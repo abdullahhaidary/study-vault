@@ -3,6 +3,8 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/auto_direction_text_field.dart';
+import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_editor.dart';
 import '../data/notes_providers.dart';
@@ -48,6 +50,51 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _openAiActions() async {
+    final editor = _editor;
+    if (editor == null) return;
+    final selection = editor.selection;
+    final hadSelection = !selection.isCollapsed;
+    final sourceText = hadSelection
+        ? editor.getPlainText().trim()
+        : editor.document.toPlainText().trim();
+    if (sourceText.isEmpty) return;
+
+    if (!hadSelection) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Use the whole note?'),
+          content: const Text(
+            'No text is selected. AI will use the entire note as its source.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    await showAiActionsSheet(
+      context,
+      ref,
+      sourceText: sourceText,
+      selectedText: hadSelection ? sourceText : null,
+      actionContext: AiActionContext.noteEditor,
+      onTextPreviewApplied: (preview) {
+        applyPreviewToQuill(editor, preview, hadSelection: hadSelection);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final note = ref.watch(studyNoteByIdProvider(widget.noteId));
@@ -74,6 +121,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             leadingWidth: 76,
             title: const Text('Edit Note'),
             actions: [
+              IconButton(
+                tooltip: 'AI Actions',
+                onPressed: _saving ? null : _openAiActions,
+                icon: const Icon(Icons.auto_awesome),
+              ),
               TextButton(
                 onPressed: _saving ? null : _save,
                 child: _saving

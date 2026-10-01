@@ -26,6 +26,9 @@ dependencies:
   archive: ^4.3.0
   crypto: ^3.0.6
   share_plus: ^10.1.4
+  http: ^1.6.0
+  flutter_secure_storage: ^10.3.4
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

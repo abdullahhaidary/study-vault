@@ -6,7 +6,12 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/database/database_provider.dart';
+import '../../ai_assistant/domain/ai_models.dart';
+import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../../flashcards/data/flashcards_providers.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
@@ -243,32 +248,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     PdfTextSelectionDelegate selection,
   ) async {
     final selectedText = (await selection.getSelectedText()).trim();
-    final ranges = await selection.getSelectedTextRanges();
-    if (selectedText.isEmpty || ranges.isEmpty || !mounted) return;
-
-    final rangeInputs = <TextRangeInput>[];
-    for (final range in ranges) {
-      final pageIndex = range.pageNumber - 1;
-      if (pageIndex < 0 || pageIndex >= _controller.pages.length) continue;
-      final page = _controller.pages[pageIndex];
-      final pageSize = Size(page.width, page.height);
-
-      for (final fragment in range.enumerateFragmentBoundingRects()) {
-        final local = fragment.bounds.toRect(
-          page: page,
-          scaledPageSize: pageSize,
-        );
-        if (local.width <= 0 || local.height <= 0) continue;
-        rangeInputs.add(
-          TextRangeInput(
-            pageNumber: range.pageNumber,
-            rect: NormalizedRect.fromLocalRect(local, pageSize),
-          ),
-        );
-      }
-    }
-
-    if (rangeInputs.isEmpty || !mounted) return;
+    final rangeInputs = await _textRangeInputs(selection);
+    if (selectedText.isEmpty || rangeInputs.isEmpty || !mounted) return;
 
     final result = await AddEditStudyPinSheet.show(
       context,
@@ -290,6 +271,76 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     );
 
     await selection.clearTextSelection();
+  }
+
+  Future<List<TextRangeInput>> _textRangeInputs(
+    PdfTextSelectionDelegate selection,
+  ) async {
+    final ranges = await selection.getSelectedTextRanges();
+    final rangeInputs = <TextRangeInput>[];
+    for (final range in ranges) {
+      final pageIndex = range.pageNumber - 1;
+      if (pageIndex < 0 || pageIndex >= _controller.pages.length) continue;
+      final page = _controller.pages[pageIndex];
+      final pageSize = Size(page.width, page.height);
+
+      for (final fragment in range.enumerateFragmentBoundingRects()) {
+        final local = fragment.bounds.toRect(
+          page: page,
+          scaledPageSize: pageSize,
+        );
+        if (local.width <= 0 || local.height <= 0) continue;
+        rangeInputs.add(
+          TextRangeInput(
+            pageNumber: range.pageNumber,
+            rect: NormalizedRect.fromLocalRect(local, pageSize),
+          ),
+        );
+      }
+    }
+    return rangeInputs;
+  }
+
+  Future<void> _openPdfAiActions(PdfTextSelectionDelegate selection) async {
+    final selectedText = (await selection.getSelectedText()).trim();
+    final ranges = await _textRangeInputs(selection);
+    if (selectedText.isEmpty || ranges.isEmpty || !mounted) return;
+
+    await showAiActionsSheet(
+      context,
+      ref,
+      sourceText: selectedText,
+      selectedText: selectedText,
+      actionContext: AiActionContext.pdfSelection,
+      onAnnotationSave: (draft) async {
+        await createTextStudyPin(
+          ref,
+          CreateTextStudyPinInput(
+            resourceId: widget.resourceId,
+            selectedText: selectedText,
+            ranges: ranges,
+            shortText: draft.shortDescription,
+            fullExplanation: draft.fullNoteMarkdown,
+            categoryId: draft.suggestedCategory,
+          ),
+        );
+        await selection.clearTextSelection();
+      },
+      onFlashcardsCreate: (cards) async {
+        final material = await ref
+            .read(databaseProvider)
+            .getMaterialById(widget.resourceId);
+        if (material == null) return;
+        for (final card in cards) {
+          await createFlashcard(
+            ref,
+            lessonId: material.lessonId,
+            front: card.front,
+            back: MarkdownToQuill.toDeltaJson(card.back),
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -398,9 +449,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               ),
             ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(72),
-          child: StudyPinToolbar(
+      ),
+      body: Column(
+        children: [
+          StudyPinToolbar(
             addPinMode: annotate,
             displayMode: displayMode,
             onAddPinModeChanged: (value) {
@@ -411,116 +463,138 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                   mode;
             },
           ),
-        ),
-      ),
-      body: FutureBuilder<bool>(
-        future: _fileExists,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.data != true) {
-            return const Center(
-              child: Text('PDF file is missing from local storage.'),
-            );
-          }
+          Expanded(
+            child: FutureBuilder<bool>(
+              future: _fileExists,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.data != true) {
+                  return const Center(
+                    child: Text('PDF file is missing from local storage.'),
+                  );
+                }
 
-          return Row(
-            children: [
-              Expanded(
-                child: Stack(
+                return Row(
                   children: [
-                    PdfViewer.file(
-                      widget.filePath,
-                      controller: _controller,
-                      params: PdfViewerParams(
-                        margin: 8,
-                        textSelectionParams: const PdfTextSelectionParams(
-                          enabled: true,
-                        ),
-                        customizeContextMenuItems: (params, items) {
-                          if (!annotate) return;
-                          if (!params.textSelectionDelegate.hasSelectedText) {
-                            return;
-                          }
-                          items.insert(
-                            0,
-                            ContextMenuButtonItem(
-                              label: 'Add Description',
-                              type: ContextMenuButtonType.custom,
-                              onPressed: () {
-                                params.dismissContextMenu();
-                                _handleAddTextDescription(
-                                  params.textSelectionDelegate,
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          PdfViewer.file(
+                            widget.filePath,
+                            controller: _controller,
+                            params: PdfViewerParams(
+                              margin: 8,
+                              textSelectionParams: const PdfTextSelectionParams(
+                                enabled: true,
+                              ),
+                              customizeContextMenuItems: (params, items) {
+                                if (!annotate) return;
+                                if (!params
+                                    .textSelectionDelegate
+                                    .hasSelectedText) {
+                                  return;
+                                }
+                                items.insert(
+                                  0,
+                                  ContextMenuButtonItem(
+                                    label: 'Add Description',
+                                    type: ContextMenuButtonType.custom,
+                                    onPressed: () {
+                                      params.dismissContextMenu();
+                                      _handleAddTextDescription(
+                                        params.textSelectionDelegate,
+                                      );
+                                    },
+                                  ),
+                                );
+                                items.insert(
+                                  1,
+                                  ContextMenuButtonItem(
+                                    label: 'AI Actions',
+                                    type: ContextMenuButtonType.custom,
+                                    onPressed: () {
+                                      params.dismissContextMenu();
+                                      _openPdfAiActions(
+                                        params.textSelectionDelegate,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                              onPageChanged: (pageNumber) {
+                                setState(() => _currentPage = pageNumber);
+                              },
+                              onViewerReady: (document, controller) {
+                                setState(() {
+                                  _pageCount = document.pages.length;
+                                  _currentPage = controller.pageNumber;
+                                });
+                                final page = widget.initialPage;
+                                if (page != null &&
+                                    page >= 1 &&
+                                    page <= document.pages.length) {
+                                  controller.goToPage(pageNumber: page);
+                                }
+                              },
+                              onGeneralTap: (context, controller, details) {
+                                if (!annotate) return false;
+                                if (details.type !=
+                                    PdfViewerGeneralTapType.tap) {
+                                  return false;
+                                }
+                                // Avoid creating a point pin under a text selection gesture.
+                                if (details.tapOn ==
+                                    PdfViewerPart.selectedText) {
+                                  return false;
+                                }
+                                if (controller
+                                    .textSelectionDelegate
+                                    .hasSelectedText) {
+                                  return false;
+                                }
+                                _handleAddPointPinTap(controller, details);
+                                return true;
+                              },
+                              pageOverlaysBuilder: (context, pageRect, page) {
+                                return buildPdfPagePinOverlays(
+                                  pageRect: pageRect,
+                                  page: page,
+                                  pins: pins,
+                                  textRanges: textRanges,
+                                  displayMode: displayMode,
+                                  annotateMode: annotate,
+                                  categoryMap: categoryMap,
+                                  focusedPinId: _focusedPinId,
+                                  onPinTap: (pin) {
+                                    setState(() => _focusedPinId = pin.id);
+                                    _onAnnotationTap(pin, annotate: annotate);
+                                  },
+                                  onPointPinMoved: _onPointPinMoved,
                                 );
                               },
                             ),
-                          );
-                        },
-                        onPageChanged: (pageNumber) {
-                          setState(() => _currentPage = pageNumber);
-                        },
-                        onViewerReady: (document, controller) {
-                          setState(() {
-                            _pageCount = document.pages.length;
-                            _currentPage = controller.pageNumber;
-                          });
-                          final page = widget.initialPage;
-                          if (page != null &&
-                              page >= 1 &&
-                              page <= document.pages.length) {
-                            controller.goToPage(pageNumber: page);
-                          }
-                        },
-                        onGeneralTap: (context, controller, details) {
-                          if (!annotate) return false;
-                          if (details.type != PdfViewerGeneralTapType.tap) {
-                            return false;
-                          }
-                          // Avoid creating a point pin under a text selection gesture.
-                          if (details.tapOn == PdfViewerPart.selectedText) {
-                            return false;
-                          }
-                          if (controller
-                              .textSelectionDelegate
-                              .hasSelectedText) {
-                            return false;
-                          }
-                          _handleAddPointPinTap(controller, details);
-                          return true;
-                        },
-                        pageOverlaysBuilder: (context, pageRect, page) {
-                          return buildPdfPagePinOverlays(
-                            pageRect: pageRect,
-                            page: page,
-                            pins: pins,
-                            textRanges: textRanges,
-                            displayMode: displayMode,
-                            annotateMode: annotate,
-                            categoryMap: categoryMap,
-                            focusedPinId: _focusedPinId,
-                            onPinTap: (pin) {
-                              setState(() => _focusedPinId = pin.id);
-                              _onAnnotationTap(pin, annotate: annotate);
-                            },
-                            onPointPinMoved: _onPointPinMoved,
-                          );
-                        },
+                          ),
+                          if (_isWide && _readerPin != null)
+                            StudyPinReaderOverlay(
+                              pin: _readerPin!,
+                              onClose: () => setState(() => _readerPin = null),
+                            ),
+                        ],
                       ),
                     ),
-                    if (_isWide && _readerPin != null)
-                      StudyPinReaderOverlay(
-                        pin: _readerPin!,
-                        onClose: () => setState(() => _readerPin = null),
+                    if (_isWide && _showOutline && _controller.isReady)
+                      SizedBox(
+                        width: 340,
+                        child: _outlinePanel(bookmarks, pins),
                       ),
                   ],
-                ),
-              ),
-              if (_isWide && _showOutline && _controller.isReady)
-                SizedBox(width: 340, child: _outlinePanel(bookmarks, pins)),
-            ],
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

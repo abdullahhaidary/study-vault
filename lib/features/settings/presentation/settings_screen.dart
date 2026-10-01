@@ -4,18 +4,48 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/backup/backup_manifest.dart';
 import '../../../core/backup/backup_providers.dart';
 import '../../../core/backup/backup_service.dart';
+import '../../ai_assistant/presentation/ai_settings_section.dart';
 
-/// App settings — currently focuses on Backup & Restore.
-class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+/// App settings — AI Assistant + Backup & Restore.
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key, this.initialSection});
+
+  /// Optional: `ai` scrolls/focuses the AI Assistant section.
+  final String? initialSection;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _aiKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSection == 'ai') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _aiKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 300),
+            alignment: 0.1,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
+          KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
+          const SizedBox(height: 28),
           Text(
             'Backup & Restore',
             style: Theme.of(context).textTheme.titleLarge,
@@ -23,7 +53,8 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             'Protect your local Study Vault data. Backup files are not '
-            'encrypted — store them somewhere safe outside this app.',
+            'encrypted — store them somewhere safe outside this app. '
+            'Gemini API keys are never included in backups.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

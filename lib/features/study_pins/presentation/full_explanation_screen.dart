@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../domain/study_note_codec.dart';
 import 'widgets/study_rich_text_editor.dart';
 
@@ -96,6 +99,49 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
     Navigator.of(context).pop(encoded ?? '');
   }
 
+  Future<void> _openAiActions(WidgetRef ref) async {
+    final selection = _controller.selection;
+    final hadSelection = !selection.isCollapsed;
+    final sourceText = hadSelection
+        ? _controller.getPlainText().trim()
+        : _controller.document.toPlainText().trim();
+    if (sourceText.isEmpty) return;
+
+    if (!hadSelection) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Use the whole note?'),
+          content: const Text(
+            'No text is selected. AI will use the entire note as its source.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    await showAiActionsSheet(
+      context,
+      ref,
+      sourceText: sourceText,
+      selectedText: hadSelection ? sourceText : null,
+      actionContext: AiActionContext.noteEditor,
+      onTextPreviewApplied: (preview) {
+        applyPreviewToQuill(_controller, preview, hadSelection: hadSelection);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -132,6 +178,14 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                   style: theme.textTheme.titleMedium,
                 ),
               ),
+              if (!widget.readOnly)
+                Consumer(
+                  builder: (context, ref, _) => IconButton(
+                    tooltip: 'AI Actions',
+                    onPressed: () => _openAiActions(ref),
+                    icon: const Icon(Icons.auto_awesome),
+                  ),
+                ),
               if (!widget.readOnly)
                 TextButton(onPressed: _save, child: const Text('Save'))
               else

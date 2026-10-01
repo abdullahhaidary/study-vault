@@ -219,9 +219,10 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
             icon: const Icon(Icons.school_outlined),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(72),
-          child: StudyPinToolbar(
+      ),
+      body: Column(
+        children: [
+          StudyPinToolbar(
             addPinMode: annotate,
             displayMode: displayMode,
             onAddPinModeChanged: (value) {
@@ -232,21 +233,23 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
                   mode;
             },
           ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          _buildBody(
-            annotate: annotate,
-            displayMode: displayMode,
-            pins: pins,
-            categoryMap: categoryMap,
-          ),
-          if (_isWide && _readerPin != null)
-            StudyPinReaderOverlay(
-              pin: _readerPin!,
-              onClose: () => setState(() => _readerPin = null),
+          Expanded(
+            child: Stack(
+              children: [
+                _buildBody(
+                  annotate: annotate,
+                  displayMode: displayMode,
+                  pins: pins,
+                  categoryMap: categoryMap,
+                ),
+                if (_isWide && _readerPin != null)
+                  StudyPinReaderOverlay(
+                    pin: _readerPin!,
+                    onClose: () => setState(() => _readerPin = null),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     );

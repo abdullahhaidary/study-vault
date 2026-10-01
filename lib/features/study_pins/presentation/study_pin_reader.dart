@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/study_pins_providers.dart';
 import '../domain/pin_type.dart';
@@ -339,6 +342,38 @@ class StudyPinReaderPanel extends ConsumerWidget {
   final ScrollController? scrollController;
   final bool showHeader;
 
+  Future<void> _openAiActions(BuildContext context, WidgetRef ref) async {
+    final selected = pin.selectedText?.trim();
+    final fullNote = StudyNoteCodec.plainTextPreview(pin.fullExplanation);
+    final sourceText = selected != null && selected.isNotEmpty
+        ? selected
+        : [pin.shortText, fullNote].where((text) => text.isNotEmpty).join('\n');
+    if (sourceText.isEmpty) return;
+
+    await showAiActionsSheet(
+      context,
+      ref,
+      sourceText: sourceText,
+      selectedText: selected,
+      shortDescription: pin.shortText,
+      actionContext: AiActionContext.pinReader,
+      onFlashcardsCreate: (cards) async {
+        final material = await ref
+            .read(databaseProvider)
+            .getMaterialById(pin.resourceId);
+        if (material == null) return;
+        for (final card in cards) {
+          await createFlashcard(
+            ref,
+            lessonId: material.lessonId,
+            front: card.front,
+            back: MarkdownToQuill.toDeltaJson(card.back),
+          );
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -371,6 +406,11 @@ class StudyPinReaderPanel extends ConsumerWidget {
                 FavoriteStarButton(
                   entityType: FavoriteEntityType.studyPin,
                   entityId: pin.id,
+                ),
+                IconButton(
+                  tooltip: 'AI Actions',
+                  onPressed: () => _openAiActions(context, ref),
+                  icon: const Icon(Icons.auto_awesome),
                 ),
                 IconButton(
                   tooltip: flashcard == null

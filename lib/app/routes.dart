@@ -53,9 +53,14 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       );
 
     case AppRoutes.settings:
+      final args = settings.arguments;
+      String? section;
+      if (args is Map) {
+        section = args['section'] as String?;
+      }
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const SettingsScreen(),
+        builder: (_) => SettingsScreen(initialSection: section),
       );
 
     case AppRoutes.noteReader:
