@@ -26,6 +26,19 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.26.0
   build_runner: ^2.4.15
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/logo/study_vault_icon_1024.png
+  adaptive_icon_background: "#1B4F72"
+  adaptive_icon_foreground: assets/logo/study_vault_icon_1024.png
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo/study_vault_logo_512.png
+    - assets/logo/study_vault_icon_512.png
+    - assets/logo/study_vault_icon_1024.png

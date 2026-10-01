@@ -40,10 +40,7 @@ class StudyPinMarker extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: theme.colorScheme.onPrimary,
-              width: 2,
-            ),
+            border: Border.all(color: theme.colorScheme.onPrimary, width: 2),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.25),

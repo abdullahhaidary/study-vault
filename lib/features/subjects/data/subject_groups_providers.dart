@@ -10,9 +10,9 @@ const _uuid = Uuid();
 /// Watches subject groups for a class, ordered by [sortOrder].
 final subjectGroupsForClassProvider =
     StreamProvider.family<List<SubjectGroup>, String>((ref, classId) {
-  final db = ref.watch(databaseProvider);
-  return db.watchSubjectGroupsForClass(classId);
-});
+      final db = ref.watch(databaseProvider);
+      return db.watchSubjectGroupsForClass(classId);
+    });
 
 Future<void> createSubjectGroup(
   WidgetRef ref, {

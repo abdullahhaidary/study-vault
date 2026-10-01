@@ -8,15 +8,14 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 
 void main() {
-  testWidgets('Home screen shows Study Vault title and empty state',
-      (tester) async {
+  testWidgets('Home screen shows Study Vault title and empty state', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-        ],
+        overrides: [databaseProvider.overrideWithValue(db)],
         child: const StudyVaultApp(),
       ),
     );

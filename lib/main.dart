@@ -16,9 +16,5 @@ Future<void> main() async {
     await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
   }
 
-  runApp(
-    const ProviderScope(
-      child: StudyVaultApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: StudyVaultApp()));
 }

@@ -56,10 +56,7 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
         title: Text(widget.title),
         actions: [
           if (!widget.readOnly)
-            TextButton(
-              onPressed: _save,
-              child: const Text('Done'),
-            ),
+            TextButton(onPressed: _save, child: const Text('Done')),
         ],
       ),
       body: SafeArea(
@@ -86,7 +83,7 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                 hintText: widget.readOnly
                     ? 'No full explanation yet.'
                     : 'Write a longer explanation…\n\n'
-                        'You can paste notes from ChatGPT or Gemini here later.',
+                          'You can paste notes from ChatGPT or Gemini here later.',
                 border: InputBorder.none,
                 filled: false,
                 contentPadding: const EdgeInsets.all(16),

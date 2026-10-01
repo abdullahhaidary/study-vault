@@ -97,10 +97,9 @@ class _ClassCard extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed(
-            AppRoutes.classDetails,
-            arguments: classItem.id,
-          );
+          Navigator.of(
+            context,
+          ).pushNamed(AppRoutes.classDetails, arguments: classItem.id);
         },
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -109,10 +108,7 @@ class _ClassCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.class_outlined,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(Icons.class_outlined, color: theme.colorScheme.primary),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -124,10 +120,7 @@ class _ClassCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: theme.colorScheme.outline,
-                  ),
+                  Icon(Icons.chevron_right, color: theme.colorScheme.outline),
                 ],
               ),
               if (classItem.description != null &&

@@ -6,11 +6,7 @@ import '../data/lesson_groups_providers.dart';
 
 /// Create or edit a lesson group.
 class LessonGroupDialog extends ConsumerStatefulWidget {
-  const LessonGroupDialog({
-    super.key,
-    required this.subjectId,
-    this.existing,
-  });
+  const LessonGroupDialog({super.key, required this.subjectId, this.existing});
 
   final String subjectId;
   final LessonGroup? existing;
@@ -22,10 +18,8 @@ class LessonGroupDialog extends ConsumerStatefulWidget {
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => LessonGroupDialog(
-        subjectId: subjectId,
-        existing: existing,
-      ),
+      builder: (_) =>
+          LessonGroupDialog(subjectId: subjectId, existing: existing),
     );
   }
 
@@ -45,8 +39,9 @@ class _LessonGroupDialogState extends ConsumerState<LessonGroupDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existing?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
   }
 
   @override

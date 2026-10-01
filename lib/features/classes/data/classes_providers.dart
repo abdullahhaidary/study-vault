@@ -14,15 +14,16 @@ final classesProvider = StreamProvider<List<StudyClass>>((ref) {
 });
 
 /// Watches a single class by id.
-final classByIdProvider =
-    StreamProvider.family<StudyClass?, String>((ref, classId) {
+final classByIdProvider = StreamProvider.family<StudyClass?, String>((
+  ref,
+  classId,
+) {
   final db = ref.watch(databaseProvider);
   return db.watchClassById(classId);
 });
 
 /// Subject count for a given class (re-reads whenever subjects change).
-final subjectCountProvider =
-    StreamProvider.family<int, String>((ref, classId) {
+final subjectCountProvider = StreamProvider.family<int, String>((ref, classId) {
   final db = ref.watch(databaseProvider);
   // Re-emit count whenever the subjects stream for this class updates.
   return db.watchSubjectsForClass(classId).asyncMap((_) {

@@ -73,10 +73,7 @@ class GroupSectionHeader extends StatelessWidget {
                     child: Text('Delete group'),
                   ),
               ],
-              child: Icon(
-                Icons.more_horiz,
-                color: theme.colorScheme.outline,
-              ),
+              child: Icon(Icons.more_horiz, color: theme.colorScheme.outline),
             ),
         ],
       ),
@@ -171,10 +168,7 @@ class GroupedItemTile extends StatelessWidget {
                   ),
                 ),
               if (onEdit == null && onDelete == null)
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.outline,
-                ),
+                Icon(Icons.chevron_right, color: theme.colorScheme.outline),
             ],
           ),
         ),

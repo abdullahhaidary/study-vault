@@ -99,24 +99,56 @@ class LessonMaterials extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Point-based Study Pins attached to a PDF page or image resource.
+/// Study Pins attached to a PDF page or image resource.
+///
+/// [pinType] is `point` (tap marker) or `text` (PDF text selection).
+/// Text pins store geometry in [StudyPinTextRanges]; [xRatio]/[yRatio] still
+/// hold an anchor (first range center) for ordering / scroll helpers.
 class StudyPins extends Table {
   TextColumn get id => text()();
   TextColumn get resourceId => text().references(LessonMaterials, #id)();
+
+  /// `point` or `text`. Existing rows migrate to `point`.
+  TextColumn get pinType => text().withDefault(const Constant('point'))();
+
   /// 1-based PDF page number; null for image resources.
   IntColumn get pageNumber => integer().nullable()();
+
   /// Normalized X position within the page/image (0–1, left → right).
   RealColumn get xRatio => real()();
+
   /// Normalized Y position within the page/image (0–1, top → bottom).
   RealColumn get yRatio => real()();
   TextColumn get shortText => text().withLength(min: 1, max: 500)();
+
   /// Plain-text full explanation for now; reserved for richer formats later.
   TextColumn get fullExplanation => text().nullable()();
+
+  /// Snapshot of the PDF selection for text pins (display context).
+  TextColumn get selectedText => text().nullable()();
   IntColumn get sortOrder => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
   /// Reserved for future sync soft-delete; unused by current hard-delete UI.
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Normalized highlight rectangles for a text Study Pin.
+///
+/// One text annotation may have many rows (multi-line / multi-word selection).
+class StudyPinTextRanges extends Table {
+  TextColumn get id => text()();
+  TextColumn get studyPinId => text().references(StudyPins, #id)();
+  IntColumn get pageNumber => integer()();
+  RealColumn get xRatio => real()();
+  RealColumn get yRatio => real()();
+  RealColumn get widthRatio => real()();
+  RealColumn get heightRatio => real()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -131,6 +163,7 @@ class StudyPins extends Table {
     Lessons,
     LessonMaterials,
     StudyPins,
+    StudyPinTextRanges,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -140,35 +173,47 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
-            await m.createTable(subjectGroups);
-            await m.createTable(lessonGroups);
-            await m.createTable(lessons);
-            await m.addColumn(subjects, subjects.subjectGroupId);
-            await m.addColumn(subjects, subjects.sortOrder);
-          }
-          if (from < 3) {
-            await m.createTable(lessonMaterials);
-          }
-          if (from < 4) {
-            await m.createTable(studyPins);
-          }
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.createTable(subjectGroups);
+        await m.createTable(lessonGroups);
+        await m.createTable(lessons);
+        await m.addColumn(subjects, subjects.subjectGroupId);
+        await m.addColumn(subjects, subjects.sortOrder);
+      }
+      if (from < 3) {
+        await m.createTable(lessonMaterials);
+      }
+      if (from < 4) {
+        await m.createTable(studyPins);
+      }
+      if (from < 5) {
+        await m.addColumn(studyPins, studyPins.pinType);
+        await m.addColumn(studyPins, studyPins.selectedText);
+        await m.createTable(studyPinTextRanges);
+        // Backfill: any pre-v5 pin is a point pin (SQLite default covers
+        // new rows; explicit update keeps semantics obvious in tests).
+        await customStatement(
+          "UPDATE study_pins SET pin_type = 'point' "
+          "WHERE pin_type IS NULL OR pin_type = ''",
+        );
+      }
+    },
+  );
 
   // ── Classes ──────────────────────────────────────────────
 
   Stream<List<StudyClass>> watchAllClasses() {
-    return (select(classes)..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .watch();
+    return (select(
+      classes,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
   }
 
   Future<StudyClass?> getClassById(String id) {
@@ -202,8 +247,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<SubjectGroup?> getSubjectGroupById(String id) {
-    return (select(subjectGroups)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      subjectGroups,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> nextSubjectGroupSortOrder(String classId) async {
@@ -244,8 +290,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Stream<Subject?> watchSubjectById(String id) {
-    return (select(subjects)..where((t) => t.id.equals(id)))
-        .watchSingleOrNull();
+    return (select(
+      subjects,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
   Future<int> nextSubjectSortOrder(String classId) async {
@@ -275,8 +322,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<LessonGroup?> getLessonGroupById(String id) {
-    return (select(lessonGroups)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      lessonGroups,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> nextLessonGroupSortOrder(String subjectId) async {
@@ -347,8 +395,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<LessonMaterial?> getMaterialById(String id) {
-    return (select(lessonMaterials)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      lessonMaterials,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> nextMaterialSortOrder(String lessonId) async {
@@ -365,6 +414,14 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteLessonMaterial(String id) async {
+    final pinIds = await (select(
+      studyPins,
+    )..where((t) => t.resourceId.equals(id))).map((row) => row.id).get();
+    if (pinIds.isNotEmpty) {
+      await (delete(
+        studyPinTextRanges,
+      )..where((t) => t.studyPinId.isIn(pinIds))).go();
+    }
     await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
     await (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();
   }
@@ -373,10 +430,7 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<StudyPin>> watchStudyPinsForResource(String resourceId) {
     return (select(studyPins)
-          ..where(
-            (t) =>
-                t.resourceId.equals(resourceId) & t.deletedAt.isNull(),
-          )
+          ..where((t) => t.resourceId.equals(resourceId) & t.deletedAt.isNull())
           ..orderBy([
             (t) => OrderingTerm.asc(t.pageNumber),
             (t) => OrderingTerm.asc(t.sortOrder),
@@ -386,13 +440,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<StudyPin?> getStudyPinById(String id) {
-    return (select(studyPins)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(studyPins)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Stream<StudyPin?> watchStudyPinById(String id) {
-    return (select(studyPins)..where((t) => t.id.equals(id)))
-        .watchSingleOrNull();
+    return (select(
+      studyPins,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
   Future<void> insertStudyPin(StudyPinsCompanion entry) {
@@ -403,8 +457,74 @@ class AppDatabase extends _$AppDatabase {
     return update(studyPins).replace(pin);
   }
 
-  Future<void> deleteStudyPin(String id) {
-    return (delete(studyPins)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteStudyPin(String id) async {
+    await (delete(
+      studyPinTextRanges,
+    )..where((t) => t.studyPinId.equals(id))).go();
+    await (delete(studyPins)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── Study Pin Text Ranges ────────────────────────────────
+
+  Stream<List<StudyPinTextRange>> watchTextRangesForResource(
+    String resourceId,
+  ) {
+    final query =
+        select(studyPinTextRanges).join([
+            innerJoin(
+              studyPins,
+              studyPins.id.equalsExp(studyPinTextRanges.studyPinId),
+            ),
+          ])
+          ..where(
+            studyPins.resourceId.equals(resourceId) &
+                studyPins.deletedAt.isNull(),
+          )
+          ..orderBy([
+            OrderingTerm.asc(studyPinTextRanges.pageNumber),
+            OrderingTerm.asc(studyPinTextRanges.sortOrder),
+          ]);
+
+    return query.watch().map(
+      (rows) => rows.map((row) => row.readTable(studyPinTextRanges)).toList(),
+    );
+  }
+
+  Future<List<StudyPinTextRange>> getTextRangesForPin(String studyPinId) {
+    return (select(studyPinTextRanges)
+          ..where((t) => t.studyPinId.equals(studyPinId))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.pageNumber),
+            (t) => OrderingTerm.asc(t.sortOrder),
+          ]))
+        .get();
+  }
+
+  Stream<List<StudyPinTextRange>> watchTextRangesForPin(String studyPinId) {
+    return (select(studyPinTextRanges)
+          ..where((t) => t.studyPinId.equals(studyPinId))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.pageNumber),
+            (t) => OrderingTerm.asc(t.sortOrder),
+          ]))
+        .watch();
+  }
+
+  Future<void> insertStudyPinTextRange(StudyPinTextRangesCompanion entry) {
+    return into(studyPinTextRanges).insert(entry);
+  }
+
+  /// Inserts a Study Pin and its text ranges atomically.
+  Future<void> insertTextStudyPin({
+    required StudyPinsCompanion pin,
+    required List<StudyPinTextRangesCompanion> ranges,
+  }) {
+    return transaction(() async {
+      await into(studyPins).insert(pin);
+      for (final range in ranges) {
+        await into(studyPinTextRanges).insert(range);
+      }
+    });
   }
 }
 

@@ -8,15 +8,19 @@ import '../../../core/database/database_provider.dart';
 const _uuid = Uuid();
 
 /// Watches subjects belonging to a class, ordered by [sortOrder].
-final subjectsForClassProvider =
-    StreamProvider.family<List<Subject>, String>((ref, classId) {
+final subjectsForClassProvider = StreamProvider.family<List<Subject>, String>((
+  ref,
+  classId,
+) {
   final db = ref.watch(databaseProvider);
   return db.watchSubjectsForClass(classId);
 });
 
 /// Watches a single subject by id.
-final subjectByIdProvider =
-    StreamProvider.family<Subject?, String>((ref, subjectId) {
+final subjectByIdProvider = StreamProvider.family<Subject?, String>((
+  ref,
+  subjectId,
+) {
   final db = ref.watch(databaseProvider);
   return db.watchSubjectById(subjectId);
 });

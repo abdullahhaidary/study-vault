@@ -20,8 +20,10 @@ class ResponsiveGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount =
-            (width / (minItemWidth + spacing)).floor().clamp(1, 4);
+        final crossAxisCount = (width / (minItemWidth + spacing)).floor().clamp(
+          1,
+          4,
+        );
         final itemWidth =
             (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
 

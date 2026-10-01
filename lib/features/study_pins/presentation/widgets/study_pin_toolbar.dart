@@ -32,15 +32,15 @@ class StudyPinToolbar extends StatelessWidget {
           children: [
             FilterChip(
               selected: addPinMode,
-              label: Text(addPinMode ? 'Add Pin: ON' : 'Add Pin: OFF'),
+              label: Text(addPinMode ? 'Annotate: ON' : 'Annotate: OFF'),
               avatar: Icon(
-                addPinMode ? Icons.push_pin : Icons.push_pin_outlined,
+                addPinMode ? Icons.edit_note : Icons.menu_book_outlined,
                 size: 18,
               ),
               onSelected: onAddPinModeChanged,
             ),
             Text(
-              'Pins:',
+              'Show:',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

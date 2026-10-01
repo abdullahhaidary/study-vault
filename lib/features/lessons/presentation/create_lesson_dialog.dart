@@ -51,10 +51,10 @@ class _CreateLessonDialogState extends ConsumerState<CreateLessonDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existing?.description ?? '');
-    _selectedGroupId =
-        widget.existing?.lessonGroupId ?? widget.initialGroupId;
+    _descriptionController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
+    _selectedGroupId = widget.existing?.lessonGroupId ?? widget.initialGroupId;
   }
 
   @override
@@ -94,8 +94,9 @@ class _CreateLessonDialogState extends ConsumerState<CreateLessonDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync =
-        ref.watch(lessonGroupsForSubjectProvider(widget.subjectId));
+    final groupsAsync = ref.watch(
+      lessonGroupsForSubjectProvider(widget.subjectId),
+    );
 
     return AlertDialog(
       title: Text(_isEditing ? 'Edit Lesson' : 'Add Lesson'),
@@ -141,9 +142,7 @@ class _CreateLessonDialogState extends ConsumerState<CreateLessonDialog> {
                   return DropdownButtonFormField<String?>(
                     // ignore: deprecated_member_use
                     value: _selectedGroupId,
-                    decoration: const InputDecoration(
-                      labelText: 'Group',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Group'),
                     items: [
                       const DropdownMenuItem<String?>(
                         value: null,

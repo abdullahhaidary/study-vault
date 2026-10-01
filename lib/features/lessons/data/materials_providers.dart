@@ -12,12 +12,14 @@ const _uuid = Uuid();
 
 final materialsForLessonProvider =
     StreamProvider.family<List<LessonMaterial>, String>((ref, lessonId) {
-  final db = ref.watch(databaseProvider);
-  return db.watchMaterialsForLesson(lessonId);
-});
+      final db = ref.watch(databaseProvider);
+      return db.watchMaterialsForLesson(lessonId);
+    });
 
-final materialByIdProvider =
-    FutureProvider.family<LessonMaterial?, String>((ref, materialId) async {
+final materialByIdProvider = FutureProvider.family<LessonMaterial?, String>((
+  ref,
+  materialId,
+) async {
   final db = ref.watch(databaseProvider);
   return db.getMaterialById(materialId);
 });

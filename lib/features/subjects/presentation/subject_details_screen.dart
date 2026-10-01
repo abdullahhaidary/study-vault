@@ -58,9 +58,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
     final isWide = MediaQuery.sizeOf(context).width >= 720;
 
     return subjectAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
         body: Center(child: Text('Error: $error')),
@@ -81,10 +80,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
                 actions: [
                   if (isWide) ...[
                     TextButton.icon(
-                      onPressed: () => LessonGroupDialog.show(
-                        context,
-                        subjectId: subjectId,
-                      ),
+                      onPressed: () =>
+                          LessonGroupDialog.show(context, subjectId: subjectId),
                       icon: const Icon(Icons.create_new_folder_outlined),
                       label: const Text('Add Lesson Group'),
                     ),
@@ -104,10 +101,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                     PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'group') {
-                          LessonGroupDialog.show(
-                            context,
-                            subjectId: subjectId,
-                          );
+                          LessonGroupDialog.show(context, subjectId: subjectId);
                         } else if (value == 'lesson') {
                           CreateLessonDialog.show(
                             context,
@@ -196,10 +190,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
           floatingActionButton: isWide
               ? null
               : FloatingActionButton(
-                  onPressed: () => CreateLessonDialog.show(
-                    context,
-                    subjectId: subjectId,
-                  ),
+                  onPressed: () =>
+                      CreateLessonDialog.show(context, subjectId: subjectId),
                   child: const Icon(Icons.add),
                 ),
         );
@@ -267,8 +259,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
     final children = <Widget>[];
 
     for (final group in groupList) {
-      final inGroup =
-          lessonList.where((l) => l.lessonGroupId == group.id).toList();
+      final inGroup = lessonList
+          .where((l) => l.lessonGroupId == group.id)
+          .toList();
       children.add(
         GroupSectionHeader(
           title: group.name,
@@ -288,8 +281,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
             child: Text(
               'No lessons in this group',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
         );
@@ -303,10 +296,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
                 subtitle: lesson.description,
                 icon: Icons.auto_stories_outlined,
                 onTap: () {
-                  Navigator.of(context).pushNamed(
-                    AppRoutes.lessonDetails,
-                    arguments: lesson.id,
-                  );
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id);
                 },
                 onEdit: () => CreateLessonDialog.show(
                   context,
@@ -321,13 +313,10 @@ class SubjectDetailsScreen extends ConsumerWidget {
       children.add(const SizedBox(height: 8));
     }
 
-    final ungrouped =
-        lessonList.where((l) => l.lessonGroupId == null).toList();
+    final ungrouped = lessonList.where((l) => l.lessonGroupId == null).toList();
     if (ungrouped.isNotEmpty || groupList.isNotEmpty) {
       if (groupList.isNotEmpty) {
-        children.add(
-          const GroupSectionHeader(title: 'Ungrouped'),
-        );
+        children.add(const GroupSectionHeader(title: 'Ungrouped'));
       }
       if (ungrouped.isEmpty && groupList.isNotEmpty) {
         children.add(
@@ -336,8 +325,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
             child: Text(
               'No ungrouped lessons',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
         );
@@ -351,10 +340,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
               subtitle: lesson.description,
               icon: Icons.auto_stories_outlined,
               onTap: () {
-                Navigator.of(context).pushNamed(
-                  AppRoutes.lessonDetails,
-                  arguments: lesson.id,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id);
               },
               onEdit: () => CreateLessonDialog.show(
                 context,
@@ -370,9 +358,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-        sliver: SliverList(
-          delegate: SliverChildListDelegate(children),
-        ),
+        sliver: SliverList(delegate: SliverChildListDelegate(children)),
       ),
     ];
   }

@@ -52,10 +52,10 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existing?.description ?? '');
-    _selectedGroupId =
-        widget.existing?.subjectGroupId ?? widget.initialGroupId;
+    _descriptionController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
+    _selectedGroupId = widget.existing?.subjectGroupId ?? widget.initialGroupId;
   }
 
   @override
@@ -95,7 +95,9 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync = ref.watch(subjectGroupsForClassProvider(widget.classId));
+    final groupsAsync = ref.watch(
+      subjectGroupsForClassProvider(widget.classId),
+    );
 
     return AlertDialog(
       title: Text(_isEditing ? 'Edit Subject' : 'Add Subject'),
@@ -141,9 +143,7 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
                   return DropdownButtonFormField<String?>(
                     // ignore: deprecated_member_use
                     value: _selectedGroupId,
-                    decoration: const InputDecoration(
-                      labelText: 'Group',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Group'),
                     items: [
                       const DropdownMenuItem<String?>(
                         value: null,

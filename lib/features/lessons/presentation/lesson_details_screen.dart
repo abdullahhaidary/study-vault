@@ -19,15 +19,15 @@ class LessonDetailsScreen extends ConsumerWidget {
     try {
       final material = await attachPdfToLesson(ref, lessonId: lessonId);
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Attached ${material.title}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Attached ${material.title}')));
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not attach PDF: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not attach PDF: $error')));
       }
     }
   }
@@ -36,9 +36,9 @@ class LessonDetailsScreen extends ConsumerWidget {
     try {
       final material = await attachImageToLesson(ref, lessonId: lessonId);
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Attached ${material.title}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Attached ${material.title}')));
       }
     } catch (error) {
       if (context.mounted) {
@@ -117,9 +117,7 @@ class LessonDetailsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          isImageMimeType(material.mimeType)
-              ? 'Remove image?'
-              : 'Remove PDF?',
+          isImageMimeType(material.mimeType) ? 'Remove image?' : 'Remove PDF?',
         ),
         content: Text(
           '"${material.title}" will be removed from this lesson and deleted '
@@ -158,9 +156,8 @@ class LessonDetailsScreen extends ConsumerWidget {
     final isWide = MediaQuery.sizeOf(context).width >= 720;
 
     return lessonAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
         body: Center(child: Text('Error: $error')),
@@ -213,8 +210,7 @@ class LessonDetailsScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-              if (lesson.description != null &&
-                  lesson.description!.isNotEmpty)
+              if (lesson.description != null && lesson.description!.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -261,26 +257,23 @@ class LessonDetailsScreen extends ConsumerWidget {
                   return SliverPadding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 88),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final material = materials[index];
-                          final kind = isImageMimeType(material.mimeType)
-                              ? 'Image'
-                              : 'PDF';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: GroupedItemTile(
-                              title: material.title,
-                              subtitle: '$kind · Tap to open and study',
-                              icon: _iconFor(material),
-                              onTap: () => _openMaterial(context, material),
-                              onDelete: () =>
-                                  _confirmDelete(context, ref, material),
-                            ),
-                          );
-                        },
-                        childCount: materials.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final material = materials[index];
+                        final kind = isImageMimeType(material.mimeType)
+                            ? 'Image'
+                            : 'PDF';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: GroupedItemTile(
+                            title: material.title,
+                            subtitle: '$kind · Tap to open and study',
+                            icon: _iconFor(material),
+                            onTap: () => _openMaterial(context, material),
+                            onDelete: () =>
+                                _confirmDelete(context, ref, material),
+                          ),
+                        );
+                      }, childCount: materials.length),
                     ),
                   );
                 },

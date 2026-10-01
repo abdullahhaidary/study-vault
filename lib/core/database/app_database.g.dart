@@ -2980,6 +2980,18 @@ class $StudyPinsTable extends StudyPins
       'REFERENCES lesson_materials (id)',
     ),
   );
+  static const VerificationMeta _pinTypeMeta = const VerificationMeta(
+    'pinType',
+  );
+  @override
+  late final GeneratedColumn<String> pinType = GeneratedColumn<String>(
+    'pin_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('point'),
+  );
   static const VerificationMeta _pageNumberMeta = const VerificationMeta(
     'pageNumber',
   );
@@ -3035,6 +3047,17 @@ class $StudyPinsTable extends StudyPins
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _selectedTextMeta = const VerificationMeta(
+    'selectedText',
+  );
+  @override
+  late final GeneratedColumn<String> selectedText = GeneratedColumn<String>(
+    'selected_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -3083,11 +3106,13 @@ class $StudyPinsTable extends StudyPins
   List<GeneratedColumn> get $columns => [
     id,
     resourceId,
+    pinType,
     pageNumber,
     xRatio,
     yRatio,
     shortText,
     fullExplanation,
+    selectedText,
     sortOrder,
     createdAt,
     updatedAt,
@@ -3117,6 +3142,12 @@ class $StudyPinsTable extends StudyPins
       );
     } else if (isInserting) {
       context.missing(_resourceIdMeta);
+    }
+    if (data.containsKey('pin_type')) {
+      context.handle(
+        _pinTypeMeta,
+        pinType.isAcceptableOrUnknown(data['pin_type']!, _pinTypeMeta),
+      );
     }
     if (data.containsKey('page_number')) {
       context.handle(
@@ -3154,6 +3185,15 @@ class $StudyPinsTable extends StudyPins
         fullExplanation.isAcceptableOrUnknown(
           data['full_explanation']!,
           _fullExplanationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selected_text')) {
+      context.handle(
+        _selectedTextMeta,
+        selectedText.isAcceptableOrUnknown(
+          data['selected_text']!,
+          _selectedTextMeta,
         ),
       );
     }
@@ -3202,6 +3242,10 @@ class $StudyPinsTable extends StudyPins
         DriftSqlType.string,
         data['${effectivePrefix}resource_id'],
       )!,
+      pinType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pin_type'],
+      )!,
       pageNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}page_number'],
@@ -3221,6 +3265,10 @@ class $StudyPinsTable extends StudyPins
       fullExplanation: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}full_explanation'],
+      ),
+      selectedText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_text'],
       ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3251,6 +3299,9 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
   final String id;
   final String resourceId;
 
+  /// `point` or `text`. Existing rows migrate to `point`.
+  final String pinType;
+
   /// 1-based PDF page number; null for image resources.
   final int? pageNumber;
 
@@ -3263,6 +3314,9 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
 
   /// Plain-text full explanation for now; reserved for richer formats later.
   final String? fullExplanation;
+
+  /// Snapshot of the PDF selection for text pins (display context).
+  final String? selectedText;
   final int? sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -3272,11 +3326,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
   const StudyPin({
     required this.id,
     required this.resourceId,
+    required this.pinType,
     this.pageNumber,
     required this.xRatio,
     required this.yRatio,
     required this.shortText,
     this.fullExplanation,
+    this.selectedText,
     this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
@@ -3287,6 +3343,7 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['resource_id'] = Variable<String>(resourceId);
+    map['pin_type'] = Variable<String>(pinType);
     if (!nullToAbsent || pageNumber != null) {
       map['page_number'] = Variable<int>(pageNumber);
     }
@@ -3295,6 +3352,9 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     map['short_text'] = Variable<String>(shortText);
     if (!nullToAbsent || fullExplanation != null) {
       map['full_explanation'] = Variable<String>(fullExplanation);
+    }
+    if (!nullToAbsent || selectedText != null) {
+      map['selected_text'] = Variable<String>(selectedText);
     }
     if (!nullToAbsent || sortOrder != null) {
       map['sort_order'] = Variable<int>(sortOrder);
@@ -3311,6 +3371,7 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     return StudyPinsCompanion(
       id: Value(id),
       resourceId: Value(resourceId),
+      pinType: Value(pinType),
       pageNumber: pageNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(pageNumber),
@@ -3320,6 +3381,9 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
       fullExplanation: fullExplanation == null && nullToAbsent
           ? const Value.absent()
           : Value(fullExplanation),
+      selectedText: selectedText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedText),
       sortOrder: sortOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(sortOrder),
@@ -3339,11 +3403,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     return StudyPin(
       id: serializer.fromJson<String>(json['id']),
       resourceId: serializer.fromJson<String>(json['resourceId']),
+      pinType: serializer.fromJson<String>(json['pinType']),
       pageNumber: serializer.fromJson<int?>(json['pageNumber']),
       xRatio: serializer.fromJson<double>(json['xRatio']),
       yRatio: serializer.fromJson<double>(json['yRatio']),
       shortText: serializer.fromJson<String>(json['shortText']),
       fullExplanation: serializer.fromJson<String?>(json['fullExplanation']),
+      selectedText: serializer.fromJson<String?>(json['selectedText']),
       sortOrder: serializer.fromJson<int?>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3356,11 +3422,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'resourceId': serializer.toJson<String>(resourceId),
+      'pinType': serializer.toJson<String>(pinType),
       'pageNumber': serializer.toJson<int?>(pageNumber),
       'xRatio': serializer.toJson<double>(xRatio),
       'yRatio': serializer.toJson<double>(yRatio),
       'shortText': serializer.toJson<String>(shortText),
       'fullExplanation': serializer.toJson<String?>(fullExplanation),
+      'selectedText': serializer.toJson<String?>(selectedText),
       'sortOrder': serializer.toJson<int?>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3371,11 +3439,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
   StudyPin copyWith({
     String? id,
     String? resourceId,
+    String? pinType,
     Value<int?> pageNumber = const Value.absent(),
     double? xRatio,
     double? yRatio,
     String? shortText,
     Value<String?> fullExplanation = const Value.absent(),
+    Value<String?> selectedText = const Value.absent(),
     Value<int?> sortOrder = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -3383,6 +3453,7 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
   }) => StudyPin(
     id: id ?? this.id,
     resourceId: resourceId ?? this.resourceId,
+    pinType: pinType ?? this.pinType,
     pageNumber: pageNumber.present ? pageNumber.value : this.pageNumber,
     xRatio: xRatio ?? this.xRatio,
     yRatio: yRatio ?? this.yRatio,
@@ -3390,6 +3461,7 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     fullExplanation: fullExplanation.present
         ? fullExplanation.value
         : this.fullExplanation,
+    selectedText: selectedText.present ? selectedText.value : this.selectedText,
     sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -3401,6 +3473,7 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
       resourceId: data.resourceId.present
           ? data.resourceId.value
           : this.resourceId,
+      pinType: data.pinType.present ? data.pinType.value : this.pinType,
       pageNumber: data.pageNumber.present
           ? data.pageNumber.value
           : this.pageNumber,
@@ -3410,6 +3483,9 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
       fullExplanation: data.fullExplanation.present
           ? data.fullExplanation.value
           : this.fullExplanation,
+      selectedText: data.selectedText.present
+          ? data.selectedText.value
+          : this.selectedText,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -3422,11 +3498,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
     return (StringBuffer('StudyPin(')
           ..write('id: $id, ')
           ..write('resourceId: $resourceId, ')
+          ..write('pinType: $pinType, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('xRatio: $xRatio, ')
           ..write('yRatio: $yRatio, ')
           ..write('shortText: $shortText, ')
           ..write('fullExplanation: $fullExplanation, ')
+          ..write('selectedText: $selectedText, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -3439,11 +3517,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
   int get hashCode => Object.hash(
     id,
     resourceId,
+    pinType,
     pageNumber,
     xRatio,
     yRatio,
     shortText,
     fullExplanation,
+    selectedText,
     sortOrder,
     createdAt,
     updatedAt,
@@ -3455,11 +3535,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
       (other is StudyPin &&
           other.id == this.id &&
           other.resourceId == this.resourceId &&
+          other.pinType == this.pinType &&
           other.pageNumber == this.pageNumber &&
           other.xRatio == this.xRatio &&
           other.yRatio == this.yRatio &&
           other.shortText == this.shortText &&
           other.fullExplanation == this.fullExplanation &&
+          other.selectedText == this.selectedText &&
           other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -3469,11 +3551,13 @@ class StudyPin extends DataClass implements Insertable<StudyPin> {
 class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
   final Value<String> id;
   final Value<String> resourceId;
+  final Value<String> pinType;
   final Value<int?> pageNumber;
   final Value<double> xRatio;
   final Value<double> yRatio;
   final Value<String> shortText;
   final Value<String?> fullExplanation;
+  final Value<String?> selectedText;
   final Value<int?> sortOrder;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -3482,11 +3566,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
   const StudyPinsCompanion({
     this.id = const Value.absent(),
     this.resourceId = const Value.absent(),
+    this.pinType = const Value.absent(),
     this.pageNumber = const Value.absent(),
     this.xRatio = const Value.absent(),
     this.yRatio = const Value.absent(),
     this.shortText = const Value.absent(),
     this.fullExplanation = const Value.absent(),
+    this.selectedText = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3496,11 +3582,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
   StudyPinsCompanion.insert({
     required String id,
     required String resourceId,
+    this.pinType = const Value.absent(),
     this.pageNumber = const Value.absent(),
     required double xRatio,
     required double yRatio,
     required String shortText,
     this.fullExplanation = const Value.absent(),
+    this.selectedText = const Value.absent(),
     this.sortOrder = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -3516,11 +3604,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
   static Insertable<StudyPin> custom({
     Expression<String>? id,
     Expression<String>? resourceId,
+    Expression<String>? pinType,
     Expression<int>? pageNumber,
     Expression<double>? xRatio,
     Expression<double>? yRatio,
     Expression<String>? shortText,
     Expression<String>? fullExplanation,
+    Expression<String>? selectedText,
     Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -3530,11 +3620,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (resourceId != null) 'resource_id': resourceId,
+      if (pinType != null) 'pin_type': pinType,
       if (pageNumber != null) 'page_number': pageNumber,
       if (xRatio != null) 'x_ratio': xRatio,
       if (yRatio != null) 'y_ratio': yRatio,
       if (shortText != null) 'short_text': shortText,
       if (fullExplanation != null) 'full_explanation': fullExplanation,
+      if (selectedText != null) 'selected_text': selectedText,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -3546,11 +3638,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
   StudyPinsCompanion copyWith({
     Value<String>? id,
     Value<String>? resourceId,
+    Value<String>? pinType,
     Value<int?>? pageNumber,
     Value<double>? xRatio,
     Value<double>? yRatio,
     Value<String>? shortText,
     Value<String?>? fullExplanation,
+    Value<String?>? selectedText,
     Value<int?>? sortOrder,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -3560,11 +3654,13 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
     return StudyPinsCompanion(
       id: id ?? this.id,
       resourceId: resourceId ?? this.resourceId,
+      pinType: pinType ?? this.pinType,
       pageNumber: pageNumber ?? this.pageNumber,
       xRatio: xRatio ?? this.xRatio,
       yRatio: yRatio ?? this.yRatio,
       shortText: shortText ?? this.shortText,
       fullExplanation: fullExplanation ?? this.fullExplanation,
+      selectedText: selectedText ?? this.selectedText,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -3582,6 +3678,9 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
     if (resourceId.present) {
       map['resource_id'] = Variable<String>(resourceId.value);
     }
+    if (pinType.present) {
+      map['pin_type'] = Variable<String>(pinType.value);
+    }
     if (pageNumber.present) {
       map['page_number'] = Variable<int>(pageNumber.value);
     }
@@ -3596,6 +3695,9 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
     }
     if (fullExplanation.present) {
       map['full_explanation'] = Variable<String>(fullExplanation.value);
+    }
+    if (selectedText.present) {
+      map['selected_text'] = Variable<String>(selectedText.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -3620,15 +3722,541 @@ class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
     return (StringBuffer('StudyPinsCompanion(')
           ..write('id: $id, ')
           ..write('resourceId: $resourceId, ')
+          ..write('pinType: $pinType, ')
           ..write('pageNumber: $pageNumber, ')
           ..write('xRatio: $xRatio, ')
           ..write('yRatio: $yRatio, ')
           ..write('shortText: $shortText, ')
           ..write('fullExplanation: $fullExplanation, ')
+          ..write('selectedText: $selectedText, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StudyPinTextRangesTable extends StudyPinTextRanges
+    with TableInfo<$StudyPinTextRangesTable, StudyPinTextRange> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudyPinTextRangesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _studyPinIdMeta = const VerificationMeta(
+    'studyPinId',
+  );
+  @override
+  late final GeneratedColumn<String> studyPinId = GeneratedColumn<String>(
+    'study_pin_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES study_pins (id)',
+    ),
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _xRatioMeta = const VerificationMeta('xRatio');
+  @override
+  late final GeneratedColumn<double> xRatio = GeneratedColumn<double>(
+    'x_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yRatioMeta = const VerificationMeta('yRatio');
+  @override
+  late final GeneratedColumn<double> yRatio = GeneratedColumn<double>(
+    'y_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _widthRatioMeta = const VerificationMeta(
+    'widthRatio',
+  );
+  @override
+  late final GeneratedColumn<double> widthRatio = GeneratedColumn<double>(
+    'width_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _heightRatioMeta = const VerificationMeta(
+    'heightRatio',
+  );
+  @override
+  late final GeneratedColumn<double> heightRatio = GeneratedColumn<double>(
+    'height_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    studyPinId,
+    pageNumber,
+    xRatio,
+    yRatio,
+    widthRatio,
+    heightRatio,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_pin_text_ranges';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudyPinTextRange> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('study_pin_id')) {
+      context.handle(
+        _studyPinIdMeta,
+        studyPinId.isAcceptableOrUnknown(
+          data['study_pin_id']!,
+          _studyPinIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_studyPinIdMeta);
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageNumberMeta);
+    }
+    if (data.containsKey('x_ratio')) {
+      context.handle(
+        _xRatioMeta,
+        xRatio.isAcceptableOrUnknown(data['x_ratio']!, _xRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_xRatioMeta);
+    }
+    if (data.containsKey('y_ratio')) {
+      context.handle(
+        _yRatioMeta,
+        yRatio.isAcceptableOrUnknown(data['y_ratio']!, _yRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yRatioMeta);
+    }
+    if (data.containsKey('width_ratio')) {
+      context.handle(
+        _widthRatioMeta,
+        widthRatio.isAcceptableOrUnknown(data['width_ratio']!, _widthRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_widthRatioMeta);
+    }
+    if (data.containsKey('height_ratio')) {
+      context.handle(
+        _heightRatioMeta,
+        heightRatio.isAcceptableOrUnknown(
+          data['height_ratio']!,
+          _heightRatioMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_heightRatioMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StudyPinTextRange map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyPinTextRange(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      studyPinId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}study_pin_id'],
+      )!,
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      )!,
+      xRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}x_ratio'],
+      )!,
+      yRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}y_ratio'],
+      )!,
+      widthRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}width_ratio'],
+      )!,
+      heightRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}height_ratio'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $StudyPinTextRangesTable createAlias(String alias) {
+    return $StudyPinTextRangesTable(attachedDatabase, alias);
+  }
+}
+
+class StudyPinTextRange extends DataClass
+    implements Insertable<StudyPinTextRange> {
+  final String id;
+  final String studyPinId;
+  final int pageNumber;
+  final double xRatio;
+  final double yRatio;
+  final double widthRatio;
+  final double heightRatio;
+  final int sortOrder;
+  const StudyPinTextRange({
+    required this.id,
+    required this.studyPinId,
+    required this.pageNumber,
+    required this.xRatio,
+    required this.yRatio,
+    required this.widthRatio,
+    required this.heightRatio,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['study_pin_id'] = Variable<String>(studyPinId);
+    map['page_number'] = Variable<int>(pageNumber);
+    map['x_ratio'] = Variable<double>(xRatio);
+    map['y_ratio'] = Variable<double>(yRatio);
+    map['width_ratio'] = Variable<double>(widthRatio);
+    map['height_ratio'] = Variable<double>(heightRatio);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  StudyPinTextRangesCompanion toCompanion(bool nullToAbsent) {
+    return StudyPinTextRangesCompanion(
+      id: Value(id),
+      studyPinId: Value(studyPinId),
+      pageNumber: Value(pageNumber),
+      xRatio: Value(xRatio),
+      yRatio: Value(yRatio),
+      widthRatio: Value(widthRatio),
+      heightRatio: Value(heightRatio),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory StudyPinTextRange.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyPinTextRange(
+      id: serializer.fromJson<String>(json['id']),
+      studyPinId: serializer.fromJson<String>(json['studyPinId']),
+      pageNumber: serializer.fromJson<int>(json['pageNumber']),
+      xRatio: serializer.fromJson<double>(json['xRatio']),
+      yRatio: serializer.fromJson<double>(json['yRatio']),
+      widthRatio: serializer.fromJson<double>(json['widthRatio']),
+      heightRatio: serializer.fromJson<double>(json['heightRatio']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'studyPinId': serializer.toJson<String>(studyPinId),
+      'pageNumber': serializer.toJson<int>(pageNumber),
+      'xRatio': serializer.toJson<double>(xRatio),
+      'yRatio': serializer.toJson<double>(yRatio),
+      'widthRatio': serializer.toJson<double>(widthRatio),
+      'heightRatio': serializer.toJson<double>(heightRatio),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  StudyPinTextRange copyWith({
+    String? id,
+    String? studyPinId,
+    int? pageNumber,
+    double? xRatio,
+    double? yRatio,
+    double? widthRatio,
+    double? heightRatio,
+    int? sortOrder,
+  }) => StudyPinTextRange(
+    id: id ?? this.id,
+    studyPinId: studyPinId ?? this.studyPinId,
+    pageNumber: pageNumber ?? this.pageNumber,
+    xRatio: xRatio ?? this.xRatio,
+    yRatio: yRatio ?? this.yRatio,
+    widthRatio: widthRatio ?? this.widthRatio,
+    heightRatio: heightRatio ?? this.heightRatio,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  StudyPinTextRange copyWithCompanion(StudyPinTextRangesCompanion data) {
+    return StudyPinTextRange(
+      id: data.id.present ? data.id.value : this.id,
+      studyPinId: data.studyPinId.present
+          ? data.studyPinId.value
+          : this.studyPinId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      xRatio: data.xRatio.present ? data.xRatio.value : this.xRatio,
+      yRatio: data.yRatio.present ? data.yRatio.value : this.yRatio,
+      widthRatio: data.widthRatio.present
+          ? data.widthRatio.value
+          : this.widthRatio,
+      heightRatio: data.heightRatio.present
+          ? data.heightRatio.value
+          : this.heightRatio,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyPinTextRange(')
+          ..write('id: $id, ')
+          ..write('studyPinId: $studyPinId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('widthRatio: $widthRatio, ')
+          ..write('heightRatio: $heightRatio, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    studyPinId,
+    pageNumber,
+    xRatio,
+    yRatio,
+    widthRatio,
+    heightRatio,
+    sortOrder,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyPinTextRange &&
+          other.id == this.id &&
+          other.studyPinId == this.studyPinId &&
+          other.pageNumber == this.pageNumber &&
+          other.xRatio == this.xRatio &&
+          other.yRatio == this.yRatio &&
+          other.widthRatio == this.widthRatio &&
+          other.heightRatio == this.heightRatio &&
+          other.sortOrder == this.sortOrder);
+}
+
+class StudyPinTextRangesCompanion extends UpdateCompanion<StudyPinTextRange> {
+  final Value<String> id;
+  final Value<String> studyPinId;
+  final Value<int> pageNumber;
+  final Value<double> xRatio;
+  final Value<double> yRatio;
+  final Value<double> widthRatio;
+  final Value<double> heightRatio;
+  final Value<int> sortOrder;
+  final Value<int> rowid;
+  const StudyPinTextRangesCompanion({
+    this.id = const Value.absent(),
+    this.studyPinId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.xRatio = const Value.absent(),
+    this.yRatio = const Value.absent(),
+    this.widthRatio = const Value.absent(),
+    this.heightRatio = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudyPinTextRangesCompanion.insert({
+    required String id,
+    required String studyPinId,
+    required int pageNumber,
+    required double xRatio,
+    required double yRatio,
+    required double widthRatio,
+    required double heightRatio,
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       studyPinId = Value(studyPinId),
+       pageNumber = Value(pageNumber),
+       xRatio = Value(xRatio),
+       yRatio = Value(yRatio),
+       widthRatio = Value(widthRatio),
+       heightRatio = Value(heightRatio);
+  static Insertable<StudyPinTextRange> custom({
+    Expression<String>? id,
+    Expression<String>? studyPinId,
+    Expression<int>? pageNumber,
+    Expression<double>? xRatio,
+    Expression<double>? yRatio,
+    Expression<double>? widthRatio,
+    Expression<double>? heightRatio,
+    Expression<int>? sortOrder,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (studyPinId != null) 'study_pin_id': studyPinId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (xRatio != null) 'x_ratio': xRatio,
+      if (yRatio != null) 'y_ratio': yRatio,
+      if (widthRatio != null) 'width_ratio': widthRatio,
+      if (heightRatio != null) 'height_ratio': heightRatio,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudyPinTextRangesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? studyPinId,
+    Value<int>? pageNumber,
+    Value<double>? xRatio,
+    Value<double>? yRatio,
+    Value<double>? widthRatio,
+    Value<double>? heightRatio,
+    Value<int>? sortOrder,
+    Value<int>? rowid,
+  }) {
+    return StudyPinTextRangesCompanion(
+      id: id ?? this.id,
+      studyPinId: studyPinId ?? this.studyPinId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      xRatio: xRatio ?? this.xRatio,
+      yRatio: yRatio ?? this.yRatio,
+      widthRatio: widthRatio ?? this.widthRatio,
+      heightRatio: heightRatio ?? this.heightRatio,
+      sortOrder: sortOrder ?? this.sortOrder,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (studyPinId.present) {
+      map['study_pin_id'] = Variable<String>(studyPinId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (xRatio.present) {
+      map['x_ratio'] = Variable<double>(xRatio.value);
+    }
+    if (yRatio.present) {
+      map['y_ratio'] = Variable<double>(yRatio.value);
+    }
+    if (widthRatio.present) {
+      map['width_ratio'] = Variable<double>(widthRatio.value);
+    }
+    if (heightRatio.present) {
+      map['height_ratio'] = Variable<double>(heightRatio.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyPinTextRangesCompanion(')
+          ..write('id: $id, ')
+          ..write('studyPinId: $studyPinId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('widthRatio: $widthRatio, ')
+          ..write('heightRatio: $heightRatio, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3647,6 +4275,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $StudyPinsTable studyPins = $StudyPinsTable(this);
+  late final $StudyPinTextRangesTable studyPinTextRanges =
+      $StudyPinTextRangesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3659,6 +4289,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lessons,
     lessonMaterials,
     studyPins,
+    studyPinTextRanges,
   ];
 }
 
@@ -6691,11 +7322,13 @@ typedef $$StudyPinsTableCreateCompanionBuilder =
     StudyPinsCompanion Function({
       required String id,
       required String resourceId,
+      Value<String> pinType,
       Value<int?> pageNumber,
       required double xRatio,
       required double yRatio,
       required String shortText,
       Value<String?> fullExplanation,
+      Value<String?> selectedText,
       Value<int?> sortOrder,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -6706,11 +7339,13 @@ typedef $$StudyPinsTableUpdateCompanionBuilder =
     StudyPinsCompanion Function({
       Value<String> id,
       Value<String> resourceId,
+      Value<String> pinType,
       Value<int?> pageNumber,
       Value<double> xRatio,
       Value<double> yRatio,
       Value<String> shortText,
       Value<String?> fullExplanation,
+      Value<String?> selectedText,
       Value<int?> sortOrder,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -6739,6 +7374,27 @@ final class $$StudyPinsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$StudyPinTextRangesTable, List<StudyPinTextRange>>
+  _studyPinTextRangesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.studyPinTextRanges,
+        aliasName: 'study_pins__id__study_pin_text_ranges__study_pin_id',
+      );
+
+  $$StudyPinTextRangesTableProcessedTableManager get studyPinTextRangesRefs {
+    final manager = $$StudyPinTextRangesTableTableManager(
+      $_db,
+      $_db.studyPinTextRanges,
+    ).filter((f) => f.studyPinId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _studyPinTextRangesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StudyPinsTableFilterComposer
@@ -6752,6 +7408,11 @@ class $$StudyPinsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pinType => $composableBuilder(
+    column: $table.pinType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6777,6 +7438,11 @@ class $$StudyPinsTableFilterComposer
 
   ColumnFilters<String> get fullExplanation => $composableBuilder(
     column: $table.fullExplanation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6822,6 +7488,31 @@ class $$StudyPinsTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> studyPinTextRangesRefs(
+    Expression<bool> Function($$StudyPinTextRangesTableFilterComposer f) f,
+  ) {
+    final $$StudyPinTextRangesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.studyPinTextRanges,
+      getReferencedColumn: (t) => t.studyPinId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinTextRangesTableFilterComposer(
+            $db: $db,
+            $table: $db.studyPinTextRanges,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$StudyPinsTableOrderingComposer
@@ -6835,6 +7526,11 @@ class $$StudyPinsTableOrderingComposer
   });
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pinType => $composableBuilder(
+    column: $table.pinType,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6860,6 +7556,11 @@ class $$StudyPinsTableOrderingComposer
 
   ColumnOrderings<String> get fullExplanation => $composableBuilder(
     column: $table.fullExplanation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6919,6 +7620,9 @@ class $$StudyPinsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get pinType =>
+      $composableBuilder(column: $table.pinType, builder: (column) => column);
+
   GeneratedColumn<int> get pageNumber => $composableBuilder(
     column: $table.pageNumber,
     builder: (column) => column,
@@ -6935,6 +7639,11 @@ class $$StudyPinsTableAnnotationComposer
 
   GeneratedColumn<String> get fullExplanation => $composableBuilder(
     column: $table.fullExplanation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
     builder: (column) => column,
   );
 
@@ -6972,6 +7681,32 @@ class $$StudyPinsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> studyPinTextRangesRefs<T extends Object>(
+    Expression<T> Function($$StudyPinTextRangesTableAnnotationComposer a) f,
+  ) {
+    final $$StudyPinTextRangesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.studyPinTextRanges,
+          getReferencedColumn: (t) => t.studyPinId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StudyPinTextRangesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.studyPinTextRanges,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$StudyPinsTableTableManager
@@ -6987,7 +7722,7 @@ class $$StudyPinsTableTableManager
           $$StudyPinsTableUpdateCompanionBuilder,
           (StudyPin, $$StudyPinsTableReferences),
           StudyPin,
-          PrefetchHooks Function({bool resourceId})
+          PrefetchHooks Function({bool resourceId, bool studyPinTextRangesRefs})
         > {
   $$StudyPinsTableTableManager(_$AppDatabase db, $StudyPinsTable table)
     : super(
@@ -7004,11 +7739,13 @@ class $$StudyPinsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> resourceId = const Value.absent(),
+                Value<String> pinType = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 Value<double> xRatio = const Value.absent(),
                 Value<double> yRatio = const Value.absent(),
                 Value<String> shortText = const Value.absent(),
                 Value<String?> fullExplanation = const Value.absent(),
+                Value<String?> selectedText = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -7017,11 +7754,13 @@ class $$StudyPinsTableTableManager
               }) => StudyPinsCompanion(
                 id: id,
                 resourceId: resourceId,
+                pinType: pinType,
                 pageNumber: pageNumber,
                 xRatio: xRatio,
                 yRatio: yRatio,
                 shortText: shortText,
                 fullExplanation: fullExplanation,
+                selectedText: selectedText,
                 sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -7032,11 +7771,13 @@ class $$StudyPinsTableTableManager
               ({
                 required String id,
                 required String resourceId,
+                Value<String> pinType = const Value.absent(),
                 Value<int?> pageNumber = const Value.absent(),
                 required double xRatio,
                 required double yRatio,
                 required String shortText,
                 Value<String?> fullExplanation = const Value.absent(),
+                Value<String?> selectedText = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -7045,11 +7786,13 @@ class $$StudyPinsTableTableManager
               }) => StudyPinsCompanion.insert(
                 id: id,
                 resourceId: resourceId,
+                pinType: pinType,
                 pageNumber: pageNumber,
                 xRatio: xRatio,
                 yRatio: yRatio,
                 shortText: shortText,
                 fullExplanation: fullExplanation,
+                selectedText: selectedText,
                 sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -7064,7 +7807,428 @@ class $$StudyPinsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({resourceId = false}) {
+          prefetchHooksCallback:
+              ({resourceId = false, studyPinTextRangesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (studyPinTextRangesRefs) db.studyPinTextRanges,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (resourceId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.resourceId,
+                                    referencedTable: $$StudyPinsTableReferences
+                                        ._resourceIdTable(db),
+                                    referencedColumn: $$StudyPinsTableReferences
+                                        ._resourceIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (studyPinTextRangesRefs)
+                        await $_getPrefetchedData<
+                          StudyPin,
+                          $StudyPinsTable,
+                          StudyPinTextRange
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StudyPinsTableReferences
+                              ._studyPinTextRangesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StudyPinsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).studyPinTextRangesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.studyPinId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StudyPinsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudyPinsTable,
+      StudyPin,
+      $$StudyPinsTableFilterComposer,
+      $$StudyPinsTableOrderingComposer,
+      $$StudyPinsTableAnnotationComposer,
+      $$StudyPinsTableCreateCompanionBuilder,
+      $$StudyPinsTableUpdateCompanionBuilder,
+      (StudyPin, $$StudyPinsTableReferences),
+      StudyPin,
+      PrefetchHooks Function({bool resourceId, bool studyPinTextRangesRefs})
+    >;
+typedef $$StudyPinTextRangesTableCreateCompanionBuilder =
+    StudyPinTextRangesCompanion Function({
+      required String id,
+      required String studyPinId,
+      required int pageNumber,
+      required double xRatio,
+      required double yRatio,
+      required double widthRatio,
+      required double heightRatio,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+typedef $$StudyPinTextRangesTableUpdateCompanionBuilder =
+    StudyPinTextRangesCompanion Function({
+      Value<String> id,
+      Value<String> studyPinId,
+      Value<int> pageNumber,
+      Value<double> xRatio,
+      Value<double> yRatio,
+      Value<double> widthRatio,
+      Value<double> heightRatio,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+
+final class $$StudyPinTextRangesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StudyPinTextRangesTable,
+          StudyPinTextRange
+        > {
+  $$StudyPinTextRangesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StudyPinsTable _studyPinIdTable(_$AppDatabase db) => db.studyPins
+      .createAlias('study_pin_text_ranges__study_pin_id__study_pins__id');
+
+  $$StudyPinsTableProcessedTableManager get studyPinId {
+    final $_column = $_itemColumn<String>('study_pin_id')!;
+
+    final manager = $$StudyPinsTableTableManager(
+      $_db,
+      $_db.studyPins,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_studyPinIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StudyPinTextRangesTableFilterComposer
+    extends Composer<_$AppDatabase, $StudyPinTextRangesTable> {
+  $$StudyPinTextRangesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get widthRatio => $composableBuilder(
+    column: $table.widthRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get heightRatio => $composableBuilder(
+    column: $table.heightRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StudyPinsTableFilterComposer get studyPinId {
+    final $$StudyPinsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinTextRangesTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudyPinTextRangesTable> {
+  $$StudyPinTextRangesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get widthRatio => $composableBuilder(
+    column: $table.widthRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get heightRatio => $composableBuilder(
+    column: $table.heightRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StudyPinsTableOrderingComposer get studyPinId {
+    final $$StudyPinsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableOrderingComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinTextRangesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudyPinTextRangesTable> {
+  $$StudyPinTextRangesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get xRatio =>
+      $composableBuilder(column: $table.xRatio, builder: (column) => column);
+
+  GeneratedColumn<double> get yRatio =>
+      $composableBuilder(column: $table.yRatio, builder: (column) => column);
+
+  GeneratedColumn<double> get widthRatio => $composableBuilder(
+    column: $table.widthRatio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get heightRatio => $composableBuilder(
+    column: $table.heightRatio,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  $$StudyPinsTableAnnotationComposer get studyPinId {
+    final $$StudyPinsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinTextRangesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudyPinTextRangesTable,
+          StudyPinTextRange,
+          $$StudyPinTextRangesTableFilterComposer,
+          $$StudyPinTextRangesTableOrderingComposer,
+          $$StudyPinTextRangesTableAnnotationComposer,
+          $$StudyPinTextRangesTableCreateCompanionBuilder,
+          $$StudyPinTextRangesTableUpdateCompanionBuilder,
+          (StudyPinTextRange, $$StudyPinTextRangesTableReferences),
+          StudyPinTextRange,
+          PrefetchHooks Function({bool studyPinId})
+        > {
+  $$StudyPinTextRangesTableTableManager(
+    _$AppDatabase db,
+    $StudyPinTextRangesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudyPinTextRangesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudyPinTextRangesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudyPinTextRangesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> studyPinId = const Value.absent(),
+                Value<int> pageNumber = const Value.absent(),
+                Value<double> xRatio = const Value.absent(),
+                Value<double> yRatio = const Value.absent(),
+                Value<double> widthRatio = const Value.absent(),
+                Value<double> heightRatio = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyPinTextRangesCompanion(
+                id: id,
+                studyPinId: studyPinId,
+                pageNumber: pageNumber,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                widthRatio: widthRatio,
+                heightRatio: heightRatio,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String studyPinId,
+                required int pageNumber,
+                required double xRatio,
+                required double yRatio,
+                required double widthRatio,
+                required double heightRatio,
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyPinTextRangesCompanion.insert(
+                id: id,
+                studyPinId: studyPinId,
+                pageNumber: pageNumber,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                widthRatio: widthRatio,
+                heightRatio: heightRatio,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$StudyPinTextRangesTable, StudyPinTextRange>(
+                    table,
+                  ),
+                  $$StudyPinTextRangesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({studyPinId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -7084,16 +8248,18 @@ class $$StudyPinsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (resourceId) {
+                    if (studyPinId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.resourceId,
-                                referencedTable: $$StudyPinsTableReferences
-                                    ._resourceIdTable(db),
-                                referencedColumn: $$StudyPinsTableReferences
-                                    ._resourceIdTable(db)
-                                    .id,
+                                currentColumn: table.studyPinId,
+                                referencedTable:
+                                    $$StudyPinTextRangesTableReferences
+                                        ._studyPinIdTable(db),
+                                referencedColumn:
+                                    $$StudyPinTextRangesTableReferences
+                                        ._studyPinIdTable(db)
+                                        .id,
                               )
                               as T;
                     }
@@ -7109,19 +8275,19 @@ class $$StudyPinsTableTableManager
       );
 }
 
-typedef $$StudyPinsTableProcessedTableManager =
+typedef $$StudyPinTextRangesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $StudyPinsTable,
-      StudyPin,
-      $$StudyPinsTableFilterComposer,
-      $$StudyPinsTableOrderingComposer,
-      $$StudyPinsTableAnnotationComposer,
-      $$StudyPinsTableCreateCompanionBuilder,
-      $$StudyPinsTableUpdateCompanionBuilder,
-      (StudyPin, $$StudyPinsTableReferences),
-      StudyPin,
-      PrefetchHooks Function({bool resourceId})
+      $StudyPinTextRangesTable,
+      StudyPinTextRange,
+      $$StudyPinTextRangesTableFilterComposer,
+      $$StudyPinTextRangesTableOrderingComposer,
+      $$StudyPinTextRangesTableAnnotationComposer,
+      $$StudyPinTextRangesTableCreateCompanionBuilder,
+      $$StudyPinTextRangesTableUpdateCompanionBuilder,
+      (StudyPinTextRange, $$StudyPinTextRangesTableReferences),
+      StudyPinTextRange,
+      PrefetchHooks Function({bool studyPinId})
     >;
 
 class $AppDatabaseManager {
@@ -7141,4 +8307,6 @@ class $AppDatabaseManager {
       $$LessonMaterialsTableTableManager(_db, _db.lessonMaterials);
   $$StudyPinsTableTableManager get studyPins =>
       $$StudyPinsTableTableManager(_db, _db.studyPins);
+  $$StudyPinTextRangesTableTableManager get studyPinTextRanges =>
+      $$StudyPinTextRangesTableTableManager(_db, _db.studyPinTextRanges);
 }

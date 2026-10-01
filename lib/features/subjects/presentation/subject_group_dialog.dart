@@ -6,11 +6,7 @@ import '../data/subject_groups_providers.dart';
 
 /// Create or edit a subject group.
 class SubjectGroupDialog extends ConsumerStatefulWidget {
-  const SubjectGroupDialog({
-    super.key,
-    required this.classId,
-    this.existing,
-  });
+  const SubjectGroupDialog({super.key, required this.classId, this.existing});
 
   final String classId;
   final SubjectGroup? existing;
@@ -22,10 +18,7 @@ class SubjectGroupDialog extends ConsumerStatefulWidget {
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => SubjectGroupDialog(
-        classId: classId,
-        existing: existing,
-      ),
+      builder: (_) => SubjectGroupDialog(classId: classId, existing: existing),
     );
   }
 
@@ -45,8 +38,9 @@ class _SubjectGroupDialogState extends ConsumerState<SubjectGroupDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existing?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
   }
 
   @override
