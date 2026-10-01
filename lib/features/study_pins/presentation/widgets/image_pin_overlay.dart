@@ -4,7 +4,7 @@ import '../../../../core/database/app_database.dart';
 import '../../data/study_pins_providers.dart';
 import '../../domain/pin_coordinates.dart';
 import '../../domain/pin_display_mode.dart';
-import 'study_pin_marker.dart';
+import 'draggable_point_pin_marker.dart';
 
 /// Renders point Study Pins over an image sized to [contentSize].
 class ImagePinOverlay extends StatelessWidget {
@@ -13,13 +13,17 @@ class ImagePinOverlay extends StatelessWidget {
     required this.pins,
     required this.contentSize,
     required this.displayMode,
+    required this.annotateMode,
     required this.onPinTap,
+    required this.onPointPinMoved,
   });
 
   final List<StudyPin> pins;
   final Size contentSize;
   final PinDisplayMode displayMode;
+  final bool annotateMode;
   final void Function(StudyPin pin) onPinTap;
+  final void Function(StudyPin pin, NormalizedPoint point) onPointPinMoved;
 
   @override
   Widget build(BuildContext context) {
@@ -27,34 +31,21 @@ class ImagePinOverlay extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    const halfDot = StudyPinMarker.dotSize / 2;
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
         for (final pin in pins.where(
           (p) => p.deletedAt == null && p.isPointPin,
         ))
-          Builder(
-            builder: (context) {
-              final local = NormalizedPoint(
-                xRatio: pin.xRatio,
-                yRatio: pin.yRatio,
-              ).toLocalOffset(contentSize);
-
-              return Positioned(
-                left: local.dx - halfDot,
-                top: local.dy - halfDot,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onPinTap(pin),
-                  child: StudyPinMarker(
-                    shortText: pin.shortText,
-                    displayMode: displayMode,
-                  ),
-                ),
-              );
-            },
+          DraggablePointPinMarker(
+            key: ValueKey(pin.id),
+            pin: pin,
+            contentSize: contentSize,
+            displayMode: displayMode,
+            canDrag: annotateMode,
+            usePdfOverlayHitTesting: false,
+            onTap: () => onPinTap(pin),
+            onMoved: (point) => onPointPinMoved(pin, point),
           ),
       ],
     );

@@ -194,6 +194,36 @@ Future<void> updateStudyPinTexts(
   );
 }
 
+/// Persists a new point-pin location once after a drag ends.
+///
+/// Does not change texts, type, selectedText, or page (unless [pageNumber] is
+/// passed). Ratios are clamped to 0–1 via [NormalizedPoint].
+Future<void> updateStudyPinPosition(
+  WidgetRef ref, {
+  required StudyPin pin,
+  required NormalizedPoint point,
+  int? pageNumber,
+}) async {
+  if (!pin.isPointPin) {
+    throw ArgumentError('Only point Study Pins can be repositioned.');
+  }
+
+  final db = ref.read(databaseProvider);
+  final clamped = NormalizedPoint(
+    xRatio: point.xRatio.clamp(0.0, 1.0),
+    yRatio: point.yRatio.clamp(0.0, 1.0),
+  );
+
+  await db.updateStudyPin(
+    pin.copyWith(
+      pageNumber: Value(pageNumber ?? pin.pageNumber),
+      xRatio: clamped.xRatio,
+      yRatio: clamped.yRatio,
+      updatedAt: DateTime.now(),
+    ),
+  );
+}
+
 Future<void> deleteStudyPin(WidgetRef ref, {required String pinId}) async {
   final db = ref.read(databaseProvider);
   await db.deleteStudyPin(pinId);

@@ -5,7 +5,7 @@ import '../../../../core/database/app_database.dart';
 import '../../data/study_pins_providers.dart';
 import '../../domain/pin_coordinates.dart';
 import '../../domain/pin_display_mode.dart';
-import 'study_pin_marker.dart';
+import 'draggable_point_pin_marker.dart';
 
 /// Positions Study Pins and text highlights over a single PDF page.
 List<Widget> buildPdfPagePinOverlays({
@@ -14,7 +14,9 @@ List<Widget> buildPdfPagePinOverlays({
   required List<StudyPin> pins,
   required List<StudyPinTextRange> textRanges,
   required PinDisplayMode displayMode,
+  required bool annotateMode,
   required void Function(StudyPin pin) onPinTap,
+  required void Function(StudyPin pin, NormalizedPoint point) onPointPinMoved,
 }) {
   if (displayMode == PinDisplayMode.hidden) {
     return const [];
@@ -29,7 +31,7 @@ List<Widget> buildPdfPagePinOverlays({
 
   final widgets = <Widget>[];
 
-  // Text highlights first (under point markers).
+  // Text highlights first (under point markers). Never draggable.
   final pageRanges = textRanges.where((r) => r.pageNumber == page.pageNumber);
   for (final range in pageRanges) {
     final pin = pinById[range.studyPinId];
@@ -54,13 +56,13 @@ List<Widget> buildPdfPagePinOverlays({
             onPinTap(pin);
             return true;
           },
-          child: _TextHighlightBox(showLabel: false),
+          child: const _TextHighlightBox(),
         ),
       ),
     );
   }
 
-  // Optional short-text label for text pins (dotsAndText only), anchored at pin.
+  // Optional short-text label for text pins (dotsAndText only).
   if (displayMode == PinDisplayMode.dotsAndText) {
     for (final pin in pagePins.where((p) => p.isTextPin)) {
       final local = NormalizedPoint(
@@ -84,15 +86,18 @@ List<Widget> buildPdfPagePinOverlays({
     }
   }
 
-  // Point pin markers.
+  // Point pin markers (draggable only while annotate mode is on).
   for (final pin in pagePins.where((p) => p.isPointPin)) {
     widgets.add(
-      _PdfPinnedMarker(
+      DraggablePointPinMarker(
         key: ValueKey(pin.id),
         pin: pin,
-        pageSize: pageRect.size,
+        contentSize: pageRect.size,
         displayMode: displayMode,
+        canDrag: annotateMode,
+        usePdfOverlayHitTesting: true,
         onTap: () => onPinTap(pin),
+        onMoved: (point) => onPointPinMoved(pin, point),
       ),
     );
   }
@@ -101,9 +106,7 @@ List<Widget> buildPdfPagePinOverlays({
 }
 
 class _TextHighlightBox extends StatelessWidget {
-  const _TextHighlightBox({required this.showLabel});
-
-  final bool showLabel;
+  const _TextHighlightBox();
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +119,6 @@ class _TextHighlightBox extends StatelessWidget {
           color: theme.colorScheme.tertiary.withValues(alpha: 0.35),
         ),
       ),
-      child: showLabel ? const SizedBox.expand() : null,
     );
   }
 }
@@ -148,46 +150,6 @@ class _TextPinLabel extends StatelessWidget {
               height: 1.2,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PdfPinnedMarker extends StatelessWidget {
-  const _PdfPinnedMarker({
-    super.key,
-    required this.pin,
-    required this.pageSize,
-    required this.displayMode,
-    required this.onTap,
-  });
-
-  final StudyPin pin;
-  final Size pageSize;
-  final PinDisplayMode displayMode;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final local = NormalizedPoint(
-      xRatio: pin.xRatio,
-      yRatio: pin.yRatio,
-    ).toLocalOffset(pageSize);
-
-    const halfDot = StudyPinMarker.dotSize / 2;
-
-    return Positioned(
-      left: local.dx - halfDot,
-      top: local.dy - halfDot,
-      child: PdfOverlayInteractionRegion(
-        onTap: (_) {
-          onTap();
-          return true;
-        },
-        child: StudyPinMarker(
-          shortText: pin.shortText,
-          displayMode: displayMode,
         ),
       ),
     );

@@ -1,7 +1,11 @@
+import 'dart:ui';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/features/study_pins/domain/pin_coordinates.dart';
+import 'package:study_vault/features/study_pins/domain/pin_type.dart';
 
 void main() {
   late AppDatabase db;
@@ -493,5 +497,99 @@ void main() {
     await db.deleteLessonMaterial('mat-1');
     expect(await db.getTextRangesForPin('text-pin-1'), isEmpty);
     expect(await db.watchStudyPinsForResource('mat-1').first, isEmpty);
+  });
+
+  test(
+    'point pin position update persists ratios and keeps other fields',
+    () async {
+      await seedMaterial();
+      final now = DateTime.now();
+
+      await db.insertStudyPin(
+        StudyPinsCompanion.insert(
+          id: 'pin-1',
+          resourceId: 'mat-1',
+          pinType: const Value('point'),
+          pageNumber: const Value(3),
+          xRatio: 0.2,
+          yRatio: 0.4,
+          shortText: 'Keep me',
+          fullExplanation: const Value('Full text stays'),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      final pin = await db.getStudyPinById('pin-1');
+      expect(pin, isNotNull);
+
+      final moved = NormalizedPoint.fromLocalOffset(
+        const Offset(90, 10),
+        const Size(100, 100),
+      );
+      expect(moved.xRatio, closeTo(0.9, 0.0001));
+      expect(moved.yRatio, closeTo(0.1, 0.0001));
+
+      await db.updateStudyPin(
+        pin!.copyWith(
+          xRatio: moved.xRatio.clamp(0.0, 1.0),
+          yRatio: moved.yRatio.clamp(0.0, 1.0),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      final updated = await db.getStudyPinById('pin-1');
+      expect(updated!.xRatio, closeTo(0.9, 0.0001));
+      expect(updated.yRatio, closeTo(0.1, 0.0001));
+      expect(updated.pageNumber, 3);
+      expect(updated.shortText, 'Keep me');
+      expect(updated.fullExplanation, 'Full text stays');
+      expect(updated.pinType, 'point');
+    },
+  );
+
+  test('normalized drag clamps outside page bounds to 0–1', () {
+    final point = NormalizedPoint.fromLocalOffset(
+      const Offset(-20, 250),
+      const Size(200, 200),
+    );
+    expect(point.xRatio, 0.0);
+    expect(point.yRatio, 1.0);
+  });
+
+  test('text pins are not point pins for drag eligibility', () async {
+    await seedMaterial();
+    final now = DateTime.now();
+
+    await db.insertTextStudyPin(
+      pin: StudyPinsCompanion.insert(
+        id: 'text-pin-1',
+        resourceId: 'mat-1',
+        pinType: const Value('text'),
+        pageNumber: const Value(1),
+        xRatio: 0.1,
+        yRatio: 0.1,
+        shortText: 'Note',
+        selectedText: const Value('hello'),
+        createdAt: now,
+        updatedAt: now,
+      ),
+      ranges: [
+        StudyPinTextRangesCompanion.insert(
+          id: 'range-1',
+          studyPinId: 'text-pin-1',
+          pageNumber: 1,
+          xRatio: 0.1,
+          yRatio: 0.1,
+          widthRatio: 0.2,
+          heightRatio: 0.02,
+        ),
+      ],
+    );
+
+    final pin = await db.getStudyPinById('text-pin-1');
+    expect(pin!.pinType, 'text');
+    expect(StudyPinType.fromDb(pin.pinType), StudyPinType.text);
+    expect(StudyPinType.fromDb(pin.pinType) == StudyPinType.point, isFalse);
   });
 }

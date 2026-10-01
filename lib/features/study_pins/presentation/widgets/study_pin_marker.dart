@@ -9,11 +9,13 @@ class StudyPinMarker extends StatelessWidget {
     required this.shortText,
     required this.displayMode,
     this.selected = false,
+    this.dragging = false,
   });
 
   final String shortText;
   final PinDisplayMode displayMode;
   final bool selected;
+  final bool dragging;
 
   static const double dotSize = 14;
 
@@ -43,9 +45,9 @@ class StudyPinMarker extends StatelessWidget {
             border: Border.all(color: theme.colorScheme.onPrimary, width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+                color: Colors.black.withValues(alpha: dragging ? 0.35 : 0.25),
+                blurRadius: dragging ? 6 : 3,
+                offset: Offset(0, dragging ? 2 : 1),
               ),
             ],
           ),

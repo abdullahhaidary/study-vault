@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/pin_type.dart';
+import '../domain/study_note_codec.dart';
 import 'full_explanation_screen.dart';
 
 /// Result returned when the user saves (or deletes) from the annotation editor.
@@ -12,6 +13,8 @@ class StudyPinEditorSaved extends StudyPinEditorResult {
   const StudyPinEditorSaved({required this.shortText, this.fullExplanation});
 
   final String shortText;
+
+  /// Stored Full Note value (Quill Delta JSON) or `null` when empty.
   final String? fullExplanation;
 }
 
@@ -103,15 +106,56 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
     super.dispose();
   }
 
-  Future<void> _editFullExplanation() async {
+  bool get _isDirty {
+    final shortChanged =
+        _shortController.text.trim() != widget.initialShortText.trim();
+    final fullChanged = _fullExplanation != widget.initialFullExplanation;
+    return shortChanged || fullChanged;
+  }
+
+  Future<bool> _confirmDiscard() async {
+    if (!_isDirty) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard unsaved changes?'),
+        content: const Text(
+          'Your annotation edits will be lost if you leave without saving.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep editing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _onCancel() async {
+    if (!await _confirmDiscard()) return;
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _editFullNote() async {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) =>
-            FullExplanationScreen(initialText: _fullExplanation ?? ''),
+        builder: (_) => FullExplanationScreen(
+          initialText: _fullExplanation ?? '',
+          title: 'Full Note',
+        ),
       ),
     );
     if (result != null && mounted) {
-      setState(() => _fullExplanation = result.trim().isEmpty ? null : result);
+      setState(() {
+        _fullExplanation = result.trim().isEmpty ? null : result;
+      });
     }
   }
 
@@ -167,7 +211,10 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasFull = _fullExplanation != null && _fullExplanation!.isNotEmpty;
+    final hasFull = StudyNoteCodec.hasContent(_fullExplanation);
+    final preview = hasFull
+        ? StudyNoteCodec.plainTextPreview(_fullExplanation, maxLength: 160)
+        : null;
     final selected = widget.selectedText?.trim();
     final showSelected =
         widget.pinType == StudyPinType.text &&
@@ -219,29 +266,33 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
               ),
               onSubmitted: (_) => _save(),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _editFullExplanation,
-              icon: Icon(
-                hasFull ? Icons.notes_outlined : Icons.note_add_outlined,
-              ),
-              label: Text(
-                hasFull
-                    ? 'Edit Full Explanation'
-                    : 'Open / Edit Full Explanation',
+            const SizedBox(height: 16),
+            Text(
+              'Full Note',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (hasFull) ...[
-              const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            if (preview != null) ...[
               Text(
-                _fullExplanation!,
+                preview,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.4,
                 ),
               ),
+              const SizedBox(height: 8),
             ],
+            OutlinedButton.icon(
+              onPressed: _editFullNote,
+              icon: Icon(
+                hasFull ? Icons.notes_outlined : Icons.note_add_outlined,
+              ),
+              label: Text(hasFull ? 'Open Full Editor' : 'Write Full Note'),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -254,10 +305,7 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
                     child: const Text('Delete'),
                   ),
                 const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
+                TextButton(onPressed: _onCancel, child: const Text('Cancel')),
                 const SizedBox(width: 8),
                 FilledButton(onPressed: _save, child: const Text('Save')),
               ],

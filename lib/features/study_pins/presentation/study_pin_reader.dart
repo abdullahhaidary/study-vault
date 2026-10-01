@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/database/app_database.dart';
 import '../data/study_pins_providers.dart';
 import '../domain/pin_type.dart';
+import '../domain/study_note_codec.dart';
+import 'widgets/study_rich_text_viewer.dart';
 
 /// Opens a read-only Study Pin explanation UI.
 ///
@@ -329,8 +331,7 @@ class StudyPinReaderPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasFull =
-        pin.fullExplanation != null && pin.fullExplanation!.isNotEmpty;
+    final hasFull = StudyNoteCodec.hasContent(pin.fullExplanation);
     final selected = pin.selectedText?.trim();
     final showSelected =
         pin.type == StudyPinType.text &&
@@ -400,20 +401,17 @@ class StudyPinReaderPanel extends StatelessWidget {
               ],
               const SizedBox(height: 16),
               Text(
-                'Full explanation',
+                'Full Note',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 6),
               if (hasFull)
-                SelectableText(
-                  pin.fullExplanation!,
-                  style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
-                )
+                StudyRichTextViewer(storedValue: pin.fullExplanation!)
               else
                 Text(
-                  'No full explanation yet.',
+                  'No full note yet.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,

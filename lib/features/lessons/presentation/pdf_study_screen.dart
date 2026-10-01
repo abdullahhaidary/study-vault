@@ -91,6 +91,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     }
   }
 
+  Future<void> _onPointPinMoved(StudyPin pin, NormalizedPoint point) async {
+    await updateStudyPinPosition(ref, pin: pin, point: point);
+  }
+
   Future<void> _handleAddPointPinTap(
     PdfViewerController controller,
     PdfViewerGeneralTapHandlerDetails details,
@@ -304,9 +308,11 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                       pins: pins,
                       textRanges: textRanges,
                       displayMode: displayMode,
+                      annotateMode: annotate,
                       onPinTap: (pin) {
                         _onAnnotationTap(pin, annotate: annotate);
                       },
+                      onPointPinMoved: _onPointPinMoved,
                     );
                   },
                 ),

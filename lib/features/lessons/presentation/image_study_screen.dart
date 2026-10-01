@@ -120,6 +120,10 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     }
   }
 
+  Future<void> _onPointPinMoved(StudyPin pin, NormalizedPoint point) async {
+    await updateStudyPinPosition(ref, pin: pin, point: point);
+  }
+
   Future<void> _onAddPinAt(Offset local, Size contentSize) async {
     final point = NormalizedPoint.fromLocalOffset(local, contentSize);
     final result = await AddEditStudyPinSheet.show(
@@ -253,9 +257,11 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
                         pins: pins,
                         contentSize: contentSize,
                         displayMode: displayMode,
+                        annotateMode: annotate,
                         onPinTap: (pin) {
                           _onPinTap(pin, annotate: annotate);
                         },
+                        onPointPinMoved: _onPointPinMoved,
                       ),
                     ],
                   ),

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
-/// Comfortable multiline editor for Study Pin full explanations.
+import '../domain/study_note_codec.dart';
+import 'widgets/study_rich_text_editor.dart';
+
+/// Full-screen / route-level Full Note editor (and optional read-only view).
 ///
-/// Uses plain text for reliable Android + Linux desktop support. The API is
-/// kept simple so a rich-text editor can replace this screen later.
+/// Returns the serialized Quill Delta JSON string on Save, or `null` on Cancel.
+/// An empty note returns an empty string so the caller can clear the field.
 class FullExplanationScreen extends StatefulWidget {
   const FullExplanationScreen({
     super.key,
     this.initialText = '',
     this.readOnly = false,
-    this.title = 'Full Explanation',
+    this.title = 'Full Note',
   });
 
+  /// Stored DB value: Quill Delta JSON or legacy plain text.
   final String initialText;
   final bool readOnly;
   final String title;
@@ -21,72 +26,134 @@ class FullExplanationScreen extends StatefulWidget {
 }
 
 class _FullExplanationScreenState extends State<FullExplanationScreen> {
-  late final TextEditingController _controller;
-  late final FocusNode _focusNode;
+  late final QuillController _controller;
+  late final String _initialEncoded;
+  bool _dirty = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialText);
-    _focusNode = FocusNode();
-    if (!widget.readOnly) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
-      });
+    final document = StudyNoteCodec.decode(
+      widget.initialText.isEmpty ? null : widget.initialText,
+    );
+    _controller = QuillController(
+      document: document,
+      selection: const TextSelection.collapsed(offset: 0),
+      readOnly: widget.readOnly,
+    );
+    _initialEncoded = StudyNoteCodec.encode(document);
+    _controller.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    final encoded = StudyNoteCodec.encode(_controller.document);
+    final dirty = encoded != _initialEncoded;
+    if (dirty != _dirty && mounted) {
+      setState(() => _dirty = dirty);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
+    _controller
+      ..removeListener(_onChanged)
+      ..dispose();
     super.dispose();
   }
 
+  Future<bool> _confirmDiscard() async {
+    if (!_dirty || widget.readOnly) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard unsaved changes?'),
+        content: const Text(
+          'Your Full Note edits will be lost if you leave without saving.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep editing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _onCancel() async {
+    if (!await _confirmDiscard()) return;
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
   void _save() {
-    Navigator.of(context).pop(_controller.text);
+    final encoded = StudyNoteCodec.encodeOrNull(_controller.document);
+    Navigator.of(context).pop(encoded ?? '');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (!widget.readOnly)
-            TextButton(onPressed: _save, child: const Text('Done')),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
+    return PopScope(
+      canPop: !_dirty || widget.readOnly,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldDiscard = await _confirmDiscard();
+        if (!shouldDiscard || !context.mounted) return;
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          titleSpacing: 0,
+          title: Row(
+            children: [
+              if (!widget.readOnly)
+                TextButton(onPressed: _onCancel, child: const Text('Cancel'))
+              else
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              if (!widget.readOnly)
+                TextButton(onPressed: _save, child: const Text('Save'))
+              else
+                const SizedBox(width: 48),
+            ],
+          ),
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              readOnly: widget.readOnly,
-              expands: true,
-              maxLines: null,
-              minLines: null,
-              textAlignVertical: TextAlignVertical.top,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.sentences,
-              style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
-              decoration: InputDecoration(
-                hintText: widget.readOnly
-                    ? 'No full explanation yet.'
-                    : 'Write a longer explanation…\n\n'
-                          'You can paste notes from ChatGPT or Gemini here later.',
-                border: InputBorder.none,
-                filled: false,
-                contentPadding: const EdgeInsets.all(16),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLowest,
+                border: Border(
+                  top: BorderSide(color: theme.colorScheme.outlineVariant),
+                ),
+              ),
+              child: StudyRichTextEditor(
+                controller: _controller,
+                readOnly: widget.readOnly,
+                autofocus: !widget.readOnly,
+                showToolbar: !widget.readOnly,
+                expands: true,
               ),
             ),
           ),
