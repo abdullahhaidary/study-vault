@@ -12,6 +12,8 @@ import '../../lessons/data/lesson_groups_providers.dart';
 import '../../lessons/data/lessons_providers.dart';
 import '../../lessons/presentation/create_lesson_dialog.dart';
 import '../../lessons/presentation/lesson_group_dialog.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_review/presentation/review_entry_button.dart';
 import '../data/subjects_providers.dart';
 
 /// Subject page with lessons organized by optional lesson groups.
@@ -141,6 +143,18 @@ class SubjectDetailsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: ReviewEntryButton(
+                    scope: ReviewScope(
+                      type: ReviewScopeType.subject,
+                      id: subjectId,
+                      title: subject.name,
+                    ),
+                  ),
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),

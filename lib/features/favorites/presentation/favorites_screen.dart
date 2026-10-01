@@ -5,6 +5,8 @@ import '../../../core/database/built_in_data.dart';
 import '../../../core/navigation/study_navigator.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../search/domain/study_search_result.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_review/presentation/review_setup_screen.dart';
 import '../data/favorites_display_providers.dart';
 import 'favorite_star_button.dart';
 
@@ -25,7 +27,23 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Favorites')),
+      appBar: AppBar(
+        title: const Text('Favorites'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => openReviewSetup(
+              context,
+              scope: const ReviewScope(
+                type: ReviewScopeType.favorites,
+                title: 'Favorite Pins',
+              ),
+              filters: const ReviewSessionFilters(favoritesOnly: true),
+            ),
+            icon: const Icon(Icons.school_outlined),
+            label: const Text('Review Pins'),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           SingleChildScrollView(

@@ -138,10 +138,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Study Annotation'), findsOneWidget);
     expect(find.text('Definition'), findsOneWidget);
+    expect(find.text('Study Annotation'), findsNothing);
+    expect(find.text('Short description'), findsNothing);
+    expect(find.text('Full Note'), findsNothing);
+    expect(find.text('Selected text'), findsNothing);
     expect(find.text('gradient descent'), findsOneWidget);
-    expect(find.text('Full Note'), findsOneWidget);
     expect(find.byType(StudyRichTextViewer), findsOneWidget);
     expect(find.text(rich), findsNothing);
     expect(

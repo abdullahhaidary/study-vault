@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../features/study_pins/domain/study_note_codec.dart';
+import '../storage/study_vault_paths.dart';
 import 'built_in_data.dart';
 
 part 'app_database.g.dart';
@@ -196,6 +193,50 @@ class Favorites extends Table {
   ];
 }
 
+/// A Study Review Mode session (lesson / material / subject / favorites).
+class StudyReviewSessions extends Table {
+  TextColumn get id => text()();
+
+  /// `lesson`, `material`, `subject`, or `favorites`.
+  TextColumn get scopeType => text()();
+
+  /// Scope entity id; null when [scopeType] is `favorites`.
+  TextColumn get scopeId => text().nullable()();
+  TextColumn get title => text()();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get completedAt => dateTime().nullable()();
+  IntColumn get totalItems => integer()();
+  IntColumn get reviewedItems => integer().withDefault(const Constant(0))();
+  BoolColumn get shuffle => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Individual recall ratings within a review session.
+///
+/// Cascades when the Study Pin is deleted (history option A).
+class StudyReviewEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get studyPinId =>
+      text().references(StudyPins, #id, onDelete: KeyAction.cascade)();
+  TextColumn get sessionId => text().references(
+    StudyReviewSessions,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  /// `again`, `hard`, `good`, or `easy`.
+  TextColumn get rating => text()();
+  DateTimeColumn get reviewedAt => dateTime()();
+  IntColumn get responseTimeMs => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -208,6 +249,8 @@ class Favorites extends Table {
     StudyPins,
     StudyPinTextRanges,
     Favorites,
+    StudyReviewSessions,
+    StudyReviewEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -217,7 +260,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -255,6 +298,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(studyPins, studyPins.fullExplanationPlainText);
         await seedBuiltInCategories();
         await backfillFullExplanationPlainText();
+      }
+      if (from < 7) {
+        await m.createTable(studyReviewSessions);
+        await m.createTable(studyReviewEvents);
       }
     },
   );
@@ -511,6 +558,7 @@ class AppDatabase extends _$AppDatabase {
       await (delete(
         studyPinTextRanges,
       )..where((t) => t.studyPinId.isIn(pinIds))).go();
+      await deleteReviewEventsForPins(pinIds);
       await deleteFavoritesForEntities(FavoriteEntityType.studyPin, pinIds);
     }
     await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
@@ -553,6 +601,7 @@ class AppDatabase extends _$AppDatabase {
     await (delete(
       studyPinTextRanges,
     )..where((t) => t.studyPinId.equals(id))).go();
+    await deleteReviewEventsForPins([id]);
     await deleteFavoritesForEntities(FavoriteEntityType.studyPin, [id]);
     await (delete(studyPins)..where((t) => t.id.equals(id))).go();
   }
@@ -714,12 +763,107 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.entityType.equals(entityType))).get();
     return rows.map((r) => r.entityId).toSet();
   }
+
+  // ── Study Review ─────────────────────────────────────────
+
+  Future<void> insertReviewSession(StudyReviewSessionsCompanion entry) {
+    return into(studyReviewSessions).insert(entry);
+  }
+
+  Future<void> updateReviewSession(StudyReviewSession session) {
+    return update(studyReviewSessions).replace(session);
+  }
+
+  Future<StudyReviewSession?> getReviewSessionById(String id) {
+    return (select(
+      studyReviewSessions,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<List<StudyReviewSession>> watchRecentReviewSessions({int limit = 30}) {
+    return (select(studyReviewSessions)
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+          ..limit(limit))
+        .watch();
+  }
+
+  Future<void> insertReviewEvent(StudyReviewEventsCompanion entry) {
+    return into(studyReviewEvents).insert(entry);
+  }
+
+  Future<List<StudyReviewEvent>> getReviewEventsForSession(String sessionId) {
+    return (select(studyReviewEvents)
+          ..where((t) => t.sessionId.equals(sessionId))
+          ..orderBy([(t) => OrderingTerm.asc(t.reviewedAt)]))
+        .get();
+  }
+
+  Future<void> deleteReviewEventsForPins(List<String> pinIds) async {
+    if (pinIds.isEmpty) return;
+    await (delete(
+      studyReviewEvents,
+    )..where((t) => t.studyPinId.isIn(pinIds))).go();
+  }
+
+  /// Material ids for a lesson (ordered).
+  Future<List<String>> materialIdsForLesson(String lessonId) async {
+    final rows =
+        await (select(lessonMaterials)
+              ..where((t) => t.lessonId.equals(lessonId))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
+    return rows.map((r) => r.id).toList();
+  }
+
+  /// Lesson ids for a subject (ordered).
+  Future<List<String>> lessonIdsForSubject(String subjectId) async {
+    final rows =
+        await (select(lessons)
+              ..where((t) => t.subjectId.equals(subjectId))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
+    return rows.map((r) => r.id).toList();
+  }
+
+  /// Pins for the given material ids, stable order: material → page → sort.
+  Future<List<StudyPin>> getStudyPinsForMaterialIds(
+    List<String> materialIds,
+  ) async {
+    if (materialIds.isEmpty) return const [];
+    final rows =
+        await (select(studyPins)..where(
+              (t) => t.resourceId.isIn(materialIds) & t.deletedAt.isNull(),
+            ))
+            .get();
+
+    final materialOrder = {
+      for (var i = 0; i < materialIds.length; i++) materialIds[i]: i,
+    };
+
+    rows.sort((a, b) {
+      final ma = materialOrder[a.resourceId] ?? 0;
+      final mb = materialOrder[b.resourceId] ?? 0;
+      if (ma != mb) return ma.compareTo(mb);
+      final pa = a.pageNumber ?? 0;
+      final pb = b.pageNumber ?? 0;
+      if (pa != pb) return pa.compareTo(pb);
+      final sa = a.sortOrder ?? 0;
+      final sb = b.sortOrder ?? 0;
+      if (sa != sb) return sa.compareTo(sb);
+      return a.createdAt.compareTo(b.createdAt);
+    });
+    return rows;
+  }
+
+  Future<List<LessonMaterial>> getMaterialsByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    return (select(lessonMaterials)..where((t) => t.id.isIn(ids))).get();
+  }
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'study_vault.sqlite'));
+    final file = await StudyVaultPaths.databaseFile();
     return NativeDatabase.createInBackground(file);
   });
 }

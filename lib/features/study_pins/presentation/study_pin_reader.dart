@@ -315,7 +315,10 @@ class _ResizeAffordancePainter extends CustomPainter {
   }
 }
 
-/// Read-only content for a Study Pin (short + full + selected source text).
+/// Read-only content for a Study Pin.
+///
+/// Short description is the header title; Full Note is the body.
+/// No "Short description" / "Full Note" field labels.
 class StudyPinReaderPanel extends StatelessWidget {
   const StudyPinReaderPanel({
     super.key,
@@ -350,7 +353,9 @@ class StudyPinReaderPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Study Annotation',
+                    pin.shortText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
@@ -369,25 +374,9 @@ class StudyPinReaderPanel extends StatelessWidget {
         Expanded(
           child: ListView(
             controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             children: [
-              Text(
-                'Short description',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 4),
-              SelectableText(pin.shortText, style: theme.textTheme.titleMedium),
               if (showSelected) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Selected text',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.tertiaryContainer.withValues(
@@ -400,24 +389,20 @@ class StudyPinReaderPanel extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     child: SelectableText(
                       selected,
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.4,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
               ],
-              const SizedBox(height: 16),
-              Text(
-                'Full Note',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 6),
               if (hasFull)
                 StudyRichTextViewer(storedValue: pin.fullExplanation!)
               else
                 Text(
-                  'No full note yet.',
+                  'No note yet.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,

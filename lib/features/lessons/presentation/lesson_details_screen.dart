@@ -7,6 +7,8 @@ import '../../../core/database/built_in_data.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_review/presentation/review_entry_button.dart';
 import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
@@ -228,6 +230,18 @@ class LessonDetailsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: ReviewEntryButton(
+                    scope: ReviewScope(
+                      type: ReviewScopeType.lesson,
+                      id: lessonId,
+                      title: lesson.name,
+                    ),
+                  ),
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),

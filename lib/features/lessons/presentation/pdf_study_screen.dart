@@ -15,6 +15,8 @@ import '../../study_pins/presentation/add_edit_study_pin_sheet.dart';
 import '../../study_pins/presentation/study_pin_reader.dart';
 import '../../study_pins/presentation/widgets/pdf_pin_overlay.dart';
 import '../../study_pins/presentation/widgets/study_pin_toolbar.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_review/presentation/review_setup_screen.dart';
 
 /// In-app PDF study view with Study Pin overlays and text annotations.
 class PdfStudyScreen extends ConsumerStatefulWidget {
@@ -246,6 +248,18 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
+          ),
+          IconButton(
+            tooltip: 'Review Pins',
+            onPressed: () => openReviewSetup(
+              context,
+              scope: ReviewScope(
+                type: ReviewScopeType.material,
+                id: widget.resourceId,
+                title: widget.title,
+              ),
+            ),
+            icon: const Icon(Icons.school_outlined),
           ),
           if (pageLabel != null)
             Padding(

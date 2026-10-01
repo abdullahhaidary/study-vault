@@ -5220,6 +5220,1116 @@ class FavoritesCompanion extends UpdateCompanion<Favorite> {
   }
 }
 
+class $StudyReviewSessionsTable extends StudyReviewSessions
+    with TableInfo<$StudyReviewSessionsTable, StudyReviewSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudyReviewSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeTypeMeta = const VerificationMeta(
+    'scopeType',
+  );
+  @override
+  late final GeneratedColumn<String> scopeType = GeneratedColumn<String>(
+    'scope_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeIdMeta = const VerificationMeta(
+    'scopeId',
+  );
+  @override
+  late final GeneratedColumn<String> scopeId = GeneratedColumn<String>(
+    'scope_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalItemsMeta = const VerificationMeta(
+    'totalItems',
+  );
+  @override
+  late final GeneratedColumn<int> totalItems = GeneratedColumn<int>(
+    'total_items',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reviewedItemsMeta = const VerificationMeta(
+    'reviewedItems',
+  );
+  @override
+  late final GeneratedColumn<int> reviewedItems = GeneratedColumn<int>(
+    'reviewed_items',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _shuffleMeta = const VerificationMeta(
+    'shuffle',
+  );
+  @override
+  late final GeneratedColumn<bool> shuffle = GeneratedColumn<bool>(
+    'shuffle',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("shuffle" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    scopeType,
+    scopeId,
+    title,
+    startedAt,
+    completedAt,
+    totalItems,
+    reviewedItems,
+    shuffle,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_review_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudyReviewSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('scope_type')) {
+      context.handle(
+        _scopeTypeMeta,
+        scopeType.isAcceptableOrUnknown(data['scope_type']!, _scopeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeTypeMeta);
+    }
+    if (data.containsKey('scope_id')) {
+      context.handle(
+        _scopeIdMeta,
+        scopeId.isAcceptableOrUnknown(data['scope_id']!, _scopeIdMeta),
+      );
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_items')) {
+      context.handle(
+        _totalItemsMeta,
+        totalItems.isAcceptableOrUnknown(data['total_items']!, _totalItemsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_totalItemsMeta);
+    }
+    if (data.containsKey('reviewed_items')) {
+      context.handle(
+        _reviewedItemsMeta,
+        reviewedItems.isAcceptableOrUnknown(
+          data['reviewed_items']!,
+          _reviewedItemsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shuffle')) {
+      context.handle(
+        _shuffleMeta,
+        shuffle.isAcceptableOrUnknown(data['shuffle']!, _shuffleMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StudyReviewSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyReviewSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      scopeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_type'],
+      )!,
+      scopeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_id'],
+      ),
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
+      totalItems: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_items'],
+      )!,
+      reviewedItems: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reviewed_items'],
+      )!,
+      shuffle: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}shuffle'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StudyReviewSessionsTable createAlias(String alias) {
+    return $StudyReviewSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class StudyReviewSession extends DataClass
+    implements Insertable<StudyReviewSession> {
+  final String id;
+
+  /// `lesson`, `material`, `subject`, or `favorites`.
+  final String scopeType;
+
+  /// Scope entity id; null when [scopeType] is `favorites`.
+  final String? scopeId;
+  final String title;
+  final DateTime startedAt;
+  final DateTime? completedAt;
+  final int totalItems;
+  final int reviewedItems;
+  final bool shuffle;
+  final DateTime createdAt;
+  const StudyReviewSession({
+    required this.id,
+    required this.scopeType,
+    this.scopeId,
+    required this.title,
+    required this.startedAt,
+    this.completedAt,
+    required this.totalItems,
+    required this.reviewedItems,
+    required this.shuffle,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['scope_type'] = Variable<String>(scopeType);
+    if (!nullToAbsent || scopeId != null) {
+      map['scope_id'] = Variable<String>(scopeId);
+    }
+    map['title'] = Variable<String>(title);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
+    map['total_items'] = Variable<int>(totalItems);
+    map['reviewed_items'] = Variable<int>(reviewedItems);
+    map['shuffle'] = Variable<bool>(shuffle);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  StudyReviewSessionsCompanion toCompanion(bool nullToAbsent) {
+    return StudyReviewSessionsCompanion(
+      id: Value(id),
+      scopeType: Value(scopeType),
+      scopeId: scopeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scopeId),
+      title: Value(title),
+      startedAt: Value(startedAt),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
+      totalItems: Value(totalItems),
+      reviewedItems: Value(reviewedItems),
+      shuffle: Value(shuffle),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StudyReviewSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyReviewSession(
+      id: serializer.fromJson<String>(json['id']),
+      scopeType: serializer.fromJson<String>(json['scopeType']),
+      scopeId: serializer.fromJson<String?>(json['scopeId']),
+      title: serializer.fromJson<String>(json['title']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      totalItems: serializer.fromJson<int>(json['totalItems']),
+      reviewedItems: serializer.fromJson<int>(json['reviewedItems']),
+      shuffle: serializer.fromJson<bool>(json['shuffle']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'scopeType': serializer.toJson<String>(scopeType),
+      'scopeId': serializer.toJson<String?>(scopeId),
+      'title': serializer.toJson<String>(title),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'totalItems': serializer.toJson<int>(totalItems),
+      'reviewedItems': serializer.toJson<int>(reviewedItems),
+      'shuffle': serializer.toJson<bool>(shuffle),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  StudyReviewSession copyWith({
+    String? id,
+    String? scopeType,
+    Value<String?> scopeId = const Value.absent(),
+    String? title,
+    DateTime? startedAt,
+    Value<DateTime?> completedAt = const Value.absent(),
+    int? totalItems,
+    int? reviewedItems,
+    bool? shuffle,
+    DateTime? createdAt,
+  }) => StudyReviewSession(
+    id: id ?? this.id,
+    scopeType: scopeType ?? this.scopeType,
+    scopeId: scopeId.present ? scopeId.value : this.scopeId,
+    title: title ?? this.title,
+    startedAt: startedAt ?? this.startedAt,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    totalItems: totalItems ?? this.totalItems,
+    reviewedItems: reviewedItems ?? this.reviewedItems,
+    shuffle: shuffle ?? this.shuffle,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StudyReviewSession copyWithCompanion(StudyReviewSessionsCompanion data) {
+    return StudyReviewSession(
+      id: data.id.present ? data.id.value : this.id,
+      scopeType: data.scopeType.present ? data.scopeType.value : this.scopeType,
+      scopeId: data.scopeId.present ? data.scopeId.value : this.scopeId,
+      title: data.title.present ? data.title.value : this.title,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      totalItems: data.totalItems.present
+          ? data.totalItems.value
+          : this.totalItems,
+      reviewedItems: data.reviewedItems.present
+          ? data.reviewedItems.value
+          : this.reviewedItems,
+      shuffle: data.shuffle.present ? data.shuffle.value : this.shuffle,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyReviewSession(')
+          ..write('id: $id, ')
+          ..write('scopeType: $scopeType, ')
+          ..write('scopeId: $scopeId, ')
+          ..write('title: $title, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('totalItems: $totalItems, ')
+          ..write('reviewedItems: $reviewedItems, ')
+          ..write('shuffle: $shuffle, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    scopeType,
+    scopeId,
+    title,
+    startedAt,
+    completedAt,
+    totalItems,
+    reviewedItems,
+    shuffle,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyReviewSession &&
+          other.id == this.id &&
+          other.scopeType == this.scopeType &&
+          other.scopeId == this.scopeId &&
+          other.title == this.title &&
+          other.startedAt == this.startedAt &&
+          other.completedAt == this.completedAt &&
+          other.totalItems == this.totalItems &&
+          other.reviewedItems == this.reviewedItems &&
+          other.shuffle == this.shuffle &&
+          other.createdAt == this.createdAt);
+}
+
+class StudyReviewSessionsCompanion extends UpdateCompanion<StudyReviewSession> {
+  final Value<String> id;
+  final Value<String> scopeType;
+  final Value<String?> scopeId;
+  final Value<String> title;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> completedAt;
+  final Value<int> totalItems;
+  final Value<int> reviewedItems;
+  final Value<bool> shuffle;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const StudyReviewSessionsCompanion({
+    this.id = const Value.absent(),
+    this.scopeType = const Value.absent(),
+    this.scopeId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.totalItems = const Value.absent(),
+    this.reviewedItems = const Value.absent(),
+    this.shuffle = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudyReviewSessionsCompanion.insert({
+    required String id,
+    required String scopeType,
+    this.scopeId = const Value.absent(),
+    required String title,
+    required DateTime startedAt,
+    this.completedAt = const Value.absent(),
+    required int totalItems,
+    this.reviewedItems = const Value.absent(),
+    this.shuffle = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       scopeType = Value(scopeType),
+       title = Value(title),
+       startedAt = Value(startedAt),
+       totalItems = Value(totalItems),
+       createdAt = Value(createdAt);
+  static Insertable<StudyReviewSession> custom({
+    Expression<String>? id,
+    Expression<String>? scopeType,
+    Expression<String>? scopeId,
+    Expression<String>? title,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? completedAt,
+    Expression<int>? totalItems,
+    Expression<int>? reviewedItems,
+    Expression<bool>? shuffle,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scopeType != null) 'scope_type': scopeType,
+      if (scopeId != null) 'scope_id': scopeId,
+      if (title != null) 'title': title,
+      if (startedAt != null) 'started_at': startedAt,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (totalItems != null) 'total_items': totalItems,
+      if (reviewedItems != null) 'reviewed_items': reviewedItems,
+      if (shuffle != null) 'shuffle': shuffle,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudyReviewSessionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? scopeType,
+    Value<String?>? scopeId,
+    Value<String>? title,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? completedAt,
+    Value<int>? totalItems,
+    Value<int>? reviewedItems,
+    Value<bool>? shuffle,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return StudyReviewSessionsCompanion(
+      id: id ?? this.id,
+      scopeType: scopeType ?? this.scopeType,
+      scopeId: scopeId ?? this.scopeId,
+      title: title ?? this.title,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      totalItems: totalItems ?? this.totalItems,
+      reviewedItems: reviewedItems ?? this.reviewedItems,
+      shuffle: shuffle ?? this.shuffle,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (scopeType.present) {
+      map['scope_type'] = Variable<String>(scopeType.value);
+    }
+    if (scopeId.present) {
+      map['scope_id'] = Variable<String>(scopeId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (totalItems.present) {
+      map['total_items'] = Variable<int>(totalItems.value);
+    }
+    if (reviewedItems.present) {
+      map['reviewed_items'] = Variable<int>(reviewedItems.value);
+    }
+    if (shuffle.present) {
+      map['shuffle'] = Variable<bool>(shuffle.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyReviewSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('scopeType: $scopeType, ')
+          ..write('scopeId: $scopeId, ')
+          ..write('title: $title, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('totalItems: $totalItems, ')
+          ..write('reviewedItems: $reviewedItems, ')
+          ..write('shuffle: $shuffle, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StudyReviewEventsTable extends StudyReviewEvents
+    with TableInfo<$StudyReviewEventsTable, StudyReviewEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudyReviewEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _studyPinIdMeta = const VerificationMeta(
+    'studyPinId',
+  );
+  @override
+  late final GeneratedColumn<String> studyPinId = GeneratedColumn<String>(
+    'study_pin_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES study_pins (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<String> sessionId = GeneratedColumn<String>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES study_review_sessions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _ratingMeta = const VerificationMeta('rating');
+  @override
+  late final GeneratedColumn<String> rating = GeneratedColumn<String>(
+    'rating',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reviewedAtMeta = const VerificationMeta(
+    'reviewedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> reviewedAt = GeneratedColumn<DateTime>(
+    'reviewed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _responseTimeMsMeta = const VerificationMeta(
+    'responseTimeMs',
+  );
+  @override
+  late final GeneratedColumn<int> responseTimeMs = GeneratedColumn<int>(
+    'response_time_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    studyPinId,
+    sessionId,
+    rating,
+    reviewedAt,
+    responseTimeMs,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_review_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudyReviewEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('study_pin_id')) {
+      context.handle(
+        _studyPinIdMeta,
+        studyPinId.isAcceptableOrUnknown(
+          data['study_pin_id']!,
+          _studyPinIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_studyPinIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('rating')) {
+      context.handle(
+        _ratingMeta,
+        rating.isAcceptableOrUnknown(data['rating']!, _ratingMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ratingMeta);
+    }
+    if (data.containsKey('reviewed_at')) {
+      context.handle(
+        _reviewedAtMeta,
+        reviewedAt.isAcceptableOrUnknown(data['reviewed_at']!, _reviewedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reviewedAtMeta);
+    }
+    if (data.containsKey('response_time_ms')) {
+      context.handle(
+        _responseTimeMsMeta,
+        responseTimeMs.isAcceptableOrUnknown(
+          data['response_time_ms']!,
+          _responseTimeMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StudyReviewEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyReviewEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      studyPinId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}study_pin_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      )!,
+      rating: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rating'],
+      )!,
+      reviewedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}reviewed_at'],
+      )!,
+      responseTimeMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}response_time_ms'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StudyReviewEventsTable createAlias(String alias) {
+    return $StudyReviewEventsTable(attachedDatabase, alias);
+  }
+}
+
+class StudyReviewEvent extends DataClass
+    implements Insertable<StudyReviewEvent> {
+  final String id;
+  final String studyPinId;
+  final String sessionId;
+
+  /// `again`, `hard`, `good`, or `easy`.
+  final String rating;
+  final DateTime reviewedAt;
+  final int? responseTimeMs;
+  final DateTime createdAt;
+  const StudyReviewEvent({
+    required this.id,
+    required this.studyPinId,
+    required this.sessionId,
+    required this.rating,
+    required this.reviewedAt,
+    this.responseTimeMs,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['study_pin_id'] = Variable<String>(studyPinId);
+    map['session_id'] = Variable<String>(sessionId);
+    map['rating'] = Variable<String>(rating);
+    map['reviewed_at'] = Variable<DateTime>(reviewedAt);
+    if (!nullToAbsent || responseTimeMs != null) {
+      map['response_time_ms'] = Variable<int>(responseTimeMs);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  StudyReviewEventsCompanion toCompanion(bool nullToAbsent) {
+    return StudyReviewEventsCompanion(
+      id: Value(id),
+      studyPinId: Value(studyPinId),
+      sessionId: Value(sessionId),
+      rating: Value(rating),
+      reviewedAt: Value(reviewedAt),
+      responseTimeMs: responseTimeMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(responseTimeMs),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StudyReviewEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyReviewEvent(
+      id: serializer.fromJson<String>(json['id']),
+      studyPinId: serializer.fromJson<String>(json['studyPinId']),
+      sessionId: serializer.fromJson<String>(json['sessionId']),
+      rating: serializer.fromJson<String>(json['rating']),
+      reviewedAt: serializer.fromJson<DateTime>(json['reviewedAt']),
+      responseTimeMs: serializer.fromJson<int?>(json['responseTimeMs']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'studyPinId': serializer.toJson<String>(studyPinId),
+      'sessionId': serializer.toJson<String>(sessionId),
+      'rating': serializer.toJson<String>(rating),
+      'reviewedAt': serializer.toJson<DateTime>(reviewedAt),
+      'responseTimeMs': serializer.toJson<int?>(responseTimeMs),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  StudyReviewEvent copyWith({
+    String? id,
+    String? studyPinId,
+    String? sessionId,
+    String? rating,
+    DateTime? reviewedAt,
+    Value<int?> responseTimeMs = const Value.absent(),
+    DateTime? createdAt,
+  }) => StudyReviewEvent(
+    id: id ?? this.id,
+    studyPinId: studyPinId ?? this.studyPinId,
+    sessionId: sessionId ?? this.sessionId,
+    rating: rating ?? this.rating,
+    reviewedAt: reviewedAt ?? this.reviewedAt,
+    responseTimeMs: responseTimeMs.present
+        ? responseTimeMs.value
+        : this.responseTimeMs,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StudyReviewEvent copyWithCompanion(StudyReviewEventsCompanion data) {
+    return StudyReviewEvent(
+      id: data.id.present ? data.id.value : this.id,
+      studyPinId: data.studyPinId.present
+          ? data.studyPinId.value
+          : this.studyPinId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      rating: data.rating.present ? data.rating.value : this.rating,
+      reviewedAt: data.reviewedAt.present
+          ? data.reviewedAt.value
+          : this.reviewedAt,
+      responseTimeMs: data.responseTimeMs.present
+          ? data.responseTimeMs.value
+          : this.responseTimeMs,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyReviewEvent(')
+          ..write('id: $id, ')
+          ..write('studyPinId: $studyPinId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('rating: $rating, ')
+          ..write('reviewedAt: $reviewedAt, ')
+          ..write('responseTimeMs: $responseTimeMs, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    studyPinId,
+    sessionId,
+    rating,
+    reviewedAt,
+    responseTimeMs,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyReviewEvent &&
+          other.id == this.id &&
+          other.studyPinId == this.studyPinId &&
+          other.sessionId == this.sessionId &&
+          other.rating == this.rating &&
+          other.reviewedAt == this.reviewedAt &&
+          other.responseTimeMs == this.responseTimeMs &&
+          other.createdAt == this.createdAt);
+}
+
+class StudyReviewEventsCompanion extends UpdateCompanion<StudyReviewEvent> {
+  final Value<String> id;
+  final Value<String> studyPinId;
+  final Value<String> sessionId;
+  final Value<String> rating;
+  final Value<DateTime> reviewedAt;
+  final Value<int?> responseTimeMs;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const StudyReviewEventsCompanion({
+    this.id = const Value.absent(),
+    this.studyPinId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.rating = const Value.absent(),
+    this.reviewedAt = const Value.absent(),
+    this.responseTimeMs = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudyReviewEventsCompanion.insert({
+    required String id,
+    required String studyPinId,
+    required String sessionId,
+    required String rating,
+    required DateTime reviewedAt,
+    this.responseTimeMs = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       studyPinId = Value(studyPinId),
+       sessionId = Value(sessionId),
+       rating = Value(rating),
+       reviewedAt = Value(reviewedAt),
+       createdAt = Value(createdAt);
+  static Insertable<StudyReviewEvent> custom({
+    Expression<String>? id,
+    Expression<String>? studyPinId,
+    Expression<String>? sessionId,
+    Expression<String>? rating,
+    Expression<DateTime>? reviewedAt,
+    Expression<int>? responseTimeMs,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (studyPinId != null) 'study_pin_id': studyPinId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (rating != null) 'rating': rating,
+      if (reviewedAt != null) 'reviewed_at': reviewedAt,
+      if (responseTimeMs != null) 'response_time_ms': responseTimeMs,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudyReviewEventsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? studyPinId,
+    Value<String>? sessionId,
+    Value<String>? rating,
+    Value<DateTime>? reviewedAt,
+    Value<int?>? responseTimeMs,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return StudyReviewEventsCompanion(
+      id: id ?? this.id,
+      studyPinId: studyPinId ?? this.studyPinId,
+      sessionId: sessionId ?? this.sessionId,
+      rating: rating ?? this.rating,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      responseTimeMs: responseTimeMs ?? this.responseTimeMs,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (studyPinId.present) {
+      map['study_pin_id'] = Variable<String>(studyPinId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (rating.present) {
+      map['rating'] = Variable<String>(rating.value);
+    }
+    if (reviewedAt.present) {
+      map['reviewed_at'] = Variable<DateTime>(reviewedAt.value);
+    }
+    if (responseTimeMs.present) {
+      map['response_time_ms'] = Variable<int>(responseTimeMs.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyReviewEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('studyPinId: $studyPinId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('rating: $rating, ')
+          ..write('reviewedAt: $reviewedAt, ')
+          ..write('responseTimeMs: $responseTimeMs, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5237,6 +6347,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StudyPinTextRangesTable studyPinTextRanges =
       $StudyPinTextRangesTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
+  late final $StudyReviewSessionsTable studyReviewSessions =
+      $StudyReviewSessionsTable(this);
+  late final $StudyReviewEventsTable studyReviewEvents =
+      $StudyReviewEventsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5252,7 +6366,26 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     studyPins,
     studyPinTextRanges,
     favorites,
+    studyReviewSessions,
+    studyReviewEvents,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'study_pins',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('study_review_events', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'study_review_sessions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('study_review_events', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$ClassesTableCreateCompanionBuilder =
@@ -8755,6 +9888,27 @@ final class $$StudyPinsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$StudyReviewEventsTable, List<StudyReviewEvent>>
+  _studyReviewEventsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.studyReviewEvents,
+        aliasName: 'study_pins__id__study_review_events__study_pin_id',
+      );
+
+  $$StudyReviewEventsTableProcessedTableManager get studyReviewEventsRefs {
+    final manager = $$StudyReviewEventsTableTableManager(
+      $_db,
+      $_db.studyReviewEvents,
+    ).filter((f) => f.studyPinId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _studyReviewEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StudyPinsTableFilterComposer
@@ -8893,6 +10047,31 @@ class $$StudyPinsTableFilterComposer
           }) => $$StudyPinTextRangesTableFilterComposer(
             $db: $db,
             $table: $db.studyPinTextRanges,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> studyReviewEventsRefs(
+    Expression<bool> Function($$StudyReviewEventsTableFilterComposer f) f,
+  ) {
+    final $$StudyReviewEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.studyReviewEvents,
+      getReferencedColumn: (t) => t.studyPinId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyReviewEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyReviewEvents,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -9152,6 +10331,32 @@ class $$StudyPinsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> studyReviewEventsRefs<T extends Object>(
+    Expression<T> Function($$StudyReviewEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StudyReviewEventsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.studyReviewEvents,
+          getReferencedColumn: (t) => t.studyPinId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StudyReviewEventsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.studyReviewEvents,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$StudyPinsTableTableManager
@@ -9171,6 +10376,7 @@ class $$StudyPinsTableTableManager
             bool resourceId,
             bool categoryId,
             bool studyPinTextRangesRefs,
+            bool studyReviewEventsRefs,
           })
         > {
   $$StudyPinsTableTableManager(_$AppDatabase db, $StudyPinsTable table)
@@ -9269,11 +10475,13 @@ class $$StudyPinsTableTableManager
                 resourceId = false,
                 categoryId = false,
                 studyPinTextRangesRefs = false,
+                studyReviewEventsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (studyPinTextRangesRefs) db.studyPinTextRanges,
+                    if (studyReviewEventsRefs) db.studyReviewEvents,
                   ],
                   addJoins:
                       <
@@ -9343,6 +10551,27 @@ class $$StudyPinsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (studyReviewEventsRefs)
+                        await $_getPrefetchedData<
+                          StudyPin,
+                          $StudyPinsTable,
+                          StudyReviewEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StudyPinsTableReferences
+                              ._studyReviewEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StudyPinsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).studyReviewEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.studyPinId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -9367,6 +10596,7 @@ typedef $$StudyPinsTableProcessedTableManager =
         bool resourceId,
         bool categoryId,
         bool studyPinTextRangesRefs,
+        bool studyReviewEventsRefs,
       })
     >;
 typedef $$StudyPinTextRangesTableCreateCompanionBuilder =
@@ -9953,6 +11183,900 @@ typedef $$FavoritesTableProcessedTableManager =
       Favorite,
       PrefetchHooks Function()
     >;
+typedef $$StudyReviewSessionsTableCreateCompanionBuilder =
+    StudyReviewSessionsCompanion Function({
+      required String id,
+      required String scopeType,
+      Value<String?> scopeId,
+      required String title,
+      required DateTime startedAt,
+      Value<DateTime?> completedAt,
+      required int totalItems,
+      Value<int> reviewedItems,
+      Value<bool> shuffle,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$StudyReviewSessionsTableUpdateCompanionBuilder =
+    StudyReviewSessionsCompanion Function({
+      Value<String> id,
+      Value<String> scopeType,
+      Value<String?> scopeId,
+      Value<String> title,
+      Value<DateTime> startedAt,
+      Value<DateTime?> completedAt,
+      Value<int> totalItems,
+      Value<int> reviewedItems,
+      Value<bool> shuffle,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$StudyReviewSessionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StudyReviewSessionsTable,
+          StudyReviewSession
+        > {
+  $$StudyReviewSessionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$StudyReviewEventsTable, List<StudyReviewEvent>>
+  _studyReviewEventsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.studyReviewEvents,
+        aliasName: 'study_review_sessions__id__study_review_events__session_id',
+      );
+
+  $$StudyReviewEventsTableProcessedTableManager get studyReviewEventsRefs {
+    final manager = $$StudyReviewEventsTableTableManager(
+      $_db,
+      $_db.studyReviewEvents,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _studyReviewEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StudyReviewSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $StudyReviewSessionsTable> {
+  $$StudyReviewSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scopeType => $composableBuilder(
+    column: $table.scopeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scopeId => $composableBuilder(
+    column: $table.scopeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalItems => $composableBuilder(
+    column: $table.totalItems,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reviewedItems => $composableBuilder(
+    column: $table.reviewedItems,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get shuffle => $composableBuilder(
+    column: $table.shuffle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> studyReviewEventsRefs(
+    Expression<bool> Function($$StudyReviewEventsTableFilterComposer f) f,
+  ) {
+    final $$StudyReviewEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.studyReviewEvents,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyReviewEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyReviewEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$StudyReviewSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudyReviewSessionsTable> {
+  $$StudyReviewSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scopeType => $composableBuilder(
+    column: $table.scopeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scopeId => $composableBuilder(
+    column: $table.scopeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalItems => $composableBuilder(
+    column: $table.totalItems,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reviewedItems => $composableBuilder(
+    column: $table.reviewedItems,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get shuffle => $composableBuilder(
+    column: $table.shuffle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StudyReviewSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudyReviewSessionsTable> {
+  $$StudyReviewSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get scopeType =>
+      $composableBuilder(column: $table.scopeType, builder: (column) => column);
+
+  GeneratedColumn<String> get scopeId =>
+      $composableBuilder(column: $table.scopeId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalItems => $composableBuilder(
+    column: $table.totalItems,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reviewedItems => $composableBuilder(
+    column: $table.reviewedItems,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get shuffle =>
+      $composableBuilder(column: $table.shuffle, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> studyReviewEventsRefs<T extends Object>(
+    Expression<T> Function($$StudyReviewEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StudyReviewEventsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.studyReviewEvents,
+          getReferencedColumn: (t) => t.sessionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StudyReviewEventsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.studyReviewEvents,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StudyReviewSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudyReviewSessionsTable,
+          StudyReviewSession,
+          $$StudyReviewSessionsTableFilterComposer,
+          $$StudyReviewSessionsTableOrderingComposer,
+          $$StudyReviewSessionsTableAnnotationComposer,
+          $$StudyReviewSessionsTableCreateCompanionBuilder,
+          $$StudyReviewSessionsTableUpdateCompanionBuilder,
+          (StudyReviewSession, $$StudyReviewSessionsTableReferences),
+          StudyReviewSession,
+          PrefetchHooks Function({bool studyReviewEventsRefs})
+        > {
+  $$StudyReviewSessionsTableTableManager(
+    _$AppDatabase db,
+    $StudyReviewSessionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudyReviewSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudyReviewSessionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StudyReviewSessionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> scopeType = const Value.absent(),
+                Value<String?> scopeId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
+                Value<int> totalItems = const Value.absent(),
+                Value<int> reviewedItems = const Value.absent(),
+                Value<bool> shuffle = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyReviewSessionsCompanion(
+                id: id,
+                scopeType: scopeType,
+                scopeId: scopeId,
+                title: title,
+                startedAt: startedAt,
+                completedAt: completedAt,
+                totalItems: totalItems,
+                reviewedItems: reviewedItems,
+                shuffle: shuffle,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String scopeType,
+                Value<String?> scopeId = const Value.absent(),
+                required String title,
+                required DateTime startedAt,
+                Value<DateTime?> completedAt = const Value.absent(),
+                required int totalItems,
+                Value<int> reviewedItems = const Value.absent(),
+                Value<bool> shuffle = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => StudyReviewSessionsCompanion.insert(
+                id: id,
+                scopeType: scopeType,
+                scopeId: scopeId,
+                title: title,
+                startedAt: startedAt,
+                completedAt: completedAt,
+                totalItems: totalItems,
+                reviewedItems: reviewedItems,
+                shuffle: shuffle,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$StudyReviewSessionsTable, StudyReviewSession>(
+                    table,
+                  ),
+                  $$StudyReviewSessionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({studyReviewEventsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (studyReviewEventsRefs) db.studyReviewEvents,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (studyReviewEventsRefs)
+                    await $_getPrefetchedData<
+                      StudyReviewSession,
+                      $StudyReviewSessionsTable,
+                      StudyReviewEvent
+                    >(
+                      currentTable: table,
+                      referencedTable: $$StudyReviewSessionsTableReferences
+                          ._studyReviewEventsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$StudyReviewSessionsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).studyReviewEventsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.sessionId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StudyReviewSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudyReviewSessionsTable,
+      StudyReviewSession,
+      $$StudyReviewSessionsTableFilterComposer,
+      $$StudyReviewSessionsTableOrderingComposer,
+      $$StudyReviewSessionsTableAnnotationComposer,
+      $$StudyReviewSessionsTableCreateCompanionBuilder,
+      $$StudyReviewSessionsTableUpdateCompanionBuilder,
+      (StudyReviewSession, $$StudyReviewSessionsTableReferences),
+      StudyReviewSession,
+      PrefetchHooks Function({bool studyReviewEventsRefs})
+    >;
+typedef $$StudyReviewEventsTableCreateCompanionBuilder =
+    StudyReviewEventsCompanion Function({
+      required String id,
+      required String studyPinId,
+      required String sessionId,
+      required String rating,
+      required DateTime reviewedAt,
+      Value<int?> responseTimeMs,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$StudyReviewEventsTableUpdateCompanionBuilder =
+    StudyReviewEventsCompanion Function({
+      Value<String> id,
+      Value<String> studyPinId,
+      Value<String> sessionId,
+      Value<String> rating,
+      Value<DateTime> reviewedAt,
+      Value<int?> responseTimeMs,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$StudyReviewEventsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StudyReviewEventsTable,
+          StudyReviewEvent
+        > {
+  $$StudyReviewEventsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StudyPinsTable _studyPinIdTable(_$AppDatabase db) => db.studyPins
+      .createAlias('study_review_events__study_pin_id__study_pins__id');
+
+  $$StudyPinsTableProcessedTableManager get studyPinId {
+    final $_column = $_itemColumn<String>('study_pin_id')!;
+
+    final manager = $$StudyPinsTableTableManager(
+      $_db,
+      $_db.studyPins,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_studyPinIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StudyReviewSessionsTable _sessionIdTable(_$AppDatabase db) =>
+      db.studyReviewSessions.createAlias(
+        'study_review_events__session_id__study_review_sessions__id',
+      );
+
+  $$StudyReviewSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<String>('session_id')!;
+
+    final manager = $$StudyReviewSessionsTableTableManager(
+      $_db,
+      $_db.studyReviewSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StudyReviewEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $StudyReviewEventsTable> {
+  $$StudyReviewEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rating => $composableBuilder(
+    column: $table.rating,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get responseTimeMs => $composableBuilder(
+    column: $table.responseTimeMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StudyPinsTableFilterComposer get studyPinId {
+    final $$StudyPinsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StudyReviewSessionsTableFilterComposer get sessionId {
+    final $$StudyReviewSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.studyReviewSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyReviewSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyReviewSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyReviewEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudyReviewEventsTable> {
+  $$StudyReviewEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rating => $composableBuilder(
+    column: $table.rating,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get responseTimeMs => $composableBuilder(
+    column: $table.responseTimeMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StudyPinsTableOrderingComposer get studyPinId {
+    final $$StudyPinsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableOrderingComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StudyReviewSessionsTableOrderingComposer get sessionId {
+    final $$StudyReviewSessionsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.sessionId,
+          referencedTable: $db.studyReviewSessions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StudyReviewSessionsTableOrderingComposer(
+                $db: $db,
+                $table: $db.studyReviewSessions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$StudyReviewEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudyReviewEventsTable> {
+  $$StudyReviewEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get rating =>
+      $composableBuilder(column: $table.rating, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get responseTimeMs => $composableBuilder(
+    column: $table.responseTimeMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$StudyPinsTableAnnotationComposer get studyPinId {
+    final $$StudyPinsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.studyPinId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StudyReviewSessionsTableAnnotationComposer get sessionId {
+    final $$StudyReviewSessionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.sessionId,
+          referencedTable: $db.studyReviewSessions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StudyReviewSessionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.studyReviewSessions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$StudyReviewEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudyReviewEventsTable,
+          StudyReviewEvent,
+          $$StudyReviewEventsTableFilterComposer,
+          $$StudyReviewEventsTableOrderingComposer,
+          $$StudyReviewEventsTableAnnotationComposer,
+          $$StudyReviewEventsTableCreateCompanionBuilder,
+          $$StudyReviewEventsTableUpdateCompanionBuilder,
+          (StudyReviewEvent, $$StudyReviewEventsTableReferences),
+          StudyReviewEvent,
+          PrefetchHooks Function({bool studyPinId, bool sessionId})
+        > {
+  $$StudyReviewEventsTableTableManager(
+    _$AppDatabase db,
+    $StudyReviewEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudyReviewEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudyReviewEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudyReviewEventsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> studyPinId = const Value.absent(),
+                Value<String> sessionId = const Value.absent(),
+                Value<String> rating = const Value.absent(),
+                Value<DateTime> reviewedAt = const Value.absent(),
+                Value<int?> responseTimeMs = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyReviewEventsCompanion(
+                id: id,
+                studyPinId: studyPinId,
+                sessionId: sessionId,
+                rating: rating,
+                reviewedAt: reviewedAt,
+                responseTimeMs: responseTimeMs,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String studyPinId,
+                required String sessionId,
+                required String rating,
+                required DateTime reviewedAt,
+                Value<int?> responseTimeMs = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => StudyReviewEventsCompanion.insert(
+                id: id,
+                studyPinId: studyPinId,
+                sessionId: sessionId,
+                rating: rating,
+                reviewedAt: reviewedAt,
+                responseTimeMs: responseTimeMs,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$StudyReviewEventsTable, StudyReviewEvent>(table),
+                  $$StudyReviewEventsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({studyPinId = false, sessionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (studyPinId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.studyPinId,
+                                referencedTable:
+                                    $$StudyReviewEventsTableReferences
+                                        ._studyPinIdTable(db),
+                                referencedColumn:
+                                    $$StudyReviewEventsTableReferences
+                                        ._studyPinIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (sessionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sessionId,
+                                referencedTable:
+                                    $$StudyReviewEventsTableReferences
+                                        ._sessionIdTable(db),
+                                referencedColumn:
+                                    $$StudyReviewEventsTableReferences
+                                        ._sessionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StudyReviewEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudyReviewEventsTable,
+      StudyReviewEvent,
+      $$StudyReviewEventsTableFilterComposer,
+      $$StudyReviewEventsTableOrderingComposer,
+      $$StudyReviewEventsTableAnnotationComposer,
+      $$StudyReviewEventsTableCreateCompanionBuilder,
+      $$StudyReviewEventsTableUpdateCompanionBuilder,
+      (StudyReviewEvent, $$StudyReviewEventsTableReferences),
+      StudyReviewEvent,
+      PrefetchHooks Function({bool studyPinId, bool sessionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9977,4 +12101,8 @@ class $AppDatabaseManager {
       $$StudyPinTextRangesTableTableManager(_db, _db.studyPinTextRanges);
   $$FavoritesTableTableManager get favorites =>
       $$FavoritesTableTableManager(_db, _db.favorites);
+  $$StudyReviewSessionsTableTableManager get studyReviewSessions =>
+      $$StudyReviewSessionsTableTableManager(_db, _db.studyReviewSessions);
+  $$StudyReviewEventsTableTableManager get studyReviewEvents =>
+      $$StudyReviewEventsTableTableManager(_db, _db.studyReviewEvents);
 }

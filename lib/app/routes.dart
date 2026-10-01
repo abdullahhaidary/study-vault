@@ -7,6 +7,7 @@ import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/search/presentation/search_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 
 /// Named route constants.
@@ -19,6 +20,7 @@ abstract final class AppRoutes {
   static const imageStudy = '/image-study';
   static const search = '/search';
   static const favorites = '/favorites';
+  static const settings = '/settings';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -40,6 +42,12 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => const FavoritesScreen(),
+      );
+
+    case AppRoutes.settings:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const SettingsScreen(),
       );
 
     case AppRoutes.classDetails:

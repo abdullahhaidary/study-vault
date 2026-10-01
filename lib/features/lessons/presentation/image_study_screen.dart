@@ -16,6 +16,8 @@ import '../../study_pins/presentation/add_edit_study_pin_sheet.dart';
 import '../../study_pins/presentation/study_pin_reader.dart';
 import '../../study_pins/presentation/widgets/image_pin_overlay.dart';
 import '../../study_pins/presentation/widgets/study_pin_toolbar.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_review/presentation/review_setup_screen.dart';
 
 /// In-app image study view with zoom/pan and Study Pin overlays.
 class ImageStudyScreen extends ConsumerStatefulWidget {
@@ -199,6 +201,18 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
+          ),
+          IconButton(
+            tooltip: 'Review Pins',
+            onPressed: () => openReviewSetup(
+              context,
+              scope: ReviewScope(
+                type: ReviewScopeType.material,
+                id: widget.resourceId,
+                title: widget.title,
+              ),
+            ),
+            icon: const Icon(Icons.school_outlined),
           ),
         ],
         bottom: PreferredSize(

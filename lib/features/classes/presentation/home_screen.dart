@@ -9,6 +9,7 @@ import '../../../core/widgets/responsive_grid.dart';
 import '../../favorites/data/favorites_display_providers.dart';
 import '../../favorites/presentation/favorites_screen.dart';
 import '../../search/domain/study_search_result.dart';
+import '../../study_review/presentation/recent_reviews_screen.dart';
 import '../data/classes_providers.dart';
 import 'create_class_dialog.dart';
 
@@ -41,6 +42,18 @@ class HomeScreen extends ConsumerWidget {
                   Navigator.of(context).pushNamed(AppRoutes.favorites);
                 },
                 icon: const Icon(Icons.star_outline),
+              ),
+              IconButton(
+                tooltip: 'Recent Reviews',
+                onPressed: () => RecentReviewsScreen.open(context),
+                icon: const Icon(Icons.history_edu_outlined),
+              ),
+              IconButton(
+                tooltip: 'Settings',
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRoutes.settings);
+                },
+                icon: const Icon(Icons.settings_outlined),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
