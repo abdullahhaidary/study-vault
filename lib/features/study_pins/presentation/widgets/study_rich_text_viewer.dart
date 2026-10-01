@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../domain/quill_paragraph_direction_sync.dart';
 import '../../domain/study_note_codec.dart';
 import 'study_rich_text_editor.dart';
 
@@ -8,6 +9,7 @@ import 'study_rich_text_editor.dart';
 ///
 /// Instantiates a Quill controller only while this widget is mounted —
 /// suitable for the Study Pin reader, not for scrolling PDF overlays.
+/// Applies paragraph direction so Persian/Arabic notes display correctly.
 class StudyRichTextViewer extends StatefulWidget {
   const StudyRichTextViewer({
     super.key,
@@ -41,11 +43,13 @@ class _StudyRichTextViewerState extends State<StudyRichTextViewer> {
   }
 
   QuillController _buildController(String storedValue) {
-    return QuillController(
+    final controller = QuillController(
       document: StudyNoteCodec.decode(storedValue),
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
     );
+    QuillParagraphDirectionSync.sync(controller, force: true);
+    return controller;
   }
 
   @override

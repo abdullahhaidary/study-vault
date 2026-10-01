@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/auto_direction_text_field.dart';
 import '../data/pin_categories_providers.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
@@ -267,7 +269,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: SelectableText(
+                  child: AutoDirectionSelectableText(
                     selected,
                     style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
                   ),
@@ -275,7 +277,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
               ),
             ],
             const SizedBox(height: 16),
-            TextField(
+            AutoDirectionTextField(
               controller: _shortController,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
@@ -344,7 +346,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
             ),
             const SizedBox(height: 6),
             if (preview != null) ...[
-              Text(
+              AutoDirectionText(
                 preview,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,

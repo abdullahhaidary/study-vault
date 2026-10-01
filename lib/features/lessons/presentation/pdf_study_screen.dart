@@ -7,6 +7,9 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../data/bookmarks_providers.dart';
+import '../data/lesson_progress_providers.dart';
+import 'widgets/material_outline_panel.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
@@ -47,12 +50,16 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   StudyPin? _readerPin;
   String? _focusedPinId;
   bool _didApplyInitialFocus = false;
+  bool _showOutline = true;
 
   @override
   void initState() {
     super.initState();
     _fileExists = File(widget.filePath).exists();
     _focusedPinId = widget.focusPinId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      recordMaterialStudyActivity(ref, materialId: widget.resourceId);
+    });
   }
 
   bool get _isWide => MediaQuery.sizeOf(context).width >= 720;
@@ -108,6 +115,93 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
 
   Future<void> _onPointPinMoved(StudyPin pin, NormalizedPoint point) async {
     await updateStudyPinPosition(ref, pin: pin, point: point);
+  }
+
+  Future<void> _toggleBookmark() async {
+    final page = _currentPage;
+    if (page == null) return;
+    final created = await toggleMaterialBookmark(
+      ref,
+      materialId: widget.resourceId,
+      pageNumber: page,
+    );
+    if (created != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bookmarked page $page'),
+          action: SnackBarAction(
+            label: 'Title',
+            onPressed: () => _editBookmark(created),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _editBookmark(MaterialBookmark bookmark) async {
+    final controller = TextEditingController(text: bookmark.title ?? '');
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bookmark title'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title != null)
+      await updateBookmarkTitle(ref, bookmark: bookmark, title: title);
+  }
+
+  Widget _outlinePanel(List<MaterialBookmark> bookmarks, List<StudyPin> pins) {
+    final categories =
+        ref.read(studyPinCategoryMapProvider).valueOrNull ?? const {};
+    return MaterialOutlinePanel(
+      controller: _controller,
+      bookmarks: bookmarks,
+      pins: pins,
+      currentPage: _currentPage,
+      onBookmarkTap: (bookmark) =>
+          _controller.goToPage(pageNumber: bookmark.pageNumber),
+      onBookmarkEdit: _editBookmark,
+      onBookmarkDelete: (bookmark) =>
+          deleteMaterialBookmarkById(ref, id: bookmark.id),
+      onPinTap: (pin) {
+        setState(() {
+          _focusedPinId = pin.id;
+          _readerPin = pin;
+        });
+        if (pin.pageNumber != null)
+          _controller.goToPage(pageNumber: pin.pageNumber!);
+      },
+      categoryNames: {
+        for (final entry in categories.entries) entry.key: entry.value.name,
+      },
+    );
+  }
+
+  Future<void> _openOutlineSheet(
+    List<MaterialBookmark> bookmarks,
+    List<StudyPin> pins,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .78,
+        child: _outlinePanel(bookmarks, pins),
+      ),
+    );
   }
 
   Future<void> _handleAddPointPinTap(
@@ -204,6 +298,14 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     final pinsAsync = ref.watch(studyPinsForResourceProvider(resourceId));
     final rangesAsync = ref.watch(textRangesForResourceProvider(resourceId));
     final pins = pinsAsync.valueOrNull ?? const [];
+    final bookmarks =
+        ref.watch(bookmarksForMaterialProvider(resourceId)).valueOrNull ??
+        const <MaterialBookmark>[];
+    final currentBookmark = _currentPage == null
+        ? null
+        : bookmarks
+              .where((bookmark) => bookmark.pageNumber == _currentPage)
+              .firstOrNull;
     final textRanges = rangesAsync.valueOrNull ?? const [];
     final categoryMap =
         ref.watch(studyPinCategoryMapProvider).valueOrNull ?? const {};
@@ -248,6 +350,28 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
+          ),
+          IconButton(
+            tooltip: currentBookmark == null
+                ? 'Bookmark page'
+                : 'Remove bookmark',
+            onPressed: _currentPage == null ? null : _toggleBookmark,
+            icon: Icon(
+              currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Document navigation',
+            onPressed: !_controller.isReady
+                ? null
+                : () {
+                    if (_isWide) {
+                      setState(() => _showOutline = !_showOutline);
+                    } else {
+                      _openOutlineSheet(bookmarks, pins);
+                    }
+                  },
+            icon: const Icon(Icons.toc_outlined),
           ),
           IconButton(
             tooltip: 'Review Pins',
@@ -299,87 +423,98 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             );
           }
 
-          return Stack(
+          return Row(
             children: [
-              PdfViewer.file(
-                widget.filePath,
-                controller: _controller,
-                params: PdfViewerParams(
-                  margin: 8,
-                  textSelectionParams: const PdfTextSelectionParams(
-                    enabled: true,
-                  ),
-                  customizeContextMenuItems: (params, items) {
-                    if (!annotate) return;
-                    if (!params.textSelectionDelegate.hasSelectedText) return;
-                    items.insert(
-                      0,
-                      ContextMenuButtonItem(
-                        label: 'Add Description',
-                        type: ContextMenuButtonType.custom,
-                        onPressed: () {
-                          params.dismissContextMenu();
-                          _handleAddTextDescription(
-                            params.textSelectionDelegate,
+              Expanded(
+                child: Stack(
+                  children: [
+                    PdfViewer.file(
+                      widget.filePath,
+                      controller: _controller,
+                      params: PdfViewerParams(
+                        margin: 8,
+                        textSelectionParams: const PdfTextSelectionParams(
+                          enabled: true,
+                        ),
+                        customizeContextMenuItems: (params, items) {
+                          if (!annotate) return;
+                          if (!params.textSelectionDelegate.hasSelectedText)
+                            return;
+                          items.insert(
+                            0,
+                            ContextMenuButtonItem(
+                              label: 'Add Description',
+                              type: ContextMenuButtonType.custom,
+                              onPressed: () {
+                                params.dismissContextMenu();
+                                _handleAddTextDescription(
+                                  params.textSelectionDelegate,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        onPageChanged: (pageNumber) {
+                          setState(() => _currentPage = pageNumber);
+                        },
+                        onViewerReady: (document, controller) {
+                          setState(() {
+                            _pageCount = document.pages.length;
+                            _currentPage = controller.pageNumber;
+                          });
+                          final page = widget.initialPage;
+                          if (page != null &&
+                              page >= 1 &&
+                              page <= document.pages.length) {
+                            controller.goToPage(pageNumber: page);
+                          }
+                        },
+                        onGeneralTap: (context, controller, details) {
+                          if (!annotate) return false;
+                          if (details.type != PdfViewerGeneralTapType.tap) {
+                            return false;
+                          }
+                          // Avoid creating a point pin under a text selection gesture.
+                          if (details.tapOn == PdfViewerPart.selectedText) {
+                            return false;
+                          }
+                          if (controller
+                              .textSelectionDelegate
+                              .hasSelectedText) {
+                            return false;
+                          }
+                          _handleAddPointPinTap(controller, details);
+                          return true;
+                        },
+                        pageOverlaysBuilder: (context, pageRect, page) {
+                          return buildPdfPagePinOverlays(
+                            pageRect: pageRect,
+                            page: page,
+                            pins: pins,
+                            textRanges: textRanges,
+                            displayMode: displayMode,
+                            annotateMode: annotate,
+                            categoryMap: categoryMap,
+                            focusedPinId: _focusedPinId,
+                            onPinTap: (pin) {
+                              setState(() => _focusedPinId = pin.id);
+                              _onAnnotationTap(pin, annotate: annotate);
+                            },
+                            onPointPinMoved: _onPointPinMoved,
                           );
                         },
                       ),
-                    );
-                  },
-                  onPageChanged: (pageNumber) {
-                    setState(() => _currentPage = pageNumber);
-                  },
-                  onViewerReady: (document, controller) {
-                    setState(() {
-                      _pageCount = document.pages.length;
-                      _currentPage = controller.pageNumber;
-                    });
-                    final page = widget.initialPage;
-                    if (page != null &&
-                        page >= 1 &&
-                        page <= document.pages.length) {
-                      controller.goToPage(pageNumber: page);
-                    }
-                  },
-                  onGeneralTap: (context, controller, details) {
-                    if (!annotate) return false;
-                    if (details.type != PdfViewerGeneralTapType.tap) {
-                      return false;
-                    }
-                    // Avoid creating a point pin under a text selection gesture.
-                    if (details.tapOn == PdfViewerPart.selectedText) {
-                      return false;
-                    }
-                    if (controller.textSelectionDelegate.hasSelectedText) {
-                      return false;
-                    }
-                    _handleAddPointPinTap(controller, details);
-                    return true;
-                  },
-                  pageOverlaysBuilder: (context, pageRect, page) {
-                    return buildPdfPagePinOverlays(
-                      pageRect: pageRect,
-                      page: page,
-                      pins: pins,
-                      textRanges: textRanges,
-                      displayMode: displayMode,
-                      annotateMode: annotate,
-                      categoryMap: categoryMap,
-                      focusedPinId: _focusedPinId,
-                      onPinTap: (pin) {
-                        setState(() => _focusedPinId = pin.id);
-                        _onAnnotationTap(pin, annotate: annotate);
-                      },
-                      onPointPinMoved: _onPointPinMoved,
-                    );
-                  },
+                    ),
+                    if (_isWide && _readerPin != null)
+                      StudyPinReaderOverlay(
+                        pin: _readerPin!,
+                        onClose: () => setState(() => _readerPin = null),
+                      ),
+                  ],
                 ),
               ),
-              if (_isWide && _readerPin != null)
-                StudyPinReaderOverlay(
-                  pin: _readerPin!,
-                  onClose: () => setState(() => _readerPin = null),
-                ),
+              if (_isWide && _showOutline && _controller.isReady)
+                SizedBox(width: 340, child: _outlinePanel(bookmarks, pins)),
             ],
           );
         },

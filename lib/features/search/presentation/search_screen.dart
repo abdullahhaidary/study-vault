@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/study_navigator.dart';
+import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../favorites/data/favorites_display_providers.dart';
 import '../../favorites/presentation/favorites_screen.dart';
@@ -68,7 +69,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               autofocus: true,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search classes, subjects, lessons, materials, pins…',
+                hintText: 'Search classes, lessons, notes, flashcards…',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: queryState.query.isEmpty
                     ? null
@@ -273,12 +274,12 @@ class _SearchResultTile extends ConsumerWidget {
       leading: Icon(_iconFor(result.kind)),
       title: Row(
         children: [
-          Expanded(child: Text(result.title)),
+          Expanded(child: AutoDirectionText(result.title)),
           if (result.isFavorite)
             Icon(Icons.star, size: 16, color: theme.colorScheme.tertiary),
         ],
       ),
-      subtitle: Text(
+      subtitle: AutoDirectionText(
         [
           if (result.subtitle != null) result.subtitle!,
           result.breadcrumb,
@@ -296,5 +297,8 @@ class _SearchResultTile extends ConsumerWidget {
     StudyEntityKind.lesson => Icons.article_outlined,
     StudyEntityKind.material => Icons.attach_file,
     StudyEntityKind.studyPin => Icons.push_pin_outlined,
+    StudyEntityKind.note => Icons.sticky_note_2_outlined,
+    StudyEntityKind.flashcard => Icons.style_outlined,
+    StudyEntityKind.bookmark => Icons.bookmark_outline,
   };
 }

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/text/search_text_normalizer.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../domain/study_search_result.dart';
 
@@ -20,7 +21,7 @@ class StudySearchService {
     final q = query.trim();
     if (q.isEmpty) return const [];
 
-    final pattern = '%${_escapeLike(q.toLowerCase())}%';
+    final pattern = SearchTextNormalizer.likePattern(q);
     final results = <StudySearchResult>[];
 
     final favoriteClassIds = await _db.favoriteIdsOfType(
@@ -37,6 +38,12 @@ class StudySearchService {
     );
     final favoritePinIds = await _db.favoriteIdsOfType(
       FavoriteEntityType.studyPin,
+    );
+    final favoriteNoteIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.note,
+    );
+    final favoriteFlashcardIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.flashcard,
     );
 
     final categories = {for (final c in await _db.getAllCategories()) c.id: c};
@@ -91,6 +98,29 @@ class StudySearchService {
         ),
       );
     }
+    if (kind == null || kind == StudyEntityKind.note) {
+      results.addAll(
+        await _searchNotes(
+          pattern,
+          favoritesOnly: favoritesOnly,
+          favoriteIds: favoriteNoteIds,
+        ),
+      );
+    }
+    if (kind == null || kind == StudyEntityKind.flashcard) {
+      results.addAll(
+        await _searchFlashcards(
+          pattern,
+          favoritesOnly: favoritesOnly,
+          favoriteIds: favoriteFlashcardIds,
+        ),
+      );
+    }
+    if (kind == null || kind == StudyEntityKind.bookmark) {
+      results.addAll(
+        await _searchBookmarks(pattern, favoritesOnly: favoritesOnly),
+      );
+    }
 
     return results;
   }
@@ -105,8 +135,8 @@ class StudySearchService {
           '''
 SELECT id, name, description
 FROM classes
-WHERE lower(name) LIKE ? ESCAPE '\\'
-   OR (description IS NOT NULL AND lower(description) LIKE ? ESCAPE '\\')
+WHERE ${SearchTextNormalizer.sqlNormalizeExpr('name')} LIKE ? ESCAPE '\\'
+   OR (description IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('description')} LIKE ? ESCAPE '\\')
 ORDER BY name COLLATE NOCASE
 LIMIT 50
 ''',
@@ -144,8 +174,8 @@ LIMIT 50
 SELECT s.id, s.name, s.description, s.class_id AS classId, c.name AS className
 FROM subjects s
 JOIN classes c ON c.id = s.class_id
-WHERE lower(s.name) LIKE ? ESCAPE '\\'
-   OR (s.description IS NOT NULL AND lower(s.description) LIKE ? ESCAPE '\\')
+WHERE ${SearchTextNormalizer.sqlNormalizeExpr('s.name')} LIKE ? ESCAPE '\\'
+   OR (s.description IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('s.description')} LIKE ? ESCAPE '\\')
 ORDER BY s.name COLLATE NOCASE
 LIMIT 50
 ''',
@@ -186,8 +216,8 @@ SELECT l.id, l.name, l.description, l.subject_id AS subjectId,
 FROM lessons l
 JOIN subjects s ON s.id = l.subject_id
 JOIN classes c ON c.id = s.class_id
-WHERE lower(l.name) LIKE ? ESCAPE '\\'
-   OR (l.description IS NOT NULL AND lower(l.description) LIKE ? ESCAPE '\\')
+WHERE ${SearchTextNormalizer.sqlNormalizeExpr('l.name')} LIKE ? ESCAPE '\\'
+   OR (l.description IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('l.description')} LIKE ? ESCAPE '\\')
 ORDER BY l.name COLLATE NOCASE
 LIMIT 50
 ''',
@@ -233,8 +263,8 @@ FROM lesson_materials m
 JOIN lessons l ON l.id = m.lesson_id
 JOIN subjects s ON s.id = l.subject_id
 JOIN classes c ON c.id = s.class_id
-WHERE lower(m.title) LIKE ? ESCAPE '\\'
-   OR lower(m.original_file_name) LIKE ? ESCAPE '\\'
+WHERE ${SearchTextNormalizer.sqlNormalizeExpr('m.title')} LIKE ? ESCAPE '\\'
+   OR ${SearchTextNormalizer.sqlNormalizeExpr('m.original_file_name')} LIKE ? ESCAPE '\\'
 ORDER BY m.title COLLATE NOCASE
 LIMIT 50
 ''',
@@ -308,9 +338,9 @@ JOIN subjects s ON s.id = l.subject_id
 JOIN classes c ON c.id = s.class_id
 WHERE p.deleted_at IS NULL
   AND (
-    lower(p.short_text) LIKE ? ESCAPE '\\'
-    OR (p.selected_text IS NOT NULL AND lower(p.selected_text) LIKE ? ESCAPE '\\')
-    OR (p.full_explanation_plain_text IS NOT NULL AND lower(p.full_explanation_plain_text) LIKE ? ESCAPE '\\')
+    ${SearchTextNormalizer.sqlNormalizeExpr('p.short_text')} LIKE ? ESCAPE '\\'
+    OR (p.selected_text IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('p.selected_text')} LIKE ? ESCAPE '\\')
+    OR (p.full_explanation_plain_text IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('p.full_explanation_plain_text')} LIKE ? ESCAPE '\\')
   )
   $categoryClause
 ORDER BY p.updated_at DESC
@@ -373,19 +403,126 @@ LIMIT 80
     String? selected,
     String? plainNote,
   }) {
-    final q = query.toLowerCase();
+    final q = SearchTextNormalizer.normalize(query);
     for (final source in [selected, plainNote]) {
       if (source == null || source.isEmpty) continue;
-      if (!source.toLowerCase().contains(q)) continue;
+      if (!SearchTextNormalizer.normalize(source).contains(q)) continue;
       return StudyNoteCodec.plainTextPreview(source, maxLength: 120);
     }
     return null;
   }
 
-  static String _escapeLike(String input) {
-    return input
-        .replaceAll(r'\', r'\\')
-        .replaceAll('%', r'\%')
-        .replaceAll('_', r'\_');
+  Future<List<StudySearchResult>> _searchNotes(
+    String pattern, {
+    required bool favoritesOnly,
+    required Set<String> favoriteIds,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          '''
+SELECT n.id, n.title, n.plain_text_content AS plainText, n.subject_id AS subjectId, n.lesson_id AS lessonId
+FROM study_notes n
+WHERE n.deleted_at IS NULL AND (
+  ${SearchTextNormalizer.sqlNormalizeExpr('n.title')} LIKE ? ESCAPE '\\'
+  OR (n.plain_text_content IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('n.plain_text_content')} LIKE ? ESCAPE '\\')
+) ORDER BY n.updated_at DESC LIMIT 50
+''',
+          variables: [
+            Variable.withString(pattern),
+            Variable.withString(pattern),
+          ],
+          readsFrom: {_db.studyNotes},
+        )
+        .get();
+    return [
+      for (final row in rows)
+        if (!favoritesOnly || favoriteIds.contains(row.read<String>('id')))
+          StudySearchResult(
+            kind: StudyEntityKind.note,
+            id: row.read<String>('id'),
+            title: row.read<String>('title'),
+            breadcrumb: row.readNullable<String>('lessonId') == null
+                ? 'Subject note'
+                : 'Lesson note',
+            subtitle: row.readNullable<String>('plainText'),
+            isFavorite: favoriteIds.contains(row.read<String>('id')),
+            subjectId: row.readNullable<String>('subjectId'),
+            lessonId: row.readNullable<String>('lessonId'),
+          ),
+    ];
+  }
+
+  Future<List<StudySearchResult>> _searchFlashcards(
+    String pattern, {
+    required bool favoritesOnly,
+    required Set<String> favoriteIds,
+  }) async {
+    final rows = await _db
+        .customSelect(
+          '''
+SELECT id, front, back_plain_text AS backText, subject_id AS subjectId, lesson_id AS lessonId
+FROM flashcards
+WHERE deleted_at IS NULL AND (
+  ${SearchTextNormalizer.sqlNormalizeExpr('front')} LIKE ? ESCAPE '\\'
+  OR (back_plain_text IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('back_plain_text')} LIKE ? ESCAPE '\\')
+) ORDER BY updated_at DESC LIMIT 50
+''',
+          variables: [
+            Variable.withString(pattern),
+            Variable.withString(pattern),
+          ],
+          readsFrom: {_db.flashcards},
+        )
+        .get();
+    return [
+      for (final row in rows)
+        if (!favoritesOnly || favoriteIds.contains(row.read<String>('id')))
+          StudySearchResult(
+            kind: StudyEntityKind.flashcard,
+            id: row.read<String>('id'),
+            title: row.read<String>('front'),
+            breadcrumb: 'Flashcard',
+            subtitle: row.readNullable<String>('backText'),
+            isFavorite: favoriteIds.contains(row.read<String>('id')),
+            subjectId: row.readNullable<String>('subjectId'),
+            lessonId: row.readNullable<String>('lessonId'),
+          ),
+    ];
+  }
+
+  Future<List<StudySearchResult>> _searchBookmarks(
+    String pattern, {
+    required bool favoritesOnly,
+  }) async {
+    if (favoritesOnly) return const [];
+    final rows = await _db
+        .customSelect(
+          '''
+SELECT b.id, b.title, b.page_number AS pageNumber, b.material_id AS materialId,
+       m.title AS materialTitle, m.mime_type AS mimeType, m.lesson_id AS lessonId
+FROM material_bookmarks b JOIN lesson_materials m ON m.id = b.material_id
+WHERE b.title IS NOT NULL AND ${SearchTextNormalizer.sqlNormalizeExpr('b.title')} LIKE ? ESCAPE '\\'
+ORDER BY b.updated_at DESC LIMIT 50
+''',
+          variables: [Variable.withString(pattern)],
+          readsFrom: {_db.materialBookmarks, _db.lessonMaterials},
+        )
+        .get();
+    return [
+      for (final row in rows)
+        StudySearchResult(
+          kind: StudyEntityKind.bookmark,
+          id: row.read<String>('id'),
+          title: row.read<String>('title'),
+          breadcrumb:
+              '${row.read<String>('materialTitle')} • page ${row.read<int>('pageNumber')}',
+          subtitle: 'Bookmark',
+          materialId: row.read<String>('materialId'),
+          materialTitle: row.read<String>('materialTitle'),
+          mimeType: row.read<String>('mimeType'),
+          lessonId: row.read<String>('lessonId'),
+          pageNumber: row.read<int>('pageNumber'),
+        ),
+    ];
   }
 }

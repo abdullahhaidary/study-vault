@@ -7,6 +7,12 @@ import '../../../core/database/built_in_data.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../../flashcards/data/flashcards_providers.dart';
+import '../../flashcards/presentation/flashcards_list_screen.dart';
+import '../../notes/presentation/notes_list_section.dart';
+import '../data/bookmarks_providers.dart';
+import '../data/lesson_progress_providers.dart';
+import '../domain/lesson_progress.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_entry_button.dart';
 import '../data/lessons_providers.dart';
@@ -232,6 +238,32 @@ class LessonDetailsScreen extends ConsumerWidget {
                 ),
               SliverToBoxAdapter(
                 child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: DropdownButtonFormField<LessonProgressStatus>(
+                    initialValue: LessonProgressStatus.fromStorage(
+                      lesson.progressStatus,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Progress',
+                      prefixIcon: Icon(Icons.track_changes_outlined),
+                    ),
+                    items: [
+                      for (final status in LessonProgressStatus.values)
+                        DropdownMenuItem(
+                          value: status,
+                          child: Text(status.label),
+                        ),
+                    ],
+                    onChanged: (status) {
+                      if (status != null) {
+                        setLessonProgress(ref, lesson: lesson, status: status);
+                      }
+                    },
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                   child: ReviewEntryButton(
                     scope: ReviewScope(
@@ -240,6 +272,43 @@ class LessonDetailsScreen extends ConsumerWidget {
                       title: lesson.name,
                     ),
                   ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Row(
+                    children: [
+                      _CountTile(
+                        icon: Icons.style_outlined,
+                        label: 'Flashcards',
+                        count: ref
+                            .watch(flashcardCountForLessonProvider(lessonId))
+                            .valueOrNull,
+                        onTap: () => Navigator.of(context).pushNamed(
+                          AppRoutes.flashcardsList,
+                          arguments: FlashcardsListScope.lesson(
+                            id: lessonId,
+                            title: lesson.name,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      _CountTile(
+                        icon: Icons.bookmark_outline,
+                        label: 'Bookmarks',
+                        count: ref
+                            .watch(bookmarkCountForLessonProvider(lessonId))
+                            .valueOrNull,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                  child: NotesListSection.lesson(lessonId: lessonId),
                 ),
               ),
               SliverToBoxAdapter(
@@ -311,4 +380,38 @@ class LessonDetailsScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+class _CountTile extends StatelessWidget {
+  const _CountTile({
+    required this.icon,
+    required this.label,
+    this.count,
+    this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final int? count;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 8),
+              Expanded(child: Text(label)),
+              Text('${count ?? 0}'),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

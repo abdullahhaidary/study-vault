@@ -15,6 +15,17 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      // Prefer system fonts that cover Persian/Arabic without bundling a
+      // custom face. English typography stays on the platform default.
+      fontFamilyFallback: const [
+        'Noto Sans Arabic',
+        'Noto Naskh Arabic',
+        'Noto Sans',
+        'DejaVu Sans',
+        'FreeSans',
+        'Segoe UI',
+        'Roboto',
+      ],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: colorScheme.surface,

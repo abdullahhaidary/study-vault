@@ -74,6 +74,16 @@ abstract final class FavoriteEntityType {
   static const lesson = 'lesson';
   static const material = 'material';
   static const studyPin = 'studyPin';
+  static const flashcard = 'flashcard';
+  static const note = 'note';
 
-  static const all = [class_, subject, lesson, material, studyPin];
+  static const all = [
+    class_,
+    subject,
+    lesson,
+    material,
+    studyPin,
+    flashcard,
+    note,
+  ];
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/auto_direction_text.dart';
 import '../../domain/pin_display_mode.dart';
 
 /// Visual Study Pin marker (dot, optionally with short text).
@@ -70,7 +71,7 @@ class StudyPinMarker extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                child: Text(
+                child: AutoDirectionText(
                   shortText,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

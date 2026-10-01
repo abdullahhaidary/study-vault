@@ -10,10 +10,12 @@ import '../../../core/widgets/responsive_grid.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../lessons/data/lesson_groups_providers.dart';
 import '../../lessons/data/lessons_providers.dart';
+import '../../lessons/domain/lesson_progress.dart';
 import '../../lessons/presentation/create_lesson_dialog.dart';
 import '../../lessons/presentation/lesson_group_dialog.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_entry_button.dart';
+import '../../notes/presentation/notes_list_section.dart';
 import '../data/subjects_providers.dart';
 
 /// Subject page with lessons organized by optional lesson groups.
@@ -177,7 +179,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
                   child: Text(
-                    'Coming later',
+                    'Notes & reference',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
@@ -189,18 +191,14 @@ class SubjectDetailsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 88),
                 sliver: SliverToBoxAdapter(
                   child: ResponsiveGrid(
-                    children: const [
-                      _PlaceholderCard(
+                    children: [
+                      const _PlaceholderCard(
                         icon: Icons.menu_book_outlined,
                         title: 'Reference Books',
                         subtitle:
                             'Coming soon — attach PDFs and textbooks here.',
                       ),
-                      _PlaceholderCard(
-                        icon: Icons.sticky_note_2_outlined,
-                        title: 'Notes',
-                        subtitle: 'Coming soon — keep study notes here.',
-                      ),
+                      NotesListSection.subject(subjectId: subjectId),
                     ],
                   ),
                 ),
@@ -313,7 +311,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: GroupedItemTile(
                 title: lesson.name,
-                subtitle: lesson.description,
+                subtitle: _lessonSubtitle(lesson),
                 icon: Icons.auto_stories_outlined,
                 onTap: () {
                   Navigator.of(
@@ -357,7 +355,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: GroupedItemTile(
               title: lesson.name,
-              subtitle: lesson.description,
+              subtitle: _lessonSubtitle(lesson),
               icon: Icons.auto_stories_outlined,
               onTap: () {
                 Navigator.of(
@@ -381,6 +379,19 @@ class SubjectDetailsScreen extends ConsumerWidget {
         sliver: SliverList(delegate: SliverChildListDelegate(children)),
       ),
     ];
+  }
+
+  String? _lessonSubtitle(Lesson lesson) {
+    final progress = LessonProgressStatus.fromStorage(lesson.progressStatus);
+    final last = lesson.lastStudiedAt;
+    final studied = last == null
+        ? null
+        : 'Last studied ${last.year}/${last.month.toString().padLeft(2, '0')}/${last.day.toString().padLeft(2, '0')}';
+    return [
+      lesson.description,
+      progress.label,
+      studied,
+    ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
   }
 }
 

@@ -6,6 +6,10 @@ import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
+import '../features/flashcards/presentation/flashcard_study_screen.dart';
+import '../features/flashcards/presentation/flashcards_list_screen.dart';
+import '../features/notes/presentation/note_editor_screen.dart';
+import '../features/notes/presentation/note_reader_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
@@ -21,6 +25,10 @@ abstract final class AppRoutes {
   static const search = '/search';
   static const favorites = '/favorites';
   static const settings = '/settings';
+  static const noteReader = '/note';
+  static const noteEditor = '/note/edit';
+  static const flashcardsList = '/flashcards';
+  static const flashcardStudy = '/flashcards/study';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -48,6 +56,34 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => const SettingsScreen(),
+      );
+
+    case AppRoutes.noteReader:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => NoteReaderScreen(noteId: settings.arguments as String),
+      );
+
+    case AppRoutes.noteEditor:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => NoteEditorScreen(noteId: settings.arguments as String),
+      );
+
+    case AppRoutes.flashcardsList:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => FlashcardsListScreen(
+          scope: settings.arguments as FlashcardsListScope,
+        ),
+      );
+
+    case AppRoutes.flashcardStudy:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => FlashcardStudyScreen(
+          scope: settings.arguments as FlashcardsListScope,
+        ),
       );
 
     case AppRoutes.classDetails:

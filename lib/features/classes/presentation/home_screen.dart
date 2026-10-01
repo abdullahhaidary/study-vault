@@ -8,6 +8,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
 import '../../favorites/data/favorites_display_providers.dart';
 import '../../favorites/presentation/favorites_screen.dart';
+import '../../lessons/data/lesson_progress_providers.dart';
 import '../../search/domain/study_search_result.dart';
 import '../../study_review/presentation/recent_reviews_screen.dart';
 import '../data/classes_providers.dart';
@@ -21,6 +22,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final classesAsync = ref.watch(classesProvider);
     final favoritesAsync = ref.watch(homeFavoritesProvider);
+    final continueAsync = ref.watch(continueStudyingLessonsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -64,6 +66,47 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          continueAsync.when(
+            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            data: (lessons) {
+              if (lessons.isEmpty)
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Continue Studying',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ...lessons
+                          .take(3)
+                          .map(
+                            (lesson) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.play_circle_outline),
+                              title: Text(lesson.name),
+                              subtitle: lesson.lastStudiedAt == null
+                                  ? null
+                                  : Text(
+                                      'Last studied ${lesson.lastStudiedAt!.year}/${lesson.lastStudiedAt!.month}/${lesson.lastStudiedAt!.day}',
+                                    ),
+                              onTap: () => Navigator.of(context).pushNamed(
+                                AppRoutes.lessonDetails,
+                                arguments: lesson.id,
+                              ),
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           favoritesAsync.when(
             loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),

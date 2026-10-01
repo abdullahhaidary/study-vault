@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/review_session_providers.dart';
+import '../../lessons/data/lesson_progress_providers.dart';
 import '../domain/review_models.dart';
 import '../domain/study_review_item.dart';
 import 'review_session_screen.dart';
@@ -48,6 +49,14 @@ class ReviewCompleteScreen extends ConsumerWidget {
         body: const Center(child: Text('Session unavailable.')),
       );
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (session.scope.id == null) return;
+      if (session.scope.type == ReviewScopeType.lesson) {
+        recordLessonStudyActivity(ref, lessonId: session.scope.id!);
+      } else if (session.scope.type == ReviewScopeType.material) {
+        recordMaterialStudyActivity(ref, materialId: session.scope.id!);
+      }
+    });
 
     final counts = session.ratingCounts;
     final againItems = session.itemsWithRating(ReviewRating.again);

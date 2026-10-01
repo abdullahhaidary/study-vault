@@ -6,6 +6,7 @@ import '../../core/database/app_database.dart';
 import '../../core/database/database_provider.dart';
 import '../../core/storage/material_storage.dart';
 import '../../features/lessons/data/materials_providers.dart';
+import '../../features/flashcards/presentation/flashcards_list_screen.dart';
 import '../../features/search/domain/study_search_result.dart';
 
 /// Shared navigation for Search and Favorites destinations.
@@ -78,6 +79,20 @@ abstract final class StudyNavigator {
           initialPage: pageNumber,
           focusPinId: focusPinId ?? id,
         );
+      case StudyEntityKind.note:
+        await openNote(context, id: id);
+      case StudyEntityKind.flashcard:
+        await openFlashcard(context, id: id, lessonId: lessonId);
+      case StudyEntityKind.bookmark:
+        if (materialId == null || pageNumber == null) return;
+        await _openMaterial(
+          context,
+          ref,
+          materialId: materialId,
+          title: materialTitle,
+          mimeType: mimeType,
+          initialPage: pageNumber,
+        );
     }
   }
 
@@ -125,7 +140,51 @@ abstract final class StudyNavigator {
           initialPage: pin.pageNumber,
           focusPinId: pin.id,
         );
+      case 'note':
+        await openNote(context, id: favorite.entityId);
+      case 'flashcard':
+        final card = await db.getFlashcardById(favorite.entityId);
+        if (card == null || !context.mounted) return;
+        await openFlashcard(context, id: card.id, lessonId: card.lessonId);
     }
+  }
+
+  static Future<void> openNote(BuildContext context, {required String id}) {
+    return Navigator.of(context).pushNamed(AppRoutes.noteReader, arguments: id);
+  }
+
+  static Future<void> openFlashcard(
+    BuildContext context, {
+    required String id,
+    String? lessonId,
+  }) {
+    return Navigator.of(context).pushNamed(
+      AppRoutes.flashcardStudy,
+      arguments: lessonId == null
+          ? const FlashcardsListScope.all()
+          : FlashcardsListScope.lesson(id: lessonId, title: 'Flashcards'),
+    );
+  }
+
+  static Future<void> openSourcePin(
+    BuildContext context,
+    WidgetRef ref, {
+    required String pinId,
+  }) async {
+    final db = ref.read(databaseProvider);
+    final pin = await db.getStudyPinById(pinId);
+    if (pin == null || !context.mounted) return;
+    final material = await db.getMaterialById(pin.resourceId);
+    if (material == null || !context.mounted) return;
+    await _openMaterial(
+      context,
+      ref,
+      materialId: material.id,
+      title: material.title,
+      mimeType: material.mimeType,
+      initialPage: pin.pageNumber,
+      focusPinId: pin.id,
+    );
   }
 
   static Future<void> _openMaterial(

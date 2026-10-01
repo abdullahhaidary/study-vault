@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/study_navigator.dart';
+import '../../../core/widgets/auto_direction_text.dart';
 import '../../search/domain/study_search_result.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
@@ -223,7 +224,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                           ),
                         ),
                         if (item.isQuestionCategory) ...[
-                          Text(
+                          AutoDirectionText(
                             item.shortText,
                             style: theme.textTheme.headlineSmall?.copyWith(
                               height: 1.3,
@@ -263,7 +264,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                           if (!item.isQuestionCategory &&
                               item.shortText.trim().isNotEmpty &&
                               item.annotationType == StudyPinType.text) ...[
-                            Text(
+                            AutoDirectionText(
                               item.shortText,
                               style: theme.textTheme.titleMedium,
                             ),
@@ -272,7 +273,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                           if (item.hasFullNote)
                             StudyRichTextViewer(storedValue: item.fullNote!)
                           else
-                            Text(
+                            AutoDirectionText(
                               item.shortText,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 height: 1.4,
@@ -379,7 +380,7 @@ class _PromptBody extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
+              child: AutoDirectionText(
                 '"${item.selectedText!.trim()}"',
                 style: theme.textTheme.titleMedium?.copyWith(height: 1.4),
               ),
@@ -389,7 +390,7 @@ class _PromptBody extends StatelessWidget {
       );
     }
 
-    return Text(
+    return AutoDirectionText(
       item.shortText,
       style: theme.textTheme.headlineSmall?.copyWith(height: 1.3),
     );

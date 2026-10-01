@@ -57,6 +57,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                   (FavoriteEntityType.lesson, 'Lessons'),
                   (FavoriteEntityType.material, 'Materials'),
                   (FavoriteEntityType.studyPin, 'Pins'),
+                  (FavoriteEntityType.note, 'Notes'),
+                  (FavoriteEntityType.flashcard, 'Flashcards'),
                   (FavoriteEntityType.class_, 'Classes'),
                 ])
                   Padding(
@@ -142,6 +144,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     FavoriteEntityType.lesson => Icons.article_outlined,
     FavoriteEntityType.material => Icons.attach_file,
     FavoriteEntityType.studyPin => Icons.push_pin_outlined,
+    FavoriteEntityType.note => Icons.sticky_note_2_outlined,
+    FavoriteEntityType.flashcard => Icons.style_outlined,
     _ => Icons.star_border,
   };
 }

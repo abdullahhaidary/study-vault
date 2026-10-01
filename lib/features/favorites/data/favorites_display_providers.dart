@@ -129,6 +129,28 @@ Future<FavoriteDisplayItem?> _resolve(AppDatabase db, Favorite fav) async {
         mimeType: m?.mimeType,
         pageNumber: page,
       );
+    case FavoriteEntityType.note:
+      final note = await db.getStudyNoteById(fav.entityId);
+      if (note == null) return null;
+      return FavoriteDisplayItem(
+        entityType: fav.entityType,
+        entityId: fav.entityId,
+        kind: StudyEntityKind.note,
+        title: note.title,
+        breadcrumb: note.lessonId == null ? 'Subject note' : 'Lesson note',
+        subtitle: note.plainTextContent,
+      );
+    case FavoriteEntityType.flashcard:
+      final card = await db.getFlashcardById(fav.entityId);
+      if (card == null) return null;
+      return FavoriteDisplayItem(
+        entityType: fav.entityType,
+        entityId: fav.entityId,
+        kind: StudyEntityKind.flashcard,
+        title: card.front,
+        breadcrumb: 'Flashcard',
+        subtitle: card.backPlainText,
+      );
     default:
       return null;
   }

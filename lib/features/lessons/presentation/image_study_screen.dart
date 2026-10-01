@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../data/lesson_progress_providers.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
@@ -52,6 +53,9 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     super.initState();
     _focusedPinId = widget.focusPinId;
     _loadImage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      recordMaterialStudyActivity(ref, materialId: widget.resourceId);
+    });
   }
 
   @override

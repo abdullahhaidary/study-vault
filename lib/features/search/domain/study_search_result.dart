@@ -1,5 +1,14 @@
 /// Unified search / favorites destination types.
-enum StudyEntityKind { class_, subject, lesson, material, studyPin }
+enum StudyEntityKind {
+  class_,
+  subject,
+  lesson,
+  material,
+  studyPin,
+  note,
+  flashcard,
+  bookmark,
+}
 
 /// Lightweight search hit for the Search UI.
 class StudySearchResult {
@@ -44,7 +53,17 @@ class StudySearchResult {
   final String? pinType;
 }
 
-enum SearchResultFilter { all, classes, subjects, lessons, materials, pins }
+enum SearchResultFilter {
+  all,
+  classes,
+  subjects,
+  lessons,
+  materials,
+  pins,
+  notes,
+  flashcards,
+  bookmarks,
+}
 
 extension SearchResultFilterX on SearchResultFilter {
   String get label => switch (this) {
@@ -54,6 +73,9 @@ extension SearchResultFilterX on SearchResultFilter {
     SearchResultFilter.lessons => 'Lessons',
     SearchResultFilter.materials => 'Materials',
     SearchResultFilter.pins => 'Pins',
+    SearchResultFilter.notes => 'Notes',
+    SearchResultFilter.flashcards => 'Flashcards',
+    SearchResultFilter.bookmarks => 'Bookmarks',
   };
 
   StudyEntityKind? get asKind => switch (this) {
@@ -63,5 +85,8 @@ extension SearchResultFilterX on SearchResultFilter {
     SearchResultFilter.lessons => StudyEntityKind.lesson,
     SearchResultFilter.materials => StudyEntityKind.material,
     SearchResultFilter.pins => StudyEntityKind.studyPin,
+    SearchResultFilter.notes => StudyEntityKind.note,
+    SearchResultFilter.flashcards => StudyEntityKind.flashcard,
+    SearchResultFilter.bookmarks => StudyEntityKind.bookmark,
   };
 }

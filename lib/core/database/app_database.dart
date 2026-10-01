@@ -75,6 +75,13 @@ class Lessons extends Table {
   TextColumn get name => text().withLength(min: 1, max: 200)();
   TextColumn get description => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// `notStarted` | `studying` | `reviewed` | `mastered`.
+  TextColumn get progressStatus =>
+      text().withDefault(const Constant('notStarted'))();
+  DateTimeColumn get lastStudiedAt => dateTime().nullable()();
+  DateTimeColumn get progressUpdatedAt => dateTime().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -237,6 +244,88 @@ class StudyReviewEvents extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Lightweight PDF page bookmarks (one per material page).
+class MaterialBookmarks extends Table {
+  TextColumn get id => text()();
+  TextColumn get materialId =>
+      text().references(LessonMaterials, #id, onDelete: KeyAction.cascade)();
+  IntColumn get pageNumber => integer()();
+  TextColumn get title => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {materialId, pageNumber},
+  ];
+}
+
+/// Rich notes owned by a subject or lesson (exactly one parent set).
+class StudyNotes extends Table {
+  TextColumn get id => text()();
+  TextColumn get subjectId => text().nullable().references(
+    Subjects,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get lessonId =>
+      text().nullable().references(Lessons, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text().withLength(min: 1, max: 300)();
+
+  /// Quill Delta JSON (same codec as Study Pin Full Notes).
+  TextColumn get content => text()();
+
+  /// Plain-text extraction for local search.
+  TextColumn get plainTextContent => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Flashcards — separate study objects; may link to a source Study Pin.
+class Flashcards extends Table {
+  TextColumn get id => text()();
+  TextColumn get subjectId => text().nullable().references(
+    Subjects,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get lessonId =>
+      text().nullable().references(Lessons, #id, onDelete: KeyAction.cascade)();
+
+  /// At most one auto-linked flashcard per pin (SQLite allows multiple NULLs).
+  TextColumn get sourceStudyPinId => text().nullable().references(
+    StudyPins,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+
+  TextColumn get front => text()();
+
+  /// Quill Delta JSON for the back (rich note).
+  TextColumn get back => text()();
+  TextColumn get backPlainText => text().nullable()();
+  IntColumn get sortOrder => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {sourceStudyPinId},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -251,6 +340,9 @@ class StudyReviewEvents extends Table {
     Favorites,
     StudyReviewSessions,
     StudyReviewEvents,
+    MaterialBookmarks,
+    StudyNotes,
+    Flashcards,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -260,7 +352,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -302,6 +394,18 @@ class AppDatabase extends _$AppDatabase {
       if (from < 7) {
         await m.createTable(studyReviewSessions);
         await m.createTable(studyReviewEvents);
+      }
+      if (from < 8) {
+        await m.addColumn(lessons, lessons.progressStatus);
+        await m.addColumn(lessons, lessons.lastStudiedAt);
+        await m.addColumn(lessons, lessons.progressUpdatedAt);
+        await m.createTable(materialBookmarks);
+        await m.createTable(studyNotes);
+        await m.createTable(flashcards);
+        await customStatement(
+          "UPDATE lessons SET progress_status = 'notStarted' "
+          "WHERE progress_status IS NULL OR progress_status = ''",
+        );
       }
     },
   );
@@ -562,6 +666,9 @@ class AppDatabase extends _$AppDatabase {
       await deleteFavoritesForEntities(FavoriteEntityType.studyPin, pinIds);
     }
     await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
+    await (delete(
+      materialBookmarks,
+    )..where((t) => t.materialId.equals(id))).go();
     await deleteFavoritesForEntities(FavoriteEntityType.material, [id]);
     await (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();
   }
@@ -603,6 +710,11 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.studyPinId.equals(id))).go();
     await deleteReviewEventsForPins([id]);
     await deleteFavoritesForEntities(FavoriteEntityType.studyPin, [id]);
+    // Keep source-derived flashcards when a pin is removed. SQLite foreign
+    // keys are not enabled by every test/runtime executor, so apply SET NULL
+    // explicitly as well as declaring it in the schema.
+    await (update(flashcards)..where((t) => t.sourceStudyPinId.equals(id)))
+        .write(const FlashcardsCompanion(sourceStudyPinId: Value(null)));
     await (delete(studyPins)..where((t) => t.id.equals(id))).go();
   }
 
@@ -858,6 +970,271 @@ class AppDatabase extends _$AppDatabase {
   Future<List<LessonMaterial>> getMaterialsByIds(List<String> ids) async {
     if (ids.isEmpty) return const [];
     return (select(lessonMaterials)..where((t) => t.id.isIn(ids))).get();
+  }
+
+  // ── Lesson Progress ──────────────────────────────────────
+
+  Future<void> updateLessonProgress({
+    required String lessonId,
+    required String progressStatus,
+    DateTime? lastStudiedAt,
+    bool touchLastStudied = false,
+  }) async {
+    final now = DateTime.now();
+    await (update(lessons)..where((t) => t.id.equals(lessonId))).write(
+      LessonsCompanion(
+        progressStatus: Value(progressStatus),
+        progressUpdatedAt: Value(now),
+        lastStudiedAt: touchLastStudied
+            ? Value(lastStudiedAt ?? now)
+            : lastStudiedAt != null
+            ? Value(lastStudiedAt)
+            : const Value.absent(),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  /// Records meaningful study activity without forcing Reviewed/Mastered.
+  Future<void> recordLessonStudyActivity(String lessonId) async {
+    final lesson = await getLessonById(lessonId);
+    if (lesson == null) return;
+    final now = DateTime.now();
+    final last = lesson.lastStudiedAt;
+    // Throttle DB writes: skip if already recorded within the last minute.
+    if (last != null && now.difference(last) < const Duration(minutes: 1)) {
+      return;
+    }
+    final nextStatus = lesson.progressStatus == 'notStarted'
+        ? 'studying'
+        : lesson.progressStatus;
+    await (update(lessons)..where((t) => t.id.equals(lessonId))).write(
+      LessonsCompanion(
+        progressStatus: Value(nextStatus),
+        lastStudiedAt: Value(now),
+        progressUpdatedAt: lesson.progressStatus == 'notStarted'
+            ? Value(now)
+            : const Value.absent(),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  Stream<List<Lesson>> watchStudyingLessons({int limit = 20}) {
+    return (select(lessons)
+          ..where((t) => t.progressStatus.equals('studying'))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.lastStudiedAt),
+            (t) => OrderingTerm.desc(t.updatedAt),
+          ])
+          ..limit(limit))
+        .watch();
+  }
+
+  // ── Material Bookmarks ───────────────────────────────────
+
+  Stream<List<MaterialBookmark>> watchBookmarksForMaterial(String materialId) {
+    return (select(materialBookmarks)
+          ..where((t) => t.materialId.equals(materialId))
+          ..orderBy([(t) => OrderingTerm.asc(t.pageNumber)]))
+        .watch();
+  }
+
+  Future<List<MaterialBookmark>> getBookmarksForMaterial(String materialId) {
+    return (select(materialBookmarks)
+          ..where((t) => t.materialId.equals(materialId))
+          ..orderBy([(t) => OrderingTerm.asc(t.pageNumber)]))
+        .get();
+  }
+
+  Future<MaterialBookmark?> getBookmarkForPage(
+    String materialId,
+    int pageNumber,
+  ) {
+    return (select(materialBookmarks)..where(
+          (t) =>
+              t.materialId.equals(materialId) & t.pageNumber.equals(pageNumber),
+        ))
+        .getSingleOrNull();
+  }
+
+  Future<int> countBookmarksForMaterial(String materialId) async {
+    final count = countAll();
+    final query = selectOnly(materialBookmarks)
+      ..addColumns([count])
+      ..where(materialBookmarks.materialId.equals(materialId));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<int> countBookmarksForLesson(String lessonId) async {
+    final materialIds = await materialIdsForLesson(lessonId);
+    if (materialIds.isEmpty) return 0;
+    final count = countAll();
+    final query = selectOnly(materialBookmarks)
+      ..addColumns([count])
+      ..where(materialBookmarks.materialId.isIn(materialIds));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<void> insertMaterialBookmark(MaterialBookmarksCompanion entry) {
+    return into(materialBookmarks).insert(entry);
+  }
+
+  Future<void> updateMaterialBookmark(MaterialBookmark bookmark) {
+    return update(materialBookmarks).replace(bookmark);
+  }
+
+  Future<void> deleteMaterialBookmark(String id) {
+    return (delete(materialBookmarks)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> deleteBookmarkForPage(String materialId, int pageNumber) {
+    return (delete(materialBookmarks)..where(
+          (t) =>
+              t.materialId.equals(materialId) & t.pageNumber.equals(pageNumber),
+        ))
+        .go();
+  }
+
+  // ── Study Notes ──────────────────────────────────────────
+
+  Stream<List<StudyNote>> watchNotesForSubject(String subjectId) {
+    return (select(studyNotes)
+          ..where((t) => t.subjectId.equals(subjectId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.desc(t.updatedAt),
+          ]))
+        .watch();
+  }
+
+  Stream<List<StudyNote>> watchNotesForLesson(String lessonId) {
+    return (select(studyNotes)
+          ..where((t) => t.lessonId.equals(lessonId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.desc(t.updatedAt),
+          ]))
+        .watch();
+  }
+
+  Future<StudyNote?> getStudyNoteById(String id) {
+    return (select(
+      studyNotes,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<StudyNote?> watchStudyNoteById(String id) {
+    return (select(
+      studyNotes,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
+  Future<int> nextNoteSortOrder({String? subjectId, String? lessonId}) async {
+    final maxExpr = studyNotes.sortOrder.max();
+    final query = selectOnly(studyNotes)..addColumns([maxExpr]);
+    if (subjectId != null) {
+      query.where(studyNotes.subjectId.equals(subjectId));
+    } else if (lessonId != null) {
+      query.where(studyNotes.lessonId.equals(lessonId));
+    }
+    final row = await query.getSingle();
+    return (row.read(maxExpr) ?? -1) + 1;
+  }
+
+  Future<void> insertStudyNote(StudyNotesCompanion entry) {
+    return into(studyNotes).insert(entry);
+  }
+
+  Future<void> updateStudyNote(StudyNote note) {
+    return update(studyNotes).replace(note);
+  }
+
+  Future<void> deleteStudyNote(String id) async {
+    await deleteFavoritesForEntities(FavoriteEntityType.note, [id]);
+    await (delete(studyNotes)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── Flashcards ───────────────────────────────────────────
+
+  Stream<List<Flashcard>> watchFlashcardsForLesson(String lessonId) {
+    return (select(flashcards)
+          ..where((t) => t.lessonId.equals(lessonId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
+  Stream<List<Flashcard>> watchFlashcardsForSubject(String subjectId) {
+    return (select(flashcards)
+          ..where((t) => t.subjectId.equals(subjectId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
+  Stream<List<Flashcard>> watchAllFlashcards() {
+    return (select(flashcards)
+          ..where((t) => t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .watch();
+  }
+
+  Future<Flashcard?> getFlashcardById(String id) {
+    return (select(
+      flashcards,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<Flashcard?> watchFlashcardById(String id) {
+    return (select(
+      flashcards,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
+  Future<Flashcard?> getFlashcardBySourcePinId(String pinId) {
+    return (select(flashcards)..where(
+          (t) => t.sourceStudyPinId.equals(pinId) & t.deletedAt.isNull(),
+        ))
+        .getSingleOrNull();
+  }
+
+  Stream<Flashcard?> watchFlashcardBySourcePinId(String pinId) {
+    return (select(flashcards)..where(
+          (t) => t.sourceStudyPinId.equals(pinId) & t.deletedAt.isNull(),
+        ))
+        .watch()
+        .map((rows) => rows.isEmpty ? null : rows.first);
+  }
+
+  Future<int> countFlashcardsForLesson(String lessonId) async {
+    final count = countAll();
+    final query = selectOnly(flashcards)
+      ..addColumns([count])
+      ..where(
+        flashcards.lessonId.equals(lessonId) & flashcards.deletedAt.isNull(),
+      );
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<void> insertFlashcard(FlashcardsCompanion entry) {
+    return into(flashcards).insert(entry);
+  }
+
+  Future<void> updateFlashcard(Flashcard card) {
+    return update(flashcards).replace(card);
+  }
+
+  Future<void> deleteFlashcard(String id) async {
+    await deleteFavoritesForEntities(FavoriteEntityType.flashcard, [id]);
+    await (delete(flashcards)..where((t) => t.id.equals(id))).go();
   }
 }
 

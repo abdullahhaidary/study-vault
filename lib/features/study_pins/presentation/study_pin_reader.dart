@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/widgets/auto_direction_text.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/study_pins_providers.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
 import 'widgets/study_rich_text_viewer.dart';
+import '../../flashcards/data/flashcards_providers.dart';
+import '../../flashcards/presentation/create_flashcard_dialog.dart';
+import '../../flashcards/presentation/flashcards_list_screen.dart';
+import '../../../app/routes.dart';
 
 /// Opens a read-only Study Pin explanation UI.
 ///
@@ -319,7 +325,7 @@ class _ResizeAffordancePainter extends CustomPainter {
 ///
 /// Short description is the header title; Full Note is the body.
 /// No "Short description" / "Full Note" field labels.
-class StudyPinReaderPanel extends StatelessWidget {
+class StudyPinReaderPanel extends ConsumerWidget {
   const StudyPinReaderPanel({
     super.key,
     required this.pin,
@@ -334,7 +340,7 @@ class StudyPinReaderPanel extends StatelessWidget {
   final bool showHeader;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final hasFull = StudyNoteCodec.hasContent(pin.fullExplanation);
     final selected = pin.selectedText?.trim();
@@ -342,6 +348,9 @@ class StudyPinReaderPanel extends StatelessWidget {
         pin.type == StudyPinType.text &&
         selected != null &&
         selected.isNotEmpty;
+    final flashcard = ref
+        .watch(flashcardBySourcePinProvider(pin.id))
+        .valueOrNull;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,7 +361,7 @@ class StudyPinReaderPanel extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: AutoDirectionText(
                     pin.shortText,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -362,6 +371,31 @@ class StudyPinReaderPanel extends StatelessWidget {
                 FavoriteStarButton(
                   entityType: FavoriteEntityType.studyPin,
                   entityId: pin.id,
+                ),
+                IconButton(
+                  tooltip: flashcard == null
+                      ? 'Create Flashcard'
+                      : 'Open Flashcard',
+                  onPressed: () {
+                    if (flashcard == null) {
+                      CreateFlashcardDialog.show(context, pin: pin);
+                    } else {
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.flashcardStudy,
+                        arguments: flashcard.lessonId == null
+                            ? const FlashcardsListScope.all()
+                            : FlashcardsListScope.lesson(
+                                id: flashcard.lessonId!,
+                                title: 'Flashcards',
+                              ),
+                      );
+                    }
+                  },
+                  icon: Icon(
+                    flashcard == null
+                        ? Icons.style_outlined
+                        : Icons.play_circle_outline,
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -387,7 +421,7 @@ class StudyPinReaderPanel extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: SelectableText(
+                    child: AutoDirectionSelectableText(
                       selected,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         height: 1.4,

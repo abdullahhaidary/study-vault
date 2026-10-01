@@ -273,4 +273,38 @@ void main() {
     expect(all.length, greaterThanOrEqualTo(favOnly.length));
     expect(favOnly.every((r) => r.isFavorite), isTrue);
   });
+
+  test('Persian and Yeh/Kaf-normalized pin search', () async {
+    await seedHierarchy();
+    final now = DateTime.now();
+    await db.insertStudyPin(
+      StudyPinsCompanion.insert(
+        id: 'p_fa',
+        resourceId: 'm1',
+        xRatio: 0.1,
+        yRatio: 0.1,
+        shortText: 'گرادیان نزولی',
+        selectedText: const Value('یک الگوریتم بهینه‌سازی'),
+        fullExplanationPlainText: const Value(
+          'Gradient Descent یک الگوریتم بهینه‌سازی است.',
+        ),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    expect(
+      (await search.search(query: 'گرادیان')).any((r) => r.id == 'p_fa'),
+      isTrue,
+    );
+    // Arabic Yeh in query should still match Persian Yeh in storage.
+    expect(
+      (await search.search(query: 'گراد\u064Aان')).any((r) => r.id == 'p_fa'),
+      isTrue,
+    );
+    expect(
+      (await search.search(query: 'Gradient')).any((r) => r.id == 'p_fa'),
+      isTrue,
+    );
+  });
 }

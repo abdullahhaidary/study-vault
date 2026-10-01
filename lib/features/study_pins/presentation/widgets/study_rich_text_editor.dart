@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../domain/quill_paragraph_direction_sync.dart';
 import 'study_note_toolbar.dart';
 
 /// Reusable Study Vault rich-text editor for Full Note content.
 ///
 /// Owns nothing about persistence — the parent supplies a [QuillController]
 /// and decides when to encode/save via [StudyNoteCodec].
+///
+/// Supports mixed LTR/RTL paragraphs (Persian/Dari/Arabic + English) via
+/// Quill direction attributes synced from Unicode first-strong detection.
 class StudyRichTextEditor extends StatefulWidget {
   const StudyRichTextEditor({
     super.key,
@@ -45,6 +49,10 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
     _focusNode = FocusNode();
     _scrollController = ScrollController();
     widget.controller.readOnly = widget.readOnly;
+    widget.controller.addListener(_onDocumentChanged);
+    if (!widget.readOnly) {
+      QuillParagraphDirectionSync.sync(widget.controller);
+    }
     if (widget.autofocus && !widget.readOnly) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -55,13 +63,26 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
   @override
   void didUpdateWidget(covariant StudyRichTextEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onDocumentChanged);
+      widget.controller.addListener(_onDocumentChanged);
+      if (!widget.readOnly) {
+        QuillParagraphDirectionSync.sync(widget.controller);
+      }
+    }
     if (oldWidget.readOnly != widget.readOnly) {
       widget.controller.readOnly = widget.readOnly;
     }
   }
 
+  void _onDocumentChanged() {
+    if (widget.readOnly) return;
+    QuillParagraphDirectionSync.sync(widget.controller);
+  }
+
   @override
   void dispose() {
+    widget.controller.removeListener(_onDocumentChanged);
     _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
