@@ -1,0 +1,13 @@
+{
+  "name": "file-share-server",
+  "version": "1.0.0",
+  "description": "Minimal local file sharing server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.4.0"
+  }
+}
