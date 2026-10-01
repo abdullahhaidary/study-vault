@@ -7,37 +7,36 @@ import '../../../core/database/database_provider.dart';
 
 const _uuid = Uuid();
 
-/// Watches subjects belonging to a class, ordered by [sortOrder].
-final subjectsForClassProvider =
-    StreamProvider.family<List<Subject>, String>((ref, classId) {
+/// Watches lessons belonging to a subject, ordered by [sortOrder].
+final lessonsForSubjectProvider =
+    StreamProvider.family<List<Lesson>, String>((ref, subjectId) {
   final db = ref.watch(databaseProvider);
-  return db.watchSubjectsForClass(classId);
+  return db.watchLessonsForSubject(subjectId);
 });
 
-/// Watches a single subject by id.
-final subjectByIdProvider =
-    StreamProvider.family<Subject?, String>((ref, subjectId) {
+/// Watches a single lesson by id.
+final lessonByIdProvider =
+    StreamProvider.family<Lesson?, String>((ref, lessonId) {
   final db = ref.watch(databaseProvider);
-  return db.watchSubjectById(subjectId);
+  return db.watchLessonById(lessonId);
 });
 
-/// Creates a new subject inside a class.
-Future<void> createSubject(
+Future<void> createLesson(
   WidgetRef ref, {
-  required String classId,
+  required String subjectId,
   required String name,
   String? description,
-  String? subjectGroupId,
+  String? lessonGroupId,
 }) async {
   final db = ref.read(databaseProvider);
   final now = DateTime.now();
-  final sortOrder = await db.nextSubjectSortOrder(classId);
+  final sortOrder = await db.nextLessonSortOrder(subjectId);
 
-  await db.insertSubject(
-    SubjectsCompanion.insert(
+  await db.insertLesson(
+    LessonsCompanion.insert(
       id: _uuid.v4(),
-      classId: classId,
-      subjectGroupId: Value(subjectGroupId),
+      subjectId: subjectId,
+      lessonGroupId: Value(lessonGroupId),
       name: name.trim(),
       description: Value(
         description?.trim().isEmpty == true ? null : description?.trim(),
@@ -49,21 +48,21 @@ Future<void> createSubject(
   );
 }
 
-Future<void> updateSubjectDetails(
+Future<void> updateLessonDetails(
   WidgetRef ref, {
-  required Subject subject,
+  required Lesson lesson,
   required String name,
   String? description,
-  String? subjectGroupId,
+  String? lessonGroupId,
 }) async {
   final db = ref.read(databaseProvider);
-  await db.updateSubject(
-    subject.copyWith(
+  await db.updateLesson(
+    lesson.copyWith(
       name: name.trim(),
       description: Value(
         description?.trim().isEmpty == true ? null : description?.trim(),
       ),
-      subjectGroupId: Value(subjectGroupId),
+      lessonGroupId: Value(lessonGroupId),
       updatedAt: DateTime.now(),
     ),
   );

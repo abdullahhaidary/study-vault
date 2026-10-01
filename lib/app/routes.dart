@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../features/classes/presentation/class_details_screen.dart';
 import '../features/classes/presentation/home_screen.dart';
+import '../features/lessons/presentation/lesson_details_screen.dart';
+import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 
 /// Named route constants.
@@ -9,6 +11,8 @@ abstract final class AppRoutes {
   static const home = '/';
   static const classDetails = '/class';
   static const subjectDetails = '/subject';
+  static const lessonDetails = '/lesson';
+  static const pdfStudy = '/pdf-study';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -32,6 +36,23 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => SubjectDetailsScreen(subjectId: subjectId),
+      );
+
+    case AppRoutes.lessonDetails:
+      final lessonId = settings.arguments as String;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => LessonDetailsScreen(lessonId: lessonId),
+      );
+
+    case AppRoutes.pdfStudy:
+      final args = settings.arguments as Map<String, String>;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => PdfStudyScreen(
+          title: args['title']!,
+          filePath: args['filePath']!,
+        ),
       );
 
     default:

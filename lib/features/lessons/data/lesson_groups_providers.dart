@@ -7,37 +7,27 @@ import '../../../core/database/database_provider.dart';
 
 const _uuid = Uuid();
 
-/// Watches subjects belonging to a class, ordered by [sortOrder].
-final subjectsForClassProvider =
-    StreamProvider.family<List<Subject>, String>((ref, classId) {
+/// Watches lesson groups for a subject, ordered by [sortOrder].
+final lessonGroupsForSubjectProvider =
+    StreamProvider.family<List<LessonGroup>, String>((ref, subjectId) {
   final db = ref.watch(databaseProvider);
-  return db.watchSubjectsForClass(classId);
+  return db.watchLessonGroupsForSubject(subjectId);
 });
 
-/// Watches a single subject by id.
-final subjectByIdProvider =
-    StreamProvider.family<Subject?, String>((ref, subjectId) {
-  final db = ref.watch(databaseProvider);
-  return db.watchSubjectById(subjectId);
-});
-
-/// Creates a new subject inside a class.
-Future<void> createSubject(
+Future<void> createLessonGroup(
   WidgetRef ref, {
-  required String classId,
+  required String subjectId,
   required String name,
   String? description,
-  String? subjectGroupId,
 }) async {
   final db = ref.read(databaseProvider);
   final now = DateTime.now();
-  final sortOrder = await db.nextSubjectSortOrder(classId);
+  final sortOrder = await db.nextLessonGroupSortOrder(subjectId);
 
-  await db.insertSubject(
-    SubjectsCompanion.insert(
+  await db.insertLessonGroup(
+    LessonGroupsCompanion.insert(
       id: _uuid.v4(),
-      classId: classId,
-      subjectGroupId: Value(subjectGroupId),
+      subjectId: subjectId,
       name: name.trim(),
       description: Value(
         description?.trim().isEmpty == true ? null : description?.trim(),
@@ -49,22 +39,25 @@ Future<void> createSubject(
   );
 }
 
-Future<void> updateSubjectDetails(
+Future<void> updateLessonGroupDetails(
   WidgetRef ref, {
-  required Subject subject,
+  required LessonGroup group,
   required String name,
   String? description,
-  String? subjectGroupId,
 }) async {
   final db = ref.read(databaseProvider);
-  await db.updateSubject(
-    subject.copyWith(
+  await db.updateLessonGroup(
+    group.copyWith(
       name: name.trim(),
       description: Value(
         description?.trim().isEmpty == true ? null : description?.trim(),
       ),
-      subjectGroupId: Value(subjectGroupId),
       updatedAt: DateTime.now(),
     ),
   );
+}
+
+Future<void> deleteLessonGroup(WidgetRef ref, String groupId) async {
+  final db = ref.read(databaseProvider);
+  await db.deleteLessonGroup(groupId);
 }

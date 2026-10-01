@@ -3,47 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../data/subject_groups_providers.dart';
-import '../data/subjects_providers.dart';
 
-/// Dialog for creating or editing a Subject.
-class CreateSubjectDialog extends ConsumerStatefulWidget {
-  const CreateSubjectDialog({
+/// Create or edit a subject group.
+class SubjectGroupDialog extends ConsumerStatefulWidget {
+  const SubjectGroupDialog({
     super.key,
     required this.classId,
     this.existing,
-    this.initialGroupId,
   });
 
   final String classId;
-  final Subject? existing;
-  final String? initialGroupId;
+  final SubjectGroup? existing;
 
   static Future<void> show(
     BuildContext context, {
     required String classId,
-    Subject? existing,
-    String? initialGroupId,
+    SubjectGroup? existing,
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => CreateSubjectDialog(
+      builder: (_) => SubjectGroupDialog(
         classId: classId,
         existing: existing,
-        initialGroupId: initialGroupId,
       ),
     );
   }
 
   @override
-  ConsumerState<CreateSubjectDialog> createState() =>
-      _CreateSubjectDialogState();
+  ConsumerState<SubjectGroupDialog> createState() => _SubjectGroupDialogState();
 }
 
-class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
+class _SubjectGroupDialogState extends ConsumerState<SubjectGroupDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
-  String? _selectedGroupId;
   bool _saving = false;
 
   bool get _isEditing => widget.existing != null;
@@ -54,8 +47,6 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
     _descriptionController =
         TextEditingController(text: widget.existing?.description ?? '');
-    _selectedGroupId =
-        widget.existing?.subjectGroupId ?? widget.initialGroupId;
   }
 
   @override
@@ -71,20 +62,18 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
     setState(() => _saving = true);
     try {
       if (_isEditing) {
-        await updateSubjectDetails(
+        await updateSubjectGroupDetails(
           ref,
-          subject: widget.existing!,
+          group: widget.existing!,
           name: _nameController.text,
           description: _descriptionController.text,
-          subjectGroupId: _selectedGroupId,
         );
       } else {
-        await createSubject(
+        await createSubjectGroup(
           ref,
           classId: widget.classId,
           name: _nameController.text,
           description: _descriptionController.text,
-          subjectGroupId: _selectedGroupId,
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -95,10 +84,8 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync = ref.watch(subjectGroupsForClassProvider(widget.classId));
-
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit Subject' : 'Add Subject'),
+      title: Text(_isEditing ? 'Edit Subject Group' : 'Add Subject Group'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -111,12 +98,12 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
-                  labelText: 'Subject Name',
-                  hintText: 'e.g. Machine Learning',
+                  labelText: 'Group Name',
+                  hintText: 'e.g. Core Subjects',
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a subject name';
+                    return 'Please enter a group name';
                   }
                   return null;
                 },
@@ -129,37 +116,9 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
-                  hintText: 'A short note about this subject',
+                  hintText: 'A short note about this group',
                   alignLabelWithHint: true,
                 ),
-              ),
-              const SizedBox(height: 16),
-              groupsAsync.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => const SizedBox.shrink(),
-                data: (groups) {
-                  return DropdownButtonFormField<String?>(
-                    // ignore: deprecated_member_use
-                    value: _selectedGroupId,
-                    decoration: const InputDecoration(
-                      labelText: 'Group',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('None'),
-                      ),
-                      for (final group in groups)
-                        DropdownMenuItem<String?>(
-                          value: group.id,
-                          child: Text(group.name),
-                        ),
-                    ],
-                    onChanged: (value) {
-                      setState(() => _selectedGroupId = value);
-                    },
-                  );
-                },
               ),
             ],
           ),

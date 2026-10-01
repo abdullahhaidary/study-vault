@@ -2,32 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
-import '../data/subject_groups_providers.dart';
-import '../data/subjects_providers.dart';
+import '../data/lesson_groups_providers.dart';
+import '../data/lessons_providers.dart';
 
-/// Dialog for creating or editing a Subject.
-class CreateSubjectDialog extends ConsumerStatefulWidget {
-  const CreateSubjectDialog({
+/// Dialog for creating or editing a Lesson.
+class CreateLessonDialog extends ConsumerStatefulWidget {
+  const CreateLessonDialog({
     super.key,
-    required this.classId,
+    required this.subjectId,
     this.existing,
     this.initialGroupId,
   });
 
-  final String classId;
-  final Subject? existing;
+  final String subjectId;
+  final Lesson? existing;
   final String? initialGroupId;
 
   static Future<void> show(
     BuildContext context, {
-    required String classId,
-    Subject? existing,
+    required String subjectId,
+    Lesson? existing,
     String? initialGroupId,
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => CreateSubjectDialog(
-        classId: classId,
+      builder: (_) => CreateLessonDialog(
+        subjectId: subjectId,
         existing: existing,
         initialGroupId: initialGroupId,
       ),
@@ -35,11 +35,10 @@ class CreateSubjectDialog extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<CreateSubjectDialog> createState() =>
-      _CreateSubjectDialogState();
+  ConsumerState<CreateLessonDialog> createState() => _CreateLessonDialogState();
 }
 
-class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
+class _CreateLessonDialogState extends ConsumerState<CreateLessonDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _descriptionController;
@@ -55,7 +54,7 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
     _descriptionController =
         TextEditingController(text: widget.existing?.description ?? '');
     _selectedGroupId =
-        widget.existing?.subjectGroupId ?? widget.initialGroupId;
+        widget.existing?.lessonGroupId ?? widget.initialGroupId;
   }
 
   @override
@@ -71,20 +70,20 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
     setState(() => _saving = true);
     try {
       if (_isEditing) {
-        await updateSubjectDetails(
+        await updateLessonDetails(
           ref,
-          subject: widget.existing!,
+          lesson: widget.existing!,
           name: _nameController.text,
           description: _descriptionController.text,
-          subjectGroupId: _selectedGroupId,
+          lessonGroupId: _selectedGroupId,
         );
       } else {
-        await createSubject(
+        await createLesson(
           ref,
-          classId: widget.classId,
+          subjectId: widget.subjectId,
           name: _nameController.text,
           description: _descriptionController.text,
-          subjectGroupId: _selectedGroupId,
+          lessonGroupId: _selectedGroupId,
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -95,10 +94,11 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync = ref.watch(subjectGroupsForClassProvider(widget.classId));
+    final groupsAsync =
+        ref.watch(lessonGroupsForSubjectProvider(widget.subjectId));
 
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit Subject' : 'Add Subject'),
+      title: Text(_isEditing ? 'Edit Lesson' : 'Add Lesson'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -111,12 +111,12 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
-                  labelText: 'Subject Name',
-                  hintText: 'e.g. Machine Learning',
+                  labelText: 'Lesson Name',
+                  hintText: 'e.g. Linear Regression',
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a subject name';
+                    return 'Please enter a lesson name';
                   }
                   return null;
                 },
@@ -129,7 +129,7 @@ class _CreateSubjectDialogState extends ConsumerState<CreateSubjectDialog> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
-                  hintText: 'A short note about this subject',
+                  hintText: 'A short note about this lesson',
                   alignLabelWithHint: true,
                 ),
               ),
