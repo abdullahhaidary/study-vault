@@ -59,8 +59,9 @@ class FlashcardsListScreen extends ConsumerWidget {
         error: (error, _) =>
             Center(child: Text('Could not load flashcards: $error')),
         data: (items) {
-          if (items.isEmpty)
+          if (items.isEmpty) {
             return const Center(child: Text('No flashcards yet.'));
+          }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: items.length,

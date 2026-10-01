@@ -35,8 +35,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (note == null ||
         editor == null ||
         title == null ||
-        title.text.trim().isEmpty)
+        title.text.trim().isEmpty) {
       return;
+    }
     setState(() => _saving = true);
     await updateStudyNoteContent(
       ref,
@@ -56,8 +57,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       error: (error, _) =>
           Scaffold(body: Center(child: Text('Could not load note: $error'))),
       data: (item) {
-        if (item == null)
+        if (item == null) {
           return const Scaffold(body: Center(child: Text('Note not found.')));
+        }
         _title ??= TextEditingController(text: item.title);
         _editor ??= QuillController(
           document: StudyNoteCodec.decode(item.content),

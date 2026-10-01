@@ -71,8 +71,9 @@ class HomeScreen extends ConsumerWidget {
             loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
             error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             data: (lessons) {
-              if (lessons.isEmpty)
+              if (lessons.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
               return SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),

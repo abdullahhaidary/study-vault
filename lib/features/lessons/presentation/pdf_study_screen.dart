@@ -158,8 +158,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       ),
     );
     controller.dispose();
-    if (title != null)
+    if (title != null) {
       await updateBookmarkTitle(ref, bookmark: bookmark, title: title);
+    }
   }
 
   Widget _outlinePanel(List<MaterialBookmark> bookmarks, List<StudyPin> pins) {
@@ -180,8 +181,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
           _focusedPinId = pin.id;
           _readerPin = pin;
         });
-        if (pin.pageNumber != null)
+        if (pin.pageNumber != null) {
           _controller.goToPage(pageNumber: pin.pageNumber!);
+        }
       },
       categoryNames: {
         for (final entry in categories.entries) entry.key: entry.value.name,
@@ -438,8 +440,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                         ),
                         customizeContextMenuItems: (params, items) {
                           if (!annotate) return;
-                          if (!params.textSelectionDelegate.hasSelectedText)
+                          if (!params.textSelectionDelegate.hasSelectedText) {
                             return;
+                          }
                           items.insert(
                             0,
                             ContextMenuButtonItem(

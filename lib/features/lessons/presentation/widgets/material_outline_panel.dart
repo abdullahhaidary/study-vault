@@ -68,8 +68,9 @@ class _MaterialOutlinePanelState extends State<MaterialOutlinePanel> {
                 FutureBuilder<List<PdfOutlineNode>>(
                   future: _outline,
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData)
+                    if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
+                    }
                     final nodes = snapshot.data!;
                     if (nodes.isEmpty) {
                       return const Center(
@@ -121,8 +122,9 @@ class _MaterialOutlinePanelState extends State<MaterialOutlinePanel> {
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'edit') widget.onBookmarkEdit(bookmark);
-                          if (value == 'delete')
+                          if (value == 'delete') {
                             widget.onBookmarkDelete(bookmark);
+                          }
                         },
                         itemBuilder: (_) => const [
                           PopupMenuItem(

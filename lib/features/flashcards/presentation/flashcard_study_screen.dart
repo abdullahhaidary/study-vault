@@ -55,8 +55,9 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen> {
         error: (error, _) =>
             Center(child: Text('Could not load flashcards: $error')),
         data: (items) {
-          if (items.isEmpty)
+          if (items.isEmpty) {
             return const Center(child: Text('No flashcards to study.'));
+          }
           final card = items[_index % items.length];
           return Focus(
             autofocus: true,
@@ -113,10 +114,11 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen> {
                         ),
                       FilledButton(
                         onPressed: () {
-                          if (_revealed)
+                          if (_revealed) {
                             _next(items.length);
-                          else
+                          } else {
                             setState(() => _revealed = true);
+                          }
                           if (card.lessonId != null) {
                             recordLessonStudyActivity(
                               ref,
