@@ -9,7 +9,7 @@ import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
 
-/// Lesson page — attach and open local PDF study materials.
+/// Lesson page — attach and open local PDF / image study materials.
 class LessonDetailsScreen extends ConsumerWidget {
   const LessonDetailsScreen({super.key, required this.lessonId});
 
@@ -32,15 +32,76 @@ class LessonDetailsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _attachImage(BuildContext context, WidgetRef ref) async {
+    try {
+      final material = await attachImageToLesson(ref, lessonId: lessonId);
+      if (material != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Attached ${material.title}')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not attach image: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showAttachMenu(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Attach PDF'),
+              onTap: () {
+                Navigator.pop(context);
+                _attachPdf(context, ref);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Attach image'),
+              onTap: () {
+                Navigator.pop(context);
+                _attachImage(context, ref);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _openMaterial(
     BuildContext context,
     LessonMaterial material,
   ) async {
     final path = await materialAbsolutePath(material);
     if (!context.mounted) return;
+
+    if (isImageMimeType(material.mimeType)) {
+      await Navigator.of(context).pushNamed(
+        AppRoutes.imageStudy,
+        arguments: {
+          'resourceId': material.id,
+          'title': material.title,
+          'filePath': path,
+        },
+      );
+      return;
+    }
+
     await Navigator.of(context).pushNamed(
       AppRoutes.pdfStudy,
       arguments: {
+        'resourceId': material.id,
         'title': material.title,
         'filePath': path,
       },
@@ -55,10 +116,15 @@ class LessonDetailsScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove PDF?'),
+        title: Text(
+          isImageMimeType(material.mimeType)
+              ? 'Remove image?'
+              : 'Remove PDF?',
+        ),
         content: Text(
           '"${material.title}" will be removed from this lesson and deleted '
-          'from local Study Vault storage.',
+          'from local Study Vault storage. Study Pins on this resource will '
+          'also be removed.',
         ),
         actions: [
           TextButton(
@@ -76,6 +142,12 @@ class LessonDetailsScreen extends ConsumerWidget {
     if (confirmed == true) {
       await deleteLessonMaterial(ref, material: material);
     }
+  }
+
+  IconData _iconFor(LessonMaterial material) {
+    return isImageMimeType(material.mimeType)
+        ? Icons.image_outlined
+        : Icons.picture_as_pdf_outlined;
   }
 
   @override
@@ -116,7 +188,15 @@ class LessonDetailsScreen extends ConsumerWidget {
                     ),
                     icon: const Icon(Icons.edit_outlined),
                   ),
-                  if (isWide)
+                  if (isWide) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => _attachImage(context, ref),
+                        icon: const Icon(Icons.image_outlined),
+                        label: const Text('Attach image'),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: FilledButton.icon(
@@ -124,12 +204,12 @@ class LessonDetailsScreen extends ConsumerWidget {
                         icon: const Icon(Icons.picture_as_pdf_outlined),
                         label: const Text('Attach PDF'),
                       ),
-                    )
-                  else
+                    ),
+                  ] else
                     IconButton(
-                      tooltip: 'Attach PDF',
-                      onPressed: () => _attachPdf(context, ref),
-                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      tooltip: 'Attach material',
+                      onPressed: () => _showAttachMenu(context, ref),
+                      icon: const Icon(Icons.attach_file),
                     ),
                 ],
               ),
@@ -170,10 +250,10 @@ class LessonDetailsScreen extends ConsumerWidget {
                     return const SliverFillRemaining(
                       hasScrollBody: false,
                       child: EmptyState(
-                        icon: Icons.picture_as_pdf_outlined,
-                        title: 'No PDFs yet',
+                        icon: Icons.folder_open_outlined,
+                        title: 'No materials yet',
                         message:
-                            'Attach a local PDF to open and study it here.',
+                            'Attach a local PDF or image to study it here.',
                       ),
                     );
                   }
@@ -184,12 +264,15 @@ class LessonDetailsScreen extends ConsumerWidget {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final material = materials[index];
+                          final kind = isImageMimeType(material.mimeType)
+                              ? 'Image'
+                              : 'PDF';
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: GroupedItemTile(
                               title: material.title,
-                              subtitle: 'Tap to open and study',
-                              icon: Icons.picture_as_pdf_outlined,
+                              subtitle: '$kind · Tap to open and study',
+                              icon: _iconFor(material),
                               onTap: () => _openMaterial(context, material),
                               onDelete: () =>
                                   _confirmDelete(context, ref, material),
@@ -207,9 +290,9 @@ class LessonDetailsScreen extends ConsumerWidget {
           floatingActionButton: isWide
               ? null
               : FloatingActionButton.extended(
-                  onPressed: () => _attachPdf(context, ref),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('Attach PDF'),
+                  onPressed: () => _showAttachMenu(context, ref),
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Attach'),
                 ),
         );
       },

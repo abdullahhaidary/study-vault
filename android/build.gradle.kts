@@ -15,6 +15,27 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
+// Register BEFORE evaluationDependsOn so callbacks still run when plugins evaluate.
+subprojects {
+    afterEvaluate {
+        val android = extensions.findByName("android") ?: return@afterEvaluate
+        try {
+            android.javaClass
+                .getMethod("setCompileSdk", Int::class.javaPrimitiveType)
+                .invoke(android, 36)
+        } catch (_: Throwable) {
+            try {
+                android.javaClass
+                    .getMethod("setCompileSdkVersion", Int::class.javaPrimitiveType)
+                    .invoke(android, 36)
+            } catch (_: Throwable) {
+                // Not an Android module / unsupported DSL.
+            }
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

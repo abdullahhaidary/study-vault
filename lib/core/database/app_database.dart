@@ -82,7 +82,7 @@ class Lessons extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Local study materials (currently PDFs) attached to a lesson.
+/// Local study materials (PDFs / images) attached to a lesson.
 class LessonMaterials extends Table {
   TextColumn get id => text()();
   TextColumn get lessonId => text().references(Lessons, #id)();
@@ -99,6 +99,29 @@ class LessonMaterials extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Point-based Study Pins attached to a PDF page or image resource.
+class StudyPins extends Table {
+  TextColumn get id => text()();
+  TextColumn get resourceId => text().references(LessonMaterials, #id)();
+  /// 1-based PDF page number; null for image resources.
+  IntColumn get pageNumber => integer().nullable()();
+  /// Normalized X position within the page/image (0–1, left → right).
+  RealColumn get xRatio => real()();
+  /// Normalized Y position within the page/image (0–1, top → bottom).
+  RealColumn get yRatio => real()();
+  TextColumn get shortText => text().withLength(min: 1, max: 500)();
+  /// Plain-text full explanation for now; reserved for richer formats later.
+  TextColumn get fullExplanation => text().nullable()();
+  IntColumn get sortOrder => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  /// Reserved for future sync soft-delete; unused by current hard-delete UI.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -107,6 +130,7 @@ class LessonMaterials extends Table {
     LessonGroups,
     Lessons,
     LessonMaterials,
+    StudyPins,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -116,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -133,6 +157,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 3) {
             await m.createTable(lessonMaterials);
+          }
+          if (from < 4) {
+            await m.createTable(studyPins);
           }
         },
       );
@@ -337,8 +364,47 @@ class AppDatabase extends _$AppDatabase {
     return into(lessonMaterials).insert(entry);
   }
 
-  Future<void> deleteLessonMaterial(String id) {
-    return (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteLessonMaterial(String id) async {
+    await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
+    await (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── Study Pins ───────────────────────────────────────────
+
+  Stream<List<StudyPin>> watchStudyPinsForResource(String resourceId) {
+    return (select(studyPins)
+          ..where(
+            (t) =>
+                t.resourceId.equals(resourceId) & t.deletedAt.isNull(),
+          )
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.pageNumber),
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .watch();
+  }
+
+  Future<StudyPin?> getStudyPinById(String id) {
+    return (select(studyPins)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  Stream<StudyPin?> watchStudyPinById(String id) {
+    return (select(studyPins)..where((t) => t.id.equals(id)))
+        .watchSingleOrNull();
+  }
+
+  Future<void> insertStudyPin(StudyPinsCompanion entry) {
+    return into(studyPins).insert(entry);
+  }
+
+  Future<void> updateStudyPin(StudyPin pin) {
+    return update(studyPins).replace(pin);
+  }
+
+  Future<void> deleteStudyPin(String id) {
+    return (delete(studyPins)..where((t) => t.id.equals(id))).go();
   }
 }
 

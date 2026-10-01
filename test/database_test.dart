@@ -240,4 +240,70 @@ void main() {
     expect(materials, hasLength(1));
     expect(materials.first.title, 'ML-L4-MSIS.pdf');
   });
+
+  test('study pins persist normalized coordinates on a resource', () async {
+    final now = DateTime.now();
+    await db.insertClass(
+      ClassesCompanion.insert(
+        id: 'class-1',
+        name: 'Class',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertSubject(
+      SubjectsCompanion.insert(
+        id: 'subject-1',
+        classId: 'class-1',
+        name: 'ML',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLesson(
+      LessonsCompanion.insert(
+        id: 'lesson-1',
+        subjectId: 'subject-1',
+        name: 'Linear Regression',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLessonMaterial(
+      LessonMaterialsCompanion.insert(
+        id: 'mat-1',
+        lessonId: 'lesson-1',
+        title: 'notes.pdf',
+        originalFileName: 'notes.pdf',
+        storedFileName: 'uuid.pdf',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    await db.insertStudyPin(
+      StudyPinsCompanion.insert(
+        id: 'pin-1',
+        resourceId: 'mat-1',
+        pageNumber: const Value(2),
+        xRatio: 0.42,
+        yRatio: 0.33,
+        shortText: 'Controls gradient step size',
+        fullExplanation: const Value('Learning rate scales each update.'),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final pins = await db.watchStudyPinsForResource('mat-1').first;
+    expect(pins, hasLength(1));
+    expect(pins.first.pageNumber, 2);
+    expect(pins.first.xRatio, closeTo(0.42, 0.0001));
+    expect(pins.first.yRatio, closeTo(0.33, 0.0001));
+    expect(pins.first.shortText, 'Controls gradient step size');
+
+    await db.deleteLessonMaterial('mat-1');
+    final afterDelete = await db.watchStudyPinsForResource('mat-1').first;
+    expect(afterDelete, isEmpty);
+  });
 }

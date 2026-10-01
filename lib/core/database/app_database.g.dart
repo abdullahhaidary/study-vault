@@ -2951,6 +2951,690 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
   }
 }
 
+class $StudyPinsTable extends StudyPins
+    with TableInfo<$StudyPinsTable, StudyPin> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudyPinsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resourceIdMeta = const VerificationMeta(
+    'resourceId',
+  );
+  @override
+  late final GeneratedColumn<String> resourceId = GeneratedColumn<String>(
+    'resource_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id)',
+    ),
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _xRatioMeta = const VerificationMeta('xRatio');
+  @override
+  late final GeneratedColumn<double> xRatio = GeneratedColumn<double>(
+    'x_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yRatioMeta = const VerificationMeta('yRatio');
+  @override
+  late final GeneratedColumn<double> yRatio = GeneratedColumn<double>(
+    'y_ratio',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _shortTextMeta = const VerificationMeta(
+    'shortText',
+  );
+  @override
+  late final GeneratedColumn<String> shortText = GeneratedColumn<String>(
+    'short_text',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 500,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fullExplanationMeta = const VerificationMeta(
+    'fullExplanation',
+  );
+  @override
+  late final GeneratedColumn<String> fullExplanation = GeneratedColumn<String>(
+    'full_explanation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    resourceId,
+    pageNumber,
+    xRatio,
+    yRatio,
+    shortText,
+    fullExplanation,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_pins';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudyPin> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('resource_id')) {
+      context.handle(
+        _resourceIdMeta,
+        resourceId.isAcceptableOrUnknown(data['resource_id']!, _resourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resourceIdMeta);
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    }
+    if (data.containsKey('x_ratio')) {
+      context.handle(
+        _xRatioMeta,
+        xRatio.isAcceptableOrUnknown(data['x_ratio']!, _xRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_xRatioMeta);
+    }
+    if (data.containsKey('y_ratio')) {
+      context.handle(
+        _yRatioMeta,
+        yRatio.isAcceptableOrUnknown(data['y_ratio']!, _yRatioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yRatioMeta);
+    }
+    if (data.containsKey('short_text')) {
+      context.handle(
+        _shortTextMeta,
+        shortText.isAcceptableOrUnknown(data['short_text']!, _shortTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shortTextMeta);
+    }
+    if (data.containsKey('full_explanation')) {
+      context.handle(
+        _fullExplanationMeta,
+        fullExplanation.isAcceptableOrUnknown(
+          data['full_explanation']!,
+          _fullExplanationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StudyPin map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudyPin(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      resourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resource_id'],
+      )!,
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      ),
+      xRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}x_ratio'],
+      )!,
+      yRatio: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}y_ratio'],
+      )!,
+      shortText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}short_text'],
+      )!,
+      fullExplanation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}full_explanation'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $StudyPinsTable createAlias(String alias) {
+    return $StudyPinsTable(attachedDatabase, alias);
+  }
+}
+
+class StudyPin extends DataClass implements Insertable<StudyPin> {
+  final String id;
+  final String resourceId;
+
+  /// 1-based PDF page number; null for image resources.
+  final int? pageNumber;
+
+  /// Normalized X position within the page/image (0–1, left → right).
+  final double xRatio;
+
+  /// Normalized Y position within the page/image (0–1, top → bottom).
+  final double yRatio;
+  final String shortText;
+
+  /// Plain-text full explanation for now; reserved for richer formats later.
+  final String? fullExplanation;
+  final int? sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  /// Reserved for future sync soft-delete; unused by current hard-delete UI.
+  final DateTime? deletedAt;
+  const StudyPin({
+    required this.id,
+    required this.resourceId,
+    this.pageNumber,
+    required this.xRatio,
+    required this.yRatio,
+    required this.shortText,
+    this.fullExplanation,
+    this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['resource_id'] = Variable<String>(resourceId);
+    if (!nullToAbsent || pageNumber != null) {
+      map['page_number'] = Variable<int>(pageNumber);
+    }
+    map['x_ratio'] = Variable<double>(xRatio);
+    map['y_ratio'] = Variable<double>(yRatio);
+    map['short_text'] = Variable<String>(shortText);
+    if (!nullToAbsent || fullExplanation != null) {
+      map['full_explanation'] = Variable<String>(fullExplanation);
+    }
+    if (!nullToAbsent || sortOrder != null) {
+      map['sort_order'] = Variable<int>(sortOrder);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  StudyPinsCompanion toCompanion(bool nullToAbsent) {
+    return StudyPinsCompanion(
+      id: Value(id),
+      resourceId: Value(resourceId),
+      pageNumber: pageNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageNumber),
+      xRatio: Value(xRatio),
+      yRatio: Value(yRatio),
+      shortText: Value(shortText),
+      fullExplanation: fullExplanation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fullExplanation),
+      sortOrder: sortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory StudyPin.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudyPin(
+      id: serializer.fromJson<String>(json['id']),
+      resourceId: serializer.fromJson<String>(json['resourceId']),
+      pageNumber: serializer.fromJson<int?>(json['pageNumber']),
+      xRatio: serializer.fromJson<double>(json['xRatio']),
+      yRatio: serializer.fromJson<double>(json['yRatio']),
+      shortText: serializer.fromJson<String>(json['shortText']),
+      fullExplanation: serializer.fromJson<String?>(json['fullExplanation']),
+      sortOrder: serializer.fromJson<int?>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'resourceId': serializer.toJson<String>(resourceId),
+      'pageNumber': serializer.toJson<int?>(pageNumber),
+      'xRatio': serializer.toJson<double>(xRatio),
+      'yRatio': serializer.toJson<double>(yRatio),
+      'shortText': serializer.toJson<String>(shortText),
+      'fullExplanation': serializer.toJson<String?>(fullExplanation),
+      'sortOrder': serializer.toJson<int?>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  StudyPin copyWith({
+    String? id,
+    String? resourceId,
+    Value<int?> pageNumber = const Value.absent(),
+    double? xRatio,
+    double? yRatio,
+    String? shortText,
+    Value<String?> fullExplanation = const Value.absent(),
+    Value<int?> sortOrder = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => StudyPin(
+    id: id ?? this.id,
+    resourceId: resourceId ?? this.resourceId,
+    pageNumber: pageNumber.present ? pageNumber.value : this.pageNumber,
+    xRatio: xRatio ?? this.xRatio,
+    yRatio: yRatio ?? this.yRatio,
+    shortText: shortText ?? this.shortText,
+    fullExplanation: fullExplanation.present
+        ? fullExplanation.value
+        : this.fullExplanation,
+    sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  StudyPin copyWithCompanion(StudyPinsCompanion data) {
+    return StudyPin(
+      id: data.id.present ? data.id.value : this.id,
+      resourceId: data.resourceId.present
+          ? data.resourceId.value
+          : this.resourceId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      xRatio: data.xRatio.present ? data.xRatio.value : this.xRatio,
+      yRatio: data.yRatio.present ? data.yRatio.value : this.yRatio,
+      shortText: data.shortText.present ? data.shortText.value : this.shortText,
+      fullExplanation: data.fullExplanation.present
+          ? data.fullExplanation.value
+          : this.fullExplanation,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyPin(')
+          ..write('id: $id, ')
+          ..write('resourceId: $resourceId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('shortText: $shortText, ')
+          ..write('fullExplanation: $fullExplanation, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    resourceId,
+    pageNumber,
+    xRatio,
+    yRatio,
+    shortText,
+    fullExplanation,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudyPin &&
+          other.id == this.id &&
+          other.resourceId == this.resourceId &&
+          other.pageNumber == this.pageNumber &&
+          other.xRatio == this.xRatio &&
+          other.yRatio == this.yRatio &&
+          other.shortText == this.shortText &&
+          other.fullExplanation == this.fullExplanation &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class StudyPinsCompanion extends UpdateCompanion<StudyPin> {
+  final Value<String> id;
+  final Value<String> resourceId;
+  final Value<int?> pageNumber;
+  final Value<double> xRatio;
+  final Value<double> yRatio;
+  final Value<String> shortText;
+  final Value<String?> fullExplanation;
+  final Value<int?> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const StudyPinsCompanion({
+    this.id = const Value.absent(),
+    this.resourceId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.xRatio = const Value.absent(),
+    this.yRatio = const Value.absent(),
+    this.shortText = const Value.absent(),
+    this.fullExplanation = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StudyPinsCompanion.insert({
+    required String id,
+    required String resourceId,
+    this.pageNumber = const Value.absent(),
+    required double xRatio,
+    required double yRatio,
+    required String shortText,
+    this.fullExplanation = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       resourceId = Value(resourceId),
+       xRatio = Value(xRatio),
+       yRatio = Value(yRatio),
+       shortText = Value(shortText),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<StudyPin> custom({
+    Expression<String>? id,
+    Expression<String>? resourceId,
+    Expression<int>? pageNumber,
+    Expression<double>? xRatio,
+    Expression<double>? yRatio,
+    Expression<String>? shortText,
+    Expression<String>? fullExplanation,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (resourceId != null) 'resource_id': resourceId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (xRatio != null) 'x_ratio': xRatio,
+      if (yRatio != null) 'y_ratio': yRatio,
+      if (shortText != null) 'short_text': shortText,
+      if (fullExplanation != null) 'full_explanation': fullExplanation,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StudyPinsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? resourceId,
+    Value<int?>? pageNumber,
+    Value<double>? xRatio,
+    Value<double>? yRatio,
+    Value<String>? shortText,
+    Value<String?>? fullExplanation,
+    Value<int?>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return StudyPinsCompanion(
+      id: id ?? this.id,
+      resourceId: resourceId ?? this.resourceId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      xRatio: xRatio ?? this.xRatio,
+      yRatio: yRatio ?? this.yRatio,
+      shortText: shortText ?? this.shortText,
+      fullExplanation: fullExplanation ?? this.fullExplanation,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (resourceId.present) {
+      map['resource_id'] = Variable<String>(resourceId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (xRatio.present) {
+      map['x_ratio'] = Variable<double>(xRatio.value);
+    }
+    if (yRatio.present) {
+      map['y_ratio'] = Variable<double>(yRatio.value);
+    }
+    if (shortText.present) {
+      map['short_text'] = Variable<String>(shortText.value);
+    }
+    if (fullExplanation.present) {
+      map['full_explanation'] = Variable<String>(fullExplanation.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudyPinsCompanion(')
+          ..write('id: $id, ')
+          ..write('resourceId: $resourceId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('xRatio: $xRatio, ')
+          ..write('yRatio: $yRatio, ')
+          ..write('shortText: $shortText, ')
+          ..write('fullExplanation: $fullExplanation, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2962,6 +3646,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LessonMaterialsTable lessonMaterials = $LessonMaterialsTable(
     this,
   );
+  late final $StudyPinsTable studyPins = $StudyPinsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2973,6 +3658,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lessonGroups,
     lessons,
     lessonMaterials,
+    studyPins,
   ];
 }
 
@@ -5559,6 +6245,24 @@ final class $$LessonMaterialsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$StudyPinsTable, List<StudyPin>>
+  _studyPinsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.studyPins,
+    aliasName: 'lesson_materials__id__study_pins__resource_id',
+  );
+
+  $$StudyPinsTableProcessedTableManager get studyPinsRefs {
+    final manager = $$StudyPinsTableTableManager(
+      $_db,
+      $_db.studyPins,
+    ).filter((f) => f.resourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_studyPinsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$LessonMaterialsTableFilterComposer
@@ -5631,6 +6335,31 @@ class $$LessonMaterialsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> studyPinsRefs(
+    Expression<bool> Function($$StudyPinsTableFilterComposer f) f,
+  ) {
+    final $$StudyPinsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.resourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -5766,6 +6495,31 @@ class $$LessonMaterialsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> studyPinsRefs<T extends Object>(
+    Expression<T> Function($$StudyPinsTableAnnotationComposer a) f,
+  ) {
+    final $$StudyPinsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.resourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$LessonMaterialsTableTableManager
@@ -5781,7 +6535,7 @@ class $$LessonMaterialsTableTableManager
           $$LessonMaterialsTableUpdateCompanionBuilder,
           (LessonMaterial, $$LessonMaterialsTableReferences),
           LessonMaterial,
-          PrefetchHooks Function({bool lessonId})
+          PrefetchHooks Function({bool lessonId, bool studyPinsRefs})
         > {
   $$LessonMaterialsTableTableManager(
     _$AppDatabase db,
@@ -5852,10 +6606,10 @@ class $$LessonMaterialsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({lessonId = false}) {
+          prefetchHooksCallback: ({lessonId = false, studyPinsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (studyPinsRefs) db.studyPins],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -5891,7 +6645,27 @@ class $$LessonMaterialsTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (studyPinsRefs)
+                    await $_getPrefetchedData<
+                      LessonMaterial,
+                      $LessonMaterialsTable,
+                      StudyPin
+                    >(
+                      currentTable: table,
+                      referencedTable: $$LessonMaterialsTableReferences
+                          ._studyPinsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$LessonMaterialsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).studyPinsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.resourceId == item.id),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -5911,7 +6685,443 @@ typedef $$LessonMaterialsTableProcessedTableManager =
       $$LessonMaterialsTableUpdateCompanionBuilder,
       (LessonMaterial, $$LessonMaterialsTableReferences),
       LessonMaterial,
-      PrefetchHooks Function({bool lessonId})
+      PrefetchHooks Function({bool lessonId, bool studyPinsRefs})
+    >;
+typedef $$StudyPinsTableCreateCompanionBuilder =
+    StudyPinsCompanion Function({
+      required String id,
+      required String resourceId,
+      Value<int?> pageNumber,
+      required double xRatio,
+      required double yRatio,
+      required String shortText,
+      Value<String?> fullExplanation,
+      Value<int?> sortOrder,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$StudyPinsTableUpdateCompanionBuilder =
+    StudyPinsCompanion Function({
+      Value<String> id,
+      Value<String> resourceId,
+      Value<int?> pageNumber,
+      Value<double> xRatio,
+      Value<double> yRatio,
+      Value<String> shortText,
+      Value<String?> fullExplanation,
+      Value<int?> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+final class $$StudyPinsTableReferences
+    extends BaseReferences<_$AppDatabase, $StudyPinsTable, StudyPin> {
+  $$StudyPinsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LessonMaterialsTable _resourceIdTable(_$AppDatabase db) => db
+      .lessonMaterials
+      .createAlias('study_pins__resource_id__lesson_materials__id');
+
+  $$LessonMaterialsTableProcessedTableManager get resourceId {
+    final $_column = $_itemColumn<String>('resource_id')!;
+
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_resourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StudyPinsTableFilterComposer
+    extends Composer<_$AppDatabase, $StudyPinsTable> {
+  $$StudyPinsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shortText => $composableBuilder(
+    column: $table.shortText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fullExplanation => $composableBuilder(
+    column: $table.fullExplanation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LessonMaterialsTableFilterComposer get resourceId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resourceId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudyPinsTable> {
+  $$StudyPinsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get xRatio => $composableBuilder(
+    column: $table.xRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get yRatio => $composableBuilder(
+    column: $table.yRatio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shortText => $composableBuilder(
+    column: $table.shortText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fullExplanation => $composableBuilder(
+    column: $table.fullExplanation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LessonMaterialsTableOrderingComposer get resourceId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resourceId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudyPinsTable> {
+  $$StudyPinsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get xRatio =>
+      $composableBuilder(column: $table.xRatio, builder: (column) => column);
+
+  GeneratedColumn<double> get yRatio =>
+      $composableBuilder(column: $table.yRatio, builder: (column) => column);
+
+  GeneratedColumn<String> get shortText =>
+      $composableBuilder(column: $table.shortText, builder: (column) => column);
+
+  GeneratedColumn<String> get fullExplanation => $composableBuilder(
+    column: $table.fullExplanation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $$LessonMaterialsTableAnnotationComposer get resourceId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resourceId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StudyPinsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudyPinsTable,
+          StudyPin,
+          $$StudyPinsTableFilterComposer,
+          $$StudyPinsTableOrderingComposer,
+          $$StudyPinsTableAnnotationComposer,
+          $$StudyPinsTableCreateCompanionBuilder,
+          $$StudyPinsTableUpdateCompanionBuilder,
+          (StudyPin, $$StudyPinsTableReferences),
+          StudyPin,
+          PrefetchHooks Function({bool resourceId})
+        > {
+  $$StudyPinsTableTableManager(_$AppDatabase db, $StudyPinsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudyPinsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudyPinsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudyPinsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> resourceId = const Value.absent(),
+                Value<int?> pageNumber = const Value.absent(),
+                Value<double> xRatio = const Value.absent(),
+                Value<double> yRatio = const Value.absent(),
+                Value<String> shortText = const Value.absent(),
+                Value<String?> fullExplanation = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyPinsCompanion(
+                id: id,
+                resourceId: resourceId,
+                pageNumber: pageNumber,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                shortText: shortText,
+                fullExplanation: fullExplanation,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String resourceId,
+                Value<int?> pageNumber = const Value.absent(),
+                required double xRatio,
+                required double yRatio,
+                required String shortText,
+                Value<String?> fullExplanation = const Value.absent(),
+                Value<int?> sortOrder = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StudyPinsCompanion.insert(
+                id: id,
+                resourceId: resourceId,
+                pageNumber: pageNumber,
+                xRatio: xRatio,
+                yRatio: yRatio,
+                shortText: shortText,
+                fullExplanation: fullExplanation,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$StudyPinsTable, StudyPin>(table),
+                  $$StudyPinsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({resourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (resourceId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.resourceId,
+                                referencedTable: $$StudyPinsTableReferences
+                                    ._resourceIdTable(db),
+                                referencedColumn: $$StudyPinsTableReferences
+                                    ._resourceIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StudyPinsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudyPinsTable,
+      StudyPin,
+      $$StudyPinsTableFilterComposer,
+      $$StudyPinsTableOrderingComposer,
+      $$StudyPinsTableAnnotationComposer,
+      $$StudyPinsTableCreateCompanionBuilder,
+      $$StudyPinsTableUpdateCompanionBuilder,
+      (StudyPin, $$StudyPinsTableReferences),
+      StudyPin,
+      PrefetchHooks Function({bool resourceId})
     >;
 
 class $AppDatabaseManager {
@@ -5929,4 +7139,6 @@ class $AppDatabaseManager {
       $$LessonsTableTableManager(_db, _db.lessons);
   $$LessonMaterialsTableTableManager get lessonMaterials =>
       $$LessonMaterialsTableTableManager(_db, _db.lessonMaterials);
+  $$StudyPinsTableTableManager get studyPins =>
+      $$StudyPinsTableTableManager(_db, _db.studyPins);
 }
