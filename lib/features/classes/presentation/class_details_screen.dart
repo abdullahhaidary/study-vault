@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/database/built_in_data.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
+import '../../favorites/presentation/favorite_star_button.dart';
 import '../../subjects/data/subject_groups_providers.dart';
 import '../../subjects/data/subjects_providers.dart';
 import '../../subjects/presentation/create_subject_dialog.dart';
@@ -77,6 +79,10 @@ class ClassDetailsScreen extends ConsumerWidget {
               SliverAppBar.large(
                 title: Text(classItem.name),
                 actions: [
+                  FavoriteStarButton(
+                    entityType: FavoriteEntityType.class_,
+                    entityId: classId,
+                  ),
                   if (isWide) ...[
                     TextButton.icon(
                       onPressed: () =>

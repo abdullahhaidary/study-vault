@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../features/classes/presentation/class_details_screen.dart';
 import '../features/classes/presentation/home_screen.dart';
+import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
+import '../features/search/presentation/search_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 
 /// Named route constants.
@@ -15,6 +17,8 @@ abstract final class AppRoutes {
   static const lessonDetails = '/lesson';
   static const pdfStudy = '/pdf-study';
   static const imageStudy = '/image-study';
+  static const search = '/search';
+  static const favorites = '/favorites';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -24,6 +28,18 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => const HomeScreen(),
+      );
+
+    case AppRoutes.search:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const SearchScreen(),
+      );
+
+    case AppRoutes.favorites:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const FavoritesScreen(),
       );
 
     case AppRoutes.classDetails:
@@ -55,6 +71,8 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
           resourceId: args['resourceId']!,
           title: args['title']!,
           filePath: args['filePath']!,
+          focusPinId: args['focusPinId'],
+          initialPage: int.tryParse(args['initialPage'] ?? ''),
         ),
       );
 
@@ -66,6 +84,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
           resourceId: args['resourceId']!,
           title: args['title']!,
           filePath: args['filePath']!,
+          focusPinId: args['focusPinId'],
         ),
       );
 

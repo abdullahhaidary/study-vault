@@ -3,18 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/navigation/study_navigator.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
+import '../../favorites/data/favorites_display_providers.dart';
+import '../../favorites/presentation/favorites_screen.dart';
+import '../../search/domain/study_search_result.dart';
 import '../data/classes_providers.dart';
 import 'create_class_dialog.dart';
 
-/// Home screen — lists all Classes.
+/// Home screen — lists all Classes + favorites strip.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classesAsync = ref.watch(classesProvider);
+    final favoritesAsync = ref.watch(homeFavoritesProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -23,6 +28,20 @@ class HomeScreen extends ConsumerWidget {
           SliverAppBar.large(
             title: const Text('Study Vault'),
             actions: [
+              IconButton(
+                tooltip: 'Search',
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRoutes.search);
+                },
+                icon: const Icon(Icons.search),
+              ),
+              IconButton(
+                tooltip: 'Favorites',
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRoutes.favorites);
+                },
+                icon: const Icon(Icons.star_outline),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FilledButton.icon(
@@ -32,6 +51,84 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          favoritesAsync.when(
+            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            data: (favs) {
+              if (favs.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Favorites',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const FavoritesScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text('View all'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        height: 88,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: favs.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final item = favs[index];
+                            return ActionChip(
+                              avatar: const Icon(Icons.star, size: 16),
+                              label: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 140,
+                                ),
+                                child: Text(
+                                  item.title,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              onPressed: () => StudyNavigator.openEntity(
+                                context,
+                                ref,
+                                kind: item.kind,
+                                id: item.entityId,
+                                materialId: item.materialId,
+                                materialTitle: item.materialTitle,
+                                mimeType: item.mimeType,
+                                pageNumber: item.pageNumber,
+                                focusPinId:
+                                    item.kind == StudyEntityKind.studyPin
+                                    ? item.entityId
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           SliverToBoxAdapter(
             child: Padding(

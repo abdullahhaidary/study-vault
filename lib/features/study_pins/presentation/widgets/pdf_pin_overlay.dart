@@ -3,6 +3,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/study_pins_providers.dart';
+import '../../domain/pin_category_style.dart';
 import '../../domain/pin_coordinates.dart';
 import '../../domain/pin_display_mode.dart';
 import 'draggable_point_pin_marker.dart';
@@ -15,6 +16,8 @@ List<Widget> buildPdfPagePinOverlays({
   required List<StudyPinTextRange> textRanges,
   required PinDisplayMode displayMode,
   required bool annotateMode,
+  required Map<String, StudyPinCategory> categoryMap,
+  String? focusedPinId,
   required void Function(StudyPin pin) onPinTap,
   required void Function(StudyPin pin, NormalizedPoint point) onPointPinMoved,
 }) {
@@ -36,6 +39,9 @@ List<Widget> buildPdfPagePinOverlays({
   for (final range in pageRanges) {
     final pin = pinById[range.studyPinId];
     if (pin == null || !pin.isTextPin) continue;
+    final category = pin.categoryId == null
+        ? null
+        : categoryMap[pin.categoryId!];
 
     final local = NormalizedRect(
       xRatio: range.xRatio,
@@ -56,7 +62,10 @@ List<Widget> buildPdfPagePinOverlays({
             onPinTap(pin);
             return true;
           },
-          child: const _TextHighlightBox(),
+          child: _TextHighlightBox(
+            category: category,
+            focused: pin.id == focusedPinId,
+          ),
         ),
       ),
     );
@@ -88,6 +97,9 @@ List<Widget> buildPdfPagePinOverlays({
 
   // Point pin markers (draggable only while annotate mode is on).
   for (final pin in pagePins.where((p) => p.isPointPin)) {
+    final category = pin.categoryId == null
+        ? null
+        : categoryMap[pin.categoryId!];
     widgets.add(
       DraggablePointPinMarker(
         key: ValueKey(pin.id),
@@ -96,6 +108,8 @@ List<Widget> buildPdfPagePinOverlays({
         displayMode: displayMode,
         canDrag: annotateMode,
         usePdfOverlayHitTesting: true,
+        category: category,
+        selected: pin.id == focusedPinId,
         onTap: () => onPinTap(pin),
         onMoved: (point) => onPointPinMoved(pin, point),
       ),
@@ -106,17 +120,22 @@ List<Widget> buildPdfPagePinOverlays({
 }
 
 class _TextHighlightBox extends StatelessWidget {
-  const _TextHighlightBox();
+  const _TextHighlightBox({this.category, this.focused = false});
+
+  final StudyPinCategory? category;
+  final bool focused;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final base = PinCategoryStyle.colorOf(category, theme.colorScheme);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.colorScheme.tertiary.withValues(alpha: 0.22),
+        color: base.withValues(alpha: focused ? 0.35 : 0.22),
         borderRadius: BorderRadius.circular(2),
         border: Border.all(
-          color: theme.colorScheme.tertiary.withValues(alpha: 0.35),
+          color: base.withValues(alpha: focused ? 0.7 : 0.35),
+          width: focused ? 1.5 : 1,
         ),
       ),
     );

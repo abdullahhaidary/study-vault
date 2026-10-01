@@ -5,6 +5,9 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/study_pins/domain/study_note_codec.dart';
+import 'built_in_data.dart';
+
 part 'app_database.g.dart';
 
 /// Classes table — top-level study containers.
@@ -99,9 +102,25 @@ class LessonMaterials extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Optional study-meaning categories for pins (Definition, Formula, …).
+class StudyPinCategories extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().withLength(min: 1, max: 80)();
+  IntColumn get colorValue => integer()();
+  TextColumn get iconKey => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  BoolColumn get isSystem => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Study Pins attached to a PDF page or image resource.
 ///
 /// [pinType] is `point` (tap marker) or `text` (PDF text selection).
+/// [categoryId] is optional study meaning (Definition, Formula, …).
 /// Text pins store geometry in [StudyPinTextRanges]; [xRatio]/[yRatio] still
 /// hold an anchor (first range center) for ordering / scroll helpers.
 class StudyPins extends Table {
@@ -110,6 +129,10 @@ class StudyPins extends Table {
 
   /// `point` or `text`. Existing rows migrate to `point`.
   TextColumn get pinType => text().withDefault(const Constant('point'))();
+
+  /// Optional study category (not the point/text annotation type).
+  TextColumn get categoryId =>
+      text().nullable().references(StudyPinCategories, #id)();
 
   /// 1-based PDF page number; null for image resources.
   IntColumn get pageNumber => integer().nullable()();
@@ -121,8 +144,11 @@ class StudyPins extends Table {
   RealColumn get yRatio => real()();
   TextColumn get shortText => text().withLength(min: 1, max: 500)();
 
-  /// Plain-text full explanation for now; reserved for richer formats later.
+  /// Full note: Quill Delta JSON (or legacy plain text).
   TextColumn get fullExplanation => text().nullable()();
+
+  /// Plain-text extraction of [fullExplanation] for local search.
+  TextColumn get fullExplanationPlainText => text().nullable()();
 
   /// Snapshot of the PDF selection for text pins (display context).
   TextColumn get selectedText => text().nullable()();
@@ -154,6 +180,22 @@ class StudyPinTextRanges extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Generic favorites / bookmarks across study entities.
+class Favorites extends Table {
+  TextColumn get id => text()();
+  TextColumn get entityType => text()();
+  TextColumn get entityId => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {entityType, entityId},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -162,8 +204,10 @@ class StudyPinTextRanges extends Table {
     LessonGroups,
     Lessons,
     LessonMaterials,
+    StudyPinCategories,
     StudyPins,
     StudyPinTextRanges,
+    Favorites,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -173,12 +217,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
+      await seedBuiltInCategories();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -198,15 +243,60 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(studyPins, studyPins.pinType);
         await m.addColumn(studyPins, studyPins.selectedText);
         await m.createTable(studyPinTextRanges);
-        // Backfill: any pre-v5 pin is a point pin (SQLite default covers
-        // new rows; explicit update keeps semantics obvious in tests).
         await customStatement(
           "UPDATE study_pins SET pin_type = 'point' "
           "WHERE pin_type IS NULL OR pin_type = ''",
         );
       }
+      if (from < 6) {
+        await m.createTable(studyPinCategories);
+        await m.createTable(favorites);
+        await m.addColumn(studyPins, studyPins.categoryId);
+        await m.addColumn(studyPins, studyPins.fullExplanationPlainText);
+        await seedBuiltInCategories();
+        await backfillFullExplanationPlainText();
+      }
     },
   );
+
+  /// Inserts built-in categories once (idempotent by primary key).
+  Future<void> seedBuiltInCategories() async {
+    final now = DateTime.now();
+    for (final seed in BuiltInPinCategories.seeds) {
+      final existing = await (select(
+        studyPinCategories,
+      )..where((t) => t.id.equals(seed.id))).getSingleOrNull();
+      if (existing != null) continue;
+      await into(studyPinCategories).insert(
+        StudyPinCategoriesCompanion.insert(
+          id: seed.id,
+          name: seed.name,
+          colorValue: seed.colorValue,
+          iconKey: Value(seed.iconKey),
+          sortOrder: Value(seed.sortOrder),
+          isSystem: const Value(true),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+  }
+
+  /// Populates searchable plain text from existing fullExplanation values.
+  Future<void> backfillFullExplanationPlainText() async {
+    final pins = await select(studyPins).get();
+    for (final pin in pins) {
+      if (pin.fullExplanation == null || pin.fullExplanation!.isEmpty) {
+        continue;
+      }
+      final plain = StudyNoteCodec.plainTextPreview(pin.fullExplanation);
+      await (update(studyPins)..where((t) => t.id.equals(pin.id))).write(
+        StudyPinsCompanion(
+          fullExplanationPlainText: Value(plain.isEmpty ? null : plain),
+        ),
+      );
+    }
+  }
 
   // ── Classes ──────────────────────────────────────────────
 
@@ -421,8 +511,10 @@ class AppDatabase extends _$AppDatabase {
       await (delete(
         studyPinTextRanges,
       )..where((t) => t.studyPinId.isIn(pinIds))).go();
+      await deleteFavoritesForEntities(FavoriteEntityType.studyPin, pinIds);
     }
     await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
+    await deleteFavoritesForEntities(FavoriteEntityType.material, [id]);
     await (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();
   }
 
@@ -461,6 +553,7 @@ class AppDatabase extends _$AppDatabase {
     await (delete(
       studyPinTextRanges,
     )..where((t) => t.studyPinId.equals(id))).go();
+    await deleteFavoritesForEntities(FavoriteEntityType.studyPin, [id]);
     await (delete(studyPins)..where((t) => t.id.equals(id))).go();
   }
 
@@ -525,6 +618,101 @@ class AppDatabase extends _$AppDatabase {
         await into(studyPinTextRanges).insert(range);
       }
     });
+  }
+
+  // ── Categories ───────────────────────────────────────────
+
+  Stream<List<StudyPinCategory>> watchAllCategories() {
+    return (select(
+      studyPinCategories,
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).watch();
+  }
+
+  Future<List<StudyPinCategory>> getAllCategories() {
+    return (select(
+      studyPinCategories,
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).get();
+  }
+
+  Future<StudyPinCategory?> getCategoryById(String id) {
+    return (select(
+      studyPinCategories,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  // ── Favorites ────────────────────────────────────────────
+
+  Stream<List<Favorite>> watchAllFavorites() {
+    return (select(
+      favorites,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
+  }
+
+  Stream<List<Favorite>> watchFavoritesOfType(String entityType) {
+    return (select(favorites)
+          ..where((t) => t.entityType.equals(entityType))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  Stream<bool> watchIsFavorite(String entityType, String entityId) {
+    return (select(favorites)..where(
+          (t) => t.entityType.equals(entityType) & t.entityId.equals(entityId),
+        ))
+        .watch()
+        .map((rows) => rows.isNotEmpty);
+  }
+
+  Future<bool> isFavorite(String entityType, String entityId) async {
+    final row =
+        await (select(favorites)..where(
+              (t) =>
+                  t.entityType.equals(entityType) & t.entityId.equals(entityId),
+            ))
+            .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<void> addFavorite({
+    required String id,
+    required String entityType,
+    required String entityId,
+  }) async {
+    final exists = await isFavorite(entityType, entityId);
+    if (exists) return;
+    await into(favorites).insert(
+      FavoritesCompanion.insert(
+        id: id,
+        entityType: entityType,
+        entityId: entityId,
+        createdAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> removeFavorite(String entityType, String entityId) {
+    return (delete(favorites)..where(
+          (t) => t.entityType.equals(entityType) & t.entityId.equals(entityId),
+        ))
+        .go();
+  }
+
+  Future<void> deleteFavoritesForEntities(
+    String entityType,
+    List<String> entityIds,
+  ) async {
+    if (entityIds.isEmpty) return;
+    await (delete(favorites)..where(
+          (t) => t.entityType.equals(entityType) & t.entityId.isIn(entityIds),
+        ))
+        .go();
+  }
+
+  Future<Set<String>> favoriteIdsOfType(String entityType) async {
+    final rows = await (select(
+      favorites,
+    )..where((t) => t.entityType.equals(entityType))).get();
+    return rows.map((r) => r.entityId).toSet();
   }
 }
 

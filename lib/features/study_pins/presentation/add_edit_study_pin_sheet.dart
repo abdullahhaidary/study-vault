@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/pin_categories_providers.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
 import 'full_explanation_screen.dart';
@@ -10,12 +12,19 @@ sealed class StudyPinEditorResult {
 }
 
 class StudyPinEditorSaved extends StudyPinEditorResult {
-  const StudyPinEditorSaved({required this.shortText, this.fullExplanation});
+  const StudyPinEditorSaved({
+    required this.shortText,
+    this.fullExplanation,
+    this.categoryId,
+  });
 
   final String shortText;
 
   /// Stored Full Note value (Quill Delta JSON) or `null` when empty.
   final String? fullExplanation;
+
+  /// Null means General / no category.
+  final String? categoryId;
 }
 
 class StudyPinEditorDeleted extends StudyPinEditorResult {
@@ -23,11 +32,12 @@ class StudyPinEditorDeleted extends StudyPinEditorResult {
 }
 
 /// Dialog / bottom sheet to create or edit Study Pin annotations.
-class AddEditStudyPinSheet extends StatefulWidget {
+class AddEditStudyPinSheet extends ConsumerStatefulWidget {
   const AddEditStudyPinSheet({
     super.key,
     this.initialShortText = '',
     this.initialFullExplanation,
+    this.initialCategoryId,
     this.selectedText,
     this.pinType = StudyPinType.point,
     this.isEditing = false,
@@ -36,6 +46,7 @@ class AddEditStudyPinSheet extends StatefulWidget {
 
   final String initialShortText;
   final String? initialFullExplanation;
+  final String? initialCategoryId;
   final String? selectedText;
   final StudyPinType pinType;
   final bool isEditing;
@@ -45,6 +56,7 @@ class AddEditStudyPinSheet extends StatefulWidget {
     BuildContext context, {
     String initialShortText = '',
     String? initialFullExplanation,
+    String? initialCategoryId,
     String? selectedText,
     StudyPinType pinType = StudyPinType.point,
     bool isEditing = false,
@@ -54,6 +66,7 @@ class AddEditStudyPinSheet extends StatefulWidget {
     final child = AddEditStudyPinSheet(
       initialShortText: initialShortText,
       initialFullExplanation: initialFullExplanation,
+      initialCategoryId: initialCategoryId,
       selectedText: selectedText,
       pinType: pinType,
       isEditing: isEditing,
@@ -86,18 +99,21 @@ class AddEditStudyPinSheet extends StatefulWidget {
   }
 
   @override
-  State<AddEditStudyPinSheet> createState() => _AddEditStudyPinSheetState();
+  ConsumerState<AddEditStudyPinSheet> createState() =>
+      _AddEditStudyPinSheetState();
 }
 
-class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
+class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
   late final TextEditingController _shortController;
   late String? _fullExplanation;
+  String? _categoryId;
 
   @override
   void initState() {
     super.initState();
     _shortController = TextEditingController(text: widget.initialShortText);
     _fullExplanation = widget.initialFullExplanation;
+    _categoryId = widget.initialCategoryId;
   }
 
   @override
@@ -110,7 +126,8 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
     final shortChanged =
         _shortController.text.trim() != widget.initialShortText.trim();
     final fullChanged = _fullExplanation != widget.initialFullExplanation;
-    return shortChanged || fullChanged;
+    final categoryChanged = _categoryId != widget.initialCategoryId;
+    return shortChanged || fullChanged || categoryChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -193,7 +210,11 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
       return;
     }
     Navigator.of(context).pop(
-      StudyPinEditorSaved(shortText: short, fullExplanation: _fullExplanation),
+      StudyPinEditorSaved(
+        shortText: short,
+        fullExplanation: _fullExplanation,
+        categoryId: _categoryId,
+      ),
     );
   }
 
@@ -266,6 +287,54 @@ class _AddEditStudyPinSheetState extends State<AddEditStudyPinSheet> {
               ),
               onSubmitted: (_) => _save(),
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Category',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ref
+                .watch(studyPinCategoriesProvider)
+                .when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, _) => const Text('Could not load categories'),
+                  data: (categories) {
+                    return DropdownButtonFormField<String?>(
+                      // ignore: deprecated_member_use
+                      value: _categoryId,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('General'),
+                        ),
+                        for (final cat in categories)
+                          DropdownMenuItem<String?>(
+                            value: cat.id,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Color(cat.colorValue),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(cat.name),
+                              ],
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) => setState(() => _categoryId = value),
+                    );
+                  },
+                ),
             const SizedBox(height: 16),
             Text(
               'Full Note',

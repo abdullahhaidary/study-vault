@@ -10,12 +10,14 @@ class StudyPinMarker extends StatelessWidget {
     required this.displayMode,
     this.selected = false,
     this.dragging = false,
+    this.accentColor,
   });
 
   final String shortText;
   final PinDisplayMode displayMode;
   final bool selected;
   final bool dragging;
+  final Color? accentColor;
 
   static const double dotSize = 14;
 
@@ -28,7 +30,7 @@ class StudyPinMarker extends StatelessWidget {
     final theme = Theme.of(context);
     final color = selected
         ? theme.colorScheme.tertiary
-        : theme.colorScheme.primary;
+        : (accentColor ?? theme.colorScheme.primary);
 
     final showText = displayMode == PinDisplayMode.dotsAndText;
 
@@ -60,7 +62,11 @@ class StudyPinMarker extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
+                border: Border.all(
+                  color:
+                      accentColor?.withValues(alpha: 0.45) ??
+                      theme.colorScheme.outlineVariant,
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),

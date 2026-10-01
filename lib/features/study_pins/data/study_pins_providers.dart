@@ -7,6 +7,7 @@ import '../../../core/database/database_provider.dart';
 import '../domain/pin_coordinates.dart';
 import '../domain/pin_display_mode.dart';
 import '../domain/pin_type.dart';
+import '../domain/study_note_codec.dart';
 
 const _uuid = Uuid();
 
@@ -47,6 +48,12 @@ final pinDisplayModeProvider = StateProvider.autoDispose
       (ref, resourceId) => PinDisplayMode.dotsAndText,
     );
 
+String? _plainFromFull(String? full) {
+  if (full == null || full.trim().isEmpty) return null;
+  final plain = StudyNoteCodec.plainTextPreview(full);
+  return plain.isEmpty ? null : plain;
+}
+
 class CreateStudyPinInput {
   const CreateStudyPinInput({
     required this.resourceId,
@@ -54,6 +61,7 @@ class CreateStudyPinInput {
     required this.shortText,
     this.pageNumber,
     this.fullExplanation,
+    this.categoryId,
   });
 
   final String resourceId;
@@ -61,6 +69,7 @@ class CreateStudyPinInput {
   final int? pageNumber;
   final String shortText;
   final String? fullExplanation;
+  final String? categoryId;
 }
 
 class TextRangeInput {
@@ -77,6 +86,7 @@ class CreateTextStudyPinInput {
     required this.ranges,
     required this.shortText,
     this.fullExplanation,
+    this.categoryId,
   });
 
   final String resourceId;
@@ -84,6 +94,7 @@ class CreateTextStudyPinInput {
   final List<TextRangeInput> ranges;
   final String shortText;
   final String? fullExplanation;
+  final String? categoryId;
 }
 
 Future<StudyPin> createStudyPin(
@@ -95,17 +106,20 @@ Future<StudyPin> createStudyPin(
   final id = _uuid.v4();
   final shortText = input.shortText.trim();
   final full = input.fullExplanation?.trim();
+  final storedFull = full == null || full.isEmpty ? null : full;
 
   await db.insertStudyPin(
     StudyPinsCompanion.insert(
       id: id,
       resourceId: input.resourceId,
       pinType: Value(StudyPinType.point.dbValue),
+      categoryId: Value(input.categoryId),
       pageNumber: Value(input.pageNumber),
       xRatio: input.point.xRatio,
       yRatio: input.point.yRatio,
       shortText: shortText,
-      fullExplanation: Value(full == null || full.isEmpty ? null : full),
+      fullExplanation: Value(storedFull),
+      fullExplanationPlainText: Value(_plainFromFull(storedFull)),
       createdAt: now,
       updatedAt: now,
     ),
@@ -131,6 +145,7 @@ Future<StudyPin> createTextStudyPin(
   final id = _uuid.v4();
   final shortText = input.shortText.trim();
   final full = input.fullExplanation?.trim();
+  final storedFull = full == null || full.isEmpty ? null : full;
   final selected = input.selectedText.trim();
   final first = input.ranges.first;
   final anchor = first.rect.center;
@@ -154,11 +169,13 @@ Future<StudyPin> createTextStudyPin(
       id: id,
       resourceId: input.resourceId,
       pinType: Value(StudyPinType.text.dbValue),
+      categoryId: Value(input.categoryId),
       pageNumber: Value(first.pageNumber),
       xRatio: anchor.xRatio,
       yRatio: anchor.yRatio,
       shortText: shortText,
-      fullExplanation: Value(full == null || full.isEmpty ? null : full),
+      fullExplanation: Value(storedFull),
+      fullExplanationPlainText: Value(_plainFromFull(storedFull)),
       selectedText: Value(selected.isEmpty ? null : selected),
       createdAt: now,
       updatedAt: now,
@@ -178,26 +195,28 @@ Future<void> updateStudyPinTexts(
   required StudyPin pin,
   required String shortText,
   String? fullExplanation,
+  String? categoryId,
+  bool updateCategory = false,
 }) async {
   final db = ref.read(databaseProvider);
   final trimmedShort = shortText.trim();
   final trimmedFull = fullExplanation?.trim();
+  final storedFull = trimmedFull == null || trimmedFull.isEmpty
+      ? null
+      : trimmedFull;
 
   await db.updateStudyPin(
     pin.copyWith(
       shortText: trimmedShort,
-      fullExplanation: Value(
-        trimmedFull == null || trimmedFull.isEmpty ? null : trimmedFull,
-      ),
+      fullExplanation: Value(storedFull),
+      fullExplanationPlainText: Value(_plainFromFull(storedFull)),
+      categoryId: updateCategory ? Value(categoryId) : const Value.absent(),
       updatedAt: DateTime.now(),
     ),
   );
 }
 
 /// Persists a new point-pin location once after a drag ends.
-///
-/// Does not change texts, type, selectedText, or page (unless [pageNumber] is
-/// passed). Ratios are clamped to 0–1 via [NormalizedPoint].
 Future<void> updateStudyPinPosition(
   WidgetRef ref, {
   required StudyPin pin,

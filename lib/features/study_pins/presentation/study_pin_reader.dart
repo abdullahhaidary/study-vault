@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/built_in_data.dart';
+import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/study_pins_providers.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
@@ -351,6 +353,10 @@ class StudyPinReaderPanel extends StatelessWidget {
                     'Study Annotation',
                     style: theme.textTheme.titleMedium,
                   ),
+                ),
+                FavoriteStarButton(
+                  entityType: FavoriteEntityType.studyPin,
+                  entityId: pin.id,
                 ),
                 IconButton(
                   tooltip: 'Close',

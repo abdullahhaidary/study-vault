@@ -3,7 +3,9 @@ import 'package:flutter_quill/flutter_quill.dart';
 
 /// Focused Study Vault formatting toolbar for [QuillController].
 ///
-/// Keeps only study-note essentials and scrolls horizontally on narrow widths.
+/// Uses Quill's built-in horizontal arrow scroller (`multiRowsDisplay: false`).
+/// Do not wrap in another [SingleChildScrollView] — that gives unbounded width
+/// and breaks [QuillToolbarArrowIndicatedButtonList] on mobile.
 class StudyNoteToolbar extends StatelessWidget {
   const StudyNoteToolbar({super.key, required this.controller});
 
@@ -57,10 +59,7 @@ class StudyNoteToolbar extends StatelessWidget {
             bottom: BorderSide(color: theme.colorScheme.outlineVariant),
           ),
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: QuillSimpleToolbar(controller: controller, config: config),
-        ),
+        child: QuillSimpleToolbar(controller: controller, config: config),
       ),
     );
   }

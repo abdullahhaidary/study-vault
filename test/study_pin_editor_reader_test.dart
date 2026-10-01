@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/features/favorites/data/favorites_providers.dart';
+import 'package:study_vault/features/study_pins/data/pin_categories_providers.dart';
 import 'package:study_vault/features/study_pins/domain/pin_type.dart';
 import 'package:study_vault/features/study_pins/domain/study_note_codec.dart';
 import 'package:study_vault/features/study_pins/presentation/add_edit_study_pin_sheet.dart';
@@ -10,15 +13,23 @@ import 'package:study_vault/features/study_pins/presentation/study_pin_reader.da
 import 'package:study_vault/features/study_pins/presentation/widgets/study_rich_text_viewer.dart';
 
 Widget _app(Widget child) {
-  return MaterialApp(
-    localizationsDelegates: const [
-      GlobalMaterialLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      FlutterQuillLocalizations.delegate,
+  return ProviderScope(
+    overrides: [
+      studyPinCategoriesProvider.overrideWith(
+        (ref) => Stream.value(const <StudyPinCategory>[]),
+      ),
+      isFavoriteProvider.overrideWith((ref, key) => Stream.value(false)),
     ],
-    supportedLocales: const [Locale('en')],
-    home: Scaffold(body: child),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: Scaffold(body: child),
+    ),
   );
 }
 
@@ -34,12 +45,14 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Add Text Annotation'), findsOneWidget);
     expect(find.text('Selected text'), findsOneWidget);
     expect(find.text('supervised learning'), findsOneWidget);
     expect(find.text('Full Note'), findsOneWidget);
     expect(find.text('Write Full Note'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
     expect(find.text('Delete'), findsNothing);
   });
 
@@ -55,6 +68,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Edit Point Annotation'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
@@ -71,6 +85,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Open Full Editor'), findsOneWidget);
     expect(
@@ -130,22 +145,21 @@ void main() {
     expect(find.byType(StudyRichTextViewer), findsOneWidget);
     expect(find.text(rich), findsNothing);
     expect(
-      find.textContaining(
-        jsonEncode([
-          {'insert': 'x'},
-        ]),
-      ),
-      findsNothing,
+      find.textContaining('Gradient Descent', findRichText: true),
+      findsWidgets,
     );
-    expect(find.textContaining('Gradient Descent'), findsWidgets);
     expect(
-      find.textContaining('A longer explanation that can be copied.'),
+      find.textContaining(
+        'A longer explanation that can be copied.',
+        findRichText: true,
+      ),
       findsWidgets,
     );
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Delete'), findsNothing);
     expect(find.text('Edit'), findsNothing);
     expect(find.text('Save'), findsNothing);
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
   });
 
   testWidgets('reader still shows legacy plain-text full notes', (

@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/built_in_data.dart';
+import '../../favorites/presentation/favorite_star_button.dart';
+import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
 import '../../study_pins/domain/pin_type.dart';
@@ -20,11 +23,15 @@ class PdfStudyScreen extends ConsumerStatefulWidget {
     required this.resourceId,
     required this.title,
     required this.filePath,
+    this.focusPinId,
+    this.initialPage,
   });
 
   final String resourceId;
   final String title;
   final String filePath;
+  final String? focusPinId;
+  final int? initialPage;
 
   @override
   ConsumerState<PdfStudyScreen> createState() => _PdfStudyScreenState();
@@ -36,11 +43,14 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   int? _currentPage;
   int? _pageCount;
   StudyPin? _readerPin;
+  String? _focusedPinId;
+  bool _didApplyInitialFocus = false;
 
   @override
   void initState() {
     super.initState();
     _fileExists = File(widget.filePath).exists();
+    _focusedPinId = widget.focusPinId;
   }
 
   bool get _isWide => MediaQuery.sizeOf(context).width >= 720;
@@ -58,6 +68,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       context,
       initialShortText: pin.shortText,
       initialFullExplanation: pin.fullExplanation,
+      initialCategoryId: pin.categoryId,
       selectedText: pin.selectedText,
       pinType: pin.type,
       isEditing: true,
@@ -79,6 +90,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         pin: pin,
         shortText: result.shortText,
         fullExplanation: result.fullExplanation,
+        categoryId: result.categoryId,
+        updateCategory: true,
       );
     }
   }
@@ -123,6 +136,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         point: point,
         shortText: result.shortText,
         fullExplanation: result.fullExplanation,
+        categoryId: result.categoryId,
       ),
     );
   }
@@ -173,6 +187,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         ranges: rangeInputs,
         shortText: result.shortText,
         fullExplanation: result.fullExplanation,
+        categoryId: result.categoryId,
       ),
     );
 
@@ -188,6 +203,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     final rangesAsync = ref.watch(textRangesForResourceProvider(resourceId));
     final pins = pinsAsync.valueOrNull ?? const [];
     final textRanges = rangesAsync.valueOrNull ?? const [];
+    final categoryMap =
+        ref.watch(studyPinCategoryMapProvider).valueOrNull ?? const {};
 
     // Keep floating reader in sync with DB updates / deletes.
     final readingId = _readerPin?.id;
@@ -204,6 +221,20 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       }
     }
 
+    // Open focused pin reader once pins are loaded.
+    if (!_didApplyInitialFocus &&
+        widget.focusPinId != null &&
+        pins.isNotEmpty) {
+      final focus = pins.where((p) => p.id == widget.focusPinId).firstOrNull;
+      if (focus != null) {
+        _didApplyInitialFocus = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _openReader(focus);
+        });
+      }
+    }
+
     final pageLabel = _currentPage != null && _pageCount != null
         ? 'Page $_currentPage / $_pageCount'
         : null;
@@ -212,6 +243,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          FavoriteStarButton(
+            entityType: FavoriteEntityType.material,
+            entityId: widget.resourceId,
+          ),
           if (pageLabel != null)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -285,6 +320,12 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                       _pageCount = document.pages.length;
                       _currentPage = controller.pageNumber;
                     });
+                    final page = widget.initialPage;
+                    if (page != null &&
+                        page >= 1 &&
+                        page <= document.pages.length) {
+                      controller.goToPage(pageNumber: page);
+                    }
                   },
                   onGeneralTap: (context, controller, details) {
                     if (!annotate) return false;
@@ -309,7 +350,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                       textRanges: textRanges,
                       displayMode: displayMode,
                       annotateMode: annotate,
+                      categoryMap: categoryMap,
+                      focusedPinId: _focusedPinId,
                       onPinTap: (pin) {
+                        setState(() => _focusedPinId = pin.id);
                         _onAnnotationTap(pin, annotate: annotate);
                       },
                       onPointPinMoved: _onPointPinMoved,

@@ -109,6 +109,9 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
+        // Let Scaffold shrink for the IME; do not also pad by viewInsets
+        // or the Quill editor can get zero height on Android.
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           titleSpacing: 0,
@@ -137,24 +140,26 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
           ),
         ),
         body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLowest,
-                border: Border(
-                  top: BorderSide(color: theme.colorScheme.outlineVariant),
+          child: ColoredBox(
+            color: theme.colorScheme.surfaceContainerLowest,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: theme.colorScheme.outlineVariant,
                 ),
-              ),
-              child: StudyRichTextEditor(
-                controller: _controller,
-                readOnly: widget.readOnly,
-                autofocus: !widget.readOnly,
-                showToolbar: !widget.readOnly,
-                expands: true,
-              ),
+                Expanded(
+                  child: StudyRichTextEditor(
+                    controller: _controller,
+                    readOnly: widget.readOnly,
+                    autofocus: !widget.readOnly,
+                    showToolbar: !widget.readOnly,
+                    expands: true,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/database/built_in_data.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
+import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
@@ -176,6 +178,10 @@ class LessonDetailsScreen extends ConsumerWidget {
               SliverAppBar.large(
                 title: Text(lesson.name),
                 actions: [
+                  FavoriteStarButton(
+                    entityType: FavoriteEntityType.lesson,
+                    entityId: lessonId,
+                  ),
                   IconButton(
                     tooltip: 'Edit lesson',
                     onPressed: () => CreateLessonDialog.show(

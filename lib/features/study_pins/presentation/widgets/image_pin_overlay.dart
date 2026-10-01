@@ -16,6 +16,8 @@ class ImagePinOverlay extends StatelessWidget {
     required this.annotateMode,
     required this.onPinTap,
     required this.onPointPinMoved,
+    this.categoryMap = const {},
+    this.focusedPinId,
   });
 
   final List<StudyPin> pins;
@@ -24,6 +26,8 @@ class ImagePinOverlay extends StatelessWidget {
   final bool annotateMode;
   final void Function(StudyPin pin) onPinTap;
   final void Function(StudyPin pin, NormalizedPoint point) onPointPinMoved;
+  final Map<String, StudyPinCategory> categoryMap;
+  final String? focusedPinId;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +48,10 @@ class ImagePinOverlay extends StatelessWidget {
             displayMode: displayMode,
             canDrag: annotateMode,
             usePdfOverlayHitTesting: false,
+            category: pin.categoryId == null
+                ? null
+                : categoryMap[pin.categoryId!],
+            selected: pin.id == focusedPinId,
             onTap: () => onPinTap(pin),
             onMoved: (point) => onPointPinMoved(pin, point),
           ),

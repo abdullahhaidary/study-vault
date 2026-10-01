@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/built_in_data.dart';
+import '../../favorites/presentation/favorite_star_button.dart';
+import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
 import '../../study_pins/domain/pin_display_mode.dart';
@@ -21,11 +24,13 @@ class ImageStudyScreen extends ConsumerStatefulWidget {
     required this.resourceId,
     required this.title,
     required this.filePath,
+    this.focusPinId,
   });
 
   final String resourceId;
   final String title;
   final String filePath;
+  final String? focusPinId;
 
   @override
   ConsumerState<ImageStudyScreen> createState() => _ImageStudyScreenState();
@@ -37,10 +42,13 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
   ui.Image? _decoded;
   Object? _loadError;
   StudyPin? _readerPin;
+  String? _focusedPinId;
+  bool _didApplyInitialFocus = false;
 
   @override
   void initState() {
     super.initState();
+    _focusedPinId = widget.focusPinId;
     _loadImage();
   }
 
@@ -87,6 +95,7 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
       context,
       initialShortText: pin.shortText,
       initialFullExplanation: pin.fullExplanation,
+      initialCategoryId: pin.categoryId,
       selectedText: pin.selectedText,
       pinType: pin.type,
       isEditing: true,
@@ -108,6 +117,8 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
         pin: pin,
         shortText: result.shortText,
         fullExplanation: result.fullExplanation,
+        categoryId: result.categoryId,
+        updateCategory: true,
       );
     }
   }
@@ -140,6 +151,7 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
         point: point,
         shortText: result.shortText,
         fullExplanation: result.fullExplanation,
+        categoryId: result.categoryId,
       ),
     );
   }
@@ -151,6 +163,20 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     final displayMode = ref.watch(pinDisplayModeProvider(resourceId));
     final pinsAsync = ref.watch(studyPinsForResourceProvider(resourceId));
     final pins = pinsAsync.valueOrNull ?? const [];
+    final categoryMap =
+        ref.watch(studyPinCategoryMapProvider).valueOrNull ?? const {};
+
+    if (!_didApplyInitialFocus &&
+        widget.focusPinId != null &&
+        pins.isNotEmpty) {
+      final focus = pins.where((p) => p.id == widget.focusPinId).firstOrNull;
+      if (focus != null) {
+        _didApplyInitialFocus = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openReader(focus);
+        });
+      }
+    }
 
     final readingId = _readerPin?.id;
     if (readingId != null) {
@@ -169,6 +195,12 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          FavoriteStarButton(
+            entityType: FavoriteEntityType.material,
+            entityId: widget.resourceId,
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(72),
           child: StudyPinToolbar(
@@ -186,7 +218,12 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
       ),
       body: Stack(
         children: [
-          _buildBody(annotate: annotate, displayMode: displayMode, pins: pins),
+          _buildBody(
+            annotate: annotate,
+            displayMode: displayMode,
+            pins: pins,
+            categoryMap: categoryMap,
+          ),
           if (_isWide && _readerPin != null)
             StudyPinReaderOverlay(
               pin: _readerPin!,
@@ -201,6 +238,7 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     required bool annotate,
     required PinDisplayMode displayMode,
     required List<StudyPin> pins,
+    required Map<String, StudyPinCategory> categoryMap,
   }) {
     if (_loadError != null) {
       return Center(child: Text('Could not load image: $_loadError'));
@@ -258,7 +296,10 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
                         contentSize: contentSize,
                         displayMode: displayMode,
                         annotateMode: annotate,
+                        categoryMap: categoryMap,
+                        focusedPinId: _focusedPinId,
                         onPinTap: (pin) {
+                          setState(() => _focusedPinId = pin.id);
                           _onPinTap(pin, annotate: annotate);
                         },
                         onPointPinMoved: _onPointPinMoved,

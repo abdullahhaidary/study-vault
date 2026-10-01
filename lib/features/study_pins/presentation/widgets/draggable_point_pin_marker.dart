@@ -22,6 +22,8 @@ class DraggablePointPinMarker extends StatefulWidget {
     required this.onTap,
     this.onMoved,
     this.usePdfOverlayHitTesting = false,
+    this.category,
+    this.selected = false,
   });
 
   final StudyPin pin;
@@ -29,12 +31,10 @@ class DraggablePointPinMarker extends StatefulWidget {
   final PinDisplayMode displayMode;
   final bool canDrag;
   final VoidCallback onTap;
-
-  /// Called once when a drag completes with the clamped normalized point.
   final ValueChanged<NormalizedPoint>? onMoved;
-
-  /// When true and not dragging, use pdfrx overlay hit-testing (pointer-transparent).
   final bool usePdfOverlayHitTesting;
+  final StudyPinCategory? category;
+  final bool selected;
 
   @override
   State<DraggablePointPinMarker> createState() =>
@@ -127,6 +127,10 @@ class _DraggablePointPinMarkerState extends State<DraggablePointPinMarker> {
       shortText: widget.pin.shortText,
       displayMode: widget.displayMode,
       dragging: _dragging,
+      selected: widget.selected,
+      accentColor: widget.category == null
+          ? null
+          : Color(widget.category!.colorValue),
     );
 
     final scaled = Transform.scale(
