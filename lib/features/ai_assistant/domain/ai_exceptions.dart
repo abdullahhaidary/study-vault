@@ -43,8 +43,10 @@ class AiTimeoutException extends AiException {
 }
 
 class AiUnsupportedModelException extends AiException {
-  const AiUnsupportedModelException()
-    : super('The selected Gemini model is not available.');
+  const AiUnsupportedModelException([
+    super.message =
+        'The selected Gemini model is not available for this API key.',
+  ]);
 }
 
 class AiServerException extends AiException {

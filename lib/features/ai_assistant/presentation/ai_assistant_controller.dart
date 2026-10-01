@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ai_providers.dart';
+import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
@@ -66,7 +67,7 @@ abstract final class AiAssistantController {
       if (cont != true) return null;
     }
 
-    if (!await ensureReady(context, ref)) return null;
+    if (!context.mounted || !await ensureReady(context, ref)) return null;
     if (!context.mounted) return null;
 
     showDialog<void>(
@@ -87,11 +88,12 @@ abstract final class AiAssistantController {
     );
 
     try {
-      final language =
-          request.language == AiLanguage.auto
-              ? await ref.read(aiSettingsStoreProvider).getLanguage()
-              : request.language;
-      final result = await ref.read(aiServiceProvider).run(
+      final language = request.language == AiLanguage.auto
+          ? await ref.read(aiSettingsStoreProvider).getLanguage()
+          : request.language;
+      final result = await ref
+          .read(aiServiceProvider)
+          .run(
             AiStudyRequest(
               action: request.action,
               sourceText: request.sourceText,
@@ -133,6 +135,3 @@ abstract final class AiAssistantController {
     return MarkdownToQuill.toDeltaJson(markdown);
   }
 }
-
-// Re-export action enum extensions used by UI.
-export '../domain/ai_actions.dart';

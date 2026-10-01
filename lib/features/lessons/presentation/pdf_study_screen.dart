@@ -7,7 +7,6 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
-import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../favorites/presentation/favorite_star_button.dart';

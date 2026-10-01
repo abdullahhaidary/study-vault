@@ -16,28 +16,26 @@ import 'ai_service.dart';
 /// Gemini REST client using generateContent (official Google AI API).
 class GeminiAiService implements AiService {
   GeminiAiService({
-    required AiCredentialStore credentials,
-    required AiSettingsStore settings,
+    required this.credentials,
+    required this.settings,
     http.Client? httpClient,
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta',
-  }) : _credentials = credentials,
-       _settings = settings,
-       _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? http.Client();
 
-  final AiCredentialStore _credentials;
-  final AiSettingsStore _settings;
+  final AiCredentialStore credentials;
+  final AiSettingsStore settings;
   final http.Client _http;
   final String baseUrl;
 
   @override
-  Future<bool> get isConfigured => _credentials.hasApiKey;
+  Future<bool> get isConfigured => credentials.hasApiKey;
 
   @override
   Future<void> testConnection({
     Duration timeout = const Duration(seconds: 20),
   }) async {
     final key = await _requireKey();
-    final model = await _settings.getModelId();
+    final model = AiModelIds.normalize(await settings.getModelId());
     final body = {
       'contents': [
         {
@@ -46,7 +44,11 @@ class GeminiAiService implements AiService {
           ],
         },
       ],
-      'generationConfig': {'maxOutputTokens': 16},
+      'generationConfig': {
+        'maxOutputTokens': 64,
+        // 2.5 Flash thinking can consume a tiny token budget with no visible text.
+        'thinkingConfig': {'thinkingBudget': 0},
+      },
     };
     await _postGenerate(
       model: model,
@@ -64,11 +66,11 @@ class GeminiAiService implements AiService {
   }) async {
     _assertSourceSize(request.sourceText);
     final key = await _requireKey();
-    if (!await _settings.getPrivacyConsentAccepted()) {
+    if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final model = await _settings.getModelId();
-    final preference = await _settings.getStudyPreference();
+    final model = AiModelIds.normalize(await settings.getModelId());
+    final preference = await settings.getStudyPreference();
     final enriched = AiStudyRequest(
       action: request.action,
       sourceText: request.sourceText,
@@ -95,9 +97,12 @@ class GeminiAiService implements AiService {
         },
       ],
       'generationConfig': {
+        'maxOutputTokens': 8192,
+        'thinkingConfig': {'thinkingBudget': 0},
         if (structured != null) ...{
           'responseMimeType': 'application/json',
-          'responseSchema': structured,
+          // Prefer JSON Schema field (responseSchema is deprecated).
+          'responseJsonSchema': structured,
         },
       },
     };
@@ -109,11 +114,10 @@ class GeminiAiService implements AiService {
       body: body,
       timeout: timeout,
     );
-    // Technical log only — no prompt/response content.
     assert(() {
       // ignore: avoid_print
       print(
-        'AI ${request.action.name} ok in '
+        'AI ${request.action.name} model=$model ok in '
         '${DateTime.now().difference(started).inMilliseconds}ms',
       );
       return true;
@@ -149,7 +153,7 @@ class GeminiAiService implements AiService {
   }
 
   Future<String> _requireKey() async {
-    final key = await _credentials.readApiKey();
+    final key = await credentials.readApiKey();
     if (key == null || key.isEmpty) {
       throw const AiNotConfiguredException();
     }
@@ -189,31 +193,48 @@ class GeminiAiService implements AiService {
       throw const AiOfflineException();
     }
 
+    final apiMessage = _errorMessage(response.body);
+    final lower = apiMessage.toLowerCase();
+
     if (response.statusCode == 400 || response.statusCode == 403) {
-      final msg = _errorMessage(response.body).toLowerCase();
-      if (msg.contains('api key') ||
-          msg.contains('permission') ||
-          msg.contains('invalid')) {
+      if (lower.contains('api key') ||
+          lower.contains('api_key') ||
+          lower.contains('permission') ||
+          lower.contains('permission_denied') ||
+          lower.contains('invalid')) {
         throw const AiInvalidKeyException();
       }
-      if (msg.contains('not found') || msg.contains('model')) {
-        throw const AiUnsupportedModelException();
+      if (lower.contains('not found') ||
+          lower.contains('is not found') ||
+          lower.contains('model')) {
+        throw AiUnsupportedModelException(
+          'Model "$model" is not available for this API key. '
+          'Pick Recommended (Gemini 3.8 Flash) in Settings.',
+        );
       }
-      throw AiServerException('Gemini rejected the request.');
+      throw AiServerException(
+        _friendlyApiFailure(status: response.statusCode, message: apiMessage),
+      );
     }
     if (response.statusCode == 404) {
-      throw const AiUnsupportedModelException();
+      throw AiUnsupportedModelException(
+        'Model "$model" was not found. '
+        'Pick Recommended (Gemini 3.8 Flash) in Settings.',
+      );
     }
     if (response.statusCode == 429) {
-      final msg = _errorMessage(response.body).toLowerCase();
-      if (msg.contains('quota')) throw const AiQuotaException();
+      if (lower.contains('quota')) throw const AiQuotaException();
       throw const AiRateLimitException();
     }
     if (response.statusCode >= 500) {
-      throw const AiServerException();
+      throw AiServerException(
+        _friendlyApiFailure(status: response.statusCode, message: apiMessage),
+      );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw const AiServerException();
+      throw AiServerException(
+        _friendlyApiFailure(status: response.statusCode, message: apiMessage),
+      );
     }
 
     try {
@@ -221,18 +242,33 @@ class GeminiAiService implements AiService {
       if (decoded is! Map) throw const AiMalformedOutputException();
       final candidates = decoded['candidates'];
       if (candidates is! List || candidates.isEmpty) {
+        final block = decoded['promptFeedback'];
+        if (block is Map) {
+          throw const AiServerException(
+            'Gemini blocked this request. Try different text.',
+          );
+        }
         throw const AiEmptyResultException();
       }
-      final content = candidates.first['content'];
+      final candidate = candidates.first;
+      if (candidate is! Map) throw const AiMalformedOutputException();
+      final finish = '${candidate['finishReason'] ?? ''}';
+      final content = candidate['content'];
       final parts = content is Map ? content['parts'] : null;
       if (parts is! List || parts.isEmpty) {
+        if (finish == 'MAX_TOKENS') {
+          throw const AiServerException(
+            'Gemini ran out of output tokens before finishing. Try again.',
+          );
+        }
         throw const AiEmptyResultException();
       }
       final buffer = StringBuffer();
       for (final part in parts) {
-        if (part is Map && part['text'] is String) {
-          buffer.write(part['text']);
-        }
+        if (part is! Map) continue;
+        // Skip thought parts if any slip through.
+        if (part['thought'] == true) continue;
+        if (part['text'] is String) buffer.write(part['text']);
       }
       final text = buffer.toString().trim();
       if (text.isEmpty) throw const AiEmptyResultException();
@@ -242,6 +278,16 @@ class GeminiAiService implements AiService {
     } on Object {
       throw const AiMalformedOutputException();
     }
+  }
+
+  String _friendlyApiFailure({required int status, required String message}) {
+    final trimmed = message.trim();
+    if (trimmed.isEmpty) {
+      return 'Gemini request failed (HTTP $status). Check model and API key.';
+    }
+    // Never include secrets; API messages do not contain the key value.
+    final short = trimmed.length > 180 ? '${trimmed.substring(0, 180)}…' : trimmed;
+    return 'Gemini error ($status): $short';
   }
 
   String _errorMessage(String body) {

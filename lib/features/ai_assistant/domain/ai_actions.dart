@@ -51,17 +51,34 @@ enum AiQuestionType {
 }
 
 /// Centralized Gemini model IDs — do not scatter elsewhere.
+///
+/// Keep in sync with https://ai.google.dev/gemini-api/docs/models
 abstract final class AiModelIds {
-  static const recommended = 'gemini-2.5-flash';
-  static const flash35 = 'gemini-3.5-flash';
+  /// Current recommended Flash model for study actions.
+  static const recommended = 'gemini-3.8-flash';
 
-  static const all = [recommended, flash35];
+  /// Previous-generation Flash (broad availability fallback).
+  static const flash25 = 'gemini-2.5-flash';
+
+  /// Cheaper / faster lite variant.
+  static const flashLite = 'gemini-2.5-flash-lite';
+
+  static const all = [recommended, flash25, flashLite];
 
   static String label(String id) => switch (id) {
-    recommended => 'Recommended (2.5 Flash)',
-    flash35 => 'Gemini 3.5 Flash',
+    recommended => 'Recommended (Gemini 3.8 Flash)',
+    flash25 => 'Gemini 2.5 Flash',
+    flashLite => 'Gemini 2.5 Flash-Lite',
     _ => id,
   };
+
+  /// Falls back when a stored preference is obsolete / unavailable.
+  static String normalize(String? id) {
+    // Migrate older stored preferences to the current recommended model.
+    if (id == 'gemini-3.5-flash') return recommended;
+    if (id != null && all.contains(id)) return id;
+    return recommended;
+  }
 }
 
 extension AiStudyActionX on AiStudyAction {

@@ -241,9 +241,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 Text('Model', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  initialValue: AiModelIds.all.contains(state.modelId)
-                      ? state.modelId
-                      : AiModelIds.recommended,
+                  initialValue: AiModelIds.normalize(state.modelId),
                   items: [
                     for (final id in AiModelIds.all)
                       DropdownMenuItem(

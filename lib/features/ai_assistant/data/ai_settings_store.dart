@@ -38,7 +38,7 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   @override
   Future<String> getModelId() async {
     final prefs = await _prefs();
-    return prefs.getString(_modelKey) ?? AiModelIds.recommended;
+    return AiModelIds.normalize(prefs.getString(_modelKey));
   }
 
   @override
@@ -89,6 +89,9 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
     final prefs = await _prefs();
     await prefs.setBool(_consentKey, accepted);
   }
+
+  @override
+  Future<void> resetPrivacyConsent() => setPrivacyConsentAccepted(false);
 }
 
 /// In-memory settings for tests.

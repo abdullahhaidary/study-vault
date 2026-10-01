@@ -146,14 +146,14 @@ abstract final class AiOutputValidator {
   }
 }
 
-/// JSON schemas passed to Gemini generationConfig.responseSchema.
+/// JSON schemas for Gemini structured output (`responseJsonSchema`).
 abstract final class AiResponseSchemas {
   static const annotation = {
     'type': 'object',
     'properties': {
       'shortDescription': {'type': 'string'},
       'fullNote': {'type': 'string'},
-      'suggestedCategory': {'type': 'string', 'nullable': true},
+      'suggestedCategory': {'type': 'string'},
     },
     'required': ['shortDescription', 'fullNote'],
   };
@@ -189,10 +189,9 @@ abstract final class AiResponseSchemas {
             'choices': {
               'type': 'array',
               'items': {'type': 'string'},
-              'nullable': true,
             },
-            'correctIndex': {'type': 'integer', 'nullable': true},
-            'explanation': {'type': 'string', 'nullable': true},
+            'correctIndex': {'type': 'integer'},
+            'explanation': {'type': 'string'},
           },
           'required': ['question', 'answer'],
         },
