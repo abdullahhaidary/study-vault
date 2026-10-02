@@ -10,10 +10,8 @@ Future<void> showAiFlashcardsPreview(
 }) {
   return Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => AiFlashcardsPreviewScreen(
-        initialCards: cards,
-        onCreate: onCreate,
-      ),
+      builder: (_) =>
+          AiFlashcardsPreviewScreen(initialCards: cards, onCreate: onCreate),
     ),
   );
 }
@@ -129,7 +127,8 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                             )
                             .where(
                               (c) =>
-                                  c.front.isNotEmpty && c.back.trim().isNotEmpty,
+                                  c.front.isNotEmpty &&
+                                  c.back.trim().isNotEmpty,
                             )
                             .toList();
                         if (selected.isEmpty) return;

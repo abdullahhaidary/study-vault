@@ -100,7 +100,19 @@ abstract final class StudyNoteCodec {
   static Document _documentFromPlainText(String text) {
     final document = Document();
     if (text.isEmpty) return document;
-    document.insert(0, text);
+    document.insert(0, text.endsWith('\n') ? text : '$text\n');
     return document;
+  }
+
+  /// True when a Quill document has no formatting attributes on any op.
+  static bool isUnformatted(Document document) {
+    try {
+      for (final op in document.toDelta().toJson()) {
+        if (op['attributes'] != null) return false;
+      }
+      return true;
+    } on Object {
+      return true;
+    }
   }
 }

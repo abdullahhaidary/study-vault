@@ -4,6 +4,7 @@ import '../data/ai_credential_store.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../services/ai_service.dart';
+import '../services/annotation_ai_service.dart';
 import '../services/gemini_ai_service.dart';
 
 final aiCredentialStoreProvider = Provider<AiCredentialStore>((ref) {
@@ -19,6 +20,11 @@ final aiServiceProvider = Provider<AiService>((ref) {
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),
   );
+});
+
+/// Annotation/selection façade over [aiServiceProvider] (shared Gemini client).
+final annotationAiServiceProvider = Provider<AnnotationAiService>((ref) {
+  return AnnotationAiService(aiService: ref.watch(aiServiceProvider));
 });
 
 /// UI-safe configured flag — never exposes the key.

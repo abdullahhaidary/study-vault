@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../domain/quill_paragraph_direction_sync.dart';
+import 'divider_embed_builder.dart';
 import 'study_note_toolbar.dart';
 
 /// Reusable Study Vault rich-text editor for Full Note content.
@@ -103,6 +104,7 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
         scrollable: widget.scrollable,
         showCursor: !widget.readOnly,
         enableInteractiveSelection: true,
+        embedBuilders: const [DividerEmbedBuilder()],
         customStyles: DefaultStyles(
           paragraph: DefaultTextBlockStyle(
             theme.textTheme.bodyLarge!.copyWith(height: 1.5),

@@ -6,6 +6,7 @@ import '../features/classes/presentation/class_details_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
+import '../features/ai_questions/presentation/question_sets_screen.dart';
 import '../features/flashcards/presentation/flashcard_study_screen.dart';
 import '../features/flashcards/presentation/flashcards_list_screen.dart';
 import '../features/notes/presentation/note_editor_screen.dart';
@@ -30,6 +31,7 @@ abstract final class AppRoutes {
   static const noteEditor = '/note/edit';
   static const flashcardsList = '/flashcards';
   static const flashcardStudy = '/flashcards/study';
+  static const questionSets = '/ai-questions';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -105,6 +107,13 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         builder: (_) => FlashcardStudyScreen(
           scope: settings.arguments as FlashcardsListScope,
         ),
+      );
+
+    case AppRoutes.questionSets:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) =>
+            QuestionSetsScreen(scope: settings.arguments as QuestionSetsScope),
       );
 
     case AppRoutes.classDetails:

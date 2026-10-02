@@ -5,12 +5,15 @@ import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
+import '../domain/annotation_ai_context.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_missing_key_dialog.dart';
 import 'ai_privacy_dialog.dart';
 
 /// Shared entry point for user-initiated AI actions.
 abstract final class AiAssistantController {
+  static bool _requestInFlight = false;
+
   /// Ensures key + privacy consent. Returns false if user cancelled.
   static Future<bool> ensureReady(BuildContext context, WidgetRef ref) async {
     final service = ref.read(aiServiceProvider);
@@ -36,20 +39,29 @@ abstract final class AiAssistantController {
     WidgetRef ref, {
     required AiStudyRequest request,
     Map<String, String> categoryNameToId = const {},
+    AnnotationAiContext? annotationContext,
   }) async {
+    if (_requestInFlight) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An AI request is already in progress.')),
+      );
+      return null;
+    }
+
+    final sourceLen = request.effectiveSourceLength;
     if (request.sourceText.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select or provide text for AI first.')),
       );
       return null;
     }
-    if (request.sourceText.length > kAiSoftSourceLimit) {
+    if (sourceLen > kAiSoftSourceLimit) {
       final cont = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Large text'),
           content: const Text(
-            'This note is large. Consider selecting only the part you want '
+            'This selection is large. Consider selecting only the part you want '
             'AI to process. Continue anyway?',
           ),
           actions: [
@@ -70,10 +82,13 @@ abstract final class AiAssistantController {
     if (!context.mounted || !await ensureReady(context, ref)) return null;
     if (!context.mounted) return null;
 
+    var cancelled = false;
+    _requestInFlight = true;
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PopScope(
+      builder: (dialogContext) => PopScope(
         canPop: false,
         child: AlertDialog(
           content: Row(
@@ -83,6 +98,15 @@ abstract final class AiAssistantController {
               Expanded(child: Text(request.action.loadingMessage)),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                Navigator.of(dialogContext, rootNavigator: true).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
         ),
       ),
     );
@@ -91,29 +115,43 @@ abstract final class AiAssistantController {
       final language = request.language == AiLanguage.auto
           ? await ref.read(aiSettingsStoreProvider).getLanguage()
           : request.language;
-      final result = await ref
-          .read(aiServiceProvider)
-          .run(
-            AiStudyRequest(
+
+      final AiStudyResult result;
+      if (annotationContext != null) {
+        result = await ref
+            .read(annotationAiServiceProvider)
+            .run(
+              context: annotationContext,
               action: request.action,
-              sourceText: request.sourceText,
-              language: language,
               rephraseMode: request.rephraseMode,
               organizeMode: request.organizeMode,
               summarizeMode: request.summarizeMode,
-              questionType: request.questionType,
               flashcardCount: request.flashcardCount,
               categoryNames: request.categoryNames,
-              userPreference: request.userPreference,
-              selectedText: request.selectedText,
-              shortDescription: request.shortDescription,
-            ),
-            categoryNameToId: categoryNameToId,
-          );
+              customPrompt: request.customPrompt,
+              conversation: request.conversation,
+              translateTarget: request.translateTarget,
+              languageOverride: language,
+              categoryNameToId: categoryNameToId,
+            );
+      } else {
+        result = await ref
+            .read(aiServiceProvider)
+            .run(
+              request.copyWith(language: language),
+              categoryNameToId: categoryNameToId,
+            );
+      }
+
+      if (cancelled) {
+        return null;
+      }
       if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
       return result;
+    } on AiCancelledException {
+      return null;
     } on AiException catch (e) {
-      if (context.mounted) {
+      if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(
           context,
@@ -121,13 +159,15 @@ abstract final class AiAssistantController {
       }
       return null;
     } catch (_) {
-      if (context.mounted) {
+      if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('AI request failed. Please try again.')),
         );
       }
       return null;
+    } finally {
+      _requestInFlight = false;
     }
   }
 

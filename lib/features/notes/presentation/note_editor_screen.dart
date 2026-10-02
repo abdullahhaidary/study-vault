@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
+import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_editor.dart';
 import '../data/notes_providers.dart';
@@ -83,12 +84,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       if (confirmed != true || !mounted) return;
     }
 
+    final note = ref.read(studyNoteByIdProvider(widget.noteId)).valueOrNull;
     await showAiActionsSheet(
       context,
       ref,
       sourceText: sourceText,
       selectedText: hadSelection ? sourceText : null,
       actionContext: AiActionContext.noteEditor,
+      questionsLaunch: QuestionSourceLaunches.forNoteText(
+        ref: ref,
+        noteText: sourceText,
+        lessonId: note?.lessonId,
+        subjectId: note?.subjectId,
+        noteId: note?.id,
+        noteTitle: note?.title,
+      ),
       onTextPreviewApplied: (preview) {
         applyPreviewToQuill(editor, preview, hadSelection: hadSelection);
       },

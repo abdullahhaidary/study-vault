@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../../ai_assistant/services/markdown_to_quill.dart';
 import '../../domain/quill_paragraph_direction_sync.dart';
 import '../../domain/study_note_codec.dart';
 import 'study_rich_text_editor.dart';
@@ -10,6 +11,9 @@ import 'study_rich_text_editor.dart';
 /// Instantiates a Quill controller only while this widget is mounted —
 /// suitable for the Study Pin reader, not for scrolling PDF overlays.
 /// Applies paragraph direction so Persian/Arabic notes display correctly.
+///
+/// Also re-parses AI markdown that was previously stored as plain Quill text
+/// (headings/lists/emphasis) so read mode shows formatted content.
 class StudyRichTextViewer extends StatefulWidget {
   const StudyRichTextViewer({
     super.key,
@@ -44,12 +48,24 @@ class _StudyRichTextViewerState extends State<StudyRichTextViewer> {
 
   QuillController _buildController(String storedValue) {
     final controller = QuillController(
-      document: StudyNoteCodec.decode(storedValue),
+      document: _documentForRead(storedValue),
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
     );
     QuillParagraphDirectionSync.sync(controller, force: true);
     return controller;
+  }
+
+  /// Decode stored value; if it is unformatted markdown (common after older
+  /// AI apply), convert so headings/lists render in Quill read mode.
+  Document _documentForRead(String storedValue) {
+    final decoded = StudyNoteCodec.decode(storedValue);
+    final plain = decoded.toPlainText();
+    if (StudyNoteCodec.isUnformatted(decoded) &&
+        MarkdownToQuill.looksLikeMarkdown(plain)) {
+      return MarkdownToQuill.toDocument(plain);
+    }
+    return decoded;
   }
 
   @override

@@ -12,4 +12,10 @@ abstract class AiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(seconds: 60),
   });
+
+  /// First-class quiz generation — Gemini returns structured question JSON only.
+  Future<AiQuestionsResult> generateQuestions(
+    AiQuestionGenerationRequest request, {
+    Duration timeout = const Duration(seconds: 90),
+  });
 }

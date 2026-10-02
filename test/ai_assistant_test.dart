@@ -126,10 +126,51 @@ void main() {
   test(
     'MarkdownToQuill creates a non-empty delta from headings and bullets',
     () {
-      final document = MarkdownToQuill.toDocument('# Heading\n\n- One\n- Two');
+      final document = MarkdownToQuill.toDocument(
+        '# Heading\n\n- One\n- Two\n\n**Bold** and *italic*',
+      );
       expect(document.toDelta().toJson(), isNotEmpty);
       expect(document.toPlainText(), contains('Heading'));
       expect(document.toPlainText(), contains('One'));
+      expect(document.toPlainText(), isNot(contains('#')));
+      expect(document.toPlainText(), isNot(contains('- One')));
+      expect(document.toPlainText(), isNot(contains('**')));
+
+      final ops = document.toDelta().toJson() as List<dynamic>;
+      final hasHeader = ops.any(
+        (op) =>
+            op is Map &&
+            op['attributes'] is Map &&
+            (op['attributes'] as Map)['header'] == 1,
+      );
+      final hasBullet = ops.any(
+        (op) =>
+            op is Map &&
+            op['attributes'] is Map &&
+            (op['attributes'] as Map)['list'] == 'bullet',
+      );
+      final hasBold = ops.any(
+        (op) =>
+            op is Map &&
+            op['attributes'] is Map &&
+            (op['attributes'] as Map)['bold'] == true,
+      );
+      expect(hasHeader, isTrue);
+      expect(hasBullet, isTrue);
+      expect(hasBold, isTrue);
     },
   );
+
+  test('MarkdownToQuill treats -- and --- as horizontal rules', () {
+    final document = MarkdownToQuill.toDocument(
+      'Above\n\n--\n\nMiddle\n\n---\n\nBelow',
+    );
+    final ops = document.toDelta().toJson() as List<dynamic>;
+    final dividers = ops.where(
+      (op) =>
+          op is Map && op['insert'] is Map && op['insert']['divider'] != null,
+    );
+    expect(dividers.length, 2);
+    expect(document.toPlainText(), isNot(contains('--')));
+  });
 }

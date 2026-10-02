@@ -8,9 +8,15 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/services/annotation_ai_context_builder.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_questions/domain/question_source.dart';
+import '../../ai_questions/presentation/generate_questions_sheet.dart';
+import '../../ai_questions/presentation/question_sets_screen.dart';
+import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
+import '../../notes/data/notes_providers.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
@@ -300,17 +306,165 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     return rangeInputs;
   }
 
+  Future<Set<int>?> _pickPages() async {
+    final count = _pageCount;
+    final current = _currentPage ?? 1;
+    if (count == null) return {current};
+    final controller = TextEditingController(text: '$current');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select pages'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Pages (e.g. 1,3,5-8)',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.text,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return null;
+    return _parsePageList(result, maxPage: count);
+  }
+
+  Set<int> _parsePageList(String raw, {required int maxPage}) {
+    final pages = <int>{};
+    for (final part in raw.split(',')) {
+      final token = part.trim();
+      if (token.isEmpty) continue;
+      if (token.contains('-')) {
+        final bits = token.split('-');
+        if (bits.length != 2) continue;
+        final a = int.tryParse(bits[0].trim());
+        final b = int.tryParse(bits[1].trim());
+        if (a == null || b == null) continue;
+        final start = a < b ? a : b;
+        final end = a < b ? b : a;
+        for (var p = start; p <= end; p++) {
+          if (p >= 1 && p <= maxPage) pages.add(p);
+        }
+      } else {
+        final p = int.tryParse(token);
+        if (p != null && p >= 1 && p <= maxPage) pages.add(p);
+      }
+    }
+    return pages;
+  }
+
+  Future<void> _openGenerateQuestions({String? selectedText}) async {
+    Set<int>? selectedPages;
+    final launch = selectedText != null && selectedText.isNotEmpty
+        ? QuestionSourceLaunches.forPdfSelection(
+            ref: ref,
+            selectedText: selectedText,
+            materialId: widget.resourceId,
+            filePath: widget.filePath,
+            currentPage: _currentPage,
+            pageNumber: _currentPage,
+          )
+        : QuestionSourceLaunches.forPdfMaterial(
+            ref: ref,
+            materialId: widget.resourceId,
+            filePath: widget.filePath,
+            currentPage: _currentPage,
+          );
+
+    // Intercept pages source to collect page numbers first.
+    final wrapped = GenerateQuestionsLaunch(
+      title: launch.title,
+      availableSources: launch.availableSources,
+      initialSource: launch.initialSource,
+      resolveSource: (type) async {
+        if (type == QuestionSourceType.pages) {
+          selectedPages = await _pickPages();
+          if (selectedPages == null || selectedPages!.isEmpty) {
+            throw StateError('No pages selected');
+          }
+          return QuestionSourceLaunches.forPdfMaterial(
+            ref: ref,
+            materialId: widget.resourceId,
+            filePath: widget.filePath,
+            currentPage: _currentPage,
+            selectedPages: selectedPages,
+          ).resolveSource(type);
+        }
+        return launch.resolveSource(type);
+      },
+    );
+
+    if (!mounted) return;
+    await showGenerateQuestionsSheet(context, ref, launch: wrapped);
+  }
+
   Future<void> _openPdfAiActions(PdfTextSelectionDelegate selection) async {
     final selectedText = (await selection.getSelectedText()).trim();
     final ranges = await _textRangeInputs(selection);
     if (selectedText.isEmpty || ranges.isEmpty || !mounted) return;
 
+    final pageNumber = ranges.first.pageNumber;
+    final material = await ref
+        .read(databaseProvider)
+        .getMaterialById(widget.resourceId);
+    final aiContext =
+        await AnnotationAiContextBuilder.fromPdfSelectionWithPageLoad(
+          selectedText: selectedText,
+          filePath: widget.filePath,
+          materialId: widget.resourceId,
+          lessonId: material?.lessonId,
+          pageNumber: pageNumber,
+        );
+    if (!mounted) return;
+
     await showAiActionsSheet(
       context,
       ref,
-      sourceText: selectedText,
+      sourceText: aiContext.primaryText,
       selectedText: selectedText,
+      annotationContext: aiContext,
       actionContext: AiActionContext.pdfSelection,
+      questionsLaunch: QuestionSourceLaunches.forPdfSelection(
+        ref: ref,
+        selectedText: selectedText,
+        materialId: widget.resourceId,
+        filePath: widget.filePath,
+        currentPage: _currentPage,
+        pageNumber: pageNumber,
+        surroundingText: aiContext.surroundingText,
+      ),
+      onGoToSource: () {
+        _controller.goToPage(pageNumber: pageNumber);
+      },
+      onCreateNote: material == null
+          ? null
+          : (markdown) async {
+              final title = selectedText.length > 48
+                  ? '${selectedText.substring(0, 48)}…'
+                  : selectedText;
+              await createStudyNote(
+                ref,
+                lessonId: material.lessonId,
+                title: title.isEmpty ? 'AI note' : title,
+                content: MarkdownToQuill.toDeltaJson(markdown),
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Note created')));
+              }
+            },
       onAnnotationSave: (draft) async {
         await createTextStudyPin(
           ref,
@@ -326,9 +480,6 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         await selection.clearTextSelection();
       },
       onFlashcardsCreate: (cards) async {
-        final material = await ref
-            .read(databaseProvider)
-            .getMaterialById(widget.resourceId);
         if (material == null) return;
         for (final card in cards) {
           await createFlashcard(
@@ -436,6 +587,37 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               ),
             ),
             icon: const Icon(Icons.school_outlined),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'AI',
+            icon: const Icon(Icons.auto_awesome),
+            onSelected: (value) async {
+              if (value == 'generate_questions') {
+                await _openGenerateQuestions();
+              } else if (value == 'question_sets') {
+                if (!mounted) return;
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => QuestionSetsScreen(
+                      scope: QuestionSetsScope.material(
+                        id: widget.resourceId,
+                        title: widget.title,
+                      ),
+                    ),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'generate_questions',
+                child: Text('Generate Questions'),
+              ),
+              PopupMenuItem(
+                value: 'question_sets',
+                child: Text('AI Questions'),
+              ),
+            ],
           ),
           if (pageLabel != null)
             Padding(

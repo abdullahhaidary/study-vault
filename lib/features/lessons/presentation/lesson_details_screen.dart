@@ -9,6 +9,7 @@ import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../ai_questions/presentation/question_sets_screen.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../flashcards/presentation/flashcards_list_screen.dart';
@@ -338,6 +339,19 @@ class LessonDetailsScreen extends ConsumerWidget {
                         onTap: () => Navigator.of(context).pushNamed(
                           AppRoutes.flashcardsList,
                           arguments: FlashcardsListScope.lesson(
+                            id: lessonId,
+                            title: lesson.name,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _StudyToolTile(
+                        icon: Icons.quiz_outlined,
+                        title: 'AI Questions',
+                        subtitle: 'Generated quizzes',
+                        onTap: () => Navigator.of(context).pushNamed(
+                          AppRoutes.questionSets,
+                          arguments: QuestionSetsScope.lesson(
                             id: lessonId,
                             title: lesson.name,
                           ),

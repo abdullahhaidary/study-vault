@@ -90,8 +90,8 @@ void main() {
       await db.close();
     });
 
-    test('schema version is 9', () {
-      expect(db.schemaVersion, 9);
+    test('schema version is 10', () {
+      expect(db.schemaVersion, 10);
     });
 
     test('create chat, send message, persist history and continue', () async {

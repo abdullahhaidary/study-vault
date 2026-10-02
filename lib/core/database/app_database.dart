@@ -360,6 +360,113 @@ class AiChatMessages extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// AI-generated quiz sets (first-class study objects).
+class QuestionSets extends Table {
+  TextColumn get id => text()();
+  TextColumn get materialId => text().nullable().references(
+    LessonMaterials,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+  TextColumn get lessonId =>
+      text().nullable().references(Lessons, #id, onDelete: KeyAction.setNull)();
+  TextColumn get subjectId => text().nullable().references(
+    Subjects,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+  TextColumn get title => text().withLength(min: 1, max: 300)();
+
+  /// `selected_text` | `page` | `pages` | `material` | `annotations` |
+  /// `notes` | `annotations_and_notes`
+  TextColumn get sourceType => text()();
+  TextColumn get sourceReference => text().nullable()();
+  IntColumn get questionCount => integer()();
+
+  /// Requested generation type: `mcq` | `true_false` | `short_answer` |
+  /// `fill_blank` | `mixed`
+  TextColumn get questionType => text()();
+
+  /// `easy` | `medium` | `hard` | `mixed`
+  TextColumn get difficulty => text()();
+  TextColumn get aiProvider => text().withDefault(const Constant('gemini'))();
+  TextColumn get aiModel => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Individual questions belonging to a [QuestionSets] row.
+class QuizQuestions extends Table {
+  TextColumn get id => text()();
+  TextColumn get questionSetId =>
+      text().references(QuestionSets, #id, onDelete: KeyAction.cascade)();
+
+  /// `mcq` | `true_false` | `short_answer` | `fill_blank`
+  TextColumn get type => text()();
+  TextColumn get question => text()();
+
+  /// Serialized correct answer (MCQ index, `true`/`false`, or text).
+  TextColumn get correctAnswer => text()();
+  TextColumn get explanation => text().nullable()();
+  TextColumn get difficulty => text().nullable()();
+  IntColumn get sourcePage => integer().nullable()();
+  TextColumn get sourceText => text().nullable()();
+  IntColumn get position => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Options for MCQ / True-False questions.
+class QuizQuestionOptions extends Table {
+  TextColumn get id => text()();
+  TextColumn get questionId =>
+      text().references(QuizQuestions, #id, onDelete: KeyAction.cascade)();
+  TextColumn get optionText => text()();
+  BoolColumn get isCorrect => boolean()();
+  IntColumn get position => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// A single play-through of a question set.
+class QuizAttempts extends Table {
+  TextColumn get id => text()();
+  TextColumn get questionSetId =>
+      text().references(QuestionSets, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get completedAt => dateTime().nullable()();
+  IntColumn get score => integer().nullable()();
+  IntColumn get totalQuestions => integer()();
+
+  /// `study` | `exam` (exam reserved for follow-up).
+  TextColumn get mode => text().withDefault(const Constant('study'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Per-question answers within a [QuizAttempts] row.
+class QuizAnswers extends Table {
+  TextColumn get id => text()();
+  TextColumn get quizAttemptId =>
+      text().references(QuizAttempts, #id, onDelete: KeyAction.cascade)();
+  TextColumn get questionId =>
+      text().references(QuizQuestions, #id, onDelete: KeyAction.cascade)();
+  TextColumn get selectedOptionId => text().nullable()();
+  TextColumn get answerText => text().nullable()();
+  BoolColumn get isCorrect => boolean().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -379,6 +486,11 @@ class AiChatMessages extends Table {
     Flashcards,
     AiChats,
     AiChatMessages,
+    QuestionSets,
+    QuizQuestions,
+    QuizQuestionOptions,
+    QuizAttempts,
+    QuizAnswers,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -388,7 +500,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -399,6 +511,7 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await seedBuiltInCategories();
       await _createAiChatIndexes();
+      await _createQuizIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -452,8 +565,39 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(aiChatMessages);
         await _createAiChatIndexes();
       }
+      if (from < 10) {
+        await m.createTable(questionSets);
+        await m.createTable(quizQuestions);
+        await m.createTable(quizQuestionOptions);
+        await m.createTable(quizAttempts);
+        await m.createTable(quizAnswers);
+        await _createQuizIndexes();
+      }
     },
   );
+
+  Future<void> _createQuizIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_question_sets_lesson_id '
+      'ON question_sets (lesson_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_question_sets_material_id '
+      'ON question_sets (material_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_quiz_questions_set_id '
+      'ON quiz_questions (question_set_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_quiz_attempts_set_id '
+      'ON quiz_attempts (question_set_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_quiz_answers_attempt_id '
+      'ON quiz_answers (quiz_attempt_id)',
+    );
+  }
 
   Future<void> _createAiChatIndexes() async {
     await customStatement(
@@ -744,6 +888,17 @@ class AppDatabase extends _$AppDatabase {
             (t) => OrderingTerm.asc(t.createdAt),
           ]))
         .watch();
+  }
+
+  Future<List<StudyPin>> getStudyPinsForResource(String resourceId) {
+    return (select(studyPins)
+          ..where((t) => t.resourceId.equals(resourceId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.pageNumber),
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.asc(t.createdAt),
+          ]))
+        .get();
   }
 
   Future<StudyPin?> getStudyPinById(String id) {
@@ -1180,6 +1335,16 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  Future<List<StudyNote>> getStudyNotesForLesson(String lessonId) {
+    return (select(studyNotes)
+          ..where((t) => t.lessonId.equals(lessonId) & t.deletedAt.isNull())
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.sortOrder),
+            (t) => OrderingTerm.desc(t.updatedAt),
+          ]))
+        .get();
+  }
+
   Future<StudyNote?> getStudyNoteById(String id) {
     return (select(
       studyNotes,
@@ -1373,6 +1538,193 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteAiChatMessage(String id) async {
     await (delete(aiChatMessages)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── AI Questions / Quiz ──────────────────────────────────
+
+  Stream<List<QuestionSet>> watchQuestionSetsForLesson(String lessonId) {
+    return (select(questionSets)
+          ..where((t) => t.lessonId.equals(lessonId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  Stream<List<QuestionSet>> watchQuestionSetsForMaterial(String materialId) {
+    return (select(questionSets)
+          ..where((t) => t.materialId.equals(materialId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  Future<QuestionSet?> getQuestionSetById(String id) {
+    return (select(
+      questionSets,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<QuestionSet?> watchQuestionSetById(String id) {
+    return (select(
+      questionSets,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
+  Future<List<QuizQuestion>> getQuizQuestionsForSet(String questionSetId) {
+    return (select(quizQuestions)
+          ..where((t) => t.questionSetId.equals(questionSetId))
+          ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+        .get();
+  }
+
+  Future<List<QuizQuestionOption>> getOptionsForQuestion(String questionId) {
+    return (select(quizQuestionOptions)
+          ..where((t) => t.questionId.equals(questionId))
+          ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+        .get();
+  }
+
+  Future<List<QuizQuestionOption>> getOptionsForQuestions(
+    List<String> questionIds,
+  ) {
+    if (questionIds.isEmpty) return Future.value(const []);
+    return (select(quizQuestionOptions)
+          ..where((t) => t.questionId.isIn(questionIds))
+          ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+        .get();
+  }
+
+  Future<void> insertQuestionSet(QuestionSetsCompanion entry) {
+    return into(questionSets).insert(entry);
+  }
+
+  Future<void> insertQuizQuestion(QuizQuestionsCompanion entry) {
+    return into(quizQuestions).insert(entry);
+  }
+
+  Future<void> insertQuizQuestionOption(QuizQuestionOptionsCompanion entry) {
+    return into(quizQuestionOptions).insert(entry);
+  }
+
+  Future<void> insertQuizAttempt(QuizAttemptsCompanion entry) {
+    return into(quizAttempts).insert(entry);
+  }
+
+  Future<void> updateQuizAttempt(QuizAttempt attempt) {
+    return update(quizAttempts).replace(attempt);
+  }
+
+  Future<QuizAttempt?> getQuizAttemptById(String id) {
+    return (select(
+      quizAttempts,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<List<QuizAttempt>> getQuizAttemptsForSet(String questionSetId) {
+    return (select(quizAttempts)
+          ..where((t) => t.questionSetId.equals(questionSetId))
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
+        .get();
+  }
+
+  Future<void> insertQuizAnswer(QuizAnswersCompanion entry) {
+    return into(quizAnswers).insert(entry);
+  }
+
+  Future<void> saveQuizAnswer({
+    required String id,
+    required String quizAttemptId,
+    required String questionId,
+    String? selectedOptionId,
+    String? answerText,
+    required bool isCorrect,
+  }) async {
+    final existing =
+        await (select(quizAnswers)..where(
+              (t) =>
+                  t.quizAttemptId.equals(quizAttemptId) &
+                  t.questionId.equals(questionId),
+            ))
+            .getSingleOrNull();
+    if (existing == null) {
+      await into(quizAnswers).insert(
+        QuizAnswersCompanion.insert(
+          id: id,
+          quizAttemptId: quizAttemptId,
+          questionId: questionId,
+          selectedOptionId: Value(selectedOptionId),
+          answerText: Value(answerText),
+          isCorrect: Value(isCorrect),
+        ),
+      );
+    } else {
+      await update(quizAnswers).replace(
+        existing.copyWith(
+          selectedOptionId: Value(selectedOptionId),
+          answerText: Value(answerText),
+          isCorrect: Value(isCorrect),
+        ),
+      );
+    }
+  }
+
+  Future<List<QuizAnswer>> getQuizAnswersForAttempt(String attemptId) {
+    return (select(
+      quizAnswers,
+    )..where((t) => t.quizAttemptId.equals(attemptId))).get();
+  }
+
+  /// Incorrect answers across attempts — extension point for future spaced review.
+  Future<List<QuizAnswer>> getIncorrectQuizAnswersForSet(
+    String questionSetId,
+  ) async {
+    final attempts = await getQuizAttemptsForSet(questionSetId);
+    if (attempts.isEmpty) return const [];
+    final attemptIds = [for (final a in attempts) a.id];
+    return (select(quizAnswers)..where(
+          (t) => t.quizAttemptId.isIn(attemptIds) & t.isCorrect.equals(false),
+        ))
+        .get();
+  }
+
+  Future<void> deleteQuestionSet(String id) async {
+    final questions = await getQuizQuestionsForSet(id);
+    final questionIds = [for (final q in questions) q.id];
+    if (questionIds.isNotEmpty) {
+      await (delete(
+        quizQuestionOptions,
+      )..where((t) => t.questionId.isIn(questionIds))).go();
+    }
+    final attempts = await getQuizAttemptsForSet(id);
+    final attemptIds = [for (final a in attempts) a.id];
+    if (attemptIds.isNotEmpty) {
+      await (delete(
+        quizAnswers,
+      )..where((t) => t.quizAttemptId.isIn(attemptIds))).go();
+      await (delete(
+        quizAttempts,
+      )..where((t) => t.questionSetId.equals(id))).go();
+    }
+    await (delete(
+      quizQuestions,
+    )..where((t) => t.questionSetId.equals(id))).go();
+    await (delete(questionSets)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Atomically persist a fully validated generated quiz. Rolls back on error.
+  Future<QuestionSet> persistGeneratedQuiz({
+    required QuestionSetsCompanion setEntry,
+    required List<QuizQuestionsCompanion> questions,
+    required List<QuizQuestionOptionsCompanion> options,
+  }) async {
+    return transaction(() async {
+      await into(questionSets).insert(setEntry);
+      for (final q in questions) {
+        await into(quizQuestions).insert(q);
+      }
+      for (final o in options) {
+        await into(quizQuestionOptions).insert(o);
+      }
+      return (await getQuestionSetById(setEntry.id.value))!;
+    });
   }
 }
 

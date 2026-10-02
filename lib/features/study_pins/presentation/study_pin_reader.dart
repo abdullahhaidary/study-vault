@@ -6,8 +6,11 @@ import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/services/annotation_ai_context_builder.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../../notes/data/notes_providers.dart';
 import '../data/study_pins_providers.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
@@ -343,24 +346,54 @@ class StudyPinReaderPanel extends ConsumerWidget {
   final bool showHeader;
 
   Future<void> _openAiActions(BuildContext context, WidgetRef ref) async {
-    final selected = pin.selectedText?.trim();
-    final fullNote = StudyNoteCodec.plainTextPreview(pin.fullExplanation);
-    final sourceText = selected != null && selected.isNotEmpty
-        ? selected
-        : [pin.shortText, fullNote].where((text) => text.isNotEmpty).join('\n');
-    if (sourceText.isEmpty) return;
+    final material = await ref
+        .read(databaseProvider)
+        .getMaterialById(pin.resourceId);
+    final aiContext = AnnotationAiContextBuilder.fromStudyPin(
+      pinId: pin.id,
+      shortText: pin.shortText,
+      fullExplanationStored: pin.fullExplanation ?? '',
+      selectedText: pin.selectedText,
+      materialId: pin.resourceId,
+      lessonId: material?.lessonId,
+      pageNumber: pin.pageNumber,
+    );
+    if (!aiContext.hasUsableText || !context.mounted) return;
 
     await showAiActionsSheet(
       context,
       ref,
-      sourceText: sourceText,
-      selectedText: selected,
+      sourceText: aiContext.primaryText,
+      selectedText: pin.selectedText,
       shortDescription: pin.shortText,
+      annotationContext: aiContext,
       actionContext: AiActionContext.pinReader,
+      questionsLaunch: QuestionSourceLaunches.forPin(
+        ref: ref,
+        pinText: aiContext.primaryText,
+        materialId: pin.resourceId,
+        lessonId: material?.lessonId,
+        pageNumber: pin.pageNumber,
+      ),
+      onCreateNote: material == null
+          ? null
+          : (markdown) async {
+              final title = pin.shortText.trim().isEmpty
+                  ? 'AI note'
+                  : pin.shortText.trim();
+              await createStudyNote(
+                ref,
+                lessonId: material.lessonId,
+                title: title,
+                content: MarkdownToQuill.toDeltaJson(markdown),
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Note created')));
+              }
+            },
       onFlashcardsCreate: (cards) async {
-        final material = await ref
-            .read(databaseProvider)
-            .getMaterialById(pin.resourceId);
         if (material == null) return;
         for (final card in cards) {
           await createFlashcard(

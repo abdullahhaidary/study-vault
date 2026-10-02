@@ -65,25 +65,22 @@ class GeminiAiService implements AiService {
     Duration timeout = const Duration(seconds: 60),
   }) async {
     _assertSourceSize(request.sourceText);
+    if ((request.action == AiStudyAction.askAi ||
+            request.action == AiStudyAction.customPrompt) &&
+        (request.customPrompt == null ||
+            request.customPrompt!.trim().isEmpty)) {
+      throw const AiMalformedOutputException(
+        'Enter a question or custom prompt first.',
+      );
+    }
     final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = AiModelIds.normalize(await settings.getModelId());
     final preference = await settings.getStudyPreference();
-    final enriched = AiStudyRequest(
-      action: request.action,
-      sourceText: request.sourceText,
-      language: request.language,
-      rephraseMode: request.rephraseMode,
-      organizeMode: request.organizeMode,
-      summarizeMode: request.summarizeMode,
-      questionType: request.questionType,
-      flashcardCount: request.flashcardCount,
-      categoryNames: request.categoryNames,
+    final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
-      selectedText: request.selectedText,
-      shortDescription: request.shortDescription,
     );
 
     final prompt = AiPromptBuilder.forRequest(enriched);
@@ -115,10 +112,12 @@ class GeminiAiService implements AiService {
       timeout: timeout,
     );
     assert(() {
+      // Never log source/PDF content or API keys — action + timing only.
       // ignore: avoid_print
       print(
         'AI ${request.action.name} model=$model ok in '
-        '${DateTime.now().difference(started).inMilliseconds}ms',
+        '${DateTime.now().difference(started).inMilliseconds}ms '
+        'chars=${request.effectiveSourceLength}',
       );
       return true;
     }());
@@ -129,8 +128,12 @@ class GeminiAiService implements AiService {
       AiStudyAction.rephrase ||
       AiStudyAction.fixGrammar ||
       AiStudyAction.organize ||
-      AiStudyAction.summarize =>
-        AiOutputValidator.textFromMarkdown(text),
+      AiStudyAction.summarize ||
+      AiStudyAction.define ||
+      AiStudyAction.giveExample ||
+      AiStudyAction.translate ||
+      AiStudyAction.askAi ||
+      AiStudyAction.customPrompt => AiOutputValidator.textFromMarkdown(text),
       AiStudyAction.createAnnotation => AiOutputValidator.parseAnnotation(
         text,
         categoryNameToId: categoryNameToId,
@@ -139,8 +142,26 @@ class GeminiAiService implements AiService {
         text,
         expectedCount: request.flashcardCount,
       ),
-      AiStudyAction.generateQuestions => AiOutputValidator.parseQuestions(text),
+      AiStudyAction.generateQuestions => AiOutputValidator.parseQuestions(
+        text,
+        expectedCount: request.questionCount,
+        requestedType: request.questionType,
+      ),
     };
+  }
+
+  @override
+  Future<AiQuestionsResult> generateQuestions(
+    AiQuestionGenerationRequest request, {
+    Duration timeout = const Duration(seconds: 90),
+  }) async {
+    final result = await run(request.toStudyRequest(), timeout: timeout);
+    if (result is! AiQuestionsResult) {
+      throw const AiMalformedOutputException(
+        'Gemini did not return quiz questions.',
+      );
+    }
+    return result;
   }
 
   Map<String, dynamic>? _schemaFor(AiStudyAction action) {
@@ -161,6 +182,9 @@ class GeminiAiService implements AiService {
   }
 
   void _assertSourceSize(String source) {
+    if (source.trim().isEmpty) {
+      throw const AiEmptySelectionException();
+    }
     if (source.length > kAiHardSourceLimit) {
       throw const AiSourceTooLargeException();
     }
@@ -286,7 +310,9 @@ class GeminiAiService implements AiService {
       return 'Gemini request failed (HTTP $status). Check model and API key.';
     }
     // Never include secrets; API messages do not contain the key value.
-    final short = trimmed.length > 180 ? '${trimmed.substring(0, 180)}…' : trimmed;
+    final short = trimmed.length > 180
+        ? '${trimmed.substring(0, 180)}…'
+        : trimmed;
     return 'Gemini error ($status): $short';
   }
 

@@ -8,8 +8,7 @@ sealed class AiException implements Exception {
 }
 
 class AiNotConfiguredException extends AiException {
-  const AiNotConfiguredException()
-    : super('Gemini is not configured yet.');
+  const AiNotConfiguredException() : super('Gemini is not configured yet.');
 }
 
 class AiPrivacyNotAcceptedException extends AiException {
@@ -28,8 +27,7 @@ class AiInvalidKeyException extends AiException {
 }
 
 class AiQuotaException extends AiException {
-  const AiQuotaException()
-    : super('Gemini quota exceeded. Try again later.');
+  const AiQuotaException() : super('Gemini quota exceeded. Try again later.');
 }
 
 class AiRateLimitException extends AiException {
@@ -56,8 +54,7 @@ class AiServerException extends AiException {
 }
 
 class AiEmptyResultException extends AiException {
-  const AiEmptyResultException()
-    : super('Gemini returned an empty result.');
+  const AiEmptyResultException() : super('Gemini returned an empty result.');
 }
 
 class AiMalformedOutputException extends AiException {
@@ -76,4 +73,9 @@ class AiSourceTooLargeException extends AiException {
 
 class AiCancelledException extends AiException {
   const AiCancelledException() : super('AI request cancelled.');
+}
+
+class AiEmptySelectionException extends AiException {
+  const AiEmptySelectionException()
+    : super('Select or provide text for AI first.');
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../../core/widgets/auto_direction_text.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../domain/ai_models.dart';
@@ -60,8 +61,10 @@ class AiTextPreviewScreen extends StatelessWidget {
     final stored = MarkdownToQuill.toDeltaJson(result.markdown);
     final isWide = MediaQuery.sizeOf(context).width >= 900;
 
-    Widget originalPane() =>
-        _Pane(title: 'Original', child: SelectableText(originalText));
+    Widget originalPane() => _Pane(
+      title: 'Original',
+      child: AutoDirectionSelectableText(originalText),
+    );
     Widget aiPane() => _Pane(
       title: 'AI Version',
       child: StudyRichTextViewer(storedValue: stored),

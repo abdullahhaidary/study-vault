@@ -102,9 +102,9 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
                     ClipboardData(text: buffer.toString()),
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copied')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Copied')));
                   }
                 },
                 child: const Text('Copy'),

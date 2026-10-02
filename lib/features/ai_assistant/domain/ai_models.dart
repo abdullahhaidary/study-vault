@@ -1,10 +1,25 @@
+import '../../ai_questions/domain/quiz_models.dart';
 import 'ai_actions.dart';
 
 /// Soft size limit before warning the user (characters).
 const kAiSoftSourceLimit = 12000;
 
-/// Hard reject above this (characters).
+/// Hard reject above this (characters) for a single Gemini call.
 const kAiHardSourceLimit = 40000;
+
+/// Max surrounding context characters included with a selection.
+const kAiSurroundingContextLimit = 2500;
+
+/// One turn in a lightweight annotation-scoped follow-up chat.
+class AiConversationTurn {
+  const AiConversationTurn({
+    required this.userMessage,
+    required this.assistantMarkdown,
+  });
+
+  final String userMessage;
+  final String assistantMarkdown;
+}
 
 class AiStudyRequest {
   const AiStudyRequest({
@@ -15,11 +30,21 @@ class AiStudyRequest {
     this.organizeMode,
     this.summarizeMode,
     this.questionType,
-    this.flashcardCount = 3,
+    this.questionCount = 5,
+    this.questionDifficulty = AiQuestionDifficulty.mixed,
+    this.flashcardCount = 5,
     this.categoryNames = const [],
     this.userPreference,
     this.selectedText,
     this.shortDescription,
+    this.surroundingText,
+    this.pageNumber,
+    this.materialId,
+    this.lessonId,
+    this.annotationId,
+    this.customPrompt,
+    this.conversation = const [],
+    this.translateTarget,
   });
 
   final AiStudyAction action;
@@ -29,11 +54,114 @@ class AiStudyRequest {
   final AiOrganizeMode? organizeMode;
   final AiSummarizeMode? summarizeMode;
   final AiQuestionType? questionType;
+  final int questionCount;
+  final AiQuestionDifficulty questionDifficulty;
   final int flashcardCount;
   final List<String> categoryNames;
   final String? userPreference;
   final String? selectedText;
   final String? shortDescription;
+
+  /// Limited surrounding page / paragraph text for clarity.
+  final String? surroundingText;
+  final int? pageNumber;
+  final String? materialId;
+  final String? lessonId;
+  final String? annotationId;
+
+  /// Free-form user question (Ask AI) or custom instruction.
+  final String? customPrompt;
+
+  /// Prior turns for annotation-scoped follow-ups.
+  final List<AiConversationTurn> conversation;
+
+  /// Target language for [AiStudyAction.translate].
+  final AiLanguage? translateTarget;
+
+  /// Combined character budget used for size checks (source + surrounding).
+  int get effectiveSourceLength =>
+      sourceText.length + (surroundingText?.length ?? 0);
+
+  AiStudyRequest copyWith({
+    AiStudyAction? action,
+    String? sourceText,
+    AiLanguage? language,
+    AiRephraseMode? rephraseMode,
+    AiOrganizeMode? organizeMode,
+    AiSummarizeMode? summarizeMode,
+    AiQuestionType? questionType,
+    int? questionCount,
+    AiQuestionDifficulty? questionDifficulty,
+    int? flashcardCount,
+    List<String>? categoryNames,
+    String? userPreference,
+    String? selectedText,
+    String? shortDescription,
+    String? surroundingText,
+    int? pageNumber,
+    String? materialId,
+    String? lessonId,
+    String? annotationId,
+    String? customPrompt,
+    List<AiConversationTurn>? conversation,
+    AiLanguage? translateTarget,
+  }) {
+    return AiStudyRequest(
+      action: action ?? this.action,
+      sourceText: sourceText ?? this.sourceText,
+      language: language ?? this.language,
+      rephraseMode: rephraseMode ?? this.rephraseMode,
+      organizeMode: organizeMode ?? this.organizeMode,
+      summarizeMode: summarizeMode ?? this.summarizeMode,
+      questionType: questionType ?? this.questionType,
+      questionCount: questionCount ?? this.questionCount,
+      questionDifficulty: questionDifficulty ?? this.questionDifficulty,
+      flashcardCount: flashcardCount ?? this.flashcardCount,
+      categoryNames: categoryNames ?? this.categoryNames,
+      userPreference: userPreference ?? this.userPreference,
+      selectedText: selectedText ?? this.selectedText,
+      shortDescription: shortDescription ?? this.shortDescription,
+      surroundingText: surroundingText ?? this.surroundingText,
+      pageNumber: pageNumber ?? this.pageNumber,
+      materialId: materialId ?? this.materialId,
+      lessonId: lessonId ?? this.lessonId,
+      annotationId: annotationId ?? this.annotationId,
+      customPrompt: customPrompt ?? this.customPrompt,
+      conversation: conversation ?? this.conversation,
+      translateTarget: translateTarget ?? this.translateTarget,
+    );
+  }
+}
+
+/// Dedicated request for first-class quiz generation.
+class AiQuestionGenerationRequest {
+  const AiQuestionGenerationRequest({
+    required this.sourceText,
+    required this.count,
+    required this.type,
+    required this.difficulty,
+    this.language = AiLanguage.auto,
+    this.userPreference,
+  });
+
+  final String sourceText;
+  final int count;
+  final AiQuestionType type;
+  final AiQuestionDifficulty difficulty;
+  final AiLanguage language;
+  final String? userPreference;
+
+  AiStudyRequest toStudyRequest() {
+    return AiStudyRequest(
+      action: AiStudyAction.generateQuestions,
+      sourceText: sourceText,
+      language: language,
+      questionType: type,
+      questionCount: count,
+      questionDifficulty: difficulty,
+      userPreference: userPreference,
+    );
+  }
 }
 
 sealed class AiStudyResult {
@@ -68,23 +196,39 @@ class AiFlashcardsResult extends AiStudyResult {
   final List<AiFlashcardDraft> cards;
 }
 
+/// Legacy-compatible draft used by the simple preview screen.
 class AiQuestionDraft {
   const AiQuestionDraft({
     required this.question,
     required this.answer,
+    this.type = QuizQuestionType.shortAnswer,
     this.choices,
     this.correctIndex,
     this.explanation,
+    this.difficulty,
+    this.sourcePage,
   });
 
   final String question;
   final String answer;
+  final QuizQuestionType type;
   final List<String>? choices;
   final int? correctIndex;
   final String? explanation;
+  final QuizDifficulty? difficulty;
+  final int? sourcePage;
 }
 
 class AiQuestionsResult extends AiStudyResult {
-  const AiQuestionsResult({required this.questions});
+  const AiQuestionsResult({
+    required this.questions,
+    this.title = 'Generated Quiz',
+    this.generated,
+  });
+
+  final String title;
   final List<AiQuestionDraft> questions;
+
+  /// Strictly validated quiz payload used for persistence / Quiz Mode.
+  final GeneratedQuiz? generated;
 }

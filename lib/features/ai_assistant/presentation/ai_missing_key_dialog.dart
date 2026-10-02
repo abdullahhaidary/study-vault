@@ -18,10 +18,9 @@ Future<void> showAiMissingKeyDialog(BuildContext context) {
         FilledButton(
           onPressed: () {
             Navigator.pop(context);
-            Navigator.of(context).pushNamed(
-              AppRoutes.settings,
-              arguments: {'section': 'ai'},
-            );
+            Navigator.of(
+              context,
+            ).pushNamed(AppRoutes.settings, arguments: {'section': 'ai'});
           },
           child: const Text('Open AI Settings'),
         ),
