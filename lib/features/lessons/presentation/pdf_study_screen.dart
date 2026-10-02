@@ -25,15 +25,16 @@ import '../../notes/data/notes_providers.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
+import 'widgets/pdf_study_dock.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
+import '../../study_pins/domain/pin_display_mode.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/add_edit_study_pin_sheet.dart';
 import '../../study_pins/presentation/study_pin_reader.dart';
 import '../../study_pins/presentation/widgets/pdf_pin_overlay.dart';
-import '../../study_pins/presentation/widgets/study_pin_toolbar.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_setup_screen.dart';
 
@@ -186,6 +187,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     final categories =
         ref.read(studyPinCategoryMapProvider).valueOrNull ?? const {};
     return MaterialOutlinePanel(
+      materialId: widget.resourceId,
       controller: _controller,
       bookmarks: bookmarks,
       pins: pins,
@@ -521,6 +523,103 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     });
   }
 
+  Future<void> _openAiDiscussions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.35,
+        maxChildSize: 0.9,
+        builder: (context, controller) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: ListView(
+            controller: controller,
+            children: [
+              Text(
+                'AI Discussions',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              AiDiscussionsList(
+                kind: AiContextKind.material,
+                id: widget.resourceId,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openAiTools() async {
+    final action = await showModalBottomSheet<_PdfAiTool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.auto_awesome),
+              title: const Text('Ask about this page'),
+              subtitle: Text(
+                _currentPage == null
+                    ? 'Wait for the current page to load'
+                    : 'Explain, summarize, or study page $_currentPage',
+              ),
+              enabled: _currentPage != null,
+              onTap: _currentPage == null
+                  ? null
+                  : () => Navigator.pop(context, _PdfAiTool.page),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz_outlined),
+              title: const Text('Generate questions'),
+              subtitle: const Text('Create a quiz from this PDF'),
+              onTap: () => Navigator.pop(context, _PdfAiTool.generateQuestions),
+            ),
+            ListTile(
+              leading: const Icon(Icons.fact_check_outlined),
+              title: const Text('Question sets'),
+              subtitle: const Text('Open saved AI questions'),
+              onTap: () => Navigator.pop(context, _PdfAiTool.questionSets),
+            ),
+            ListTile(
+              leading: const Icon(Icons.forum_outlined),
+              title: const Text('AI discussions'),
+              subtitle: const Text('Continue chats about this material'),
+              onTap: () => Navigator.pop(context, _PdfAiTool.discussions),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _PdfAiTool.page:
+        await _openPageInlineAi();
+      case _PdfAiTool.generateQuestions:
+        await _openGenerateQuestions();
+      case _PdfAiTool.questionSets:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => QuestionSetsScreen(
+              scope: QuestionSetsScope.material(
+                id: widget.resourceId,
+                title: widget.title,
+              ),
+            ),
+          ),
+        );
+      case _PdfAiTool.discussions:
+        await _openAiDiscussions();
+    }
+  }
+
   void _closeInlineAi() {
     if (_inlineAi == null) return;
     setState(() => _inlineAi = null);
@@ -652,116 +751,6 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
           ),
-          IconButton(
-            tooltip: currentBookmark == null
-                ? 'Bookmark page'
-                : 'Remove bookmark',
-            onPressed: _currentPage == null ? null : _toggleBookmark,
-            icon: Icon(
-              currentBookmark == null ? Icons.bookmark_border : Icons.bookmark,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Document navigation',
-            onPressed: !_controller.isReady
-                ? null
-                : () {
-                    if (_isWide) {
-                      setState(() => _showOutline = !_showOutline);
-                    } else {
-                      _openOutlineSheet(bookmarks, pins);
-                    }
-                  },
-            icon: const Icon(Icons.toc_outlined),
-          ),
-          IconButton(
-            tooltip: 'Review Pins',
-            onPressed: () => openReviewSetup(
-              context,
-              scope: ReviewScope(
-                type: ReviewScopeType.material,
-                id: widget.resourceId,
-                title: widget.title,
-              ),
-            ),
-            icon: const Icon(Icons.school_outlined),
-          ),
-          IconButton(
-            tooltip: 'Page AI',
-            onPressed: _currentPage == null ? null : _openPageInlineAi,
-            icon: const Icon(Icons.auto_awesome),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'AI tools',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) async {
-              if (value == 'page_ai') {
-                await _openPageInlineAi();
-              } else if (value == 'generate_questions') {
-                await _openGenerateQuestions();
-              } else if (value == 'question_sets') {
-                if (!mounted) return;
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => QuestionSetsScreen(
-                      scope: QuestionSetsScope.material(
-                        id: widget.resourceId,
-                        title: widget.title,
-                      ),
-                    ),
-                  ),
-                );
-              } else if (value == 'ai_discussions') {
-                if (!mounted) return;
-                await showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  showDragHandle: true,
-                  builder: (context) => DraggableScrollableSheet(
-                    expand: false,
-                    initialChildSize: 0.55,
-                    minChildSize: 0.35,
-                    maxChildSize: 0.9,
-                    builder: (context, controller) => Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: ListView(
-                        controller: controller,
-                        children: [
-                          Text(
-                            'AI Discussions',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          AiDiscussionsList(
-                            kind: AiContextKind.material,
-                            id: widget.resourceId,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'page_ai',
-                child: Text('Ask about this page'),
-              ),
-              PopupMenuItem(
-                value: 'generate_questions',
-                child: Text('Generate Questions'),
-              ),
-              PopupMenuItem(
-                value: 'question_sets',
-                child: Text('AI Questions'),
-              ),
-              PopupMenuItem(
-                value: 'ai_discussions',
-                child: Text('AI Discussions'),
-              ),
-            ],
-          ),
           if (pageLabel != null)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -774,163 +763,206 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          StudyPinToolbar(
-            addPinMode: annotate,
-            displayMode: displayMode,
-            onAddPinModeChanged: (value) {
-              ref.read(addPinModeProvider(resourceId).notifier).state = value;
-            },
-            onDisplayModeChanged: (mode) {
-              ref.read(pinDisplayModeProvider(resourceId).notifier).state =
-                  mode;
-            },
-          ),
-          Expanded(
-            child: FutureBuilder<bool>(
-              future: _fileExists,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.data != true) {
-                  return const Center(
-                    child: Text('PDF file is missing from local storage.'),
-                  );
-                }
+      body: FutureBuilder<bool>(
+        future: _fileExists,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.data != true) {
+            return const Center(
+              child: Text('PDF file is missing from local storage.'),
+            );
+          }
 
-                return Row(
+          return Row(
+            children: [
+              Expanded(
+                child: Stack(
                   children: [
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          PdfViewer.file(
-                            widget.filePath,
-                            controller: _controller,
-                            params: PdfViewerParams(
-                              margin: 8,
-                              textSelectionParams: const PdfTextSelectionParams(
-                                enabled: true,
-                              ),
-                              customizeContextMenuItems: (params, items) {
-                                if (!params
-                                    .textSelectionDelegate
-                                    .hasSelectedText) {
-                                  return;
-                                }
-                                items.insert(
-                                  0,
-                                  ContextMenuButtonItem(
-                                    label: 'AI',
-                                    type: ContextMenuButtonType.custom,
-                                    onPressed: () {
-                                      params.dismissContextMenu();
-                                      _openPdfInlineAi(
-                                        params.textSelectionDelegate,
-                                      );
-                                    },
-                                  ),
-                                );
-                                if (!annotate) return;
-                                items.insert(
-                                  1,
-                                  ContextMenuButtonItem(
-                                    label: 'Add Description',
-                                    type: ContextMenuButtonType.custom,
-                                    onPressed: () {
-                                      params.dismissContextMenu();
-                                      _handleAddTextDescription(
-                                        params.textSelectionDelegate,
-                                      );
-                                    },
-                                  ),
-                                );
+                    PdfViewer.file(
+                      widget.filePath,
+                      controller: _controller,
+                      params: PdfViewerParams(
+                        margin: 8,
+                        textSelectionParams: const PdfTextSelectionParams(
+                          enabled: true,
+                        ),
+                        customizeContextMenuItems: (params, items) {
+                          if (!params.textSelectionDelegate.hasSelectedText) {
+                            return;
+                          }
+                          items.insert(
+                            0,
+                            ContextMenuButtonItem(
+                              label: 'AI',
+                              type: ContextMenuButtonType.custom,
+                              onPressed: () {
+                                params.dismissContextMenu();
+                                _openPdfInlineAi(params.textSelectionDelegate);
                               },
-                              onPageChanged: (pageNumber) {
-                                setState(() => _currentPage = pageNumber);
-                              },
-                              onViewerReady: (document, controller) {
-                                setState(() {
-                                  _pageCount = document.pages.length;
-                                  _currentPage = controller.pageNumber;
-                                });
-                                final page = widget.initialPage;
-                                if (page != null &&
-                                    page >= 1 &&
-                                    page <= document.pages.length) {
-                                  controller.goToPage(pageNumber: page);
-                                }
-                              },
-                              onGeneralTap: (context, controller, details) {
-                                if (!annotate) return false;
-                                if (details.type !=
-                                    PdfViewerGeneralTapType.tap) {
-                                  return false;
-                                }
-                                // Avoid creating a point pin under a text selection gesture.
-                                if (details.tapOn ==
-                                    PdfViewerPart.selectedText) {
-                                  return false;
-                                }
-                                if (controller
-                                    .textSelectionDelegate
-                                    .hasSelectedText) {
-                                  return false;
-                                }
-                                _handleAddPointPinTap(controller, details);
-                                return true;
-                              },
-                              pageOverlaysBuilder: (context, pageRect, page) {
-                                return buildPdfPagePinOverlays(
-                                  pageRect: pageRect,
-                                  page: page,
-                                  pins: pins,
-                                  textRanges: textRanges,
-                                  displayMode: displayMode,
-                                  annotateMode: annotate,
-                                  categoryMap: categoryMap,
-                                  focusedPinId: _focusedPinId,
-                                  onPinTap: (pin) {
-                                    setState(() => _focusedPinId = pin.id);
-                                    _onAnnotationTap(pin, annotate: annotate);
-                                  },
-                                  onPointPinMoved: _onPointPinMoved,
+                            ),
+                          );
+                          if (!annotate) return;
+                          items.insert(
+                            1,
+                            ContextMenuButtonItem(
+                              label: 'Add Description',
+                              type: ContextMenuButtonType.custom,
+                              onPressed: () {
+                                params.dismissContextMenu();
+                                _handleAddTextDescription(
+                                  params.textSelectionDelegate,
                                 );
                               },
                             ),
-                          ),
-                          if (_isWide && _readerPin != null)
-                            StudyPinReaderOverlay(
-                              pin: _readerPin!,
-                              onClose: () => setState(() => _readerPin = null),
-                            ),
-                          if (_inlineAi != null)
-                            InlineAiOverlay(
-                              mode: _inlineAi!.mode,
-                              aiContext: _inlineAi!.context,
-                              existingPin: _inlineAi!.existingPin,
-                              useBottomSheetLayout: !_isWide,
-                              callbacks: _inlineAiCallbacks(_inlineAi!),
-                            ),
-                        ],
+                          );
+                        },
+                        onPageChanged: (pageNumber) {
+                          setState(() => _currentPage = pageNumber);
+                        },
+                        onViewerReady: (document, controller) {
+                          setState(() {
+                            _pageCount = document.pages.length;
+                            _currentPage = controller.pageNumber;
+                          });
+                          final page = widget.initialPage;
+                          if (page != null &&
+                              page >= 1 &&
+                              page <= document.pages.length) {
+                            controller.goToPage(pageNumber: page);
+                          }
+                        },
+                        onGeneralTap: (context, controller, details) {
+                          if (!annotate) return false;
+                          if (details.type != PdfViewerGeneralTapType.tap) {
+                            return false;
+                          }
+                          // Avoid creating a point pin under a text selection gesture.
+                          if (details.tapOn == PdfViewerPart.selectedText) {
+                            return false;
+                          }
+                          if (controller
+                              .textSelectionDelegate
+                              .hasSelectedText) {
+                            return false;
+                          }
+                          _handleAddPointPinTap(controller, details);
+                          return true;
+                        },
+                        pageOverlaysBuilder: (context, pageRect, page) {
+                          return buildPdfPagePinOverlays(
+                            pageRect: pageRect,
+                            page: page,
+                            pins: pins,
+                            textRanges: textRanges,
+                            displayMode: displayMode,
+                            annotateMode: annotate,
+                            categoryMap: categoryMap,
+                            focusedPinId: _focusedPinId,
+                            onPinTap: (pin) {
+                              setState(() => _focusedPinId = pin.id);
+                              _onAnnotationTap(pin, annotate: annotate);
+                            },
+                            onPointPinMoved: _onPointPinMoved,
+                          );
+                        },
                       ),
                     ),
-                    if (_isWide && _showOutline && _controller.isReady)
-                      SizedBox(
-                        width: 340,
-                        child: _outlinePanel(bookmarks, pins),
+                    if (_isWide && _readerPin != null)
+                      StudyPinReaderOverlay(
+                        pin: _readerPin!,
+                        onClose: () => setState(() => _readerPin = null),
+                      ),
+                    if (_inlineAi == null)
+                      Positioned.fill(
+                        child: PdfStudyDock(
+                          bookmarked: currentBookmark != null,
+                          bookmarkEnabled: _currentPage != null,
+                          annotating: annotate,
+                          pinDisplayMode: displayMode,
+                          onOpenNavigation: () {
+                            if (!_controller.isReady) return;
+                            if (_isWide) {
+                              setState(() => _showOutline = !_showOutline);
+                            } else {
+                              _openOutlineSheet(bookmarks, pins);
+                            }
+                          },
+                          onToggleBookmark: _toggleBookmark,
+                          onToggleAnnotating: () {
+                            ref
+                                    .read(
+                                      addPinModeProvider(resourceId).notifier,
+                                    )
+                                    .state =
+                                !annotate;
+                          },
+                          onOpenAi: _openAiTools,
+                          onAction: (action) {
+                            switch (action) {
+                              case PdfStudyDockAction.reviewPins:
+                                openReviewSetup(
+                                  context,
+                                  scope: ReviewScope(
+                                    type: ReviewScopeType.material,
+                                    id: widget.resourceId,
+                                    title: widget.title,
+                                  ),
+                                );
+                              case PdfStudyDockAction.hidePins:
+                                ref
+                                        .read(
+                                          pinDisplayModeProvider(
+                                            resourceId,
+                                          ).notifier,
+                                        )
+                                        .state =
+                                    PinDisplayMode.hidden;
+                              case PdfStudyDockAction.showPinDots:
+                                ref
+                                        .read(
+                                          pinDisplayModeProvider(
+                                            resourceId,
+                                          ).notifier,
+                                        )
+                                        .state =
+                                    PinDisplayMode.dotsOnly;
+                              case PdfStudyDockAction.showPinText:
+                                ref
+                                        .read(
+                                          pinDisplayModeProvider(
+                                            resourceId,
+                                          ).notifier,
+                                        )
+                                        .state =
+                                    PinDisplayMode.dotsAndText;
+                            }
+                          },
+                        ),
+                      ),
+                    if (_inlineAi != null)
+                      InlineAiOverlay(
+                        mode: _inlineAi!.mode,
+                        aiContext: _inlineAi!.context,
+                        existingPin: _inlineAi!.existingPin,
+                        useBottomSheetLayout: !_isWide,
+                        callbacks: _inlineAiCallbacks(_inlineAi!),
                       ),
                   ],
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              ),
+              if (_isWide && _showOutline && _controller.isReady)
+                SizedBox(width: 340, child: _outlinePanel(bookmarks, pins)),
+            ],
+          );
+        },
       ),
     );
   }
 }
+
+enum _PdfAiTool { page, generateQuestions, questionSets, discussions }
 
 class _InlineAiSession {
   const _InlineAiSession({
