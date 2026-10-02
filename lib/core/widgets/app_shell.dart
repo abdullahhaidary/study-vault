@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/classes/presentation/home_screen.dart';
 import '../../features/study_workspace/data/study_workspace_providers.dart';
-import '../../features/study_workspace/domain/study_workspace_models.dart';
 import '../navigation/shell_tab.dart';
 
 /// Application shell: Home by default, AI Chat when opened from Home.
@@ -31,9 +30,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         if (!mounted) return;
         ref.read(shellTabProvider.notifier).state = ShellTab.home;
         if (initial == ShellTab.aiChat) {
-          ref
-              .read(studyWorkspaceProvider.notifier)
-              .open(StudyWorkspaceTab.chat);
+          ref.read(studyWorkspaceProvider.notifier).open();
         }
       });
     }

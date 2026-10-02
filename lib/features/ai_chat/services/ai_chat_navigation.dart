@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../study_workspace/data/study_workspace_providers.dart';
-import '../../study_workspace/domain/study_workspace_models.dart';
 import '../data/ai_chat_providers.dart';
 import '../domain/ai_chat_models.dart';
 
@@ -16,7 +15,7 @@ abstract final class AiChatNavigation {
   }) {
     ref.read(activeAiChatIdProvider.notifier).state = chatId;
     ref.read(aiChatFocusMessageIdProvider.notifier).state = messageId;
-    ref.read(studyWorkspaceProvider.notifier).open(StudyWorkspaceTab.chat);
+    ref.read(studyWorkspaceProvider.notifier).open();
   }
 
   static void openChat(
@@ -26,7 +25,7 @@ abstract final class AiChatNavigation {
   }) {
     ref.read(activeAiChatIdProvider.notifier).state = chatId;
     ref.read(aiChatFocusMessageIdProvider.notifier).state = null;
-    ref.read(studyWorkspaceProvider.notifier).open(StudyWorkspaceTab.chat);
+    ref.read(studyWorkspaceProvider.notifier).open();
   }
 
   /// Starts a new chat with one Study Vault reference in the draft.
@@ -45,6 +44,6 @@ abstract final class AiChatNavigation {
     if (!context.mounted) return;
     ref.read(activeAiChatIdProvider.notifier).state = chat.id;
     ref.read(aiChatFocusMessageIdProvider.notifier).state = null;
-    ref.read(studyWorkspaceProvider.notifier).open(StudyWorkspaceTab.chat);
+    ref.read(studyWorkspaceProvider.notifier).open();
   }
 }

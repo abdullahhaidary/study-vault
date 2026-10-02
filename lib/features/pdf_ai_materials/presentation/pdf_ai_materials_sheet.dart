@@ -10,8 +10,6 @@ import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
-import '../../study_workspace/data/study_workspace_providers.dart';
-import '../../study_workspace/domain/study_workspace_models.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 import 'pdf_ai_material_reader_screen.dart';
@@ -22,18 +20,17 @@ Future<void> showPdfAiMaterialsSheet(
   required String title,
   required String filePath,
 }) {
-  ProviderScope.containerOf(context, listen: false)
-      .read(studyWorkspaceProvider.notifier)
-      .attachSource(
-        PdfWorkspaceSource(
-          materialId: materialId,
-          title: title,
-          filePath: filePath,
-        ),
-        open: true,
-        tab: StudyWorkspaceTab.summary,
-      );
-  return Future<void>.value();
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (_) => PdfAiMaterialsSheet(
+      materialId: materialId,
+      title: title,
+      filePath: filePath,
+    ),
+  );
 }
 
 class PdfAiMaterialsSheet extends ConsumerStatefulWidget {
