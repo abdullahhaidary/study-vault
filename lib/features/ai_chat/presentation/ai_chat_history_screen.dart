@@ -197,7 +197,7 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
   }
 }
 
-class _ChatHistoryTile extends ConsumerWidget {
+class _ChatHistoryTile extends StatelessWidget {
   const _ChatHistoryTile({
     required this.chat,
     required this.onOpen,
@@ -213,17 +213,7 @@ class _ChatHistoryTile extends ConsumerWidget {
   final ThemeData theme;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final previewAsync = ref.watch(aiChatLastMessageProvider(chat.id));
-    final preview = previewAsync.whenOrNull(
-      data: (last) {
-        if (last == null) return 'No messages yet';
-        final text = last.content.replaceAll(RegExp(r'\s+'), ' ').trim();
-        if (text.length <= 80) return text;
-        return '${text.substring(0, 80)}…';
-      },
-    );
-
+  Widget build(BuildContext context) {
     final when = chat.lastMessageAt ?? chat.updatedAt;
     final dateLabel = _friendlyDate(when);
     final modelLabel = AiModels.chatDisplayName(chat.modelId);
@@ -241,11 +231,10 @@ class _ChatHistoryTile extends ConsumerWidget {
         style: theme.textTheme.titleSmall,
       ),
       subtitle: Text(
-        '${preview ?? '…'}\n$dateLabel · $modelLabel',
-        maxLines: 3,
+        '$dateLabel · $modelLabel',
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      isThreeLine: true,
       trailing: PopupMenuButton<String>(
         onSelected: (value) {
           if (value == 'rename') onRename();

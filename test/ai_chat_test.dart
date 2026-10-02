@@ -130,6 +130,35 @@ void main() {
       expect(all.length, 4);
     });
 
+    test(
+      'first streamed reply assigns AI title without showing marker',
+      () async {
+        gemini = FakeGeminiChatService(
+          credentials: credentials,
+          settings: settings,
+          reply:
+              '[[CHAT_TITLE: Gradient Descent Basics]]\n'
+              'Gradient descent minimizes a loss function.',
+        );
+        service = AiChatService(db: db, gemini: gemini, settings: settings);
+        final chat = await service.createChat();
+
+        final updates = await service
+            .streamSend(
+              chatId: chat.id,
+              userText: 'Can you explain how gradient descent works?',
+            )
+            .toList();
+
+        expect(updates.last, 'Gradient descent minimizes a loss function.');
+        expect(updates.every((text) => !text.contains('CHAT_TITLE')), isTrue);
+        final updated = await db.getAiChatById(chat.id);
+        expect(updated!.title, 'Gradient Descent Basics');
+        final messages = await db.getAiChatMessages(chat.id);
+        expect(messages.last.content, updates.last);
+      },
+    );
+
     test('delete chat removes messages', () async {
       final chat = await service.createChat();
       await service.sendMessage(chatId: chat.id, userText: 'Hi');

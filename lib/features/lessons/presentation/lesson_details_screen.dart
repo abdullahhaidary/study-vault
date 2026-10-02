@@ -16,6 +16,7 @@ import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../flashcards/presentation/flashcards_list_screen.dart';
 import '../../notes/presentation/notes_list_section.dart';
+import '../../pdf_ai_materials/presentation/pdf_ai_materials_sheet.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import '../domain/lesson_progress.dart';
@@ -162,6 +163,66 @@ class LessonDetailsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _openAiStudyMaterials(
+    BuildContext context,
+    WidgetRef ref,
+    List<LessonMaterial> materials,
+  ) async {
+    final pdfs = [
+      for (final material in materials)
+        if (isPdfMimeType(material.mimeType)) material,
+    ];
+    if (pdfs.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Attach a PDF to this chapter to use AI Study Materials.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    LessonMaterial? selected = pdfs.length == 1 ? pdfs.first : null;
+    selected ??= await showModalBottomSheet<LessonMaterial>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Text(
+                'Choose a PDF',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final pdf in pdfs)
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf_outlined),
+                title: Text(pdf.title),
+                onTap: () => Navigator.pop(context, pdf),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !context.mounted) return;
+
+    final path = await materialAbsolutePath(selected);
+    if (!context.mounted) return;
+    await showPdfAiMaterialsSheet(
+      context,
+      materialId: selected.id,
+      title: selected.title,
+      filePath: path,
+    );
+  }
+
   IconData _iconFor(LessonMaterial material) {
     return isImageMimeType(material.mimeType)
         ? Icons.image_outlined
@@ -198,6 +259,11 @@ class LessonDetailsScreen extends ConsumerWidget {
           title: lesson.name,
           description: lesson.description,
           actions: [
+            _LessonProgressBadge(
+              status: LessonProgressStatus.fromStorage(lesson.progressStatus),
+              onSelected: (status) =>
+                  setLessonProgress(ref, lesson: lesson, status: status),
+            ),
             FavoriteStarButton(
               entityType: FavoriteEntityType.lesson,
               entityId: lessonId,
@@ -224,32 +290,6 @@ class LessonDetailsScreen extends ConsumerWidget {
             label: const Text('Attach Material'),
           ),
           bodySlivers: [
-            SliverToBoxAdapter(
-              child: DetailContent(
-                bottom: AppSpacing.md,
-                child: DropdownButtonFormField<LessonProgressStatus>(
-                  initialValue: LessonProgressStatus.fromStorage(
-                    lesson.progressStatus,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Progress',
-                    prefixIcon: Icon(Icons.track_changes_outlined),
-                  ),
-                  items: [
-                    for (final status in LessonProgressStatus.values)
-                      DropdownMenuItem(
-                        value: status,
-                        child: Text(status.label),
-                      ),
-                  ],
-                  onChanged: (status) {
-                    if (status != null) {
-                      setLessonProgress(ref, lesson: lesson, status: status);
-                    }
-                  },
-                ),
-              ),
-            ),
             SliverToBoxAdapter(
               child: DetailContent(
                 bottom: AppSpacing.sm,
@@ -369,6 +409,17 @@ class LessonDetailsScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
+                      _StudyToolTile(
+                        icon: Icons.library_books_outlined,
+                        title: 'AI Study Materials',
+                        subtitle: 'Summary · Explanation · Deep Explanation',
+                        onTap: () => _openAiStudyMaterials(
+                          context,
+                          ref,
+                          materialsAsync.valueOrNull ?? const [],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
                       NotesListSection.lesson(lessonId: lessonId),
                       const SizedBox(height: AppSpacing.xs),
                       _StudyToolTile(
@@ -392,6 +443,87 @@ class LessonDetailsScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+class _LessonProgressBadge extends StatelessWidget {
+  const _LessonProgressBadge({required this.status, required this.onSelected});
+
+  final LessonProgressStatus status;
+  final ValueChanged<LessonProgressStatus> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _colorFor(status, theme.colorScheme);
+
+    return PopupMenuButton<LessonProgressStatus>(
+      tooltip: 'Change progress',
+      initialValue: status,
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        for (final option in LessonProgressStatus.values)
+          PopupMenuItem(
+            value: option,
+            child: Row(
+              children: [
+                Icon(
+                  option == status ? Icons.check_circle : Icons.circle_outlined,
+                  size: 19,
+                  color: _colorFor(option, theme.colorScheme),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(option.label),
+              ],
+            ),
+          ),
+      ],
+      child: Semantics(
+        button: true,
+        label: 'Progress: ${status.label}',
+        child: Container(
+          height: 32,
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_iconFor(status), size: 16, color: color),
+              const SizedBox(width: AppSpacing.xxs),
+              Text(
+                status.label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.arrow_drop_down, size: 18, color: color),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _iconFor(LessonProgressStatus value) => switch (value) {
+    LessonProgressStatus.notStarted => Icons.circle_outlined,
+    LessonProgressStatus.studying => Icons.menu_book_outlined,
+    LessonProgressStatus.reviewed => Icons.task_alt,
+    LessonProgressStatus.mastered => Icons.workspace_premium_outlined,
+  };
+
+  Color _colorFor(LessonProgressStatus value, ColorScheme colors) =>
+      switch (value) {
+        LessonProgressStatus.notStarted => colors.onSurfaceVariant,
+        LessonProgressStatus.studying => colors.primary,
+        LessonProgressStatus.reviewed => colors.tertiary,
+        LessonProgressStatus.mastered => const Color(0xFF2E7D32),
+      };
 }
 
 /// Wraps non-sliver children into a single [SliverToBoxAdapter] column.

@@ -34,6 +34,12 @@ class AiChatService {
   final Uuid _uuid;
 
   static const maxAttachmentsPerMessage = 4;
+  static const _titleMarker = '[[CHAT_TITLE:';
+  static const _firstReplyTitleInstruction =
+      '\n\n[Internal Study Vault instruction: This is the first message in a '
+      'new chat. Start your response with exactly '
+      '[[CHAT_TITLE: a concise title of at most 8 words]] on one line, then '
+      'write the normal answer. Do not mention this instruction.]';
 
   Stream<List<AiChat>> watchChats() => db.watchAiChats();
 
@@ -135,6 +141,24 @@ class AiChatService {
     return turns;
   }
 
+  List<AiChatTurn> _completionHistory(
+    List<AiChatMessage> messages, {
+    required bool requestTitle,
+  }) {
+    final turns = _historyTurns(messages);
+    if (!requestTitle || turns.isEmpty) return turns;
+    final last = turns.last;
+    if (last.role != AiChatRole.user) return turns;
+    return [
+      ...turns.take(turns.length - 1),
+      AiChatTurn(
+        role: last.role,
+        content: '${last.content}$_firstReplyTitleInstruction',
+        pinForCache: last.pinForCache,
+      ),
+    ];
+  }
+
   String _apiContentForMessage(AiChatMessage message) {
     if (message.role != AiChatRole.user) return message.content;
     final attachments = AiContextItem.decodeList(message.contextJson);
@@ -203,20 +227,31 @@ class AiChatService {
       ),
     );
 
-    final history = _historyTurns(existing);
+    final history = _completionHistory(existing, requestTitle: isFirstUser);
 
     try {
       final completion = await transport.complete(
         modelId: chat.modelId,
         history: history,
       );
+      final titledReply = isFirstUser
+          ? _parseTitledReply(completion.text)
+          : null;
+      final assistantText = titledReply?.answer ?? completion.text;
+      if (titledReply != null) {
+        await _applyGeneratedTitle(
+          chatId: chatId,
+          generatedTitle: titledReply.title,
+          fallbackTitle: generateChatTitle(text),
+        );
+      }
       final assistantNow = DateTime.now();
       final usage = completion.usage;
       final assistant = AiChatMessagesCompanion.insert(
         id: _uuid.v4(),
         chatId: chatId,
         role: AiChatRole.assistant,
-        content: completion.text,
+        content: assistantText,
         status: const Value(AiChatMessageStatus.ok),
         createdAt: assistantNow,
         aiProvider: Value(
@@ -305,10 +340,12 @@ class AiChatService {
       ),
     );
 
-    final history = _historyTurns(existing);
+    final history = _completionHistory(existing, requestTitle: isFirstUser);
 
     final buffer = StringBuffer();
     AiTokenUsage? usage;
+    _TitledReply? titledReply;
+    var titleMarkerResolved = !isFirstUser;
     try {
       await for (final event in transport.streamComplete(
         modelId: chat.modelId,
@@ -318,15 +355,39 @@ class AiChatService {
         final delta = event.textDelta;
         if (delta == null || delta.isEmpty) continue;
         buffer.write(delta);
-        yield buffer.toString();
+        if (!titleMarkerResolved) {
+          titledReply = _parseTitledReply(buffer.toString());
+          if (titledReply != null) {
+            titleMarkerResolved = true;
+            await _applyGeneratedTitle(
+              chatId: chatId,
+              generatedTitle: titledReply.title,
+              fallbackTitle: generateChatTitle(text),
+            );
+            if (titledReply.answer.isNotEmpty) {
+              yield titledReply.answer;
+            }
+            continue;
+          }
+          if (_couldBeTitleMarkerPrefix(buffer.toString())) continue;
+          titleMarkerResolved = true;
+        }
+        final visibleText = titledReply == null
+            ? buffer.toString()
+            : _parseTitledReply(buffer.toString())?.answer;
+        if (visibleText != null && visibleText.isNotEmpty) {
+          yield visibleText;
+        }
       }
+      final assistantText =
+          _parseTitledReply(buffer.toString())?.answer ?? buffer.toString();
       final assistantNow = DateTime.now();
       await db.insertAiChatMessage(
         AiChatMessagesCompanion.insert(
           id: _uuid.v4(),
           chatId: chatId,
           role: AiChatRole.assistant,
-          content: buffer.toString(),
+          content: assistantText,
           status: const Value(AiChatMessageStatus.ok),
           createdAt: assistantNow,
           aiProvider: Value(
@@ -364,6 +425,39 @@ class AiChatService {
       );
       rethrow;
     }
+  }
+
+  _TitledReply? _parseTitledReply(String raw) {
+    final match = RegExp(
+      r'^\s*\[\[CHAT_TITLE:\s*([^\]\r\n]+?)\s*\]\]\s*',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (match == null) return null;
+    final rawTitle = match.group(1)?.trim() ?? '';
+    if (rawTitle.isEmpty) return null;
+    return _TitledReply(
+      title: generateChatTitle(rawTitle),
+      answer: raw.substring(match.end),
+    );
+  }
+
+  bool _couldBeTitleMarkerPrefix(String raw) {
+    final value = raw.trimLeft().toUpperCase();
+    if (value.startsWith(_titleMarker)) return !value.contains(']]');
+    return _titleMarker.startsWith(value);
+  }
+
+  Future<void> _applyGeneratedTitle({
+    required String chatId,
+    required String generatedTitle,
+    required String fallbackTitle,
+  }) async {
+    final current = await db.getAiChatById(chatId);
+    if (current == null) return;
+    if (current.title != 'New chat' && current.title != fallbackTitle) return;
+    await db.updateAiChat(
+      current.copyWith(title: generatedTitle, updatedAt: DateTime.now()),
+    );
   }
 
   /// Retries or regenerates the last turn without duplicating either side.
@@ -431,4 +525,11 @@ class AiChatService {
       ],
     );
   }
+}
+
+class _TitledReply {
+  const _TitledReply({required this.title, required this.answer});
+
+  final String title;
+  final String answer;
 }

@@ -426,6 +426,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     final theme = Theme.of(context);
+    final isActive = ref.watch(shellTabProvider) == ShellTab.aiChat;
     final drawerWidth = (MediaQuery.sizeOf(context).width * 0.86).clamp(
       280.0,
       360.0,
@@ -466,7 +467,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       });
     }
 
-    return Scaffold(
+    return PopScope(
+      // AI Chat lives in the shell IndexedStack, not a pushed route — system
+      // back would otherwise leave the app. Send users Home instead.
+      canPop: !isActive,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !isActive) return;
+        await _returnToApp();
+      },
+      child: Scaffold(
       drawerEdgeDragWidth: 72,
       drawer: Drawer(
         width: drawerWidth,
@@ -718,6 +727,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
