@@ -37,6 +37,16 @@ class QuizGenerationService {
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
   }) async {
+    assert(() {
+      // ignore: avoid_print
+      print(
+        'QuizGen start type=${type.storageValue} count=$count '
+        'difficulty=${difficulty.storageValue} '
+        'sourceChars=${source.characterCount} pages=${source.pageTexts.length}',
+      );
+      return true;
+    }());
+
     if (source.isEmpty) {
       throw const AiMalformedOutputException(
         'No study content available for this source.',
@@ -46,34 +56,53 @@ class QuizGenerationService {
       throw const AiMalformedOutputException('Unsupported question count.');
     }
 
-    final generated = await _generateWithChunking(
-      source: source,
-      count: count,
-      type: type,
-      difficulty: difficulty,
-    );
-
-    if (generated.questions.length != count) {
-      throw AiMalformedOutputException(
-        'Expected exactly $count questions, got ${generated.questions.length}.',
+    try {
+      final generated = await _generateWithChunking(
+        source: source,
+        count: count,
+        type: type,
+        difficulty: difficulty,
       );
-    }
 
-    final modelId = resolveActiveModelId(
-      provider: await settings.getProvider(),
-      storedModelId: await settings.getModelId(),
-      action: AiStudyAction.generateQuestions,
-    );
-    final provider = await settings.getProvider();
-    return _persist(
-      source: source,
-      count: count,
-      type: type,
-      difficulty: difficulty,
-      quiz: generated,
-      modelId: modelId,
-      provider: provider.storageValue,
-    );
+      if (generated.questions.length != count) {
+        throw AiMalformedOutputException(
+          'Expected exactly $count questions, got ${generated.questions.length}.',
+        );
+      }
+
+      final modelId = resolveActiveModelId(
+        provider: await settings.getProvider(),
+        storedModelId: await settings.getModelId(),
+        action: AiStudyAction.generateQuestions,
+      );
+      final provider = await settings.getProvider();
+      final set = await _persist(
+        source: source,
+        count: count,
+        type: type,
+        difficulty: difficulty,
+        quiz: generated,
+        modelId: modelId,
+        provider: provider.storageValue,
+      );
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'QuizGen persisted set=${set.id} questions=${generated.questions.length} '
+          'mcq=${generated.questions.where((q) => q.isMcq).length} '
+          'provider=${provider.storageValue} model=$modelId',
+        );
+        return true;
+      }());
+      return set;
+    } catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('QuizGen FAILED type=${type.storageValue} count=$count: $e');
+        return true;
+      }());
+      rethrow;
+    }
   }
 
   Future<GeneratedQuiz> _generateWithChunking({
@@ -138,23 +167,40 @@ class QuizGenerationService {
     required AiLanguage language,
     String? preference,
   }) async {
-    final result = await ai.generateQuestions(
-      AiQuestionGenerationRequest(
-        sourceText: text,
-        count: count,
-        type: _toAiType(type),
-        difficulty: _toAiDifficulty(difficulty),
-        language: language,
-        userPreference: preference,
-      ),
-    );
-    final generated = result.generated;
-    if (generated == null || generated.questions.length != count) {
-      throw AiMalformedOutputException(
-        'Expected exactly $count validated questions from AI.',
+    assert(() {
+      // ignore: avoid_print
+      print(
+        'QuizGen AI call type=${type.storageValue} count=$count '
+        'chunkChars=${text.length}',
       );
+      return true;
+    }());
+    try {
+      final result = await ai.generateQuestions(
+        AiQuestionGenerationRequest(
+          sourceText: text,
+          count: count,
+          type: _toAiType(type),
+          difficulty: _toAiDifficulty(difficulty),
+          language: language,
+          userPreference: preference,
+        ),
+      );
+      final generated = result.generated;
+      if (generated == null || generated.questions.length != count) {
+        throw AiMalformedOutputException(
+          'Expected exactly $count validated questions from AI.',
+        );
+      }
+      return generated;
+    } on AiException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('QuizGen AI call FAILED: ${e.message}');
+        return true;
+      }());
+      rethrow;
     }
-    return generated;
   }
 
   List<String> _chunkSource(QuestionSource source) {

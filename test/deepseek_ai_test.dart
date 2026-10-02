@@ -10,11 +10,79 @@ import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/domain/deepseek_model_registry.dart';
+import 'package:study_vault/features/ai_assistant/domain/deepseek_pricing_period.dart';
 import 'package:study_vault/features/ai_assistant/services/deepseek_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/routing_ai_service.dart';
 
 void main() {
+  group('DeepSeekPricingSchedule', () {
+    test('weekday UTC peak windows', () {
+      // Wednesday 2026-04-01
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 1, 0)),
+        DeepSeekPricingPeriod.peak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 3, 59)),
+        DeepSeekPricingPeriod.peak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 4, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 6, 0)),
+        DeepSeekPricingPeriod.peak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 9, 59)),
+        DeepSeekPricingPeriod.peak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 10, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 12, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      );
+    });
+
+    test('weekends are always off-peak', () {
+      // Saturday / Sunday during weekday peak UTC hours
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 4, 2, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      );
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 5, 7, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      );
+    });
+
+    test('Afghanistan local peak maps to UTC windows', () {
+      // AFT = UTC+4:30 → 05:30 AFT = 01:00 UTC (peak start)
+      // Use explicit UTC equivalents of Afghanistan windows.
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 1, 0)),
+        DeepSeekPricingPeriod.peak,
+      ); // 5:30 AM AFT
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 4, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      ); // 8:30 AM AFT
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 6, 0)),
+        DeepSeekPricingPeriod.peak,
+      ); // 10:30 AM AFT
+      expect(
+        DeepSeekPricingSchedule.forUtc(DateTime.utc(2026, 4, 1, 10, 0)),
+        DeepSeekPricingPeriod.offPeak,
+      ); // 2:30 PM AFT
+    });
+  });
+
   group('DeepSeekModelRegistry', () {
     test('normalizes aliases and unknown ids', () {
       expect(DeepSeekModelRegistry.normalize(null), 'deepseek-flash');

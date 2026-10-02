@@ -103,14 +103,12 @@ Future<void> showGenerateQuestionsSheet(
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(e.message)));
-  } catch (_) {
+  } catch (e) {
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Question generation failed. Please try again.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Question generation failed: $e')));
   }
 }
 

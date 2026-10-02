@@ -297,7 +297,7 @@ Return concise but educational answers.
     final count = request.questionCount.clamp(1, 50);
     final typeHint = switch (type) {
       AiQuestionType.mcq =>
-        'All questions must be MCQ (type "mcq") with exactly 4 options and correctAnswer as the 0-based index of the correct option.',
+        'All questions must be MCQ (type "mcq") with exactly 4 options and correctAnswer as the 0-based index of the correct option (0-3). Do not use letters or option text for correctAnswer.',
       AiQuestionType.trueFalse =>
         'All questions must be True/False (type "true_false") with boolean correctAnswer.',
       AiQuestionType.shortAnswer =>
@@ -326,6 +326,7 @@ Return concise but educational answers.
         '- Test understanding, not only memorization.\n'
         '- MCQ must have exactly 4 options.\n'
         '- MCQ must have exactly one correct option.\n'
+        '- MCQ correctAnswer must be the 0-based index (0, 1, 2, or 3).\n'
         '- Distractors should be plausible.\n'
         '- True/False must contain a boolean correct answer.\n'
         '- Short-answer questions must include a concise expected answer.\n'

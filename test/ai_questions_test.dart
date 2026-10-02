@@ -89,6 +89,63 @@ void main() {
       expect(q.correctAnswer, 1);
     });
 
+    test('parses MCQ with letter / option-text / object options', () {
+      final letter = AiOutputValidator.parseQuestions(
+        '''
+{
+  "title": "Quiz",
+  "questions": [{
+    "type": "mcq",
+    "question": "Pick B",
+    "options": ["alpha", "bravo", "charlie", "delta"],
+    "correctAnswer": "B",
+    "explanation": "Letter B.",
+    "difficulty": "easy"
+  }]
+}
+''',
+        expectedCount: 1,
+        requestedType: AiQuestionType.mcq,
+      );
+      expect(letter.generated!.questions.first.correctAnswer, 1);
+
+      final byText = AiOutputValidator.parseQuestions('''
+{
+  "title": "Quiz",
+  "questions": [{
+    "type": "mcq",
+    "question": "Pick bravo",
+    "options": [
+      {"text": "alpha"},
+      {"label": "bravo"},
+      {"option": "charlie"},
+      {"value": "delta"}
+    ],
+    "correctAnswer": "bravo",
+    "explanation": "Matches option text.",
+    "difficulty": "medium"
+  }]
+}
+''', expectedCount: 1);
+      expect(byText.generated!.questions.first.correctAnswer, 1);
+      expect(byText.generated!.questions.first.options[1], 'bravo');
+
+      final oneBasedLast = AiOutputValidator.parseQuestions('''
+{
+  "title": "Quiz",
+  "questions": [{
+    "type": "mcq",
+    "question": "Last option",
+    "options": ["a", "b", "c", "d"],
+    "correctAnswer": 4,
+    "explanation": "1-based last.",
+    "difficulty": "easy"
+  }]
+}
+''', expectedCount: 1);
+      expect(oneBasedLast.generated!.questions.first.correctAnswer, 3);
+    });
+
     test('parses True/False', () {
       final result = AiOutputValidator.parseQuestions('''
 {

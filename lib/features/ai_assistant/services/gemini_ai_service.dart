@@ -125,39 +125,51 @@ class GeminiAiService implements AiService {
       print(
         'AI ${request.action.name} model=$model ok in '
         '${DateTime.now().difference(started).inMilliseconds}ms '
-        'chars=${request.effectiveSourceLength}',
+        'chars=${request.effectiveSourceLength} responseChars=${text.length}',
       );
       return true;
     }());
 
-    return switch (request.action) {
-      AiStudyAction.explain ||
-      AiStudyAction.simplify ||
-      AiStudyAction.rephrase ||
-      AiStudyAction.fixGrammar ||
-      AiStudyAction.organize ||
-      AiStudyAction.summarize ||
-      AiStudyAction.define ||
-      AiStudyAction.giveExample ||
-      AiStudyAction.translate ||
-      AiStudyAction.askAi ||
-      AiStudyAction.customPrompt ||
-      AiStudyAction.keyConcepts ||
-      AiStudyAction.examPoints => AiOutputValidator.textFromMarkdown(text),
-      AiStudyAction.createAnnotation => AiOutputValidator.parseAnnotation(
-        text,
-        categoryNameToId: categoryNameToId,
-      ),
-      AiStudyAction.generateFlashcards => AiOutputValidator.parseFlashcards(
-        text,
-        expectedCount: request.flashcardCount,
-      ),
-      AiStudyAction.generateQuestions => AiOutputValidator.parseQuestions(
-        text,
-        expectedCount: request.questionCount,
-        requestedType: request.questionType,
-      ),
-    };
+    try {
+      return switch (request.action) {
+        AiStudyAction.explain ||
+        AiStudyAction.simplify ||
+        AiStudyAction.rephrase ||
+        AiStudyAction.fixGrammar ||
+        AiStudyAction.organize ||
+        AiStudyAction.summarize ||
+        AiStudyAction.define ||
+        AiStudyAction.giveExample ||
+        AiStudyAction.translate ||
+        AiStudyAction.askAi ||
+        AiStudyAction.customPrompt ||
+        AiStudyAction.keyConcepts ||
+        AiStudyAction.examPoints => AiOutputValidator.textFromMarkdown(text),
+        AiStudyAction.createAnnotation => AiOutputValidator.parseAnnotation(
+          text,
+          categoryNameToId: categoryNameToId,
+        ),
+        AiStudyAction.generateFlashcards => AiOutputValidator.parseFlashcards(
+          text,
+          expectedCount: request.flashcardCount,
+        ),
+        AiStudyAction.generateQuestions => AiOutputValidator.parseQuestions(
+          text,
+          expectedCount: request.questionCount,
+          requestedType: request.questionType,
+        ),
+      };
+    } on AiException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'AI ${request.action.name} PARSE FAILED: ${e.message} '
+          'responseChars=${text.length}',
+        );
+        return true;
+      }());
+      rethrow;
+    }
   }
 
   @override

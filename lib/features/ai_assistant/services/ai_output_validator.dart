@@ -72,43 +72,72 @@ abstract final class AiOutputValidator {
     int? expectedCount,
     AiQuestionType? requestedType,
   }) {
-    final json = _decodeObject(raw);
-    final title = ('${json['title'] ?? 'Generated Quiz'}').trim();
-    final list = json['questions'];
-    if (list is! List || list.isEmpty) {
-      throw const AiMalformedOutputException('No questions in AI response.');
-    }
+    _debugLog(
+      'Quiz parse start rawChars=${raw.length} expected=$expectedCount '
+      'requestedType=${requestedType?.name ?? 'any'}',
+    );
+    try {
+      final json = _decodeObject(raw);
+      final title = ('${json['title'] ?? 'Generated Quiz'}').trim();
+      final list = json['questions'];
+      if (list is! List || list.isEmpty) {
+        throw const AiMalformedOutputException('No questions in AI response.');
+      }
 
-    final generated = <GeneratedQuizQuestion>[];
-    final drafts = <AiQuestionDraft>[];
+      final generated = <GeneratedQuizQuestion>[];
+      final drafts = <AiQuestionDraft>[];
 
-    for (final item in list) {
-      if (item is! Map) {
-        throw const AiMalformedOutputException(
-          'Question entry was not an object.',
+      for (var i = 0; i < list.length; i++) {
+        final item = list[i];
+        if (item is! Map) {
+          throw AiMalformedOutputException(
+            'Question entry #$i was not an object.',
+          );
+        }
+        final map = Map<String, dynamic>.from(item);
+        try {
+          final parsed = _parseOneQuestion(map, requestedType: requestedType);
+          generated.add(parsed);
+          drafts.add(_toDraft(parsed));
+          _debugLog(
+            'Quiz parse q#$i type=${parsed.type.storageValue} '
+            'opts=${parsed.options.length} ok',
+          );
+        } on AiException catch (e) {
+          _debugLog(
+            'Quiz parse q#$i FAILED: ${e.message} '
+            'rawType=${map['type']} correct=${map['correctAnswer'] ?? map['correctIndex']} '
+            'options=${_describeOptions(map['options'] ?? map['choices'])}',
+          );
+          rethrow;
+        }
+      }
+
+      if (expectedCount != null && generated.length != expectedCount) {
+        throw AiMalformedOutputException(
+          'Expected exactly $expectedCount questions, '
+          'got ${generated.length}.',
         );
       }
-      final map = Map<String, dynamic>.from(item);
-      final parsed = _parseOneQuestion(map, requestedType: requestedType);
-      generated.add(parsed);
-      drafts.add(_toDraft(parsed));
-    }
 
-    if (expectedCount != null && generated.length != expectedCount) {
-      throw AiMalformedOutputException(
-        'Expected exactly $expectedCount questions, '
-        'got ${generated.length}.',
+      _debugLog(
+        'Quiz parse ok title="${title.isEmpty ? 'Generated Quiz' : title}" '
+        'count=${generated.length} '
+        'mcq=${generated.where((q) => q.isMcq).length}',
       );
-    }
 
-    return AiQuestionsResult(
-      title: title.isEmpty ? 'Generated Quiz' : title,
-      questions: drafts,
-      generated: GeneratedQuiz(
+      return AiQuestionsResult(
         title: title.isEmpty ? 'Generated Quiz' : title,
-        questions: generated,
-      ),
-    );
+        questions: drafts,
+        generated: GeneratedQuiz(
+          title: title.isEmpty ? 'Generated Quiz' : title,
+          questions: generated,
+        ),
+      );
+    } on AiException catch (e) {
+      _debugLog('Quiz parse aborted: ${e.message}');
+      rethrow;
+    }
   }
 
   static GeneratedQuizQuestion _parseOneQuestion(
@@ -177,12 +206,12 @@ abstract final class AiOutputValidator {
       throw const AiMalformedOutputException('MCQ options were missing.');
     }
     final options = rawOptions
-        .map((e) => '$e'.trim())
+        .map(_optionText)
         .where((e) => e.isNotEmpty)
         .toList();
     if (options.length != 4) {
-      throw const AiMalformedOutputException(
-        'MCQ must have exactly 4 options.',
+      throw AiMalformedOutputException(
+        'MCQ must have exactly 4 options (got ${options.length}).',
       );
     }
     if (options.toSet().length != 4) {
@@ -190,10 +219,11 @@ abstract final class AiOutputValidator {
     }
 
     final correct = item['correctAnswer'] ?? item['correctIndex'];
-    final index = correct is int ? correct : int.tryParse('$correct');
-    if (index == null || index < 0 || index > 3) {
-      throw const AiMalformedOutputException(
-        'MCQ correctAnswer must be an index 0–3.',
+    final index = _resolveMcqCorrectIndex(correct, options);
+    if (index == null) {
+      throw AiMalformedOutputException(
+        'MCQ correctAnswer must be 0–3, A–D, or match an option '
+        '(got: ${correct ?? '(missing)'}).',
       );
     }
 
@@ -206,6 +236,72 @@ abstract final class AiOutputValidator {
       difficulty: difficulty,
       sourcePage: sourcePage,
     );
+  }
+
+  /// Accepts 0-based indexes, 1-based `4`, letters A–D, or option text.
+  static int? _resolveMcqCorrectIndex(Object? correct, List<String> options) {
+    if (correct == null) return null;
+
+    if (correct is num) {
+      final n = correct.round();
+      if (n >= 0 && n <= 3) return n;
+      // Unambiguous 1-based last option.
+      if (n == 4) return 3;
+      return null;
+    }
+
+    final raw = '$correct'.trim();
+    if (raw.isEmpty) return null;
+
+    final asInt = int.tryParse(raw);
+    if (asInt != null) {
+      if (asInt >= 0 && asInt <= 3) return asInt;
+      if (asInt == 4) return 3;
+    }
+
+    final letter = RegExp(
+      r'^(?:option\s*)?[\(\[]?([a-d])[\)\]\.\:]?$',
+      caseSensitive: false,
+    ).firstMatch(raw);
+    if (letter != null) {
+      return letter.group(1)!.toLowerCase().codeUnitAt(0) - 97;
+    }
+
+    final lower = raw.toLowerCase();
+    final exact = options.indexWhere((o) => o.toLowerCase() == lower);
+    if (exact >= 0) return exact;
+
+    final partial = <int>[];
+    for (var i = 0; i < options.length; i++) {
+      final o = options[i].toLowerCase();
+      if (o.contains(lower) || lower.contains(o)) partial.add(i);
+    }
+    if (partial.length == 1) return partial.first;
+
+    return null;
+  }
+
+  static String _optionText(Object? value) {
+    if (value is Map) {
+      final map = Map<String, dynamic>.from(value);
+      final nested =
+          map['text'] ?? map['label'] ?? map['option'] ?? map['value'];
+      if (nested != null) return '$nested'.trim();
+    }
+    return '$value'.trim();
+  }
+
+  static String _describeOptions(Object? raw) {
+    if (raw is! List) return 'missing(${raw.runtimeType})';
+    return 'len=${raw.length}';
+  }
+
+  static void _debugLog(String message) {
+    assert(() {
+      // ignore: avoid_print
+      print('AI quiz: $message');
+      return true;
+    }());
   }
 
   static GeneratedQuizQuestion _parseTrueFalse({
