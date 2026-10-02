@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +27,7 @@ class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
     required this.filePath,
     required this.type,
     this.initialGenerationId,
+    this.embedded = false,
   });
 
   final String materialId;
@@ -32,6 +35,7 @@ class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
   final String filePath;
   final PdfAiMaterialType type;
   final String? initialGenerationId;
+  final bool embedded;
 
   @override
   ConsumerState<PdfAiMaterialReaderScreen> createState() =>
@@ -40,14 +44,117 @@ class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
 
 class _PdfAiMaterialReaderScreenState
     extends ConsumerState<PdfAiMaterialReaderScreen> {
+  final ScrollController _scrollController = ScrollController();
   String? _selectedId;
   bool _generating = false;
   bool _deleting = false;
+  String? _restoredGenerationId;
+  bool _restoringScroll = false;
+  Timer? _scrollSaveTimer;
+  double? _pendingScrollOffset;
+  String? _chunkedGenerationId;
+  List<String> _markdownChunks = const [];
 
   @override
   void initState() {
     super.initState();
     _selectedId = widget.initialGenerationId;
+    _scrollController.addListener(_saveScrollOffset);
+  }
+
+  @override
+  void dispose() {
+    _scrollSaveTimer?.cancel();
+    _persistScrollOffset();
+    _scrollController.removeListener(_saveScrollOffset);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  PdfAiMaterialScrollKey _scrollKey(String generationId) => (
+    materialId: widget.materialId,
+    type: widget.type,
+    generationId: generationId,
+  );
+
+  void _saveScrollOffset() {
+    final generationId = _restoredGenerationId;
+    if (_restoringScroll ||
+        generationId == null ||
+        !_scrollController.hasClients) {
+      return;
+    }
+    _pendingScrollOffset = _scrollController.offset;
+    _scrollSaveTimer?.cancel();
+    _scrollSaveTimer = Timer(
+      const Duration(milliseconds: 250),
+      _persistScrollOffset,
+    );
+  }
+
+  void _persistScrollOffset() {
+    final generationId = _restoredGenerationId;
+    final offset = _pendingScrollOffset;
+    if (generationId == null || offset == null) return;
+    _pendingScrollOffset = null;
+    ref
+            .read(
+              pdfAiMaterialScrollOffsetProvider(
+                _scrollKey(generationId),
+              ).notifier,
+            )
+            .state =
+        offset;
+  }
+
+  void _restoreScrollOffset(String generationId) {
+    if (_restoredGenerationId == generationId) return;
+    _scrollSaveTimer?.cancel();
+    _persistScrollOffset();
+    _restoredGenerationId = generationId;
+    _restoringScroll = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        _restoringScroll = false;
+        return;
+      }
+      final position = _scrollController.position;
+      final saved = ref.read(
+        pdfAiMaterialScrollOffsetProvider(_scrollKey(generationId)),
+      );
+      _scrollController.jumpTo(
+        saved
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble(),
+      );
+      _restoringScroll = false;
+    });
+  }
+
+  List<String> _chunksFor(PdfAiMaterial material) {
+    if (_chunkedGenerationId == material.id) return _markdownChunks;
+    _chunkedGenerationId = material.id;
+
+    const targetCharacters = 3500;
+    final chunks = <String>[];
+    final buffer = StringBuffer();
+    var insideCodeFence = false;
+    for (final line in material.content.split('\n')) {
+      if (line.trimLeft().startsWith('```')) {
+        insideCodeFence = !insideCodeFence;
+      }
+      buffer.writeln(line);
+      final paragraphEnded = line.trim().isEmpty;
+      if (!insideCodeFence &&
+          buffer.length >= targetCharacters &&
+          paragraphEnded) {
+        chunks.add(buffer.toString());
+        buffer.clear();
+      }
+    }
+    if (buffer.isNotEmpty) chunks.add(buffer.toString());
+    _markdownChunks = List.unmodifiable(chunks);
+    return _markdownChunks;
   }
 
   Future<void> _regenerate() async {
@@ -255,11 +362,15 @@ class _PdfAiMaterialReaderScreenState
 
     return allAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: Text(widget.type.displayName)),
+        appBar: widget.embedded
+            ? null
+            : AppBar(title: Text(widget.type.displayName)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: AppBar(title: Text(widget.type.displayName)),
+        appBar: widget.embedded
+            ? null
+            : AppBar(title: Text(widget.type.displayName)),
         body: const Center(child: Text('Could not load saved generations.')),
       ),
       data: (all) {
@@ -269,7 +380,9 @@ class _PdfAiMaterialReaderScreenState
         ];
         if (history.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: Text(widget.type.displayName)),
+            appBar: widget.embedded
+                ? null
+                : AppBar(title: Text(widget.type.displayName)),
             body: const Center(child: Text('This version no longer exists.')),
           );
         }
@@ -277,6 +390,8 @@ class _PdfAiMaterialReaderScreenState
           (item) => item.id == _selectedId,
           orElse: () => history.first,
         );
+        _restoreScrollOffset(selected.id);
+        final markdownChunks = _chunksFor(selected);
         final usage = aiTokenUsageFromColumns(
           promptTokens: selected.promptTokens,
           completionTokens: selected.completionTokens,
@@ -293,31 +408,33 @@ class _PdfAiMaterialReaderScreenState
             currentFingerprint != selected.sourceFingerprint;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(widget.type.displayName),
-            actions: [
-              IconButton(
-                tooltip: 'History',
-                onPressed: () => _showHistory(history, selected),
-                icon: Badge(
-                  label: Text('${history.length}'),
-                  child: const Icon(Icons.history),
+          appBar: widget.embedded
+              ? null
+              : AppBar(
+                  title: Text(widget.type.displayName),
+                  actions: [
+                    IconButton(
+                      tooltip: 'History',
+                      onPressed: () => _showHistory(history, selected),
+                      icon: Badge(
+                        label: Text('${history.length}'),
+                        child: const Icon(Icons.history),
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      enabled: !_generating && !_deleting,
+                      onSelected: (value) {
+                        if (value == 'delete') _delete(selected);
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete this version'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                enabled: !_generating && !_deleting,
-                onSelected: (value) {
-                  if (value == 'delete') _delete(selected);
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete this version'),
-                  ),
-                ],
-              ),
-            ],
-          ),
           body: Column(
             children: [
               if (stale)
@@ -330,58 +447,70 @@ class _PdfAiMaterialReaderScreenState
                   ),
                 ),
               Expanded(
-                child: Markdown(
-                  data: selected.content,
-                  selectable: true,
+                child: ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                ),
-              ),
-              const Divider(height: 1),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (usage != null) AiUsageIndicator(usage: usage),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Version ${selected.version} · '
-                        '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _generating ? null : _askAboutThis,
-                              icon: const Icon(Icons.chat_bubble_outline),
-                              label: const Text('Ask about this'),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: _generating ? null : _regenerate,
-                              icon: _generating
-                                  ? const SizedBox.square(
-                                      dimension: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.refresh),
-                              label: Text(
-                                _generating ? 'Generating…' : 'Regenerate',
+                  itemCount: markdownChunks.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index < markdownChunks.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: MarkdownBody(
+                          data: markdownChunks[index],
+                          selectable: true,
+                        ),
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: AppSpacing.md),
+                        const Divider(height: 1),
+                        const SizedBox(height: AppSpacing.md),
+                        if (usage != null) ...[
+                          AiUsageIndicator(usage: usage),
+                          const SizedBox(height: AppSpacing.xs),
+                        ],
+                        Text(
+                          'Version ${selected.version} · '
+                          '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (!widget.embedded) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _generating ? null : _askAboutThis,
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                  label: const Text('Ask about this'),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: _generating ? null : _regenerate,
+                                  icon: _generating
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.refresh),
+                                  label: Text(
+                                    _generating ? 'Generating…' : 'Regenerate',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

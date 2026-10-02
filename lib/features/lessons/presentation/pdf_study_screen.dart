@@ -22,6 +22,7 @@ import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../notes/data/notes_providers.dart';
+import '../../pdf_ai_materials/presentation/pdf_ai_materials_panel.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
@@ -68,6 +69,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   String? _focusedPinId;
   bool _didApplyInitialFocus = false;
   bool _showOutline = true;
+  bool _showAiMaterials = false;
 
   /// Active inline AI session over the PDF (selection or page).
   _InlineAiSession? _inlineAi;
@@ -747,6 +749,16 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+            tooltip: 'AI explanations',
+            onPressed: () =>
+                setState(() => _showAiMaterials = !_showAiMaterials),
+            icon: Icon(
+              _showAiMaterials
+                  ? Icons.auto_stories
+                  : Icons.auto_stories_outlined,
+            ),
+          ),
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
@@ -874,7 +886,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                         pin: _readerPin!,
                         onClose: () => setState(() => _readerPin = null),
                       ),
-                    if (_inlineAi == null)
+                    if (_inlineAi == null && !_showAiMaterials)
                       Positioned.fill(
                         child: PdfStudyDock(
                           bookmarked: currentBookmark != null,
@@ -948,6 +960,21 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                         existingPin: _inlineAi!.existingPin,
                         useBottomSheetLayout: !_isWide,
                         callbacks: _inlineAiCallbacks(_inlineAi!),
+                      ),
+                    if (_showAiMaterials)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        bottom: 8,
+                        left: _isWide ? null : 8,
+                        width: _isWide ? 460 : null,
+                        child: PdfAiMaterialsPanel(
+                          materialId: widget.resourceId,
+                          title: widget.title,
+                          filePath: widget.filePath,
+                          onClose: () =>
+                              setState(() => _showAiMaterials = false),
+                        ),
                       ),
                   ],
                 ),

@@ -21,11 +21,16 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
   static const _minimumHeight = 420.0;
   static const _defaultWidth = 560.0;
   static const _defaultHeight = 720.0;
+  static const _launcherSize = 48.0;
 
   double? _left;
   double? _top;
   double? _width;
   double? _height;
+  double? _launcherLeft;
+  double? _launcherTop;
+  BoxConstraints? _latestConstraints;
+  double _keyboardInset = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +39,16 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final geometry = _geometryFor(constraints);
+        _latestConstraints = constraints;
+        _keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+        final geometry = _geometryFor(
+          constraints,
+          keyboardInset: _keyboardInset,
+        );
+        final launcherPosition = _launcherPositionFor(
+          constraints,
+          keyboardInset: _keyboardInset,
+        );
         return Stack(
           children: [
             Positioned.fill(child: widget.child),
@@ -47,11 +61,8 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
                 child: Offstage(
                   offstage: state.minimized,
                   child: _WindowOverlayNavigator(
-                    key: ValueKey(
-                      '${constraints.maxWidth}x${constraints.maxHeight}',
-                    ),
-                    onDrag: (delta) => _move(delta, constraints),
-                    onResize: (delta) => _resize(delta, constraints),
+                    onDrag: _move,
+                    onResize: _resize,
                     onMinimize: controller.minimize,
                     onClose: controller.close,
                   ),
@@ -59,14 +70,21 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
               ),
             if (!state.visible || state.minimized)
               Positioned(
-                right: AppSpacing.md,
-                bottom: AppSpacing.md,
-                child: SafeArea(
-                  child: FloatingActionButton.extended(
-                    heroTag: 'global-study-ai',
-                    onPressed: controller.restore,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: Text(state.minimized ? 'Resume AI' : 'Study AI'),
+                left: launcherPosition.dx,
+                top: launcherPosition.dy,
+                width: _launcherSize,
+                height: _launcherSize,
+                child: Semantics(
+                  button: true,
+                  label: state.minimized ? 'Resume Study AI' : 'Open Study AI',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanUpdate: (details) => _moveLauncher(details.delta),
+                    child: FloatingActionButton.small(
+                      heroTag: 'global-study-ai',
+                      onPressed: controller.restore,
+                      child: const Icon(Icons.auto_awesome),
+                    ),
                   ),
                 ),
               ),
@@ -76,7 +94,50 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
     );
   }
 
-  _WindowGeometry _geometryFor(BoxConstraints constraints) {
+  Offset _launcherPositionFor(
+    BoxConstraints constraints, {
+    double keyboardInset = 0,
+  }) {
+    final maxLeft = (constraints.maxWidth - _launcherSize - _edgeMargin).clamp(
+      _edgeMargin,
+      double.infinity,
+    );
+    final usableBottom = constraints.maxHeight - keyboardInset;
+    final maxTop = (usableBottom - _launcherSize - _edgeMargin).clamp(
+      _edgeMargin,
+      double.infinity,
+    );
+    return Offset(
+      (_launcherLeft ?? maxLeft).clamp(_edgeMargin, maxLeft).toDouble(),
+      (_launcherTop ?? maxTop).clamp(_edgeMargin, maxTop).toDouble(),
+    );
+  }
+
+  void _moveLauncher(Offset delta) {
+    final constraints = _latestConstraints;
+    if (constraints == null) return;
+    final current = _launcherPositionFor(
+      constraints,
+      keyboardInset: _keyboardInset,
+    );
+    final usableBottom = constraints.maxHeight - _keyboardInset;
+    setState(() {
+      _launcherLeft = (current.dx + delta.dx)
+          .clamp(
+            _edgeMargin,
+            constraints.maxWidth - _launcherSize - _edgeMargin,
+          )
+          .toDouble();
+      _launcherTop = (current.dy + delta.dy)
+          .clamp(_edgeMargin, usableBottom - _launcherSize - _edgeMargin)
+          .toDouble();
+    });
+  }
+
+  _WindowGeometry _geometryFor(
+    BoxConstraints constraints, {
+    double keyboardInset = 0,
+  }) {
     final availableWidth = (constraints.maxWidth - (_edgeMargin * 2)).clamp(
       1.0,
       double.infinity,
@@ -88,7 +149,7 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
     final minimumWidth = _minimumWidth.clamp(1.0, availableWidth);
     final minimumHeight = _minimumHeight.clamp(1.0, availableHeight);
     final width = (_width ?? _defaultWidth).clamp(minimumWidth, availableWidth);
-    final height = (_height ?? _defaultHeight).clamp(
+    var height = (_height ?? _defaultHeight).clamp(
       minimumHeight,
       availableHeight,
     );
@@ -98,10 +159,23 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
       _edgeMargin,
       constraints.maxWidth - width - _edgeMargin,
     );
-    final top = (_top ?? defaultTop).clamp(
+    var top = (_top ?? defaultTop).clamp(
       _edgeMargin,
       constraints.maxHeight - height - _edgeMargin,
     );
+    if (keyboardInset > 0) {
+      final keyboardTop = constraints.maxHeight - keyboardInset;
+      final popupBottom = top + height;
+      if (popupBottom > keyboardTop - _edgeMargin) {
+        final shiftedTop = keyboardTop - height - _edgeMargin;
+        if (shiftedTop >= _edgeMargin) {
+          top = shiftedTop;
+        } else {
+          top = _edgeMargin;
+          height = (keyboardTop - (_edgeMargin * 2)).clamp(1.0, height);
+        }
+      }
+    }
 
     return _WindowGeometry(
       left: left.toDouble(),
@@ -111,8 +185,11 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
     );
   }
 
-  void _move(Offset delta, BoxConstraints constraints) {
-    final current = _geometryFor(constraints);
+  void _move(Offset delta) {
+    final constraints = _latestConstraints;
+    if (constraints == null) return;
+    final current = _geometryFor(constraints, keyboardInset: _keyboardInset);
+    final usableBottom = constraints.maxHeight - _keyboardInset;
     setState(() {
       _left = (current.left + delta.dx).clamp(
         _edgeMargin,
@@ -120,17 +197,20 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
       );
       _top = (current.top + delta.dy).clamp(
         _edgeMargin,
-        constraints.maxHeight - current.height - _edgeMargin,
+        usableBottom - current.height - _edgeMargin,
       );
       _width = current.width;
       _height = current.height;
     });
   }
 
-  void _resize(Offset delta, BoxConstraints constraints) {
-    final current = _geometryFor(constraints);
+  void _resize(Offset delta) {
+    final constraints = _latestConstraints;
+    if (constraints == null) return;
+    final current = _geometryFor(constraints, keyboardInset: _keyboardInset);
     final maxWidth = constraints.maxWidth - current.left - _edgeMargin;
-    final maxHeight = constraints.maxHeight - current.top - _edgeMargin;
+    final maxHeight =
+        constraints.maxHeight - _keyboardInset - current.top - _edgeMargin;
     final minimumWidth = _minimumWidth.clamp(1.0, maxWidth);
     final minimumHeight = _minimumHeight.clamp(1.0, maxHeight);
     setState(() {
@@ -144,7 +224,6 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
 
 class _WindowOverlayNavigator extends StatelessWidget {
   const _WindowOverlayNavigator({
-    super.key,
     required this.onDrag,
     required this.onResize,
     required this.onMinimize,

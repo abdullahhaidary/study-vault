@@ -502,6 +502,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     final scaffold = Scaffold(
+      resizeToAvoidBottomInset: !widget.embedded,
       drawerEdgeDragWidth: 72,
       drawer: Drawer(
         width: drawerWidth,
@@ -750,6 +751,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               key: _composerKey,
               controller: _composer,
               sending: _sending,
+              compact: widget.embedded,
               attachments: _attachments,
               onSend: _send,
               onAttach: () => _pickAttachment(),

@@ -18,7 +18,8 @@ class ChatComposer extends StatefulWidget {
     this.onRemoveAttachment,
     this.enabled = true,
     this.sending = false,
-    this.hintText = 'Ask anything about your studies…',
+    this.compact = false,
+    this.hintText = 'Ask anything...',
   });
 
   final TextEditingController controller;
@@ -33,6 +34,7 @@ class ChatComposer extends StatefulWidget {
   final ValueChanged<AiContextItem>? onRemoveAttachment;
   final bool enabled;
   final bool sending;
+  final bool compact;
   final String hintText;
 
   @override
@@ -108,16 +110,17 @@ class ChatComposerState extends State<ChatComposer> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final compact = widget.compact;
 
     return Material(
       color: Colors.transparent,
       child: SystemBottomSafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xs,
-            AppSpacing.xs,
-            AppSpacing.xs,
-            AppSpacing.xs,
+          padding: EdgeInsets.fromLTRB(
+            compact ? AppSpacing.xxs : AppSpacing.xs,
+            compact ? AppSpacing.xxs : AppSpacing.xs,
+            compact ? AppSpacing.xxs : AppSpacing.xs,
+            compact ? 0 : AppSpacing.xs,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -160,7 +163,7 @@ class ChatComposerState extends State<ChatComposer> {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(compact ? 20 : 28),
                         border: Border.all(
                           color: theme.colorScheme.outlineVariant,
                         ),
@@ -175,12 +178,22 @@ class ChatComposerState extends State<ChatComposer> {
                         ],
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(6),
+                        padding: EdgeInsets.all(compact ? 2 : 6),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             IconButton(
                               tooltip: 'Attach Study Vault content',
+                              visualDensity: compact
+                                  ? VisualDensity.compact
+                                  : null,
+                              constraints: compact
+                                  ? const BoxConstraints.tightFor(
+                                      width: 36,
+                                      height: 36,
+                                    )
+                                  : null,
+                              padding: compact ? EdgeInsets.zero : null,
                               onPressed: widget.enabled && !widget.sending
                                   ? widget.onAttach
                                   : null,
@@ -188,23 +201,27 @@ class ChatComposerState extends State<ChatComposer> {
                             ),
                             Expanded(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxHeight: 140,
+                                constraints: BoxConstraints(
+                                  maxHeight: compact ? 96 : 140,
                                 ),
                                 child: AutoDirectionTextField(
                                   controller: widget.controller,
                                   enabled: widget.enabled && !widget.sending,
                                   minLines: 1,
-                                  maxLines: 6,
+                                  maxLines: compact ? 4 : 6,
                                   textInputAction: TextInputAction.newline,
                                   keyboardType: TextInputType.multiline,
                                   decoration: InputDecoration(
                                     hintText: widget.hintText,
                                     filled: false,
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xs,
-                                      vertical: AppSpacing.sm,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: compact
+                                          ? AppSpacing.xxs
+                                          : AppSpacing.xs,
+                                      vertical: compact
+                                          ? AppSpacing.xs
+                                          : AppSpacing.sm,
                                     ),
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
@@ -222,6 +239,16 @@ class ChatComposerState extends State<ChatComposer> {
                               ),
                             IconButton.filled(
                               tooltip: 'Send',
+                              visualDensity: compact
+                                  ? VisualDensity.compact
+                                  : null,
+                              constraints: compact
+                                  ? const BoxConstraints.tightFor(
+                                      width: 36,
+                                      height: 36,
+                                    )
+                                  : null,
+                              padding: compact ? EdgeInsets.zero : null,
                               style: IconButton.styleFrom(
                                 backgroundColor: theme.colorScheme.onSurface,
                                 foregroundColor: theme.colorScheme.surface,
@@ -249,17 +276,18 @@ class ChatComposerState extends State<ChatComposer> {
                   );
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                child: Text(
-                  'Study AI can make mistakes. Check important information.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 10,
+              if (!compact)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                  child: Text(
+                    'Study AI can make mistakes. Check important information.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
