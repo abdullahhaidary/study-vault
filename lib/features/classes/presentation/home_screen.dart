@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
@@ -30,6 +31,12 @@ class HomeScreen extends ConsumerWidget {
             pinned: true,
             title: const Text('Study Vault'),
             actions: [
+              IconButton(
+                tooltip: 'AI Chat',
+                onPressed: () =>
+                    ShellNavigation.go(context, ref, ShellTab.aiChat),
+                icon: const Icon(Icons.auto_awesome_outlined),
+              ),
               IconButton(
                 tooltip: 'Search',
                 onPressed: () =>

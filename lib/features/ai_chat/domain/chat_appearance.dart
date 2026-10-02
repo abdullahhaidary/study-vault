@@ -17,7 +17,6 @@ class ChatAppearance {
     this.backgroundImagePath,
     this.backgroundImageOpacity = 0.22,
     this.backgroundImageBlur = 2,
-    this.showAvatars = false,
   });
 
   final ChatMessageLayout layout;
@@ -31,7 +30,6 @@ class ChatAppearance {
   final String? backgroundImagePath;
   final double backgroundImageOpacity;
   final double backgroundImageBlur;
-  final bool showAvatars;
 
   static const defaults = ChatAppearance();
 
@@ -47,7 +45,6 @@ class ChatAppearance {
     String? backgroundImagePath,
     double? backgroundImageOpacity,
     double? backgroundImageBlur,
-    bool? showAvatars,
     bool clearUserColor = false,
     bool clearAssistantColor = false,
     bool clearBackgroundImage = false,
@@ -71,7 +68,6 @@ class ChatAppearance {
       backgroundImageOpacity:
           backgroundImageOpacity ?? this.backgroundImageOpacity,
       backgroundImageBlur: backgroundImageBlur ?? this.backgroundImageBlur,
-      showAvatars: showAvatars ?? this.showAvatars,
     );
   }
 
@@ -87,7 +83,6 @@ class ChatAppearance {
     'backgroundImagePath': backgroundImagePath,
     'backgroundImageOpacity': backgroundImageOpacity,
     'backgroundImageBlur': backgroundImageBlur,
-    'showAvatars': showAvatars,
   };
 
   factory ChatAppearance.fromJson(Map<String, Object?> json) {
@@ -121,7 +116,6 @@ class ChatAppearance {
         0,
         20,
       ),
-      showAvatars: json['showAvatars'] as bool? ?? false,
     );
   }
 
@@ -132,7 +126,6 @@ class ChatAppearance {
         layout: ChatMessageLayout.fullWidth,
         userColorValue: 0xffe8f0fe,
         assistantColorValue: 0xfff7f7f8,
-        showAvatars: true,
       ),
       ChatAppearancePreset.minimal => const ChatAppearance(
         layout: ChatMessageLayout.fullWidth,

@@ -474,6 +474,40 @@ class AnnotationAiGenerations extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Immutable, versioned whole-PDF AI study artifacts.
+class PdfAiMaterials extends Table {
+  TextColumn get id => text()();
+  TextColumn get materialId =>
+      text().references(LessonMaterials, #id, onDelete: KeyAction.cascade)();
+
+  /// [PdfAiMaterialType.storageValue].
+  TextColumn get type => text()();
+  TextColumn get content => text()();
+  IntColumn get version => integer()();
+  DateTimeColumn get generatedAt => dateTime()();
+
+  TextColumn get provider => text().nullable()();
+  TextColumn get model => text().nullable()();
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  IntColumn get totalTokens => integer().nullable()();
+  IntColumn get cacheHitTokens => integer().nullable()();
+  IntColumn get cacheMissTokens => integer().nullable()();
+  IntColumn get requestDurationMs => integer().nullable()();
+
+  /// SHA-256 of the deterministic extracted page representation.
+  TextColumn get sourceFingerprint => text()();
+  TextColumn get customInstruction => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {materialId, type, version},
+  ];
+}
+
 /// AI-generated quiz sets (first-class study objects).
 class QuestionSets extends Table {
   TextColumn get id => text()();
@@ -611,6 +645,7 @@ class QuizAnswers extends Table {
     AiChatMessages,
     AiMessageContextRefs,
     AnnotationAiGenerations,
+    PdfAiMaterials,
     QuestionSets,
     QuizQuestions,
     QuizQuestionOptions,
@@ -625,7 +660,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -639,6 +674,7 @@ class AppDatabase extends _$AppDatabase {
       await _createAiMessageContextRefIndexes();
       await _createQuizIndexes();
       await _createAnnotationAiGenerationIndexes();
+      await _createPdfAiMaterialIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -755,8 +791,23 @@ class AppDatabase extends _$AppDatabase {
         await _createAiMessageContextRefIndexes();
         await backfillAiMessageContextRefs();
       }
+      if (from < 16) {
+        await m.createTable(pdfAiMaterials);
+        await _createPdfAiMaterialIndexes();
+      }
     },
   );
+
+  Future<void> _createPdfAiMaterialIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_pdf_ai_material_source '
+      'ON pdf_ai_materials (material_id, type, version DESC)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_pdf_ai_material_fingerprint '
+      'ON pdf_ai_materials (source_fingerprint)',
+    );
+  }
 
   Future<void> _createAnnotationAiGenerationIndexes() async {
     await customStatement(
@@ -1752,9 +1803,13 @@ class AppDatabase extends _$AppDatabase {
     final messageId = entry.id.value;
     final chatId = entry.chatId.value;
     final role = entry.role.value;
-    final contextJson = entry.contextJson.present ? entry.contextJson.value : null;
+    final contextJson = entry.contextJson.present
+        ? entry.contextJson.value
+        : null;
     final createdAt = entry.createdAt.value;
-    if (role == 'user' && contextJson != null && contextJson.trim().isNotEmpty) {
+    if (role == 'user' &&
+        contextJson != null &&
+        contextJson.trim().isNotEmpty) {
       await replaceAiMessageContextRefs(
         messageId: messageId,
         chatId: chatId,
@@ -1809,11 +1864,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// Indexes historical [AiChatMessages.contextJson] into [aiMessageContextRefs].
   Future<void> backfillAiMessageContextRefs() async {
-    final messages =
-        await (select(aiChatMessages)..where(
-              (t) => t.role.equals('user') & t.contextJson.isNotNull(),
-            ))
-            .get();
+    final messages = await (select(
+      aiChatMessages,
+    )..where((t) => t.role.equals('user') & t.contextJson.isNotNull())).get();
     for (final message in messages) {
       try {
         await replaceAiMessageContextRefs(
@@ -1871,10 +1924,7 @@ class AppDatabase extends _$AppDatabase {
               aiMessageContextRefs,
               aiMessageContextRefs.messageId.equalsExp(aiChatMessages.id),
             ),
-            innerJoin(
-              aiChats,
-              aiChats.id.equalsExp(aiChatMessages.chatId),
-            ),
+            innerJoin(aiChats, aiChats.id.equalsExp(aiChatMessages.chatId)),
           ])
           ..where(
             aiMessageContextRefs.contextType.equals(contextType) &
@@ -1908,10 +1958,7 @@ class AppDatabase extends _$AppDatabase {
               aiMessageContextRefs,
               aiMessageContextRefs.messageId.equalsExp(aiChatMessages.id),
             ),
-            innerJoin(
-              aiChats,
-              aiChats.id.equalsExp(aiChatMessages.chatId),
-            ),
+            innerJoin(aiChats, aiChats.id.equalsExp(aiChatMessages.chatId)),
           ])
           ..where(
             aiMessageContextRefs.contextType.equals(contextType) &
@@ -2245,6 +2292,69 @@ class AppDatabase extends _$AppDatabase {
               t.actionType.equals(actionType),
         ))
         .go();
+  }
+
+  // ── Whole-PDF AI study materials ─────────────────────────
+
+  Stream<List<PdfAiMaterial>> watchPdfAiMaterials(String materialId) {
+    return (select(pdfAiMaterials)
+          ..where((t) => t.materialId.equals(materialId))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.type),
+            (t) => OrderingTerm.desc(t.version),
+          ]))
+        .watch();
+  }
+
+  Future<List<PdfAiMaterial>> listPdfAiMaterials({
+    required String materialId,
+    required String type,
+  }) {
+    return (select(pdfAiMaterials)
+          ..where((t) => t.materialId.equals(materialId) & t.type.equals(type))
+          ..orderBy([(t) => OrderingTerm.desc(t.version)]))
+        .get();
+  }
+
+  Future<PdfAiMaterial?> getPdfAiMaterialById(String id) {
+    return (select(
+      pdfAiMaterials,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<int> nextPdfAiMaterialVersion({
+    required String materialId,
+    required String type,
+  }) async {
+    final maxVersion = pdfAiMaterials.version.max();
+    final query = selectOnly(pdfAiMaterials)
+      ..addColumns([maxVersion])
+      ..where(
+        pdfAiMaterials.materialId.equals(materialId) &
+            pdfAiMaterials.type.equals(type),
+      );
+    final row = await query.getSingle();
+    return (row.read(maxVersion) ?? 0) + 1;
+  }
+
+  Future<PdfAiMaterial> insertPdfAiMaterialVersion({
+    required String materialId,
+    required String type,
+    required PdfAiMaterialsCompanion Function(int version) builder,
+  }) {
+    return transaction(() async {
+      final version = await nextPdfAiMaterialVersion(
+        materialId: materialId,
+        type: type,
+      );
+      final entry = builder(version);
+      await into(pdfAiMaterials).insert(entry);
+      return (await getPdfAiMaterialById(entry.id.value))!;
+    });
+  }
+
+  Future<void> deletePdfAiMaterial(String id) async {
+    await (delete(pdfAiMaterials)..where((t) => t.id.equals(id))).go();
   }
 }
 

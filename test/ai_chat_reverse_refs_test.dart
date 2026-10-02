@@ -39,10 +39,10 @@ void main() {
     await db.close();
   });
 
-  test('schema version is 15 with backup constants', () {
-    expect(db.schemaVersion, 15);
-    expect(kStudyVaultSchemaVersion, 15);
-    expect(BackupService().currentSchemaVersion, 15);
+  test('schema version is 16 with backup constants', () {
+    expect(db.schemaVersion, 16);
+    expect(kStudyVaultSchemaVersion, 16);
+    expect(BackupService().currentSchemaVersion, 16);
   });
 
   test('saving message indexes lesson + pdf refs once each', () async {

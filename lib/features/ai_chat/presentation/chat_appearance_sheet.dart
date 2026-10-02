@@ -123,14 +123,6 @@ class _ChatAppearanceSheet extends ConsumerWidget {
                       );
                     },
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Show message avatars'),
-                    value: appearance.showAvatars,
-                    onChanged: (value) => controller.update(
-                      appearance.copyWith(showAvatars: value),
-                    ),
-                  ),
                   const SizedBox(height: AppSpacing.md),
                   _SliderSetting(
                     title: 'Message text size',

@@ -110,26 +110,21 @@ class ChatComposerState extends State<ChatComposer> {
     final theme = Theme.of(context);
 
     return Material(
-      color: theme.colorScheme.surface,
+      color: Colors.transparent,
       child: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.sm,
             AppSpacing.xs,
-            AppSpacing.sm,
-            AppSpacing.sm,
+            AppSpacing.xs,
+            AppSpacing.xs,
+            AppSpacing.xs,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (widget.attachments.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(
-                    left: AppSpacing.xs,
-                    right: AppSpacing.xs,
-                    bottom: AppSpacing.xs,
-                  ),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: Wrap(
                     spacing: AppSpacing.xs,
                     runSpacing: AppSpacing.xs,
@@ -160,60 +155,110 @@ class ChatComposerState extends State<ChatComposer> {
                       !widget.sending &&
                       (widget.controller.text.trim().isNotEmpty ||
                           widget.attachments.isNotEmpty);
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        tooltip: 'Attach Study Vault content',
-                        onPressed: widget.enabled && !widget.sending
-                            ? widget.onAttach
-                            : null,
-                        icon: const Icon(Icons.add),
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.shadow.withValues(
+                              alpha: 0.08,
+                            ),
+                            blurRadius: 12,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 140),
-                          child: AutoDirectionTextField(
-                            controller: widget.controller,
-                            enabled: widget.enabled && !widget.sending,
-                            minLines: 1,
-                            maxLines: 6,
-                            textInputAction: TextInputAction.newline,
-                            keyboardType: TextInputType.multiline,
-                            decoration: InputDecoration(
-                              hintText: widget.hintText,
-                              filled: true,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.sm,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              tooltip: 'Attach Study Vault content',
+                              onPressed: widget.enabled && !widget.sending
+                                  ? widget.onAttach
+                                  : null,
+                              icon: const Icon(Icons.add_rounded),
+                            ),
+                            Expanded(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 140,
+                                ),
+                                child: AutoDirectionTextField(
+                                  controller: widget.controller,
+                                  enabled: widget.enabled && !widget.sending,
+                                  minLines: 1,
+                                  maxLines: 6,
+                                  textInputAction: TextInputAction.newline,
+                                  keyboardType: TextInputType.multiline,
+                                  decoration: InputDecoration(
+                                    hintText: widget.hintText,
+                                    filled: false,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xs,
+                                      vertical: AppSpacing.sm,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            if (!canSend && !widget.sending)
+                              VoiceInputButton(
+                                controller: widget.controller,
+                                enabled: widget.enabled,
+                                compact: true,
+                              ),
+                            IconButton.filled(
+                              tooltip: 'Send',
+                              style: IconButton.styleFrom(
+                                backgroundColor: theme.colorScheme.onSurface,
+                                foregroundColor: theme.colorScheme.surface,
+                                disabledBackgroundColor:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                disabledForegroundColor:
+                                    theme.colorScheme.onSurfaceVariant,
+                              ),
+                              onPressed: canSend ? widget.onSend : null,
+                              icon: widget.sending
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: theme.colorScheme.surface,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_upward_rounded),
+                            ),
+                          ],
                         ),
                       ),
-                      VoiceInputButton(
-                        controller: widget.controller,
-                        enabled: widget.enabled && !widget.sending,
-                        compact: true,
-                      ),
-                      IconButton.filled(
-                        tooltip: 'Send',
-                        onPressed: canSend ? widget.onSend : null,
-                        icon: widget.sending
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send_rounded),
-                      ),
-                    ],
+                    ),
                   );
                 },
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                child: Text(
+                  'Study AI can make mistakes. Check important information.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+                ),
               ),
             ],
           ),

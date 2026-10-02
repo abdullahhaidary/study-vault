@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -149,6 +150,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       _errorBanner = null;
       _attachments = [];
     });
+  }
+
+  Future<void> _returnToApp() async {
+    await _persistDraft();
+    if (!mounted) return;
+    ref.read(shellTabProvider.notifier).state = ShellTab.home;
   }
 
   Future<void> _selectModel(String currentId) async {
@@ -466,6 +473,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         child: const AiChatHistoryScreen(asDrawer: true),
       ),
       appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
         leading: Builder(
           builder: (context) => IconButton(
             tooltip: 'Chat history',
@@ -476,50 +486,68 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             icon: const Icon(Icons.menu),
           ),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Study AI'),
-            InkWell(
-              onTap: () => _selectModel(modelId),
-              borderRadius: AppRadii.smAll,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        modelLabel,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: modelKnown
-                              ? theme.colorScheme.onSurfaceVariant
-                              : theme.colorScheme.error,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Icon(
-                      Icons.expand_more,
-                      size: 18,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              ),
+        title: InkWell(
+          onTap: () => _selectModel(modelId),
+          borderRadius: AppRadii.smAll,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xxs,
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    modelLabel,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: modelKnown
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           IconButton(
-            tooltip: 'Customize chat',
-            onPressed: () => showChatAppearanceSheet(context),
-            icon: const Icon(Icons.palette_outlined),
+            tooltip: 'Back to app',
+            onPressed: _returnToApp,
+            icon: const Icon(Icons.home_outlined),
           ),
           IconButton(
             tooltip: 'New chat',
             onPressed: _sending ? null : _newChat,
             icon: const Icon(Icons.edit_square),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'More options',
+            icon: const Icon(Icons.more_horiz),
+            onSelected: (value) {
+              if (value == 'appearance') {
+                showChatAppearanceSheet(context);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'appearance',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.palette_outlined),
+                  title: Text('Customize chat'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -564,23 +592,30 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         return ListView.builder(
                           controller: _scrollController,
                           padding: EdgeInsets.fromLTRB(
-                            fullWidth ? 0 : AppSpacing.md,
-                            AppSpacing.sm,
-                            fullWidth ? 0 : AppSpacing.md,
+                            fullWidth ? 0 : AppSpacing.xxs,
+                            AppSpacing.md,
+                            fullWidth ? 0 : AppSpacing.xxs,
                             AppSpacing.md,
                           ),
                           itemCount: messages.length + (showStream ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (showStream && index == messages.length) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: MessageBubble(
-                                  role: AiChatRole.assistant,
-                                  content: _streamingText!,
-                                  isStreaming: true,
-                                  appearance: appearance,
+                              return Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 760,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      bottom: AppSpacing.md,
+                                    ),
+                                    child: MessageBubble(
+                                      role: AiChatRole.assistant,
+                                      content: _streamingText!,
+                                      isStreaming: true,
+                                      appearance: appearance,
+                                    ),
+                                  ),
                                 ),
                               );
                             }
@@ -595,50 +630,64 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               message.id,
                               GlobalKey.new,
                             );
-                            return Padding(
-                              key: key,
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.sm,
-                              ),
-                              child: MessageBubble(
-                                role: message.role,
-                                content: message.content,
-                                status: message.status,
-                                attachments: attachments,
-                                onRetry: isLastError ? _retry : null,
-                                highlighted: message.id == _highlightMessageId,
-                                appearance: appearance,
-                                onEditAndResend:
-                                    message.role == AiChatRole.user && !_sending
-                                    ? () => _editAndResend(message)
-                                    : null,
-                                onRegenerate:
-                                    message.role == AiChatRole.assistant &&
-                                        index == messages.length - 1 &&
-                                        message.status !=
-                                            AiChatMessageStatus.error &&
-                                        !_sending
-                                    ? _retry
-                                    : null,
-                                onToggleReadAloud:
-                                    message.role == AiChatRole.assistant
-                                    ? () => _toggleReadAloud(message.content)
-                                    : null,
-                                isSpeaking: speech.isSpeaking(message.content),
-                                usage: message.role == AiChatRole.assistant
-                                    ? aiTokenUsageFromColumns(
-                                        promptTokens: message.promptTokens,
-                                        completionTokens:
-                                            message.completionTokens,
-                                        totalTokens: message.totalTokens,
-                                        cacheHitTokens: message.cacheHitTokens,
-                                        cacheMissTokens:
-                                            message.cacheMissTokens,
-                                        model: message.aiModel,
-                                        provider: message.aiProvider,
-                                        durationMs: message.requestDurationMs,
-                                      )
-                                    : null,
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 760,
+                                ),
+                                child: Padding(
+                                  key: key,
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.md,
+                                  ),
+                                  child: MessageBubble(
+                                    role: message.role,
+                                    content: message.content,
+                                    status: message.status,
+                                    attachments: attachments,
+                                    onRetry: isLastError ? _retry : null,
+                                    highlighted:
+                                        message.id == _highlightMessageId,
+                                    appearance: appearance,
+                                    onEditAndResend:
+                                        message.role == AiChatRole.user &&
+                                            !_sending
+                                        ? () => _editAndResend(message)
+                                        : null,
+                                    onRegenerate:
+                                        message.role == AiChatRole.assistant &&
+                                            index == messages.length - 1 &&
+                                            message.status !=
+                                                AiChatMessageStatus.error &&
+                                            !_sending
+                                        ? _retry
+                                        : null,
+                                    onToggleReadAloud:
+                                        message.role == AiChatRole.assistant
+                                        ? () =>
+                                              _toggleReadAloud(message.content)
+                                        : null,
+                                    isSpeaking: speech.isSpeaking(
+                                      message.content,
+                                    ),
+                                    usage: message.role == AiChatRole.assistant
+                                        ? aiTokenUsageFromColumns(
+                                            promptTokens: message.promptTokens,
+                                            completionTokens:
+                                                message.completionTokens,
+                                            totalTokens: message.totalTokens,
+                                            cacheHitTokens:
+                                                message.cacheHitTokens,
+                                            cacheMissTokens:
+                                                message.cacheMissTokens,
+                                            model: message.aiModel,
+                                            provider: message.aiProvider,
+                                            durationMs:
+                                                message.requestDurationMs,
+                                          )
+                                        : null,
+                                  ),
+                                ),
                               ),
                             );
                           },
@@ -646,7 +695,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                       },
                     ),
             ),
-            const Divider(height: 1),
             ChatComposer(
               key: _composerKey,
               controller: _composer,
@@ -768,17 +816,31 @@ class _EmptyChat extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.auto_awesome,
-                size: 40,
-                color: theme.colorScheme.primary,
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 22,
+                  color: theme.colorScheme.surface,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text('Study AI', style: theme.textTheme.headlineSmall),
+              Text(
+                'What can I help with?',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Ask anything about your studies. Type @ to attach a lesson or PDF.',
-                style: theme.textTheme.bodyLarge?.copyWith(
+                'Ask about your studies, or type @ to add your own material.',
+                style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
@@ -793,6 +855,12 @@ class _EmptyChat extends StatelessWidget {
                     ActionChip(
                       label: Text(prompt),
                       onPressed: () => onPrompt(prompt),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
                     ),
                 ],
               ),

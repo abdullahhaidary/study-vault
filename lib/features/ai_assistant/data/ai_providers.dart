@@ -30,7 +30,7 @@ final geminiAiServiceProvider = Provider<AiService>((ref) {
   );
 });
 
-final deepseekAiServiceProvider = Provider<AiService>((ref) {
+final deepseekAiServiceProvider = Provider<DeepSeekAiService>((ref) {
   return DeepSeekAiService(
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),

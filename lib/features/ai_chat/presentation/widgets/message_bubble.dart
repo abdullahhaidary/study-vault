@@ -52,19 +52,22 @@ class MessageBubble extends StatelessWidget {
     final customColor = _isUser
         ? appearance.userColorValue
         : appearance.assistantColorValue;
+    final usesDefaultAssistantStyle = !_isUser && customColor == null;
     final bg = highlighted
         ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.55)
         : customColor != null
         ? Color(customColor)
         : _isUser
-        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.62)
-        : theme.colorScheme.surface;
+        ? theme.colorScheme.surfaceContainerHigh
+        : Colors.transparent;
     final border = highlighted
         ? theme.colorScheme.tertiary.withValues(alpha: 0.65)
         : _isError
         ? theme.colorScheme.error.withValues(alpha: 0.45)
-        : theme.colorScheme.outlineVariant;
-    final foreground = _readableForeground(bg, theme);
+        : Colors.transparent;
+    final foreground = usesDefaultAssistantStyle
+        ? theme.colorScheme.onSurface
+        : _readableForeground(bg, theme);
     final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
       color: foreground,
       fontSize:
@@ -75,11 +78,13 @@ class MessageBubble extends StatelessWidget {
 
     final card = Card(
       margin: EdgeInsets.zero,
-      elevation: fullWidth ? 0 : null,
+      elevation: 0,
       color: bg,
       shape: RoundedRectangleBorder(
-        borderRadius: fullWidth ? BorderRadius.zero : AppRadii.mdAll,
-        side: fullWidth ? BorderSide.none : BorderSide(color: border),
+        borderRadius: fullWidth || usesDefaultAssistantStyle
+            ? BorderRadius.zero
+            : BorderRadius.circular(20),
+        side: BorderSide(color: border),
       ),
       child: InkWell(
         onLongPress: content.trim().isEmpty
@@ -95,8 +100,12 @@ class MessageBubble extends StatelessWidget {
         borderRadius: AppRadii.mdAll,
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: fullWidth ? AppSpacing.lg : AppSpacing.md,
-            vertical: AppSpacing.sm,
+            horizontal: fullWidth
+                ? AppSpacing.lg
+                : usesDefaultAssistantStyle
+                ? AppSpacing.xxs
+                : AppSpacing.md,
+            vertical: usesDefaultAssistantStyle ? AppSpacing.xs : AppSpacing.sm,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -219,36 +228,22 @@ class MessageBubble extends StatelessWidget {
     );
 
     if (fullWidth) {
-      return SizedBox(
-        width: double.infinity,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (appearance.showAvatars)
-              _MessageAvatar(isUser: _isUser, foreground: foreground),
-            Expanded(child: card),
-          ],
-        ),
-      );
+      return SizedBox(width: double.infinity, child: card);
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_isUser) const Spacer(),
-        if (!_isUser && appearance.showAvatars)
-          _MessageAvatar(isUser: false, foreground: foreground),
         Flexible(
-          flex: 8,
+          flex: _isUser ? 12 : 20,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+              maxWidth: MediaQuery.sizeOf(context).width * 0.94,
             ),
             child: card,
           ),
         ),
-        if (_isUser && appearance.showAvatars)
-          _MessageAvatar(isUser: true, foreground: foreground),
         if (!_isUser) const Spacer(),
       ],
     );
@@ -274,32 +269,6 @@ class MessageBubble extends StatelessWidget {
     AiContextKind.note => Icons.sticky_note_2_outlined,
     AiContextKind.studyPin => Icons.push_pin_outlined,
   };
-}
-
-class _MessageAvatar extends StatelessWidget {
-  const _MessageAvatar({required this.isUser, required this.foreground});
-
-  final bool isUser;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: AppSpacing.sm,
-      ),
-      child: CircleAvatar(
-        radius: 14,
-        backgroundColor: foreground.withValues(alpha: 0.12),
-        foregroundColor: foreground,
-        child: Icon(
-          isUser ? Icons.person_outline : Icons.auto_awesome,
-          size: 16,
-        ),
-      ),
-    );
-  }
 }
 
 class _MessageActions extends StatelessWidget {

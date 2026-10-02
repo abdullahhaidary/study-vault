@@ -178,6 +178,45 @@ class DeepSeekAiService implements AiService {
     return result;
   }
 
+  /// Low-level text completion for stable, whole-document workflows.
+  ///
+  /// The caller owns message ordering and chunking. This method still applies
+  /// the configured DeepSeek model, consent, credentials, usage parsing, and
+  /// user-selected thinking preference.
+  Future<AiTextResult> completeDocumentMessages({
+    required List<Map<String, String>> messages,
+    required int maxOutputTokens,
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    if (messages.isEmpty) {
+      throw const AiMalformedOutputException('The document prompt is empty.');
+    }
+    final key = await _requireKey();
+    if (!await settings.getPrivacyConsentAccepted()) {
+      throw const AiPrivacyNotAcceptedException();
+    }
+    final model = await _resolveModel(action: AiStudyAction.customPrompt);
+    final configuredThinking = await settings.getThinkingMode();
+    final thinking = configuredThinking == AiThinkingMode.auto
+        ? AiThinkingMode.high
+        : configuredThinking;
+    final completion = await _chatCompletions(
+      apiKey: key,
+      model: model,
+      messages: messages,
+      maxTokens: maxOutputTokens,
+      jsonMode: false,
+      thinking: thinking,
+      timeout: timeout,
+    );
+    return AiTextResult(
+      markdown: completion.text,
+      usage:
+          completion.usage ??
+          AiTokenUsage(model: model, provider: _provider.storageValue),
+    );
+  }
+
   bool _isStructured(AiStudyAction action) => switch (action) {
     AiStudyAction.createAnnotation ||
     AiStudyAction.generateFlashcards ||
@@ -386,6 +425,12 @@ class DeepSeekAiService implements AiService {
       }
       final choice = choices.first;
       if (choice is! Map) throw const AiMalformedOutputException();
+      if (choice['finish_reason'] == 'length') {
+        throw const AiMalformedOutputException(
+          'DeepSeek reached the output limit before finishing. Try a shorter '
+          'request or regenerate.',
+        );
+      }
       final message = choice['message'];
       if (message is! Map) throw const AiMalformedOutputException();
       // Ignore reasoning_content — never expose chain-of-thought to UI.

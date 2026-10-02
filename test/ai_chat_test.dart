@@ -91,8 +91,8 @@ void main() {
       await db.close();
     });
 
-    test('schema version is 15', () {
-      expect(db.schemaVersion, 15);
+    test('schema version is 16', () {
+      expect(db.schemaVersion, 16);
     });
 
     test('create chat, send message, persist history and continue', () async {

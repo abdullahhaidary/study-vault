@@ -8,6 +8,7 @@ abstract final class PdfTextExtractor {
   static Future<List<SourcePageText>> extractPages({
     required String filePath,
     Set<int>? pageNumbers,
+    bool includeEmptyPages = false,
   }) async {
     final doc = await PdfDocument.openFile(filePath);
     try {
@@ -20,7 +21,7 @@ abstract final class PdfTextExtractor {
         }
         final raw = await page.loadText();
         final text = raw?.fullText.trim() ?? '';
-        if (text.isEmpty) continue;
+        if (text.isEmpty && !includeEmptyPages) continue;
         results.add(SourcePageText(pageNumber: page.pageNumber, text: text));
       }
       return results;

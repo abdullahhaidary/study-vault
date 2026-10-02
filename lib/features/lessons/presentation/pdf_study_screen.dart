@@ -22,6 +22,7 @@ import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../notes/data/notes_providers.dart';
+import '../../pdf_ai_materials/presentation/pdf_ai_materials_sheet.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
@@ -418,6 +419,15 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     await showGenerateQuestionsSheet(context, ref, launch: wrapped);
   }
 
+  Future<void> _openAiStudyMaterials() {
+    return showPdfAiMaterialsSheet(
+      context,
+      materialId: widget.resourceId,
+      title: widget.title,
+      filePath: widget.filePath,
+    );
+  }
+
   Future<void> _openPdfInlineAi(PdfTextSelectionDelegate selection) async {
     final selectedText = (await selection.getSelectedText()).trim();
     final ranges = await _textRangeInputs(selection);
@@ -695,7 +705,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             tooltip: 'AI tools',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
-              if (value == 'page_ai') {
+              if (value == 'ai_study_materials') {
+                await _openAiStudyMaterials();
+              } else if (value == 'page_ai') {
                 await _openPageInlineAi();
               } else if (value == 'generate_questions') {
                 await _openGenerateQuestions();
@@ -745,6 +757,14 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
+                value: 'ai_study_materials',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.library_books_outlined),
+                  title: Text('AI Study Materials'),
+                ),
+              ),
+              PopupMenuItem(
                 value: 'page_ai',
                 child: Text('Ask about this page'),
               ),
@@ -776,6 +796,24 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       ),
       body: Column(
         children: [
+          Material(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerLow.withValues(alpha: 0.7),
+            child: ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              leading: Icon(
+                Icons.auto_awesome,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: const Text('AI Study Materials'),
+              subtitle: const Text('Summary · Explanation · Deep Explanation'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _openAiStudyMaterials,
+            ),
+          ),
+          const Divider(height: 1),
           StudyPinToolbar(
             addPinMode: annotate,
             displayMode: displayMode,

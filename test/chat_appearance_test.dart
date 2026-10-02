@@ -19,7 +19,6 @@ void main() {
       assistantColorValue: 0xff654321,
       gradientStartValue: 0xff000000,
       gradientEndValue: 0xffffffff,
-      showAvatars: true,
     );
 
     await store.save(expected);
@@ -32,7 +31,6 @@ void main() {
     expect(actual.assistantColorValue, expected.assistantColorValue);
     expect(actual.gradientStartValue, expected.gradientStartValue);
     expect(actual.gradientEndValue, expected.gradientEndValue);
-    expect(actual.showAvatars, isTrue);
   });
 
   test('invalid stored appearance safely returns defaults', () async {

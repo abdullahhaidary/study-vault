@@ -21,6 +21,29 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  /// Bottom-nav / rail destinations only. AI Chat stays in [ShellTab] and the
+  /// IndexedStack, and is opened from Home (next to Search) or deep links.
+  static const _destinations = <_ShellDestination>[
+    _ShellDestination(
+      tab: ShellTab.home,
+      label: 'Home',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+    ),
+    _ShellDestination(
+      tab: ShellTab.favorites,
+      label: 'Favorites',
+      icon: Icons.star_outline,
+      selectedIcon: Icons.star,
+    ),
+    _ShellDestination(
+      tab: ShellTab.settings,
+      label: 'Settings',
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -33,11 +56,17 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
   }
 
-  void _select(int i, List<_ShellDestination> destinations) {
-    ref.read(shellTabProvider.notifier).state = destinations[i].tab;
-    if (destinations[i].tab != ShellTab.settings) {
+  void _select(int i) {
+    if (i < 0 || i >= _destinations.length) return;
+    ref.read(shellTabProvider.notifier).state = _destinations[i].tab;
+    if (_destinations[i].tab != ShellTab.settings) {
       ref.read(settingsSectionProvider.notifier).state = null;
     }
+  }
+
+  int _selectedDestinationIndex(ShellTab tab) {
+    final i = _destinations.indexWhere((d) => d.tab == tab);
+    return i < 0 ? 0 : i;
   }
 
   @override
@@ -45,38 +74,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     final tab = ref.watch(shellTabProvider);
     final settingsSection = ref.watch(settingsSectionProvider);
     final wide = AppSpacing.isWide(context);
-    final index = tab.index;
     final theme = Theme.of(context);
-
-    const destinations = [
-      _ShellDestination(
-        tab: ShellTab.home,
-        label: 'Home',
-        icon: Icons.home_outlined,
-        selectedIcon: Icons.home,
-      ),
-      _ShellDestination(
-        tab: ShellTab.aiChat,
-        label: 'AI Chat',
-        icon: Icons.auto_awesome_outlined,
-        selectedIcon: Icons.auto_awesome,
-      ),
-      _ShellDestination(
-        tab: ShellTab.favorites,
-        label: 'Favorites',
-        icon: Icons.star_outline,
-        selectedIcon: Icons.star,
-      ),
-      _ShellDestination(
-        tab: ShellTab.settings,
-        label: 'Settings',
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings,
-      ),
-    ];
+    final selectedIndex = _selectedDestinationIndex(tab);
 
     final body = IndexedStack(
-      index: index,
+      index: tab.index,
       children: [
         const HomeScreen(),
         const AiChatScreen(),
@@ -89,17 +91,24 @@ class _AppShellState extends ConsumerState<AppShell> {
       ],
     );
 
+    // Chat owns its full mobile-style chrome (drawer, header, and composer).
+    // Keeping shell navigation visible here makes the conversation feel like
+    // one tab inside a dashboard and takes valuable space from the keyboard.
+    if (tab == ShellTab.aiChat) {
+      return Material(color: theme.scaffoldBackgroundColor, child: body);
+    }
+
     if (wide) {
       return Material(
         color: theme.scaffoldBackgroundColor,
         child: Row(
           children: [
             NavigationRail(
-              selectedIndex: index,
-              onDestinationSelected: (i) => _select(i, destinations),
+              selectedIndex: selectedIndex,
+              onDestinationSelected: _select,
               labelType: NavigationRailLabelType.all,
               destinations: [
-                for (final d in destinations)
+                for (final d in _destinations)
                   NavigationRailDestination(
                     icon: Icon(d.icon),
                     selectedIcon: Icon(d.selectedIcon),
@@ -126,10 +135,10 @@ class _AppShellState extends ConsumerState<AppShell> {
             elevation: 0,
             child: SystemBottomSafeArea(
               child: NavigationBar(
-                selectedIndex: index,
-                onDestinationSelected: (i) => _select(i, destinations),
+                selectedIndex: selectedIndex,
+                onDestinationSelected: _select,
                 destinations: [
-                  for (final d in destinations)
+                  for (final d in _destinations)
                     NavigationDestination(
                       icon: Icon(d.icon),
                       selectedIcon: Icon(d.selectedIcon),

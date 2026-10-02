@@ -6,6 +6,10 @@ import 'ai_provider.dart';
 abstract final class DeepSeekModelRegistry {
   static const defaultModelId = flash;
 
+  /// Current official limits for the selectable V4 text models.
+  static const contextWindowTokens = 1000000;
+  static const maximumOutputTokens = 393216;
+
   /// Fast default for inline study actions.
   static const flash = 'deepseek-flash';
 

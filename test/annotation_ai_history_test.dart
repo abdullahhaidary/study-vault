@@ -107,10 +107,10 @@ void main() {
     pageNumber: 20,
   );
 
-  test('schema version is 15 and matches backup constants', () {
-    expect(db.schemaVersion, 15);
-    expect(kStudyVaultSchemaVersion, 15);
-    expect(BackupService().currentSchemaVersion, 15);
+  test('schema version is 16 and matches backup constants', () {
+    expect(db.schemaVersion, 16);
+    expect(kStudyVaultSchemaVersion, 16);
+    expect(BackupService().currentSchemaVersion, 16);
   });
 
   test('source fingerprints prefer annotation id and separate selections', () {
