@@ -40,12 +40,3 @@ typedef PdfAiMaterialScrollKey = ({
 
 final pdfAiMaterialScrollOffsetProvider =
     StateProvider.family<double, PdfAiMaterialScrollKey>((ref, key) => 0);
-
-typedef PdfFingerprintInput = ({String title, String filePath});
-
-final pdfSourceFingerprintProvider =
-    FutureProvider.family<String, PdfFingerprintInput>((ref, input) {
-      return ref
-          .watch(pdfAiMaterialServiceProvider)
-          .sourceFingerprint(title: input.title, filePath: input.filePath);
-    });

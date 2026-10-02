@@ -353,12 +353,6 @@ class _PdfAiMaterialReaderScreenState
   @override
   Widget build(BuildContext context) {
     final allAsync = ref.watch(pdfAiMaterialsProvider(widget.materialId));
-    final fingerprintAsync = ref.watch(
-      pdfSourceFingerprintProvider((
-        title: widget.pdfTitle,
-        filePath: widget.filePath,
-      )),
-    );
 
     return allAsync.when(
       loading: () => Scaffold(
@@ -402,11 +396,6 @@ class _PdfAiMaterialReaderScreenState
           provider: selected.provider,
           durationMs: selected.requestDurationMs,
         );
-        final currentFingerprint = fingerprintAsync.valueOrNull;
-        final stale =
-            currentFingerprint != null &&
-            currentFingerprint != selected.sourceFingerprint;
-
         return Scaffold(
           appBar: widget.embedded
               ? null
@@ -437,15 +426,6 @@ class _PdfAiMaterialReaderScreenState
                 ),
           body: Column(
             children: [
-              if (stale)
-                Material(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  child: const ListTile(
-                    dense: true,
-                    leading: Icon(Icons.warning_amber_rounded),
-                    title: Text('Generated from an older version of this PDF'),
-                  ),
-                ),
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,

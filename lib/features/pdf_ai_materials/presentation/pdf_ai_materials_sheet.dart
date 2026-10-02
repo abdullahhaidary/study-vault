@@ -134,14 +134,6 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
   @override
   Widget build(BuildContext context) {
     final materialsAsync = ref.watch(pdfAiMaterialsProvider(widget.materialId));
-    final fingerprint = ref
-        .watch(
-          pdfSourceFingerprintProvider((
-            title: widget.title,
-            filePath: widget.filePath,
-          )),
-        )
-        .valueOrNull;
     final theme = Theme.of(context);
 
     return SizedBox(
@@ -189,10 +181,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
                           type: type,
                           current: _latestFor(materials, type),
                           generating: _generating.contains(type),
-                          stale: _isStale(
-                            _latestFor(materials, type),
-                            fingerprint,
-                          ),
+                          stale: false,
                           onTap: () =>
                               _onTap(type, _latestFor(materials, type)),
                         ),
@@ -224,12 +213,6 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
       if (material.type == type.storageValue) return material;
     }
     return null;
-  }
-
-  bool _isStale(PdfAiMaterial? material, String? fingerprint) {
-    return material != null &&
-        fingerprint != null &&
-        material.sourceFingerprint != fingerprint;
   }
 }
 
