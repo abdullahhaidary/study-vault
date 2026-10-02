@@ -168,8 +168,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     ref.read(shellTabProvider.notifier).state = ShellTab.home;
   }
 
-  String? _pendingModelId;
-
   Future<void> _selectModel(String currentId) async {
     final selected = await showAiModelSelector(
       context,
@@ -179,7 +177,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     final chatId = ref.read(activeAiChatIdProvider);
     if (chatId == null) {
-      setState(() => _pendingModelId = selected.requestedModelId);
+      ref.read(pendingAiChatModelIdProvider.notifier).state =
+          selected.requestedModelId;
       return;
     }
     await ref
@@ -263,12 +262,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     try {
       var chatId = ref.read(activeAiChatIdProvider);
       if (chatId == null) {
+        final pendingModelId = ref.read(pendingAiChatModelIdProvider);
         final chat = await ref
             .read(aiChatServiceProvider)
-            .createChat(modelId: _pendingModelId);
+            .createChat(modelId: pendingModelId);
         chatId = chat.id;
         ref.read(activeAiChatIdProvider.notifier).state = chatId;
-        _pendingModelId = null;
+        ref.read(pendingAiChatModelIdProvider.notifier).state = null;
       }
 
       if (preset == null) {
@@ -432,6 +432,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ChatAppearance.defaults;
     final speech = ref.watch(chatSpeechServiceProvider);
     final settingsAsync = ref.watch(aiSettingsStateProvider);
+    final pendingModelId = ref.watch(pendingAiChatModelIdProvider);
     final chatAsync = chatId == null
         ? null
         : ref.watch(aiChatByIdProvider(chatId));
@@ -441,7 +442,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     final modelId =
         chatAsync?.valueOrNull?.modelId ??
-        _pendingModelId ??
+        pendingModelId ??
         settingsAsync.valueOrNull?.modelId ??
         GeminiModelRegistry.defaultModelId;
     final modelKnown = AiModels.isKnown(modelId);
@@ -506,96 +507,100 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         width: drawerWidth,
         child: const AiChatHistoryScreen(asDrawer: true),
       ),
-      appBar: AppBar(
-        centerTitle: false,
-        titleSpacing: 0,
-        backgroundColor: theme.colorScheme.surface,
-        surfaceTintColor: Colors.transparent,
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: 'Chat history',
-            onPressed: () async {
-              await _persistDraft();
-              if (context.mounted) Scaffold.of(context).openDrawer();
-            },
-            icon: const Icon(Icons.menu),
-          ),
-        ),
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: InkWell(
-            onTap: () => _selectModel(modelId),
-            borderRadius: AppRadii.smAll,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.xxs,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              centerTitle: false,
+              titleSpacing: 0,
+              backgroundColor: theme.colorScheme.surface,
+              surfaceTintColor: Colors.transparent,
+              leading: Builder(
+                builder: (context) => IconButton(
+                  tooltip: 'Chat history',
+                  onPressed: () async {
+                    await _persistDraft();
+                    if (context.mounted) Scaffold.of(context).openDrawer();
+                  },
+                  icon: const Icon(Icons.menu),
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      modelLabel,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: modelKnown
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.error,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+              title: Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap: () => _selectModel(modelId),
+                  borderRadius: AppRadii.smAll,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: AppSpacing.xxs,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            modelLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: modelKnown
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.error,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 20,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
+                ),
               ),
+              actions: [
+                IconButton(
+                  tooltip: widget.embedded
+                      ? 'Minimize workspace'
+                      : 'Leave chat',
+                  onPressed: _returnToApp,
+                  icon: Icon(widget.embedded ? Icons.minimize : Icons.logout),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'More options',
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'new_chat':
+                        if (!_sending) _newChat();
+                      case 'appearance':
+                        showChatAppearanceSheet(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'new_chat',
+                      enabled: !_sending,
+                      child: const ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.edit_square),
+                        title: Text('New chat'),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'appearance',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.palette_outlined),
+                        title: Text('Customize chat'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            tooltip: widget.embedded ? 'Minimize workspace' : 'Leave chat',
-            onPressed: _returnToApp,
-            icon: Icon(widget.embedded ? Icons.minimize : Icons.logout),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'More options',
-            icon: const Icon(Icons.more_horiz),
-            onSelected: (value) {
-              switch (value) {
-                case 'new_chat':
-                  if (!_sending) _newChat();
-                case 'appearance':
-                  showChatAppearanceSheet(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'new_chat',
-                enabled: !_sending,
-                child: const ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.edit_square),
-                  title: Text('New chat'),
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'appearance',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.palette_outlined),
-                  title: Text('Customize chat'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
       body: _ChatBackground(
         appearance: appearance,
         child: Column(

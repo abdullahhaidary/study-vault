@@ -46,9 +46,12 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
                 height: geometry.height,
                 child: Offstage(
                   offstage: state.minimized,
-                  child: _FloatingChatWindow(
-                    onDrag: (delta) => _move(delta, constraints, geometry),
-                    onResize: (delta) => _resize(delta, constraints, geometry),
+                  child: _WindowOverlayNavigator(
+                    key: ValueKey(
+                      '${constraints.maxWidth}x${constraints.maxHeight}',
+                    ),
+                    onDrag: (delta) => _move(delta, constraints),
+                    onResize: (delta) => _resize(delta, constraints),
                     onMinimize: controller.minimize,
                     onClose: controller.close,
                   ),
@@ -108,11 +111,8 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
     );
   }
 
-  void _move(
-    Offset delta,
-    BoxConstraints constraints,
-    _WindowGeometry current,
-  ) {
+  void _move(Offset delta, BoxConstraints constraints) {
+    final current = _geometryFor(constraints);
     setState(() {
       _left = (current.left + delta.dx).clamp(
         _edgeMargin,
@@ -127,11 +127,8 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
     });
   }
 
-  void _resize(
-    Offset delta,
-    BoxConstraints constraints,
-    _WindowGeometry current,
-  ) {
+  void _resize(Offset delta, BoxConstraints constraints) {
+    final current = _geometryFor(constraints);
     final maxWidth = constraints.maxWidth - current.left - _edgeMargin;
     final maxHeight = constraints.maxHeight - current.top - _edgeMargin;
     final minimumWidth = _minimumWidth.clamp(1.0, maxWidth);
@@ -145,7 +142,41 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
   }
 }
 
-class _FloatingChatWindow extends ConsumerWidget {
+class _WindowOverlayNavigator extends StatelessWidget {
+  const _WindowOverlayNavigator({
+    super.key,
+    required this.onDrag,
+    required this.onResize,
+    required this.onMinimize,
+    required this.onClose,
+  });
+
+  final ValueChanged<Offset> onDrag;
+  final ValueChanged<Offset> onResize;
+  final VoidCallback onMinimize;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return PageRouteBuilder<void>(
+          settings: settings,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) => _FloatingChatWindow(
+            onDrag: onDrag,
+            onResize: onResize,
+            onMinimize: onMinimize,
+            onClose: onClose,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FloatingChatWindow extends StatelessWidget {
   const _FloatingChatWindow({
     required this.onDrag,
     required this.onResize,
@@ -159,7 +190,7 @@ class _FloatingChatWindow extends ConsumerWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Material(
@@ -172,65 +203,79 @@ class _FloatingChatWindow extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          Column(
-            children: [
-              GestureDetector(
+          Positioned.fill(
+            child: Navigator(
+              onGenerateRoute: (settings) {
+                if (settings.name == Navigator.defaultRouteName) {
+                  return MaterialPageRoute<void>(
+                    settings: settings,
+                    builder: (_) =>
+                        AiChatScreen(embedded: true, onClose: onMinimize),
+                  );
+                }
+                return app_routes.onGenerateRoute(settings);
+              },
+            ),
+          ),
+          Positioned(
+            left: 44,
+            right: 76,
+            top: 0,
+            height: 18,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.move,
+              child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanUpdate: (details) => onDrag(details.delta),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.move,
-                  child: Material(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    child: SizedBox(
-                      height: 48,
-                      child: Row(
-                        children: [
-                          const SizedBox(width: AppSpacing.sm),
-                          Icon(
-                            Icons.drag_indicator,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              'Study AI',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Minimize',
-                            onPressed: onMinimize,
-                            icon: const Icon(Icons.minimize),
-                          ),
-                          IconButton(
-                            tooltip: 'Close',
-                            onPressed: onClose,
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
+                child: Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
               ),
-              const Divider(height: 1),
-              Expanded(
-                child: Navigator(
-                  onGenerateRoute: (settings) {
-                    if (settings.name == Navigator.defaultRouteName) {
-                      return MaterialPageRoute<void>(
-                        settings: settings,
-                        builder: (_) =>
-                            AiChatScreen(embedded: true, onClose: onMinimize),
-                      );
-                    }
-                    return app_routes.onGenerateRoute(settings);
-                  },
-                ),
+            ),
+          ),
+          Positioned(
+            top: 2,
+            right: 4,
+            child: Material(
+              color: theme.colorScheme.surfaceContainerLow.withValues(
+                alpha: 0.92,
               ),
-            ],
+              borderRadius: BorderRadius.circular(18),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Minimize',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    padding: EdgeInsets.zero,
+                    onPressed: onMinimize,
+                    icon: const Icon(Icons.minimize, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    padding: EdgeInsets.zero,
+                    onPressed: onClose,
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+            ),
           ),
           Positioned(
             right: 0,

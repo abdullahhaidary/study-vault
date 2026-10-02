@@ -51,6 +51,9 @@ final aiChatServiceProvider = Provider<AiChatService>((ref) {
 /// Currently open conversation in the AI Chat tab (`null` = blank new chat).
 final activeAiChatIdProvider = StateProvider<String?>((ref) => null);
 
+/// Model selected for a blank chat before its first message creates the row.
+final pendingAiChatModelIdProvider = StateProvider<String?>((ref) => null);
+
 /// Pending scroll/highlight target when opening Study AI from a reverse link.
 final aiChatFocusMessageIdProvider = StateProvider<String?>((ref) => null);
 

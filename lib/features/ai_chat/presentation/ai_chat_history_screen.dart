@@ -5,7 +5,11 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/domain/gemini_model_registry.dart';
+import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../data/ai_chat_providers.dart';
 
 /// Conversation history for Study AI.
@@ -109,9 +113,38 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
     }
   }
 
+  Future<void> _selectModel(String currentId) async {
+    final selected = await showAiModelSelector(
+      context,
+      selected: AiExecutionSelection.fromModelId(currentId),
+    );
+    if (selected == null || !mounted) return;
+
+    final chatId = ref.read(activeAiChatIdProvider);
+    if (chatId == null) {
+      ref.read(pendingAiChatModelIdProvider.notifier).state =
+          selected.requestedModelId;
+      return;
+    }
+    await ref
+        .read(aiChatServiceProvider)
+        .setChatModel(chatId, selected.requestedModelId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatsAsync = ref.watch(aiChatsProvider);
+    final activeChatId = ref.watch(activeAiChatIdProvider);
+    final activeChatAsync = activeChatId == null
+        ? null
+        : ref.watch(aiChatByIdProvider(activeChatId));
+    final settingsAsync = ref.watch(aiSettingsStateProvider);
+    final pendingModelId = ref.watch(pendingAiChatModelIdProvider);
+    final modelId =
+        activeChatAsync?.valueOrNull?.modelId ??
+        pendingModelId ??
+        settingsAsync.valueOrNull?.modelId ??
+        GeminiModelRegistry.defaultModelId;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -128,6 +161,22 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: AppSpacing.pageInsets(
+              context,
+            ).copyWith(top: AppSpacing.xs),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _selectModel(modelId),
+                icon: const Icon(Icons.memory_outlined),
+                label: Text(
+                  AiModels.chatDisplayName(modelId),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
           Padding(
             padding: AppSpacing.pageInsets(
               context,
