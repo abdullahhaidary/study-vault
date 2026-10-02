@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
+import '../../../core/database/app_database.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
+import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
+import '../domain/annotation_ai_history.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
 
-/// Result of the annotation AI response screen (ephemeral unless user saves).
+/// Result of the annotation AI response screen.
 class AiResponseScreenResult {
   const AiResponseScreenResult({
     required this.markdown,
@@ -28,10 +32,11 @@ class AiResponseScreenResult {
 Future<AiResponseScreenResult?> showAiResponseScreen(
   BuildContext context,
   WidgetRef ref, {
-  required AiTextResult result,
+  AiTextResult? result,
   required AiStudyAction action,
   required AiStudyRequest request,
   AnnotationAiContext? annotationContext,
+  AnnotationAiGeneration? initialGeneration,
   GenerateQuestionsLaunch? questionsLaunch,
   Future<void> Function(List<AiFlashcardDraft> cards)? onFlashcardsCreate,
   Future<void> Function(String markdown)? onCreateNote,
@@ -44,6 +49,7 @@ Future<AiResponseScreenResult?> showAiResponseScreen(
         action: action,
         request: request,
         annotationContext: annotationContext,
+        initialGeneration: initialGeneration,
         questionsLaunch: questionsLaunch,
         onFlashcardsCreate: onFlashcardsCreate,
         onCreateNote: onCreateNote,
@@ -56,20 +62,22 @@ Future<AiResponseScreenResult?> showAiResponseScreen(
 class AiResponseScreen extends ConsumerStatefulWidget {
   const AiResponseScreen({
     super.key,
-    required this.initialResult,
+    this.initialResult,
     required this.action,
     required this.request,
     this.annotationContext,
+    this.initialGeneration,
     this.questionsLaunch,
     this.onFlashcardsCreate,
     this.onCreateNote,
     this.onGoToSource,
   });
 
-  final AiTextResult initialResult;
+  final AiTextResult? initialResult;
   final AiStudyAction action;
   final AiStudyRequest request;
   final AnnotationAiContext? annotationContext;
+  final AnnotationAiGeneration? initialGeneration;
   final GenerateQuestionsLaunch? questionsLaunch;
   final Future<void> Function(List<AiFlashcardDraft> cards)? onFlashcardsCreate;
   final Future<void> Function(String markdown)? onCreateNote;
@@ -80,15 +88,86 @@ class AiResponseScreen extends ConsumerStatefulWidget {
 }
 
 class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
-  late String _markdown;
   final List<AiConversationTurn> _conversation = [];
   final _followUpController = TextEditingController();
   var _busy = false;
+  var _generatingLabel = '';
+  List<AnnotationAiGeneration> _generations = [];
+  AnnotationAiGeneration? _selected;
+  var _historyReady = false;
+
+  /// Transient follow-up answer; does not mutate immutable history rows.
+  String? _followUpOverride;
+
+  AnnotationAiContext get _context {
+    return widget.annotationContext ??
+        AnnotationAiContext(
+          selectedText: widget.request.sourceText,
+          materialId: widget.request.materialId,
+          lessonId: widget.request.lessonId,
+          pageNumber: widget.request.pageNumber,
+          annotationId: widget.request.annotationId,
+          surroundingText: widget.request.surroundingText,
+          shortDescription: widget.request.shortDescription,
+          language: widget.request.language,
+        );
+  }
+
+  String get _fingerprint =>
+      AnnotationAiSourceFingerprint.fromContext(_context);
+
+  String get _markdown =>
+      _followUpOverride ??
+      _selected?.responseText ??
+      widget.initialResult?.markdown ??
+      '';
 
   @override
   void initState() {
     super.initState();
-    _markdown = widget.initialResult.markdown;
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    final history = ref.read(annotationAiHistoryServiceProvider);
+    var gens = await history.getGenerations(
+      sourceFingerprint: _fingerprint,
+      action: widget.action,
+    );
+
+    // Persist the just-generated result if it is not already in history.
+    final incoming = widget.initialResult?.markdown.trim();
+    if (incoming != null && incoming.isNotEmpty) {
+      final already = gens.any((g) => g.responseText.trim() == incoming);
+      if (!already) {
+        final saved = await history.persistCompleted(
+          context: _context,
+          action: widget.action,
+          responseText: widget.initialResult!.markdown,
+          rephraseMode: widget.request.rephraseMode,
+          organizeMode: widget.request.organizeMode,
+          summarizeMode: widget.request.summarizeMode,
+          translateTarget: widget.request.translateTarget,
+          customPrompt: widget.request.customPrompt,
+          modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+        );
+        gens = [...gens, saved];
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _generations = gens;
+      _selected =
+          widget.initialGeneration ?? (gens.isNotEmpty ? gens.last : null);
+      _followUpOverride = null;
+      _historyReady = true;
+    });
+    _invalidateCounts();
+  }
+
+  void _invalidateCounts() {
+    ref.invalidate(annotationAiGenerationCountsProvider(_fingerprint));
   }
 
   @override
@@ -97,23 +176,194 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     super.dispose();
   }
 
-  Future<void> _retry() async {
+  Future<void> _newVersion({
+    String? regenerateInstruction,
+    AnnotationAiGeneration? parent,
+  }) async {
     if (_busy) return;
-    setState(() => _busy = true);
-    final result = await AiAssistantController.runWithLoading(
-      context,
-      ref,
-      request: widget.request,
-      annotationContext: widget.annotationContext,
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (result is AiTextResult) {
+    setState(() {
+      _busy = true;
+      _generatingLabel = 'Generating V${_generations.length + 1}…';
+    });
+
+    final history = ref.read(annotationAiHistoryServiceProvider);
+    final modelName = await ref.read(aiSettingsStoreProvider).getModelId();
+
+    try {
+      if (!mounted) return;
+      if (!await AiAssistantController.ensureReady(context, ref)) {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _generatingLabel = '';
+          });
+        }
+        return;
+      }
+      if (!mounted) return;
+
+      final saved = await history.regenerate(
+        context: _context,
+        action: widget.action,
+        parent: parent ?? _selected,
+        rephraseMode: widget.request.rephraseMode,
+        organizeMode: widget.request.organizeMode,
+        summarizeMode: widget.request.summarizeMode,
+        translateTarget: widget.request.translateTarget,
+        customPrompt: widget.request.customPrompt,
+        regenerateInstruction: regenerateInstruction,
+        modelName: modelName,
+      );
+
+      if (!mounted) return;
       setState(() {
-        _markdown = result.markdown;
+        _generations = [..._generations, saved];
+        _selected = saved;
         _conversation.clear();
+        _followUpOverride = null;
+        _busy = false;
+        _generatingLabel = '';
       });
+      _invalidateCounts();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _generatingLabel = '';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().contains('AiException')
+                ? e.toString()
+                : 'AI request failed. Previous versions were kept.',
+          ),
+        ),
+      );
     }
+  }
+
+  Future<void> _regenerateWithInstruction() async {
+    final controller = TextEditingController();
+    final instruction = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Regenerate with instruction'),
+        content: AutoDirectionTextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Make it shorter / use a banking example…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Regenerate'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (instruction == null || instruction.isEmpty || !mounted) return;
+    await _newVersion(regenerateInstruction: instruction, parent: _selected);
+  }
+
+  Future<void> _deleteSelected() async {
+    final current = _selected;
+    if (current == null || _busy) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete V${current.generationNumber}?'),
+        content: const Text(
+          'This removes only this AI generation. The annotation and other '
+          'versions stay intact.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final history = ref.read(annotationAiHistoryServiceProvider);
+    await history.deleteGeneration(current.id);
+
+    final remaining = _generations.where((g) => g.id != current.id).toList();
+    AnnotationAiGeneration? next;
+    if (remaining.isNotEmpty) {
+      // Prefer nearest lower number, else nearest higher.
+      final lower = remaining
+          .where((g) => g.generationNumber < current.generationNumber)
+          .toList();
+      next = lower.isNotEmpty ? lower.last : remaining.first;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _generations = remaining;
+      _selected = next;
+      _conversation.clear();
+      _followUpOverride = null;
+    });
+    _invalidateCounts();
+  }
+
+  Future<void> _deleteAll() async {
+    if (_generations.isEmpty || _busy) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete all ${widget.action.menuLabel}?'),
+        content: Text(
+          'Remove all ${_generations.length} saved '
+          '${widget.action.menuLabel.toLowerCase()} generations for this '
+          'source? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete all'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    await ref
+        .read(annotationAiHistoryServiceProvider)
+        .deleteAllForAction(
+          sourceFingerprint: _fingerprint,
+          action: widget.action,
+        );
+    if (!mounted) return;
+    setState(() {
+      _generations = [];
+      _selected = null;
+      _conversation.clear();
+      _followUpOverride = null;
+    });
+    _invalidateCounts();
   }
 
   Future<void> _sendFollowUp() async {
@@ -143,6 +393,21 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (result is AiTextResult) {
+      final history = ref.read(annotationAiHistoryServiceProvider);
+      await history.persistCompleted(
+        context: ctx,
+        action: AiStudyAction.askAi,
+        responseText: result.markdown,
+        customPrompt: question,
+        parentGenerationId: _selected?.id,
+        modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+      );
+      ref.invalidate(
+        annotationAiGenerationCountsProvider(
+          AnnotationAiSourceFingerprint.fromContext(ctx),
+        ),
+      );
+      if (!mounted) return;
       setState(() {
         _conversation.add(
           AiConversationTurn(
@@ -150,7 +415,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
             assistantMarkdown: _markdown,
           ),
         );
-        _markdown = result.markdown;
+        _followUpOverride = result.markdown;
         _followUpController.clear();
       });
     }
@@ -189,6 +454,25 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
       annotationContext: ctx,
     );
     if (result is! AiFlashcardsResult || !mounted) return;
+
+    final history = ref.read(annotationAiHistoryServiceProvider);
+    await history.persistCompleted(
+      context: localCtx,
+      action: AiStudyAction.generateFlashcards,
+      responseText: result.cards
+          .map((c) => 'Q: ${c.front}\nA: ${c.back}')
+          .join('\n\n---\n\n'),
+      responseKind: 'flashcards',
+      parentGenerationId: _selected?.id,
+      modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+    );
+    ref.invalidate(
+      annotationAiGenerationCountsProvider(
+        AnnotationAiSourceFingerprint.fromContext(localCtx),
+      ),
+    );
+
+    if (!mounted) return;
     await showAiFlashcardsPreview(
       context,
       cards: result.cards,
@@ -219,21 +503,37 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     final stored = MarkdownToQuill.toDeltaJson(_markdown);
     final page =
         widget.request.pageNumber ?? widget.annotationContext?.pageNumber;
+    final timeFmt = DateFormat.jm();
+    final selected = _selected;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Response'),
+        title: Text(widget.action.menuLabel),
         actions: [
+          if (_generations.isNotEmpty)
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'delete_all') await _deleteAll();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'delete_all',
+                  child: Text('Delete all versions'),
+                ),
+              ],
+            ),
           IconButton(
             tooltip: 'Copy',
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: _markdown));
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Copied')));
-              }
-            },
+            onPressed: _markdown.isEmpty
+                ? null
+                : () async {
+                    await Clipboard.setData(ClipboardData(text: _markdown));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('Copied')));
+                    }
+                  },
             icon: const Icon(Icons.copy_outlined),
           ),
         ],
@@ -255,27 +555,112 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                       child: const Text('Go to Source'),
                     ),
             ),
+          if (_historyReady && _generations.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        widget.action.menuLabel,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(width: 8),
+                      _CountChip(count: _generations.length),
+                      const Spacer(),
+                      if (selected != null)
+                        Text(
+                          'V${selected.generationNumber} · '
+                          '${timeFmt.format(selected.createdAt.toLocal())}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Directionality(
+                    // Keep version chronology LTR even in RTL locales.
+                    textDirection: TextDirection.ltr,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final g in _generations)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 6),
+                              child: ChoiceChip(
+                                label: Text('V${g.generationNumber}'),
+                                selected: selected?.id == g.id,
+                                onSelected: _busy
+                                    ? null
+                                    : (_) {
+                                        setState(() {
+                                          _selected = g;
+                                          _conversation.clear();
+                                          _followUpOverride = null;
+                                        });
+                                      },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (selected?.modelName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Model: ${selected!.modelName}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          if (_busy && _generatingLabel.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(_generatingLabel),
+                ],
+              ),
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        widget.action.menuLabel,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Divider(),
-                      Expanded(
-                        child: SingleChildScrollView(
+                  child: !_historyReady
+                      ? const Center(child: CircularProgressIndicator())
+                      : _markdown.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'No generations yet',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              FilledButton(
+                                onPressed: _busy ? null : () => _newVersion(),
+                                child: const Text('Generate'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : SingleChildScrollView(
                           child: StudyRichTextViewer(storedValue: stored),
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -316,12 +701,30 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
               alignment: WrapAlignment.end,
               children: [
                 OutlinedButton(
-                  onPressed: _busy ? null : _retry,
-                  child: const Text('Retry'),
+                  onPressed: _busy ? null : () => _newVersion(),
+                  child: const Text('New Version'),
+                ),
+                OutlinedButton(
+                  onPressed: _busy || _selected == null
+                      ? null
+                      : () => _newVersion(parent: _selected),
+                  child: const Text('Regenerate'),
+                ),
+                OutlinedButton(
+                  onPressed: _busy || _selected == null
+                      ? null
+                      : _regenerateWithInstruction,
+                  child: const Text('Regenerate with instruction'),
+                ),
+                OutlinedButton(
+                  onPressed: _busy || _selected == null
+                      ? null
+                      : _deleteSelected,
+                  child: const Text('Delete'),
                 ),
                 if (widget.onCreateNote != null)
                   OutlinedButton(
-                    onPressed: _busy
+                    onPressed: _busy || _markdown.isEmpty
                         ? null
                         : () async {
                             await widget.onCreateNote!(_markdown);
@@ -357,6 +760,30 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CountChip extends StatelessWidget {
+  const _CountChip({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),
     );
   }

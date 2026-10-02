@@ -19,7 +19,7 @@ void main() {
   group('schema / backup version alignment', () {
     test('schema version is 10 everywhere', () {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
-      expect(db.schemaVersion, 10);
+      expect(db.schemaVersion, 11);
       expect(kStudyVaultSchemaVersion, 10);
       expect(BackupService().currentSchemaVersion, 10);
       return db.close();

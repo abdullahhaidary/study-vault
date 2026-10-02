@@ -9126,6 +9126,1370 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
   }
 }
 
+class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
+    with TableInfo<$AnnotationAiGenerationsTable, AnnotationAiGeneration> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AnnotationAiGenerationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _annotationIdMeta = const VerificationMeta(
+    'annotationId',
+  );
+  @override
+  late final GeneratedColumn<String> annotationId = GeneratedColumn<String>(
+    'annotation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES study_pins (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _materialIdMeta = const VerificationMeta(
+    'materialId',
+  );
+  @override
+  late final GeneratedColumn<String> materialId = GeneratedColumn<String>(
+    'material_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _lessonIdMeta = const VerificationMeta(
+    'lessonId',
+  );
+  @override
+  late final GeneratedColumn<String> lessonId = GeneratedColumn<String>(
+    'lesson_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lessons (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceFingerprintMeta = const VerificationMeta(
+    'sourceFingerprint',
+  );
+  @override
+  late final GeneratedColumn<String> sourceFingerprint =
+      GeneratedColumn<String>(
+        'source_fingerprint',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _actionTypeMeta = const VerificationMeta(
+    'actionType',
+  );
+  @override
+  late final GeneratedColumn<String> actionType = GeneratedColumn<String>(
+    'action_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inputTextMeta = const VerificationMeta(
+    'inputText',
+  );
+  @override
+  late final GeneratedColumn<String> inputText = GeneratedColumn<String>(
+    'input_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contextSnapshotMeta = const VerificationMeta(
+    'contextSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> contextSnapshot = GeneratedColumn<String>(
+    'context_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _customPromptMeta = const VerificationMeta(
+    'customPrompt',
+  );
+  @override
+  late final GeneratedColumn<String> customPrompt = GeneratedColumn<String>(
+    'custom_prompt',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actionModeMeta = const VerificationMeta(
+    'actionMode',
+  );
+  @override
+  late final GeneratedColumn<String> actionMode = GeneratedColumn<String>(
+    'action_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _responseTextMeta = const VerificationMeta(
+    'responseText',
+  );
+  @override
+  late final GeneratedColumn<String> responseText = GeneratedColumn<String>(
+    'response_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _responseKindMeta = const VerificationMeta(
+    'responseKind',
+  );
+  @override
+  late final GeneratedColumn<String> responseKind = GeneratedColumn<String>(
+    'response_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('text'),
+  );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelNameMeta = const VerificationMeta(
+    'modelName',
+  );
+  @override
+  late final GeneratedColumn<String> modelName = GeneratedColumn<String>(
+    'model_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('gemini'),
+  );
+  static const VerificationMeta _promptVersionMeta = const VerificationMeta(
+    'promptVersion',
+  );
+  @override
+  late final GeneratedColumn<String> promptVersion = GeneratedColumn<String>(
+    'prompt_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _parentGenerationIdMeta =
+      const VerificationMeta('parentGenerationId');
+  @override
+  late final GeneratedColumn<String> parentGenerationId =
+      GeneratedColumn<String>(
+        'parent_generation_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _generationNumberMeta = const VerificationMeta(
+    'generationNumber',
+  );
+  @override
+  late final GeneratedColumn<int> generationNumber = GeneratedColumn<int>(
+    'generation_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _linkedQuestionSetIdMeta =
+      const VerificationMeta('linkedQuestionSetId');
+  @override
+  late final GeneratedColumn<String> linkedQuestionSetId =
+      GeneratedColumn<String>(
+        'linked_question_set_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _linkedFlashcardBatchIdMeta =
+      const VerificationMeta('linkedFlashcardBatchId');
+  @override
+  late final GeneratedColumn<String> linkedFlashcardBatchId =
+      GeneratedColumn<String>(
+        'linked_flashcard_batch_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    annotationId,
+    materialId,
+    lessonId,
+    pageNumber,
+    sourceFingerprint,
+    actionType,
+    inputText,
+    contextSnapshot,
+    customPrompt,
+    actionMode,
+    responseText,
+    responseKind,
+    language,
+    modelName,
+    provider,
+    promptVersion,
+    parentGenerationId,
+    generationNumber,
+    linkedQuestionSetId,
+    linkedFlashcardBatchId,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'annotation_ai_generations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AnnotationAiGeneration> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('annotation_id')) {
+      context.handle(
+        _annotationIdMeta,
+        annotationId.isAcceptableOrUnknown(
+          data['annotation_id']!,
+          _annotationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('material_id')) {
+      context.handle(
+        _materialIdMeta,
+        materialId.isAcceptableOrUnknown(data['material_id']!, _materialIdMeta),
+      );
+    }
+    if (data.containsKey('lesson_id')) {
+      context.handle(
+        _lessonIdMeta,
+        lessonId.isAcceptableOrUnknown(data['lesson_id']!, _lessonIdMeta),
+      );
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    }
+    if (data.containsKey('source_fingerprint')) {
+      context.handle(
+        _sourceFingerprintMeta,
+        sourceFingerprint.isAcceptableOrUnknown(
+          data['source_fingerprint']!,
+          _sourceFingerprintMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceFingerprintMeta);
+    }
+    if (data.containsKey('action_type')) {
+      context.handle(
+        _actionTypeMeta,
+        actionType.isAcceptableOrUnknown(data['action_type']!, _actionTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_actionTypeMeta);
+    }
+    if (data.containsKey('input_text')) {
+      context.handle(
+        _inputTextMeta,
+        inputText.isAcceptableOrUnknown(data['input_text']!, _inputTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_inputTextMeta);
+    }
+    if (data.containsKey('context_snapshot')) {
+      context.handle(
+        _contextSnapshotMeta,
+        contextSnapshot.isAcceptableOrUnknown(
+          data['context_snapshot']!,
+          _contextSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('custom_prompt')) {
+      context.handle(
+        _customPromptMeta,
+        customPrompt.isAcceptableOrUnknown(
+          data['custom_prompt']!,
+          _customPromptMeta,
+        ),
+      );
+    }
+    if (data.containsKey('action_mode')) {
+      context.handle(
+        _actionModeMeta,
+        actionMode.isAcceptableOrUnknown(data['action_mode']!, _actionModeMeta),
+      );
+    }
+    if (data.containsKey('response_text')) {
+      context.handle(
+        _responseTextMeta,
+        responseText.isAcceptableOrUnknown(
+          data['response_text']!,
+          _responseTextMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_responseTextMeta);
+    }
+    if (data.containsKey('response_kind')) {
+      context.handle(
+        _responseKindMeta,
+        responseKind.isAcceptableOrUnknown(
+          data['response_kind']!,
+          _responseKindMeta,
+        ),
+      );
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    }
+    if (data.containsKey('model_name')) {
+      context.handle(
+        _modelNameMeta,
+        modelName.isAcceptableOrUnknown(data['model_name']!, _modelNameMeta),
+      );
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('prompt_version')) {
+      context.handle(
+        _promptVersionMeta,
+        promptVersion.isAcceptableOrUnknown(
+          data['prompt_version']!,
+          _promptVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parent_generation_id')) {
+      context.handle(
+        _parentGenerationIdMeta,
+        parentGenerationId.isAcceptableOrUnknown(
+          data['parent_generation_id']!,
+          _parentGenerationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('generation_number')) {
+      context.handle(
+        _generationNumberMeta,
+        generationNumber.isAcceptableOrUnknown(
+          data['generation_number']!,
+          _generationNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_generationNumberMeta);
+    }
+    if (data.containsKey('linked_question_set_id')) {
+      context.handle(
+        _linkedQuestionSetIdMeta,
+        linkedQuestionSetId.isAcceptableOrUnknown(
+          data['linked_question_set_id']!,
+          _linkedQuestionSetIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_flashcard_batch_id')) {
+      context.handle(
+        _linkedFlashcardBatchIdMeta,
+        linkedFlashcardBatchId.isAcceptableOrUnknown(
+          data['linked_flashcard_batch_id']!,
+          _linkedFlashcardBatchIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AnnotationAiGeneration map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AnnotationAiGeneration(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      annotationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}annotation_id'],
+      ),
+      materialId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_id'],
+      ),
+      lessonId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lesson_id'],
+      ),
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      ),
+      sourceFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_fingerprint'],
+      )!,
+      actionType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action_type'],
+      )!,
+      inputText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}input_text'],
+      )!,
+      contextSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context_snapshot'],
+      ),
+      customPrompt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_prompt'],
+      ),
+      actionMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action_mode'],
+      ),
+      responseText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}response_text'],
+      )!,
+      responseKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}response_kind'],
+      )!,
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      ),
+      modelName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_name'],
+      ),
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      )!,
+      promptVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt_version'],
+      ),
+      parentGenerationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_generation_id'],
+      ),
+      generationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}generation_number'],
+      )!,
+      linkedQuestionSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_question_set_id'],
+      ),
+      linkedFlashcardBatchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_flashcard_batch_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AnnotationAiGenerationsTable createAlias(String alias) {
+    return $AnnotationAiGenerationsTable(attachedDatabase, alias);
+  }
+}
+
+class AnnotationAiGeneration extends DataClass
+    implements Insertable<AnnotationAiGeneration> {
+  final String id;
+
+  /// Source annotation when acting on an existing pin (SET NULL on pin delete).
+  final String? annotationId;
+  final String? materialId;
+  final String? lessonId;
+  final int? pageNumber;
+
+  /// Stable grouping key for selection/annotation + material scope.
+  final String sourceFingerprint;
+
+  /// [AiStudyAction.name] value (explain, summarize, …).
+  final String actionType;
+
+  /// Snapshot of the text sent to the model (selection / annotation body).
+  final String inputText;
+
+  /// Limited surrounding context snapshot (not the full PDF).
+  final String? contextSnapshot;
+
+  /// Mode / custom prompt / regenerate instruction snapshot.
+  final String? customPrompt;
+
+  /// Optional mode name (summarize/rephrase/organize/translate target).
+  final String? actionMode;
+
+  /// Completed AI output (immutable after insert).
+  final String responseText;
+
+  /// `text` | `flashcards` | `questions` | `annotation`
+  final String responseKind;
+  final String? language;
+  final String? modelName;
+  final String provider;
+  final String? promptVersion;
+  final String? parentGenerationId;
+  final int generationNumber;
+  final String? linkedQuestionSetId;
+  final String? linkedFlashcardBatchId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const AnnotationAiGeneration({
+    required this.id,
+    this.annotationId,
+    this.materialId,
+    this.lessonId,
+    this.pageNumber,
+    required this.sourceFingerprint,
+    required this.actionType,
+    required this.inputText,
+    this.contextSnapshot,
+    this.customPrompt,
+    this.actionMode,
+    required this.responseText,
+    required this.responseKind,
+    this.language,
+    this.modelName,
+    required this.provider,
+    this.promptVersion,
+    this.parentGenerationId,
+    required this.generationNumber,
+    this.linkedQuestionSetId,
+    this.linkedFlashcardBatchId,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || annotationId != null) {
+      map['annotation_id'] = Variable<String>(annotationId);
+    }
+    if (!nullToAbsent || materialId != null) {
+      map['material_id'] = Variable<String>(materialId);
+    }
+    if (!nullToAbsent || lessonId != null) {
+      map['lesson_id'] = Variable<String>(lessonId);
+    }
+    if (!nullToAbsent || pageNumber != null) {
+      map['page_number'] = Variable<int>(pageNumber);
+    }
+    map['source_fingerprint'] = Variable<String>(sourceFingerprint);
+    map['action_type'] = Variable<String>(actionType);
+    map['input_text'] = Variable<String>(inputText);
+    if (!nullToAbsent || contextSnapshot != null) {
+      map['context_snapshot'] = Variable<String>(contextSnapshot);
+    }
+    if (!nullToAbsent || customPrompt != null) {
+      map['custom_prompt'] = Variable<String>(customPrompt);
+    }
+    if (!nullToAbsent || actionMode != null) {
+      map['action_mode'] = Variable<String>(actionMode);
+    }
+    map['response_text'] = Variable<String>(responseText);
+    map['response_kind'] = Variable<String>(responseKind);
+    if (!nullToAbsent || language != null) {
+      map['language'] = Variable<String>(language);
+    }
+    if (!nullToAbsent || modelName != null) {
+      map['model_name'] = Variable<String>(modelName);
+    }
+    map['provider'] = Variable<String>(provider);
+    if (!nullToAbsent || promptVersion != null) {
+      map['prompt_version'] = Variable<String>(promptVersion);
+    }
+    if (!nullToAbsent || parentGenerationId != null) {
+      map['parent_generation_id'] = Variable<String>(parentGenerationId);
+    }
+    map['generation_number'] = Variable<int>(generationNumber);
+    if (!nullToAbsent || linkedQuestionSetId != null) {
+      map['linked_question_set_id'] = Variable<String>(linkedQuestionSetId);
+    }
+    if (!nullToAbsent || linkedFlashcardBatchId != null) {
+      map['linked_flashcard_batch_id'] = Variable<String>(
+        linkedFlashcardBatchId,
+      );
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  AnnotationAiGenerationsCompanion toCompanion(bool nullToAbsent) {
+    return AnnotationAiGenerationsCompanion(
+      id: Value(id),
+      annotationId: annotationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(annotationId),
+      materialId: materialId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(materialId),
+      lessonId: lessonId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lessonId),
+      pageNumber: pageNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pageNumber),
+      sourceFingerprint: Value(sourceFingerprint),
+      actionType: Value(actionType),
+      inputText: Value(inputText),
+      contextSnapshot: contextSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contextSnapshot),
+      customPrompt: customPrompt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customPrompt),
+      actionMode: actionMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actionMode),
+      responseText: Value(responseText),
+      responseKind: Value(responseKind),
+      language: language == null && nullToAbsent
+          ? const Value.absent()
+          : Value(language),
+      modelName: modelName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelName),
+      provider: Value(provider),
+      promptVersion: promptVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptVersion),
+      parentGenerationId: parentGenerationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentGenerationId),
+      generationNumber: Value(generationNumber),
+      linkedQuestionSetId: linkedQuestionSetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedQuestionSetId),
+      linkedFlashcardBatchId: linkedFlashcardBatchId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedFlashcardBatchId),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory AnnotationAiGeneration.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AnnotationAiGeneration(
+      id: serializer.fromJson<String>(json['id']),
+      annotationId: serializer.fromJson<String?>(json['annotationId']),
+      materialId: serializer.fromJson<String?>(json['materialId']),
+      lessonId: serializer.fromJson<String?>(json['lessonId']),
+      pageNumber: serializer.fromJson<int?>(json['pageNumber']),
+      sourceFingerprint: serializer.fromJson<String>(json['sourceFingerprint']),
+      actionType: serializer.fromJson<String>(json['actionType']),
+      inputText: serializer.fromJson<String>(json['inputText']),
+      contextSnapshot: serializer.fromJson<String?>(json['contextSnapshot']),
+      customPrompt: serializer.fromJson<String?>(json['customPrompt']),
+      actionMode: serializer.fromJson<String?>(json['actionMode']),
+      responseText: serializer.fromJson<String>(json['responseText']),
+      responseKind: serializer.fromJson<String>(json['responseKind']),
+      language: serializer.fromJson<String?>(json['language']),
+      modelName: serializer.fromJson<String?>(json['modelName']),
+      provider: serializer.fromJson<String>(json['provider']),
+      promptVersion: serializer.fromJson<String?>(json['promptVersion']),
+      parentGenerationId: serializer.fromJson<String?>(
+        json['parentGenerationId'],
+      ),
+      generationNumber: serializer.fromJson<int>(json['generationNumber']),
+      linkedQuestionSetId: serializer.fromJson<String?>(
+        json['linkedQuestionSetId'],
+      ),
+      linkedFlashcardBatchId: serializer.fromJson<String?>(
+        json['linkedFlashcardBatchId'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'annotationId': serializer.toJson<String?>(annotationId),
+      'materialId': serializer.toJson<String?>(materialId),
+      'lessonId': serializer.toJson<String?>(lessonId),
+      'pageNumber': serializer.toJson<int?>(pageNumber),
+      'sourceFingerprint': serializer.toJson<String>(sourceFingerprint),
+      'actionType': serializer.toJson<String>(actionType),
+      'inputText': serializer.toJson<String>(inputText),
+      'contextSnapshot': serializer.toJson<String?>(contextSnapshot),
+      'customPrompt': serializer.toJson<String?>(customPrompt),
+      'actionMode': serializer.toJson<String?>(actionMode),
+      'responseText': serializer.toJson<String>(responseText),
+      'responseKind': serializer.toJson<String>(responseKind),
+      'language': serializer.toJson<String?>(language),
+      'modelName': serializer.toJson<String?>(modelName),
+      'provider': serializer.toJson<String>(provider),
+      'promptVersion': serializer.toJson<String?>(promptVersion),
+      'parentGenerationId': serializer.toJson<String?>(parentGenerationId),
+      'generationNumber': serializer.toJson<int>(generationNumber),
+      'linkedQuestionSetId': serializer.toJson<String?>(linkedQuestionSetId),
+      'linkedFlashcardBatchId': serializer.toJson<String?>(
+        linkedFlashcardBatchId,
+      ),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  AnnotationAiGeneration copyWith({
+    String? id,
+    Value<String?> annotationId = const Value.absent(),
+    Value<String?> materialId = const Value.absent(),
+    Value<String?> lessonId = const Value.absent(),
+    Value<int?> pageNumber = const Value.absent(),
+    String? sourceFingerprint,
+    String? actionType,
+    String? inputText,
+    Value<String?> contextSnapshot = const Value.absent(),
+    Value<String?> customPrompt = const Value.absent(),
+    Value<String?> actionMode = const Value.absent(),
+    String? responseText,
+    String? responseKind,
+    Value<String?> language = const Value.absent(),
+    Value<String?> modelName = const Value.absent(),
+    String? provider,
+    Value<String?> promptVersion = const Value.absent(),
+    Value<String?> parentGenerationId = const Value.absent(),
+    int? generationNumber,
+    Value<String?> linkedQuestionSetId = const Value.absent(),
+    Value<String?> linkedFlashcardBatchId = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => AnnotationAiGeneration(
+    id: id ?? this.id,
+    annotationId: annotationId.present ? annotationId.value : this.annotationId,
+    materialId: materialId.present ? materialId.value : this.materialId,
+    lessonId: lessonId.present ? lessonId.value : this.lessonId,
+    pageNumber: pageNumber.present ? pageNumber.value : this.pageNumber,
+    sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+    actionType: actionType ?? this.actionType,
+    inputText: inputText ?? this.inputText,
+    contextSnapshot: contextSnapshot.present
+        ? contextSnapshot.value
+        : this.contextSnapshot,
+    customPrompt: customPrompt.present ? customPrompt.value : this.customPrompt,
+    actionMode: actionMode.present ? actionMode.value : this.actionMode,
+    responseText: responseText ?? this.responseText,
+    responseKind: responseKind ?? this.responseKind,
+    language: language.present ? language.value : this.language,
+    modelName: modelName.present ? modelName.value : this.modelName,
+    provider: provider ?? this.provider,
+    promptVersion: promptVersion.present
+        ? promptVersion.value
+        : this.promptVersion,
+    parentGenerationId: parentGenerationId.present
+        ? parentGenerationId.value
+        : this.parentGenerationId,
+    generationNumber: generationNumber ?? this.generationNumber,
+    linkedQuestionSetId: linkedQuestionSetId.present
+        ? linkedQuestionSetId.value
+        : this.linkedQuestionSetId,
+    linkedFlashcardBatchId: linkedFlashcardBatchId.present
+        ? linkedFlashcardBatchId.value
+        : this.linkedFlashcardBatchId,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  AnnotationAiGeneration copyWithCompanion(
+    AnnotationAiGenerationsCompanion data,
+  ) {
+    return AnnotationAiGeneration(
+      id: data.id.present ? data.id.value : this.id,
+      annotationId: data.annotationId.present
+          ? data.annotationId.value
+          : this.annotationId,
+      materialId: data.materialId.present
+          ? data.materialId.value
+          : this.materialId,
+      lessonId: data.lessonId.present ? data.lessonId.value : this.lessonId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      sourceFingerprint: data.sourceFingerprint.present
+          ? data.sourceFingerprint.value
+          : this.sourceFingerprint,
+      actionType: data.actionType.present
+          ? data.actionType.value
+          : this.actionType,
+      inputText: data.inputText.present ? data.inputText.value : this.inputText,
+      contextSnapshot: data.contextSnapshot.present
+          ? data.contextSnapshot.value
+          : this.contextSnapshot,
+      customPrompt: data.customPrompt.present
+          ? data.customPrompt.value
+          : this.customPrompt,
+      actionMode: data.actionMode.present
+          ? data.actionMode.value
+          : this.actionMode,
+      responseText: data.responseText.present
+          ? data.responseText.value
+          : this.responseText,
+      responseKind: data.responseKind.present
+          ? data.responseKind.value
+          : this.responseKind,
+      language: data.language.present ? data.language.value : this.language,
+      modelName: data.modelName.present ? data.modelName.value : this.modelName,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      promptVersion: data.promptVersion.present
+          ? data.promptVersion.value
+          : this.promptVersion,
+      parentGenerationId: data.parentGenerationId.present
+          ? data.parentGenerationId.value
+          : this.parentGenerationId,
+      generationNumber: data.generationNumber.present
+          ? data.generationNumber.value
+          : this.generationNumber,
+      linkedQuestionSetId: data.linkedQuestionSetId.present
+          ? data.linkedQuestionSetId.value
+          : this.linkedQuestionSetId,
+      linkedFlashcardBatchId: data.linkedFlashcardBatchId.present
+          ? data.linkedFlashcardBatchId.value
+          : this.linkedFlashcardBatchId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnnotationAiGeneration(')
+          ..write('id: $id, ')
+          ..write('annotationId: $annotationId, ')
+          ..write('materialId: $materialId, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('actionType: $actionType, ')
+          ..write('inputText: $inputText, ')
+          ..write('contextSnapshot: $contextSnapshot, ')
+          ..write('customPrompt: $customPrompt, ')
+          ..write('actionMode: $actionMode, ')
+          ..write('responseText: $responseText, ')
+          ..write('responseKind: $responseKind, ')
+          ..write('language: $language, ')
+          ..write('modelName: $modelName, ')
+          ..write('provider: $provider, ')
+          ..write('promptVersion: $promptVersion, ')
+          ..write('parentGenerationId: $parentGenerationId, ')
+          ..write('generationNumber: $generationNumber, ')
+          ..write('linkedQuestionSetId: $linkedQuestionSetId, ')
+          ..write('linkedFlashcardBatchId: $linkedFlashcardBatchId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    annotationId,
+    materialId,
+    lessonId,
+    pageNumber,
+    sourceFingerprint,
+    actionType,
+    inputText,
+    contextSnapshot,
+    customPrompt,
+    actionMode,
+    responseText,
+    responseKind,
+    language,
+    modelName,
+    provider,
+    promptVersion,
+    parentGenerationId,
+    generationNumber,
+    linkedQuestionSetId,
+    linkedFlashcardBatchId,
+    createdAt,
+    updatedAt,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AnnotationAiGeneration &&
+          other.id == this.id &&
+          other.annotationId == this.annotationId &&
+          other.materialId == this.materialId &&
+          other.lessonId == this.lessonId &&
+          other.pageNumber == this.pageNumber &&
+          other.sourceFingerprint == this.sourceFingerprint &&
+          other.actionType == this.actionType &&
+          other.inputText == this.inputText &&
+          other.contextSnapshot == this.contextSnapshot &&
+          other.customPrompt == this.customPrompt &&
+          other.actionMode == this.actionMode &&
+          other.responseText == this.responseText &&
+          other.responseKind == this.responseKind &&
+          other.language == this.language &&
+          other.modelName == this.modelName &&
+          other.provider == this.provider &&
+          other.promptVersion == this.promptVersion &&
+          other.parentGenerationId == this.parentGenerationId &&
+          other.generationNumber == this.generationNumber &&
+          other.linkedQuestionSetId == this.linkedQuestionSetId &&
+          other.linkedFlashcardBatchId == this.linkedFlashcardBatchId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class AnnotationAiGenerationsCompanion
+    extends UpdateCompanion<AnnotationAiGeneration> {
+  final Value<String> id;
+  final Value<String?> annotationId;
+  final Value<String?> materialId;
+  final Value<String?> lessonId;
+  final Value<int?> pageNumber;
+  final Value<String> sourceFingerprint;
+  final Value<String> actionType;
+  final Value<String> inputText;
+  final Value<String?> contextSnapshot;
+  final Value<String?> customPrompt;
+  final Value<String?> actionMode;
+  final Value<String> responseText;
+  final Value<String> responseKind;
+  final Value<String?> language;
+  final Value<String?> modelName;
+  final Value<String> provider;
+  final Value<String?> promptVersion;
+  final Value<String?> parentGenerationId;
+  final Value<int> generationNumber;
+  final Value<String?> linkedQuestionSetId;
+  final Value<String?> linkedFlashcardBatchId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const AnnotationAiGenerationsCompanion({
+    this.id = const Value.absent(),
+    this.annotationId = const Value.absent(),
+    this.materialId = const Value.absent(),
+    this.lessonId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.sourceFingerprint = const Value.absent(),
+    this.actionType = const Value.absent(),
+    this.inputText = const Value.absent(),
+    this.contextSnapshot = const Value.absent(),
+    this.customPrompt = const Value.absent(),
+    this.actionMode = const Value.absent(),
+    this.responseText = const Value.absent(),
+    this.responseKind = const Value.absent(),
+    this.language = const Value.absent(),
+    this.modelName = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.promptVersion = const Value.absent(),
+    this.parentGenerationId = const Value.absent(),
+    this.generationNumber = const Value.absent(),
+    this.linkedQuestionSetId = const Value.absent(),
+    this.linkedFlashcardBatchId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AnnotationAiGenerationsCompanion.insert({
+    required String id,
+    this.annotationId = const Value.absent(),
+    this.materialId = const Value.absent(),
+    this.lessonId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    required String sourceFingerprint,
+    required String actionType,
+    required String inputText,
+    this.contextSnapshot = const Value.absent(),
+    this.customPrompt = const Value.absent(),
+    this.actionMode = const Value.absent(),
+    required String responseText,
+    this.responseKind = const Value.absent(),
+    this.language = const Value.absent(),
+    this.modelName = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.promptVersion = const Value.absent(),
+    this.parentGenerationId = const Value.absent(),
+    required int generationNumber,
+    this.linkedQuestionSetId = const Value.absent(),
+    this.linkedFlashcardBatchId = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sourceFingerprint = Value(sourceFingerprint),
+       actionType = Value(actionType),
+       inputText = Value(inputText),
+       responseText = Value(responseText),
+       generationNumber = Value(generationNumber),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<AnnotationAiGeneration> custom({
+    Expression<String>? id,
+    Expression<String>? annotationId,
+    Expression<String>? materialId,
+    Expression<String>? lessonId,
+    Expression<int>? pageNumber,
+    Expression<String>? sourceFingerprint,
+    Expression<String>? actionType,
+    Expression<String>? inputText,
+    Expression<String>? contextSnapshot,
+    Expression<String>? customPrompt,
+    Expression<String>? actionMode,
+    Expression<String>? responseText,
+    Expression<String>? responseKind,
+    Expression<String>? language,
+    Expression<String>? modelName,
+    Expression<String>? provider,
+    Expression<String>? promptVersion,
+    Expression<String>? parentGenerationId,
+    Expression<int>? generationNumber,
+    Expression<String>? linkedQuestionSetId,
+    Expression<String>? linkedFlashcardBatchId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (annotationId != null) 'annotation_id': annotationId,
+      if (materialId != null) 'material_id': materialId,
+      if (lessonId != null) 'lesson_id': lessonId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (sourceFingerprint != null) 'source_fingerprint': sourceFingerprint,
+      if (actionType != null) 'action_type': actionType,
+      if (inputText != null) 'input_text': inputText,
+      if (contextSnapshot != null) 'context_snapshot': contextSnapshot,
+      if (customPrompt != null) 'custom_prompt': customPrompt,
+      if (actionMode != null) 'action_mode': actionMode,
+      if (responseText != null) 'response_text': responseText,
+      if (responseKind != null) 'response_kind': responseKind,
+      if (language != null) 'language': language,
+      if (modelName != null) 'model_name': modelName,
+      if (provider != null) 'provider': provider,
+      if (promptVersion != null) 'prompt_version': promptVersion,
+      if (parentGenerationId != null)
+        'parent_generation_id': parentGenerationId,
+      if (generationNumber != null) 'generation_number': generationNumber,
+      if (linkedQuestionSetId != null)
+        'linked_question_set_id': linkedQuestionSetId,
+      if (linkedFlashcardBatchId != null)
+        'linked_flashcard_batch_id': linkedFlashcardBatchId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AnnotationAiGenerationsCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? annotationId,
+    Value<String?>? materialId,
+    Value<String?>? lessonId,
+    Value<int?>? pageNumber,
+    Value<String>? sourceFingerprint,
+    Value<String>? actionType,
+    Value<String>? inputText,
+    Value<String?>? contextSnapshot,
+    Value<String?>? customPrompt,
+    Value<String?>? actionMode,
+    Value<String>? responseText,
+    Value<String>? responseKind,
+    Value<String?>? language,
+    Value<String?>? modelName,
+    Value<String>? provider,
+    Value<String?>? promptVersion,
+    Value<String?>? parentGenerationId,
+    Value<int>? generationNumber,
+    Value<String?>? linkedQuestionSetId,
+    Value<String?>? linkedFlashcardBatchId,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return AnnotationAiGenerationsCompanion(
+      id: id ?? this.id,
+      annotationId: annotationId ?? this.annotationId,
+      materialId: materialId ?? this.materialId,
+      lessonId: lessonId ?? this.lessonId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+      actionType: actionType ?? this.actionType,
+      inputText: inputText ?? this.inputText,
+      contextSnapshot: contextSnapshot ?? this.contextSnapshot,
+      customPrompt: customPrompt ?? this.customPrompt,
+      actionMode: actionMode ?? this.actionMode,
+      responseText: responseText ?? this.responseText,
+      responseKind: responseKind ?? this.responseKind,
+      language: language ?? this.language,
+      modelName: modelName ?? this.modelName,
+      provider: provider ?? this.provider,
+      promptVersion: promptVersion ?? this.promptVersion,
+      parentGenerationId: parentGenerationId ?? this.parentGenerationId,
+      generationNumber: generationNumber ?? this.generationNumber,
+      linkedQuestionSetId: linkedQuestionSetId ?? this.linkedQuestionSetId,
+      linkedFlashcardBatchId:
+          linkedFlashcardBatchId ?? this.linkedFlashcardBatchId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (annotationId.present) {
+      map['annotation_id'] = Variable<String>(annotationId.value);
+    }
+    if (materialId.present) {
+      map['material_id'] = Variable<String>(materialId.value);
+    }
+    if (lessonId.present) {
+      map['lesson_id'] = Variable<String>(lessonId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (sourceFingerprint.present) {
+      map['source_fingerprint'] = Variable<String>(sourceFingerprint.value);
+    }
+    if (actionType.present) {
+      map['action_type'] = Variable<String>(actionType.value);
+    }
+    if (inputText.present) {
+      map['input_text'] = Variable<String>(inputText.value);
+    }
+    if (contextSnapshot.present) {
+      map['context_snapshot'] = Variable<String>(contextSnapshot.value);
+    }
+    if (customPrompt.present) {
+      map['custom_prompt'] = Variable<String>(customPrompt.value);
+    }
+    if (actionMode.present) {
+      map['action_mode'] = Variable<String>(actionMode.value);
+    }
+    if (responseText.present) {
+      map['response_text'] = Variable<String>(responseText.value);
+    }
+    if (responseKind.present) {
+      map['response_kind'] = Variable<String>(responseKind.value);
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (modelName.present) {
+      map['model_name'] = Variable<String>(modelName.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (promptVersion.present) {
+      map['prompt_version'] = Variable<String>(promptVersion.value);
+    }
+    if (parentGenerationId.present) {
+      map['parent_generation_id'] = Variable<String>(parentGenerationId.value);
+    }
+    if (generationNumber.present) {
+      map['generation_number'] = Variable<int>(generationNumber.value);
+    }
+    if (linkedQuestionSetId.present) {
+      map['linked_question_set_id'] = Variable<String>(
+        linkedQuestionSetId.value,
+      );
+    }
+    if (linkedFlashcardBatchId.present) {
+      map['linked_flashcard_batch_id'] = Variable<String>(
+        linkedFlashcardBatchId.value,
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnnotationAiGenerationsCompanion(')
+          ..write('id: $id, ')
+          ..write('annotationId: $annotationId, ')
+          ..write('materialId: $materialId, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('actionType: $actionType, ')
+          ..write('inputText: $inputText, ')
+          ..write('contextSnapshot: $contextSnapshot, ')
+          ..write('customPrompt: $customPrompt, ')
+          ..write('actionMode: $actionMode, ')
+          ..write('responseText: $responseText, ')
+          ..write('responseKind: $responseKind, ')
+          ..write('language: $language, ')
+          ..write('modelName: $modelName, ')
+          ..write('provider: $provider, ')
+          ..write('promptVersion: $promptVersion, ')
+          ..write('parentGenerationId: $parentGenerationId, ')
+          ..write('generationNumber: $generationNumber, ')
+          ..write('linkedQuestionSetId: $linkedQuestionSetId, ')
+          ..write('linkedFlashcardBatchId: $linkedFlashcardBatchId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $QuestionSetsTable extends QuestionSets
     with TableInfo<$QuestionSetsTable, QuestionSet> {
   @override
@@ -12032,6 +13396,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FlashcardsTable flashcards = $FlashcardsTable(this);
   late final $AiChatsTable aiChats = $AiChatsTable(this);
   late final $AiChatMessagesTable aiChatMessages = $AiChatMessagesTable(this);
+  late final $AnnotationAiGenerationsTable annotationAiGenerations =
+      $AnnotationAiGenerationsTable(this);
   late final $QuestionSetsTable questionSets = $QuestionSetsTable(this);
   late final $QuizQuestionsTable quizQuestions = $QuizQuestionsTable(this);
   late final $QuizQuestionOptionsTable quizQuestionOptions =
@@ -12060,6 +13426,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     flashcards,
     aiChats,
     aiChatMessages,
+    annotationAiGenerations,
     questionSets,
     quizQuestions,
     quizQuestionOptions,
@@ -12130,6 +13497,33 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('ai_chat_messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'study_pins',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('annotation_ai_generations', kind: UpdateKind.update),
+      ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lesson_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('annotation_ai_generations', kind: UpdateKind.update),
+      ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lessons',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('annotation_ai_generations', kind: UpdateKind.update),
+      ],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -14556,6 +15950,31 @@ final class $$LessonsTableReferences
     );
   }
 
+  static MultiTypedResultKey<
+    $AnnotationAiGenerationsTable,
+    List<AnnotationAiGeneration>
+  >
+  _annotationAiGenerationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.annotationAiGenerations,
+        aliasName: 'lessons__id__annotation_ai_generations__lesson_id',
+      );
+
+  $$AnnotationAiGenerationsTableProcessedTableManager
+  get annotationAiGenerationsRefs {
+    final manager = $$AnnotationAiGenerationsTableTableManager(
+      $_db,
+      $_db.annotationAiGenerations,
+    ).filter((f) => f.lessonId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _annotationAiGenerationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$QuestionSetsTable, List<QuestionSet>>
   _questionSetsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.questionSets,
@@ -14747,6 +16166,32 @@ class $$LessonsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> annotationAiGenerationsRefs(
+    Expression<bool> Function($$AnnotationAiGenerationsTableFilterComposer f) f,
+  ) {
+    final $$AnnotationAiGenerationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.lessonId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableFilterComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -15042,6 +16487,33 @@ class $$LessonsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> annotationAiGenerationsRefs<T extends Object>(
+    Expression<T> Function($$AnnotationAiGenerationsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$AnnotationAiGenerationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.lessonId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> questionSetsRefs<T extends Object>(
     Expression<T> Function($$QuestionSetsTableAnnotationComposer a) f,
   ) {
@@ -15087,6 +16559,7 @@ class $$LessonsTableTableManager
             bool lessonMaterialsRefs,
             bool studyNotesRefs,
             bool flashcardsRefs,
+            bool annotationAiGenerationsRefs,
             bool questionSetsRefs,
           })
         > {
@@ -15172,6 +16645,7 @@ class $$LessonsTableTableManager
                 lessonMaterialsRefs = false,
                 studyNotesRefs = false,
                 flashcardsRefs = false,
+                annotationAiGenerationsRefs = false,
                 questionSetsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -15180,6 +16654,7 @@ class $$LessonsTableTableManager
                     if (lessonMaterialsRefs) db.lessonMaterials,
                     if (studyNotesRefs) db.studyNotes,
                     if (flashcardsRefs) db.flashcards,
+                    if (annotationAiGenerationsRefs) db.annotationAiGenerations,
                     if (questionSetsRefs) db.questionSets,
                   ],
                   addJoins:
@@ -15292,6 +16767,27 @@ class $$LessonsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (annotationAiGenerationsRefs)
+                        await $_getPrefetchedData<
+                          Lesson,
+                          $LessonsTable,
+                          AnnotationAiGeneration
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonsTableReferences
+                              ._annotationAiGenerationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).annotationAiGenerationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.lessonId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (questionSetsRefs)
                         await $_getPrefetchedData<
                           Lesson,
@@ -15339,6 +16835,7 @@ typedef $$LessonsTableProcessedTableManager =
         bool lessonMaterialsRefs,
         bool studyNotesRefs,
         bool flashcardsRefs,
+        bool annotationAiGenerationsRefs,
         bool questionSetsRefs,
       })
     >;
@@ -15428,6 +16925,32 @@ final class $$LessonMaterialsTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _materialBookmarksRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $AnnotationAiGenerationsTable,
+    List<AnnotationAiGeneration>
+  >
+  _annotationAiGenerationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.annotationAiGenerations,
+        aliasName:
+            'lesson_materials__id__annotation_ai_generations__material_id',
+      );
+
+  $$AnnotationAiGenerationsTableProcessedTableManager
+  get annotationAiGenerationsRefs {
+    final manager = $$AnnotationAiGenerationsTableTableManager(
+      $_db,
+      $_db.annotationAiGenerations,
+    ).filter((f) => f.materialId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _annotationAiGenerationsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -15572,6 +17095,32 @@ class $$LessonMaterialsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> annotationAiGenerationsRefs(
+    Expression<bool> Function($$AnnotationAiGenerationsTableFilterComposer f) f,
+  ) {
+    final $$AnnotationAiGenerationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableFilterComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -15785,6 +17334,33 @@ class $$LessonMaterialsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> annotationAiGenerationsRefs<T extends Object>(
+    Expression<T> Function($$AnnotationAiGenerationsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$AnnotationAiGenerationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> questionSetsRefs<T extends Object>(
     Expression<T> Function($$QuestionSetsTableAnnotationComposer a) f,
   ) {
@@ -15828,6 +17404,7 @@ class $$LessonMaterialsTableTableManager
             bool lessonId,
             bool studyPinsRefs,
             bool materialBookmarksRefs,
+            bool annotationAiGenerationsRefs,
             bool questionSetsRefs,
           })
         > {
@@ -15905,6 +17482,7 @@ class $$LessonMaterialsTableTableManager
                 lessonId = false,
                 studyPinsRefs = false,
                 materialBookmarksRefs = false,
+                annotationAiGenerationsRefs = false,
                 questionSetsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -15912,6 +17490,7 @@ class $$LessonMaterialsTableTableManager
                   explicitlyWatchedTables: [
                     if (studyPinsRefs) db.studyPins,
                     if (materialBookmarksRefs) db.materialBookmarks,
+                    if (annotationAiGenerationsRefs) db.annotationAiGenerations,
                     if (questionSetsRefs) db.questionSets,
                   ],
                   addJoins:
@@ -15992,6 +17571,27 @@ class $$LessonMaterialsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (annotationAiGenerationsRefs)
+                        await $_getPrefetchedData<
+                          LessonMaterial,
+                          $LessonMaterialsTable,
+                          AnnotationAiGeneration
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonMaterialsTableReferences
+                              ._annotationAiGenerationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonMaterialsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).annotationAiGenerationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.materialId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (questionSetsRefs)
                         await $_getPrefetchedData<
                           LessonMaterial,
@@ -16037,6 +17637,7 @@ typedef $$LessonMaterialsTableProcessedTableManager =
         bool lessonId,
         bool studyPinsRefs,
         bool materialBookmarksRefs,
+        bool annotationAiGenerationsRefs,
         bool questionSetsRefs,
       })
     >;
@@ -16553,6 +18154,31 @@ final class $$StudyPinsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $AnnotationAiGenerationsTable,
+    List<AnnotationAiGeneration>
+  >
+  _annotationAiGenerationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.annotationAiGenerations,
+        aliasName: 'study_pins__id__annotation_ai_generations__annotation_id',
+      );
+
+  $$AnnotationAiGenerationsTableProcessedTableManager
+  get annotationAiGenerationsRefs {
+    final manager = $$AnnotationAiGenerationsTableTableManager(
+      $_db,
+      $_db.annotationAiGenerations,
+    ).filter((f) => f.annotationId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _annotationAiGenerationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$StudyPinsTableFilterComposer
@@ -16747,6 +18373,32 @@ class $$StudyPinsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> annotationAiGenerationsRefs(
+    Expression<bool> Function($$AnnotationAiGenerationsTableFilterComposer f) f,
+  ) {
+    final $$AnnotationAiGenerationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.annotationId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableFilterComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 }
@@ -17051,6 +18703,33 @@ class $$StudyPinsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> annotationAiGenerationsRefs<T extends Object>(
+    Expression<T> Function($$AnnotationAiGenerationsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$AnnotationAiGenerationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.annotationAiGenerations,
+          getReferencedColumn: (t) => t.annotationId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AnnotationAiGenerationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.annotationAiGenerations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$StudyPinsTableTableManager
@@ -17072,6 +18751,7 @@ class $$StudyPinsTableTableManager
             bool studyPinTextRangesRefs,
             bool studyReviewEventsRefs,
             bool flashcardsRefs,
+            bool annotationAiGenerationsRefs,
           })
         > {
   $$StudyPinsTableTableManager(_$AppDatabase db, $StudyPinsTable table)
@@ -17172,6 +18852,7 @@ class $$StudyPinsTableTableManager
                 studyPinTextRangesRefs = false,
                 studyReviewEventsRefs = false,
                 flashcardsRefs = false,
+                annotationAiGenerationsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -17179,6 +18860,7 @@ class $$StudyPinsTableTableManager
                     if (studyPinTextRangesRefs) db.studyPinTextRanges,
                     if (studyReviewEventsRefs) db.studyReviewEvents,
                     if (flashcardsRefs) db.flashcards,
+                    if (annotationAiGenerationsRefs) db.annotationAiGenerations,
                   ],
                   addJoins:
                       <
@@ -17290,6 +18972,27 @@ class $$StudyPinsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (annotationAiGenerationsRefs)
+                        await $_getPrefetchedData<
+                          StudyPin,
+                          $StudyPinsTable,
+                          AnnotationAiGeneration
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StudyPinsTableReferences
+                              ._annotationAiGenerationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StudyPinsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).annotationAiGenerationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.annotationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -17316,6 +19019,7 @@ typedef $$StudyPinsTableProcessedTableManager =
         bool studyPinTextRangesRefs,
         bool studyReviewEventsRefs,
         bool flashcardsRefs,
+        bool annotationAiGenerationsRefs,
       })
     >;
 typedef $$StudyPinTextRangesTableCreateCompanionBuilder =
@@ -20958,6 +22662,903 @@ typedef $$AiChatMessagesTableProcessedTableManager =
       AiChatMessage,
       PrefetchHooks Function({bool chatId})
     >;
+typedef $$AnnotationAiGenerationsTableCreateCompanionBuilder =
+    AnnotationAiGenerationsCompanion Function({
+      required String id,
+      Value<String?> annotationId,
+      Value<String?> materialId,
+      Value<String?> lessonId,
+      Value<int?> pageNumber,
+      required String sourceFingerprint,
+      required String actionType,
+      required String inputText,
+      Value<String?> contextSnapshot,
+      Value<String?> customPrompt,
+      Value<String?> actionMode,
+      required String responseText,
+      Value<String> responseKind,
+      Value<String?> language,
+      Value<String?> modelName,
+      Value<String> provider,
+      Value<String?> promptVersion,
+      Value<String?> parentGenerationId,
+      required int generationNumber,
+      Value<String?> linkedQuestionSetId,
+      Value<String?> linkedFlashcardBatchId,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$AnnotationAiGenerationsTableUpdateCompanionBuilder =
+    AnnotationAiGenerationsCompanion Function({
+      Value<String> id,
+      Value<String?> annotationId,
+      Value<String?> materialId,
+      Value<String?> lessonId,
+      Value<int?> pageNumber,
+      Value<String> sourceFingerprint,
+      Value<String> actionType,
+      Value<String> inputText,
+      Value<String?> contextSnapshot,
+      Value<String?> customPrompt,
+      Value<String?> actionMode,
+      Value<String> responseText,
+      Value<String> responseKind,
+      Value<String?> language,
+      Value<String?> modelName,
+      Value<String> provider,
+      Value<String?> promptVersion,
+      Value<String?> parentGenerationId,
+      Value<int> generationNumber,
+      Value<String?> linkedQuestionSetId,
+      Value<String?> linkedFlashcardBatchId,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$AnnotationAiGenerationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $AnnotationAiGenerationsTable,
+          AnnotationAiGeneration
+        > {
+  $$AnnotationAiGenerationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StudyPinsTable _annotationIdTable(_$AppDatabase db) => db.studyPins
+      .createAlias('annotation_ai_generations__annotation_id__study_pins__id');
+
+  $$StudyPinsTableProcessedTableManager? get annotationId {
+    final $_column = $_itemColumn<String>('annotation_id');
+    if ($_column == null) return null;
+    final manager = $$StudyPinsTableTableManager(
+      $_db,
+      $_db.studyPins,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_annotationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonMaterialsTable _materialIdTable(_$AppDatabase db) =>
+      db.lessonMaterials.createAlias(
+        'annotation_ai_generations__material_id__lesson_materials__id',
+      );
+
+  $$LessonMaterialsTableProcessedTableManager? get materialId {
+    final $_column = $_itemColumn<String>('material_id');
+    if ($_column == null) return null;
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_materialIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonsTable _lessonIdTable(_$AppDatabase db) => db.lessons
+      .createAlias('annotation_ai_generations__lesson_id__lessons__id');
+
+  $$LessonsTableProcessedTableManager? get lessonId {
+    final $_column = $_itemColumn<String>('lesson_id');
+    if ($_column == null) return null;
+    final manager = $$LessonsTableTableManager(
+      $_db,
+      $_db.lessons,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_lessonIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AnnotationAiGenerationsTableFilterComposer
+    extends Composer<_$AppDatabase, $AnnotationAiGenerationsTable> {
+  $$AnnotationAiGenerationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actionType => $composableBuilder(
+    column: $table.actionType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get inputText => $composableBuilder(
+    column: $table.inputText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contextSnapshot => $composableBuilder(
+    column: $table.contextSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customPrompt => $composableBuilder(
+    column: $table.customPrompt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actionMode => $composableBuilder(
+    column: $table.actionMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get responseText => $composableBuilder(
+    column: $table.responseText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get responseKind => $composableBuilder(
+    column: $table.responseKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get modelName => $composableBuilder(
+    column: $table.modelName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get promptVersion => $composableBuilder(
+    column: $table.promptVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parentGenerationId => $composableBuilder(
+    column: $table.parentGenerationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get generationNumber => $composableBuilder(
+    column: $table.generationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkedQuestionSetId => $composableBuilder(
+    column: $table.linkedQuestionSetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkedFlashcardBatchId => $composableBuilder(
+    column: $table.linkedFlashcardBatchId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StudyPinsTableFilterComposer get annotationId {
+    final $$StudyPinsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.annotationId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableFilterComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableFilterComposer get materialId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableFilterComposer get lessonId {
+    final $$LessonsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AnnotationAiGenerationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AnnotationAiGenerationsTable> {
+  $$AnnotationAiGenerationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actionType => $composableBuilder(
+    column: $table.actionType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get inputText => $composableBuilder(
+    column: $table.inputText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contextSnapshot => $composableBuilder(
+    column: $table.contextSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customPrompt => $composableBuilder(
+    column: $table.customPrompt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actionMode => $composableBuilder(
+    column: $table.actionMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get responseText => $composableBuilder(
+    column: $table.responseText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get responseKind => $composableBuilder(
+    column: $table.responseKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get modelName => $composableBuilder(
+    column: $table.modelName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get promptVersion => $composableBuilder(
+    column: $table.promptVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parentGenerationId => $composableBuilder(
+    column: $table.parentGenerationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get generationNumber => $composableBuilder(
+    column: $table.generationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkedQuestionSetId => $composableBuilder(
+    column: $table.linkedQuestionSetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkedFlashcardBatchId => $composableBuilder(
+    column: $table.linkedFlashcardBatchId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StudyPinsTableOrderingComposer get annotationId {
+    final $$StudyPinsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.annotationId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableOrderingComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableOrderingComposer get materialId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableOrderingComposer get lessonId {
+    final $$LessonsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AnnotationAiGenerationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AnnotationAiGenerationsTable> {
+  $$AnnotationAiGenerationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get actionType => $composableBuilder(
+    column: $table.actionType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get inputText =>
+      $composableBuilder(column: $table.inputText, builder: (column) => column);
+
+  GeneratedColumn<String> get contextSnapshot => $composableBuilder(
+    column: $table.contextSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get customPrompt => $composableBuilder(
+    column: $table.customPrompt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get actionMode => $composableBuilder(
+    column: $table.actionMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get responseText => $composableBuilder(
+    column: $table.responseText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get responseKind => $composableBuilder(
+    column: $table.responseKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get modelName =>
+      $composableBuilder(column: $table.modelName, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get promptVersion => $composableBuilder(
+    column: $table.promptVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get parentGenerationId => $composableBuilder(
+    column: $table.parentGenerationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get generationNumber => $composableBuilder(
+    column: $table.generationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkedQuestionSetId => $composableBuilder(
+    column: $table.linkedQuestionSetId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkedFlashcardBatchId => $composableBuilder(
+    column: $table.linkedFlashcardBatchId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$StudyPinsTableAnnotationComposer get annotationId {
+    final $$StudyPinsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.annotationId,
+      referencedTable: $db.studyPins,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StudyPinsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.studyPins,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableAnnotationComposer get materialId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableAnnotationComposer get lessonId {
+    final $$LessonsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AnnotationAiGenerationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AnnotationAiGenerationsTable,
+          AnnotationAiGeneration,
+          $$AnnotationAiGenerationsTableFilterComposer,
+          $$AnnotationAiGenerationsTableOrderingComposer,
+          $$AnnotationAiGenerationsTableAnnotationComposer,
+          $$AnnotationAiGenerationsTableCreateCompanionBuilder,
+          $$AnnotationAiGenerationsTableUpdateCompanionBuilder,
+          (AnnotationAiGeneration, $$AnnotationAiGenerationsTableReferences),
+          AnnotationAiGeneration,
+          PrefetchHooks Function({
+            bool annotationId,
+            bool materialId,
+            bool lessonId,
+          })
+        > {
+  $$AnnotationAiGenerationsTableTableManager(
+    _$AppDatabase db,
+    $AnnotationAiGenerationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AnnotationAiGenerationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$AnnotationAiGenerationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AnnotationAiGenerationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> annotationId = const Value.absent(),
+                Value<String?> materialId = const Value.absent(),
+                Value<String?> lessonId = const Value.absent(),
+                Value<int?> pageNumber = const Value.absent(),
+                Value<String> sourceFingerprint = const Value.absent(),
+                Value<String> actionType = const Value.absent(),
+                Value<String> inputText = const Value.absent(),
+                Value<String?> contextSnapshot = const Value.absent(),
+                Value<String?> customPrompt = const Value.absent(),
+                Value<String?> actionMode = const Value.absent(),
+                Value<String> responseText = const Value.absent(),
+                Value<String> responseKind = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                Value<String?> modelName = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String?> promptVersion = const Value.absent(),
+                Value<String?> parentGenerationId = const Value.absent(),
+                Value<int> generationNumber = const Value.absent(),
+                Value<String?> linkedQuestionSetId = const Value.absent(),
+                Value<String?> linkedFlashcardBatchId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AnnotationAiGenerationsCompanion(
+                id: id,
+                annotationId: annotationId,
+                materialId: materialId,
+                lessonId: lessonId,
+                pageNumber: pageNumber,
+                sourceFingerprint: sourceFingerprint,
+                actionType: actionType,
+                inputText: inputText,
+                contextSnapshot: contextSnapshot,
+                customPrompt: customPrompt,
+                actionMode: actionMode,
+                responseText: responseText,
+                responseKind: responseKind,
+                language: language,
+                modelName: modelName,
+                provider: provider,
+                promptVersion: promptVersion,
+                parentGenerationId: parentGenerationId,
+                generationNumber: generationNumber,
+                linkedQuestionSetId: linkedQuestionSetId,
+                linkedFlashcardBatchId: linkedFlashcardBatchId,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> annotationId = const Value.absent(),
+                Value<String?> materialId = const Value.absent(),
+                Value<String?> lessonId = const Value.absent(),
+                Value<int?> pageNumber = const Value.absent(),
+                required String sourceFingerprint,
+                required String actionType,
+                required String inputText,
+                Value<String?> contextSnapshot = const Value.absent(),
+                Value<String?> customPrompt = const Value.absent(),
+                Value<String?> actionMode = const Value.absent(),
+                required String responseText,
+                Value<String> responseKind = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                Value<String?> modelName = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String?> promptVersion = const Value.absent(),
+                Value<String?> parentGenerationId = const Value.absent(),
+                required int generationNumber,
+                Value<String?> linkedQuestionSetId = const Value.absent(),
+                Value<String?> linkedFlashcardBatchId = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AnnotationAiGenerationsCompanion.insert(
+                id: id,
+                annotationId: annotationId,
+                materialId: materialId,
+                lessonId: lessonId,
+                pageNumber: pageNumber,
+                sourceFingerprint: sourceFingerprint,
+                actionType: actionType,
+                inputText: inputText,
+                contextSnapshot: contextSnapshot,
+                customPrompt: customPrompt,
+                actionMode: actionMode,
+                responseText: responseText,
+                responseKind: responseKind,
+                language: language,
+                modelName: modelName,
+                provider: provider,
+                promptVersion: promptVersion,
+                parentGenerationId: parentGenerationId,
+                generationNumber: generationNumber,
+                linkedQuestionSetId: linkedQuestionSetId,
+                linkedFlashcardBatchId: linkedFlashcardBatchId,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $AnnotationAiGenerationsTable,
+                    AnnotationAiGeneration
+                  >(table),
+                  $$AnnotationAiGenerationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({annotationId = false, materialId = false, lessonId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (annotationId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.annotationId,
+                                    referencedTable:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._annotationIdTable(db),
+                                    referencedColumn:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._annotationIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (materialId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.materialId,
+                                    referencedTable:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._materialIdTable(db),
+                                    referencedColumn:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._materialIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (lessonId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.lessonId,
+                                    referencedTable:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._lessonIdTable(db),
+                                    referencedColumn:
+                                        $$AnnotationAiGenerationsTableReferences
+                                            ._lessonIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AnnotationAiGenerationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AnnotationAiGenerationsTable,
+      AnnotationAiGeneration,
+      $$AnnotationAiGenerationsTableFilterComposer,
+      $$AnnotationAiGenerationsTableOrderingComposer,
+      $$AnnotationAiGenerationsTableAnnotationComposer,
+      $$AnnotationAiGenerationsTableCreateCompanionBuilder,
+      $$AnnotationAiGenerationsTableUpdateCompanionBuilder,
+      (AnnotationAiGeneration, $$AnnotationAiGenerationsTableReferences),
+      AnnotationAiGeneration,
+      PrefetchHooks Function({
+        bool annotationId,
+        bool materialId,
+        bool lessonId,
+      })
+    >;
 typedef $$QuestionSetsTableCreateCompanionBuilder =
     QuestionSetsCompanion Function({
       required String id,
@@ -23769,6 +26370,11 @@ class $AppDatabaseManager {
       $$AiChatsTableTableManager(_db, _db.aiChats);
   $$AiChatMessagesTableTableManager get aiChatMessages =>
       $$AiChatMessagesTableTableManager(_db, _db.aiChatMessages);
+  $$AnnotationAiGenerationsTableTableManager get annotationAiGenerations =>
+      $$AnnotationAiGenerationsTableTableManager(
+        _db,
+        _db.annotationAiGenerations,
+      );
   $$QuestionSetsTableTableManager get questionSets =>
       $$QuestionSetsTableTableManager(_db, _db.questionSets);
   $$QuizQuestionsTableTableManager get quizQuestions =>

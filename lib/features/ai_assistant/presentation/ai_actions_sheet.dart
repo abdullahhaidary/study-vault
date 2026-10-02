@@ -5,9 +5,11 @@ import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
+import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
+import '../domain/annotation_ai_history.dart';
 import 'ai_annotation_preview.dart';
 import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
@@ -36,7 +38,20 @@ Future<void> showAiActionsSheet(
   final primary = (annotationContext?.primaryText ?? sourceText).trim();
   final selected = selectedText ?? annotationContext?.selectedText;
 
-  final chosen = await _pickAction(context, actionContext);
+  final fingerprint = annotationContext != null
+      ? AnnotationAiSourceFingerprint.fromContext(annotationContext)
+      : AnnotationAiSourceFingerprint.from(
+          materialId: null,
+          pageNumber: null,
+          inputText: primary,
+        );
+
+  final counts = await ref
+      .read(annotationAiHistoryServiceProvider)
+      .getGenerationCounts(sourceFingerprint: fingerprint);
+
+  if (!context.mounted) return;
+  final chosen = await _pickAction(context, actionContext, counts: counts);
   if (chosen == null || !context.mounted) return;
 
   if (chosen == AiStudyAction.generateQuestions) {
@@ -64,6 +79,33 @@ Future<void> showAiActionsSheet(
   AiLanguage? translateTarget;
   String? customPrompt;
   var flashcardCount = _defaultFlashcardCount(primary);
+
+  final existingCount = counts[chosen] ?? 0;
+  final useAnnotationResponseUi =
+      actionContext == AiActionContext.pdfSelection ||
+      actionContext == AiActionContext.pinReader;
+
+  // Open existing history first when present (text actions).
+  // Modes for regenerate come from the selected generation's stored metadata.
+  if (useAnnotationResponseUi &&
+      chosen.producesTextResult &&
+      existingCount > 0 &&
+      annotationContext != null) {
+    final request = annotationContext.toStudyRequest(action: chosen);
+    if (!context.mounted) return;
+    await showAiResponseScreen(
+      context,
+      ref,
+      action: chosen,
+      request: request,
+      annotationContext: annotationContext,
+      questionsLaunch: questionsLaunch,
+      onFlashcardsCreate: onFlashcardsCreate,
+      onCreateNote: onCreateNote,
+      onGoToSource: onGoToSource,
+    );
+    return;
+  }
 
   if (chosen == AiStudyAction.rephrase) {
     rephraseMode = await _pickEnum(
@@ -184,10 +226,6 @@ Future<void> showAiActionsSheet(
   if (result == null || !context.mounted) return;
 
   if (result is AiTextResult) {
-    final useAnnotationResponseUi =
-        actionContext == AiActionContext.pdfSelection ||
-        actionContext == AiActionContext.pinReader;
-
     if (useAnnotationResponseUi) {
       await showAiResponseScreen(
         context,
@@ -219,6 +257,20 @@ Future<void> showAiActionsSheet(
       }
     }
   } else if (result is AiAnnotationDraft) {
+    if (annotationContext != null) {
+      await ref
+          .read(annotationAiHistoryServiceProvider)
+          .persistCompleted(
+            context: annotationContext,
+            action: chosen,
+            responseText:
+                '## ${result.shortDescription}\n\n${result.fullNoteMarkdown}',
+            responseKind: 'annotation',
+            modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+          );
+      ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
+    }
+    if (!context.mounted) return;
     await showAiAnnotationPreview(
       context,
       ref,
@@ -227,6 +279,21 @@ Future<void> showAiActionsSheet(
       onSave: onAnnotationSave,
     );
   } else if (result is AiFlashcardsResult) {
+    if (annotationContext != null) {
+      await ref
+          .read(annotationAiHistoryServiceProvider)
+          .persistCompleted(
+            context: annotationContext,
+            action: AiStudyAction.generateFlashcards,
+            responseText: result.cards
+                .map((c) => 'Q: ${c.front}\nA: ${c.back}')
+                .join('\n\n---\n\n'),
+            responseKind: 'flashcards',
+            modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+          );
+      ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
+    }
+    if (!context.mounted) return;
     await showAiFlashcardsPreview(
       context,
       cards: result.cards,
@@ -237,8 +304,9 @@ Future<void> showAiActionsSheet(
 
 Future<AiStudyAction?> _pickAction(
   BuildContext context,
-  AiActionContext actionContext,
-) async {
+  AiActionContext actionContext, {
+  Map<AiStudyAction, int> counts = const {},
+}) async {
   final primary = switch (actionContext) {
     AiActionContext.pdfSelection => const [
       AiStudyAction.explain,
@@ -306,11 +374,7 @@ Future<AiStudyAction?> _pickAction(
             ),
           ),
           for (final action in primary)
-            ListTile(
-              leading: const Icon(Icons.auto_awesome),
-              title: Text(action.menuLabel),
-              onTap: () => Navigator.pop(context, action),
-            ),
+            _ActionTile(action: action, count: counts[action] ?? 0),
           if (more.isNotEmpty)
             ListTile(
               leading: const Icon(Icons.more_horiz),
@@ -339,15 +403,54 @@ Future<AiStudyAction?> _pickAction(
             ),
           ),
           for (final action in more)
-            ListTile(
-              leading: const Icon(Icons.auto_awesome_outlined),
-              title: Text(action.menuLabel),
-              onTap: () => Navigator.pop(context, action),
+            _ActionTile(
+              action: action,
+              count: counts[action] ?? 0,
+              outlined: true,
             ),
         ],
       ),
     ),
   );
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.action,
+    required this.count,
+    this.outlined = false,
+  });
+
+  final AiStudyAction action;
+  final int count;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(
+        outlined ? Icons.auto_awesome_outlined : Icons.auto_awesome,
+      ),
+      title: Text(action.menuLabel),
+      trailing: count > 0
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$count',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            )
+          : null,
+      onTap: () => Navigator.pop(context, action),
+    );
+  }
 }
 
 Future<String?> _promptDialog(

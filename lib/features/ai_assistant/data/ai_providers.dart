@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_provider.dart';
 import '../data/ai_credential_store.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
+import '../domain/annotation_ai_history.dart';
 import '../services/ai_service.dart';
+import '../services/annotation_ai_history_service.dart';
 import '../services/annotation_ai_service.dart';
 import '../services/gemini_ai_service.dart';
 
@@ -26,6 +29,42 @@ final aiServiceProvider = Provider<AiService>((ref) {
 final annotationAiServiceProvider = Provider<AnnotationAiService>((ref) {
   return AnnotationAiService(aiService: ref.watch(aiServiceProvider));
 });
+
+/// Persistent generation history for annotation AI actions.
+final annotationAiHistoryServiceProvider = Provider<AnnotationAiHistoryService>(
+  (ref) {
+    return AnnotationAiHistoryService(
+      db: ref.watch(databaseProvider),
+      aiService: ref.watch(annotationAiServiceProvider),
+    );
+  },
+);
+
+/// Lightweight badge counts for a source fingerprint (no response bodies).
+final annotationAiGenerationCountsProvider =
+    FutureProvider.family<Map<AiStudyAction, int>, String>((
+      ref,
+      fingerprint,
+    ) async {
+      return ref
+          .watch(annotationAiHistoryServiceProvider)
+          .getGenerationCounts(sourceFingerprint: fingerprint);
+    });
+
+/// Helper to build a fingerprint from common UI fields.
+String annotationAiFingerprint({
+  String? annotationId,
+  String? materialId,
+  int? pageNumber,
+  required String inputText,
+}) {
+  return AnnotationAiSourceFingerprint.from(
+    annotationId: annotationId,
+    materialId: materialId,
+    pageNumber: pageNumber,
+    inputText: inputText,
+  );
+}
 
 /// UI-safe configured flag — never exposes the key.
 final aiConfiguredProvider = FutureProvider<bool>((ref) async {

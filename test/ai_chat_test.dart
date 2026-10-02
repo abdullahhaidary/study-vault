@@ -91,7 +91,7 @@ void main() {
     });
 
     test('schema version is 10', () {
-      expect(db.schemaVersion, 10);
+      expect(db.schemaVersion, 11);
     });
 
     test('create chat, send message, persist history and continue', () async {

@@ -360,6 +360,69 @@ class AiChatMessages extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Versioned AI generations for annotation / PDF-selection study actions.
+///
+/// Each regenerate creates a new row; completed [responseText] is immutable.
+class AnnotationAiGenerations extends Table {
+  TextColumn get id => text()();
+
+  /// Source annotation when acting on an existing pin (SET NULL on pin delete).
+  TextColumn get annotationId => text().nullable().references(
+    StudyPins,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+  TextColumn get materialId => text().nullable().references(
+    LessonMaterials,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+  TextColumn get lessonId =>
+      text().nullable().references(Lessons, #id, onDelete: KeyAction.setNull)();
+  IntColumn get pageNumber => integer().nullable()();
+
+  /// Stable grouping key for selection/annotation + material scope.
+  TextColumn get sourceFingerprint => text()();
+
+  /// [AiStudyAction.name] value (explain, summarize, …).
+  TextColumn get actionType => text()();
+
+  /// Snapshot of the text sent to the model (selection / annotation body).
+  TextColumn get inputText => text()();
+
+  /// Limited surrounding context snapshot (not the full PDF).
+  TextColumn get contextSnapshot => text().nullable()();
+
+  /// Mode / custom prompt / regenerate instruction snapshot.
+  TextColumn get customPrompt => text().nullable()();
+
+  /// Optional mode name (summarize/rephrase/organize/translate target).
+  TextColumn get actionMode => text().nullable()();
+
+  /// Completed AI output (immutable after insert).
+  TextColumn get responseText => text()();
+
+  /// `text` | `flashcards` | `questions` | `annotation`
+  TextColumn get responseKind => text().withDefault(const Constant('text'))();
+
+  TextColumn get language => text().nullable()();
+  TextColumn get modelName => text().nullable()();
+  TextColumn get provider => text().withDefault(const Constant('gemini'))();
+  TextColumn get promptVersion => text().nullable()();
+
+  TextColumn get parentGenerationId => text().nullable()();
+  IntColumn get generationNumber => integer()();
+
+  TextColumn get linkedQuestionSetId => text().nullable()();
+  TextColumn get linkedFlashcardBatchId => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// AI-generated quiz sets (first-class study objects).
 class QuestionSets extends Table {
   TextColumn get id => text()();
@@ -486,6 +549,7 @@ class QuizAnswers extends Table {
     Flashcards,
     AiChats,
     AiChatMessages,
+    AnnotationAiGenerations,
     QuestionSets,
     QuizQuestions,
     QuizQuestionOptions,
@@ -500,7 +564,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -512,6 +576,7 @@ class AppDatabase extends _$AppDatabase {
       await seedBuiltInCategories();
       await _createAiChatIndexes();
       await _createQuizIndexes();
+      await _createAnnotationAiGenerationIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -573,8 +638,28 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(quizAnswers);
         await _createQuizIndexes();
       }
+      if (from < 11) {
+        await m.createTable(annotationAiGenerations);
+        await _createAnnotationAiGenerationIndexes();
+      }
     },
   );
+
+  Future<void> _createAnnotationAiGenerationIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_gen_fingerprint_action '
+      'ON annotation_ai_generations (source_fingerprint, action_type)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_gen_annotation_action '
+      'ON annotation_ai_generations (annotation_id, action_type)',
+    );
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_gen_scope_number '
+      'ON annotation_ai_generations '
+      '(source_fingerprint, action_type, generation_number)',
+    );
+  }
 
   Future<void> _createQuizIndexes() async {
     await customStatement(
@@ -930,6 +1015,12 @@ class AppDatabase extends _$AppDatabase {
     // explicitly as well as declaring it in the schema.
     await (update(flashcards)..where((t) => t.sourceStudyPinId.equals(id)))
         .write(const FlashcardsCompanion(sourceStudyPinId: Value(null)));
+    // Detach AI generation history from the pin; snapshots remain.
+    await (update(
+      annotationAiGenerations,
+    )..where((t) => t.annotationId.equals(id))).write(
+      const AnnotationAiGenerationsCompanion(annotationId: Value(null)),
+    );
     await (delete(studyPins)..where((t) => t.id.equals(id))).go();
   }
 
@@ -1725,6 +1816,109 @@ class AppDatabase extends _$AppDatabase {
       }
       return (await getQuestionSetById(setEntry.id.value))!;
     });
+  }
+
+  // ── Annotation AI generation history ─────────────────────
+
+  Future<List<AnnotationAiGeneration>> listAiGenerations({
+    required String sourceFingerprint,
+    required String actionType,
+  }) {
+    return (select(annotationAiGenerations)
+          ..where(
+            (t) =>
+                t.sourceFingerprint.equals(sourceFingerprint) &
+                t.actionType.equals(actionType),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.generationNumber)]))
+        .get();
+  }
+
+  Future<List<AnnotationAiGeneration>> listAiGenerationsForAnnotation(
+    String annotationId,
+  ) {
+    return (select(annotationAiGenerations)
+          ..where((t) => t.annotationId.equals(annotationId))
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.actionType),
+            (t) => OrderingTerm.asc(t.generationNumber),
+          ]))
+        .get();
+  }
+
+  Future<AnnotationAiGeneration?> getAiGenerationById(String id) {
+    return (select(
+      annotationAiGenerations,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  /// Counts per action for a source fingerprint (no response bodies).
+  Future<Map<String, int>> countAiGenerationsByAction(
+    String sourceFingerprint,
+  ) async {
+    final rows = await customSelect(
+      'SELECT action_type AS action_type, COUNT(*) AS c '
+      'FROM annotation_ai_generations '
+      'WHERE source_fingerprint = ? '
+      'GROUP BY action_type',
+      variables: [Variable.withString(sourceFingerprint)],
+      readsFrom: {annotationAiGenerations},
+    ).get();
+    return {
+      for (final row in rows)
+        row.read<String>('action_type'): row.read<int>('c'),
+    };
+  }
+
+  Future<int> nextAiGenerationNumber({
+    required String sourceFingerprint,
+    required String actionType,
+  }) async {
+    final row = await customSelect(
+      'SELECT COALESCE(MAX(generation_number), 0) AS m '
+      'FROM annotation_ai_generations '
+      'WHERE source_fingerprint = ? AND action_type = ?',
+      variables: [
+        Variable.withString(sourceFingerprint),
+        Variable.withString(actionType),
+      ],
+      readsFrom: {annotationAiGenerations},
+    ).getSingle();
+    return row.read<int>('m') + 1;
+  }
+
+  /// Inserts a generation with a monotonic [generationNumber] in a transaction.
+  Future<AnnotationAiGeneration> insertAiGeneration({
+    required String sourceFingerprint,
+    required String actionType,
+    required AnnotationAiGenerationsCompanion Function(int generationNumber)
+    builder,
+  }) {
+    return transaction(() async {
+      final next = await nextAiGenerationNumber(
+        sourceFingerprint: sourceFingerprint,
+        actionType: actionType,
+      );
+      final entry = builder(next);
+      await into(annotationAiGenerations).insert(entry);
+      return (await getAiGenerationById(entry.id.value))!;
+    });
+  }
+
+  Future<void> deleteAiGeneration(String id) async {
+    await (delete(annotationAiGenerations)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<int> deleteAiGenerationsForAction({
+    required String sourceFingerprint,
+    required String actionType,
+  }) {
+    return (delete(annotationAiGenerations)..where(
+          (t) =>
+              t.sourceFingerprint.equals(sourceFingerprint) &
+              t.actionType.equals(actionType),
+        ))
+        .go();
   }
 }
 
