@@ -134,7 +134,10 @@ class AiTokenUsage {
 
   /// Sums token fields across chunked requests (e.g. quiz generation).
   static AiTokenUsage? merge(Iterable<AiTokenUsage?> parts) {
-    final list = [for (final p in parts) if (p != null && p.hasAnyMetric) p];
+    final list = [
+      for (final p in parts)
+        if (p != null && p.hasAnyMetric) p,
+    ];
     if (list.isEmpty) return null;
     if (list.length == 1) return list.first;
 

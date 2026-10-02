@@ -1,6 +1,8 @@
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../../ai_questions/services/pdf_page_image_extractor.dart';
 import 'ai_service.dart';
@@ -30,6 +32,7 @@ class AnnotationAiService {
   Future<AiStudyResult> run({
     required AnnotationAiContext context,
     required AiStudyAction action,
+    required AiExecutionSelection selection,
     AiRephraseMode? rephraseMode,
     AiOrganizeMode? organizeMode,
     AiSummarizeMode? summarizeMode,
@@ -66,6 +69,7 @@ class AnnotationAiService {
 
     final request = context.toStudyRequest(
       action: action,
+      selection: selection,
       rephraseMode: rephraseMode,
       organizeMode: organizeMode,
       summarizeMode: summarizeMode,
@@ -130,6 +134,7 @@ class AnnotationAiService {
   /// Follow-up turn keeping the original annotation context.
   Future<AiTextResult> followUp({
     required AnnotationAiContext context,
+    required AiExecutionSelection selection,
     required List<AiConversationTurn> conversation,
     required String userMessage,
     Map<String, String> categoryNameToId = const {},
@@ -137,6 +142,7 @@ class AnnotationAiService {
     final result = await run(
       context: context,
       action: AiStudyAction.askAi,
+      selection: selection,
       customPrompt: userMessage,
       conversation: conversation,
       categoryNameToId: categoryNameToId,
@@ -155,6 +161,8 @@ class AnnotationAiService {
   String _cacheKey(AiStudyRequest request) {
     return [
       request.action.name,
+      request.selection.provider.storageValue,
+      request.selection.resolvedModelId,
       request.language.name,
       request.rephraseMode?.name ?? '',
       request.organizeMode?.name ?? '',

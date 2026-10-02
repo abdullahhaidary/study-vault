@@ -8,10 +8,11 @@ import '../data/ai_credential_store.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
-import '../domain/deepseek_model_registry.dart';
 import '../domain/ai_token_usage.dart';
+import '../domain/deepseek_model_registry.dart';
 import '../domain/deepseek_usage.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
@@ -87,8 +88,11 @@ class DeepSeekAiService implements AiService {
     final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
     );
-    final model = await _resolveModel(action: request.action);
-    final thinking = await _resolveThinking(action: request.action);
+    final model = request.selection.resolvedModelId;
+    final thinking = await _resolveThinking(
+      action: request.action,
+      override: request.selection.thinkingMode,
+    );
     final structured = _isStructured(request.action);
     final messages = AiPromptBuilder.deepSeekMessages(enriched);
 
@@ -180,12 +184,12 @@ class DeepSeekAiService implements AiService {
 
   /// Low-level text completion for stable, whole-document workflows.
   ///
-  /// The caller owns message ordering and chunking. This method still applies
-  /// the configured DeepSeek model, consent, credentials, usage parsing, and
-  /// user-selected thinking preference.
+  /// The caller owns message ordering and chunking. Uses [selection] for the
+  /// concrete model and optional thinking override.
   Future<AiTextResult> completeDocumentMessages({
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
+    required AiExecutionSelection selection,
     Duration timeout = const Duration(minutes: 5),
   }) async {
     if (messages.isEmpty) {
@@ -195,11 +199,11 @@ class DeepSeekAiService implements AiService {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final model = await _resolveModel(action: AiStudyAction.customPrompt);
-    final configuredThinking = await settings.getThinkingMode();
-    final thinking = configuredThinking == AiThinkingMode.auto
-        ? AiThinkingMode.high
-        : configuredThinking;
+    final model = selection.resolvedModelId;
+    final thinking = await _resolveThinking(
+      action: AiStudyAction.customPrompt,
+      override: selection.thinkingMode,
+    );
     final completion = await _chatCompletions(
       apiKey: key,
       model: model,
@@ -235,8 +239,9 @@ class DeepSeekAiService implements AiService {
 
   Future<AiThinkingMode> _resolveThinking({
     required AiStudyAction action,
+    AiThinkingMode? override,
   }) async {
-    final pref = await settings.getThinkingMode();
+    final pref = override ?? await settings.getThinkingMode();
     if (pref != AiThinkingMode.auto) return pref;
 
     // Auto: cheap for inline/quick study; higher for structured/hard work.

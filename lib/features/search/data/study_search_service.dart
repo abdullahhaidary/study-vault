@@ -535,7 +535,9 @@ ORDER BY b.updated_at DESC LIMIT 50
     final favoriteMaterialIds = await _db.favoriteIdsOfType(
       FavoriteEntityType.material,
     );
-    final favoriteNoteIds = await _db.favoriteIdsOfType(FavoriteEntityType.note);
+    final favoriteNoteIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.note,
+    );
     final favoritePinIds = await _db.favoriteIdsOfType(
       FavoriteEntityType.studyPin,
     );

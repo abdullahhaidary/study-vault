@@ -9,7 +9,8 @@ import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../data/ai_providers.dart';
-import '../data/ai_settings_store.dart';
+import '../domain/ai_execution_selection.dart';
+import '../domain/ai_provider.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_token_usage.dart';
@@ -18,6 +19,7 @@ import '../domain/annotation_ai_history.dart';
 import '../services/ai_prompt_builder.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_assistant_controller.dart';
+import 'widgets/ai_model_picker.dart';
 import 'ai_flashcards_preview.dart';
 import 'widgets/ai_usage_indicator.dart';
 import 'widgets/voice_input_button.dart';
@@ -165,10 +167,6 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (incoming != null && incoming.isNotEmpty) {
       final already = gens.any((g) => g.responseText.trim() == incoming);
       if (!already) {
-        final meta = await readAiGenerationMeta(
-          ref.read(aiSettingsStoreProvider),
-          action: widget.action,
-        );
         final saved = await history.persistCompleted(
           context: _context,
           action: widget.action,
@@ -178,8 +176,12 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
           summarizeMode: widget.request.summarizeMode,
           translateTarget: widget.request.translateTarget,
           customPrompt: widget.request.customPrompt,
-          modelName: meta.modelId,
-          provider: meta.providerStorage,
+          modelName:
+              widget.initialResult?.usage?.model ??
+              widget.request.selection.resolvedModelId,
+          provider:
+              widget.initialResult?.usage?.provider ??
+              widget.request.selection.providerStorage,
           usage: widget.initialResult!.usage,
         );
         gens = [...gens, saved];
@@ -218,10 +220,24 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     });
 
     final history = ref.read(annotationAiHistoryServiceProvider);
-    final meta = await readAiGenerationMeta(
-      ref.read(aiSettingsStoreProvider),
-      action: widget.action,
-    );
+    final parentGen = parent ?? _selected;
+    var selection =
+        parentGen != null && (parentGen.modelName?.trim().isNotEmpty ?? false)
+        ? AiExecutionSelection.fromStored(
+            provider: AiProviderIdX.fromStorage(parentGen.provider),
+            modelId: parentGen.modelName!,
+            action: widget.action,
+          )
+        : widget.request.selection;
+    if (!mounted) return;
+    selection =
+        await showAiModelSelector(
+          context,
+          selected: selection,
+          action: widget.action,
+          title: 'Regenerate with',
+        ) ??
+        selection;
 
     try {
       if (!mounted) return;
@@ -239,15 +255,14 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
       final saved = await history.regenerate(
         context: _context,
         action: widget.action,
-        parent: parent ?? _selected,
+        selection: selection,
+        parent: parentGen,
         rephraseMode: widget.request.rephraseMode,
         organizeMode: widget.request.organizeMode,
         summarizeMode: widget.request.summarizeMode,
         translateTarget: widget.request.translateTarget,
         customPrompt: widget.request.customPrompt,
         regenerateInstruction: regenerateInstruction,
-        modelName: meta.modelId,
-        provider: meta.providerStorage,
       );
 
       if (!mounted) return;
@@ -404,6 +419,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
       ref,
       request: ctx.toStudyRequest(
         action: AiStudyAction.askAi,
+        selection: widget.request.selection,
         customPrompt: question,
         conversation: conversation,
       ),
@@ -413,18 +429,16 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     setState(() => _busy = false);
     if (result is AiTextResult) {
       final history = ref.read(annotationAiHistoryServiceProvider);
-      final meta = await readAiGenerationMeta(
-        ref.read(aiSettingsStoreProvider),
-        action: AiStudyAction.askAi,
-      );
       final saved = await history.persistCompleted(
         context: ctx,
         action: AiStudyAction.askAi,
         responseText: result.markdown,
         customPrompt: question,
         parentGenerationId: _selected?.id,
-        modelName: meta.modelId,
-        provider: meta.providerStorage,
+        modelName:
+            result.usage?.model ?? widget.request.selection.resolvedModelId,
+        provider:
+            result.usage?.provider ?? widget.request.selection.providerStorage,
         usage: result.usage,
       );
       ref.invalidate(
@@ -476,6 +490,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
       ref,
       request: localCtx.toStudyRequest(
         action: AiStudyAction.generateFlashcards,
+        selection: widget.request.selection,
         flashcardCount: count,
       ),
       annotationContext: ctx,
@@ -483,10 +498,6 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (result is! AiFlashcardsResult || !mounted) return;
 
     final history = ref.read(annotationAiHistoryServiceProvider);
-    final meta = await readAiGenerationMeta(
-      ref.read(aiSettingsStoreProvider),
-      action: AiStudyAction.generateFlashcards,
-    );
     await history.persistCompleted(
       context: localCtx,
       action: AiStudyAction.generateFlashcards,
@@ -495,8 +506,11 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
           .join('\n\n---\n\n'),
       responseKind: 'flashcards',
       parentGenerationId: _selected?.id,
-      modelName: meta.modelId,
-      provider: meta.providerStorage,
+      modelName:
+          result.usage?.model ?? widget.request.selection.resolvedModelId,
+      provider:
+          result.usage?.provider ?? widget.request.selection.providerStorage,
+      usage: result.usage,
     );
     ref.invalidate(
       annotationAiGenerationCountsProvider(

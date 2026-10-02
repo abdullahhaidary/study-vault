@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/backup/backup_providers.dart';
 import 'package:study_vault/core/backup/backup_service.dart';
 import 'package:study_vault/core/database/app_database.dart';
@@ -132,11 +133,13 @@ void main() {
     final v1 = await history.generate(
       context: contextA,
       action: AiStudyAction.summarize,
+      selection: testGeminiSelection(),
       summarizeMode: AiSummarizeMode.oneParagraph,
     );
     final v2 = await history.generate(
       context: contextA,
       action: AiStudyAction.summarize,
+      selection: testGeminiSelection(),
       summarizeMode: AiSummarizeMode.bulletPoints,
     );
 
@@ -162,14 +165,17 @@ void main() {
     final v1 = await history.generate(
       context: contextA,
       action: AiStudyAction.explain,
+      selection: testGeminiSelection(),
     );
     final v2 = await history.generate(
       context: contextA,
       action: AiStudyAction.explain,
+      selection: testGeminiSelection(),
     );
     final v3 = await history.regenerate(
       context: contextA,
       action: AiStudyAction.explain,
+      selection: testGeminiSelection(),
       parent: v1,
       regenerateInstruction: 'Make it shorter',
     );
@@ -188,10 +194,26 @@ void main() {
   });
 
   test('generation counts are per action and annotation', () async {
-    await history.generate(context: contextA, action: AiStudyAction.summarize);
-    await history.generate(context: contextA, action: AiStudyAction.summarize);
-    await history.generate(context: contextA, action: AiStudyAction.explain);
-    await history.generate(context: contextB, action: AiStudyAction.summarize);
+    await history.generate(
+      context: contextA,
+      action: AiStudyAction.summarize,
+      selection: testGeminiSelection(),
+    );
+    await history.generate(
+      context: contextA,
+      selection: testGeminiSelection(),
+      action: AiStudyAction.summarize,
+    );
+    await history.generate(
+      context: contextA,
+      action: AiStudyAction.explain,
+      selection: testGeminiSelection(),
+    );
+    await history.generate(
+      context: contextB,
+      selection: testGeminiSelection(),
+      action: AiStudyAction.summarize,
+    );
 
     final countsA = await history.getGenerationCounts(
       sourceFingerprint: AnnotationAiSourceFingerprint.fromContext(contextA),
@@ -212,14 +234,17 @@ void main() {
       final v1 = await history.generate(
         context: contextA,
         action: AiStudyAction.simplify,
+        selection: testGeminiSelection(),
       );
       final v2 = await history.generate(
         context: contextA,
         action: AiStudyAction.simplify,
+        selection: testGeminiSelection(),
       );
       final v3 = await history.generate(
         context: contextA,
         action: AiStudyAction.simplify,
+        selection: testGeminiSelection(),
       );
 
       await history.deleteGeneration(v3.id);
@@ -233,8 +258,11 @@ void main() {
         throw const AiServerException('Simulated Gemini failure');
       };
       await expectLater(
-        () =>
-            history.generate(context: contextA, action: AiStudyAction.simplify),
+        () => history.generate(
+          context: contextA,
+          action: AiStudyAction.simplify,
+          selection: testGeminiSelection(),
+        ),
         throwsA(isA<AiException>()),
       );
       listed = await history.getGenerations(
@@ -249,6 +277,7 @@ void main() {
     final gen = await history.generate(
       context: contextA,
       action: AiStudyAction.define,
+      selection: testGeminiSelection(),
     );
     expect(gen.annotationId, 'ann-84');
     expect(gen.materialId, 'mat-1');
@@ -259,30 +288,43 @@ void main() {
     expect(gen.responseKind, 'text');
   });
 
-  test('persists DeepSeek provider metadata without overwriting Gemini versions', () async {
-    final v1 = await history.generate(
-      context: contextA,
-      action: AiStudyAction.explain,
-      modelName: 'gemini-3.8-flash',
-      provider: 'gemini',
-    );
-    final v2 = await history.generate(
-      context: contextA,
-      action: AiStudyAction.explain,
-      modelName: 'deepseek-flash',
-      provider: 'deepseek',
-      parentGenerationId: v1.id,
-    );
-    expect(v1.provider, 'gemini');
-    expect(v2.provider, 'deepseek');
-    expect(v2.modelName, 'deepseek-flash');
-    expect(v2.generationNumber, 2);
-    expect(v1.id, isNot(equals(v2.id)));
-  });
+  test(
+    'persists DeepSeek provider metadata without overwriting Gemini versions',
+    () async {
+      final v1 = await history.generate(
+        context: contextA,
+        action: AiStudyAction.explain,
+        selection: testGeminiSelection(),
+        modelName: 'gemini-3.8-flash',
+        provider: 'gemini',
+      );
+      final v2 = await history.generate(
+        context: contextA,
+        action: AiStudyAction.explain,
+        selection: testGeminiSelection(),
+        modelName: 'deepseek-flash',
+        provider: 'deepseek',
+        parentGenerationId: v1.id,
+      );
+      expect(v1.provider, 'gemini');
+      expect(v2.provider, 'deepseek');
+      expect(v2.modelName, 'deepseek-flash');
+      expect(v2.generationNumber, 2);
+      expect(v1.id, isNot(equals(v2.id)));
+    },
+  );
 
   test('delete all for action clears only that action', () async {
-    await history.generate(context: contextA, action: AiStudyAction.summarize);
-    await history.generate(context: contextA, action: AiStudyAction.explain);
+    await history.generate(
+      context: contextA,
+      action: AiStudyAction.summarize,
+      selection: testGeminiSelection(),
+    );
+    await history.generate(
+      context: contextA,
+      selection: testGeminiSelection(),
+      action: AiStudyAction.explain,
+    );
     final fp = AnnotationAiSourceFingerprint.fromContext(contextA);
 
     await history.deleteAllForAction(
@@ -312,6 +354,7 @@ void main() {
       final gen = await history.generate(
         context: contextA,
         action: AiStudyAction.summarize,
+        selection: testGeminiSelection(),
       );
       await db.deleteStudyPin('ann-84');
 

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
@@ -283,6 +285,7 @@ Future<PdfAiMaterial> _generate(PdfAiMaterialService service) {
     title: 'PDF',
     filePath: '/fake.pdf',
     type: PdfAiMaterialType.summary,
+    selection: testDeepSeekSelection(),
   );
 }
 
@@ -355,6 +358,7 @@ class _FakeCompletionClient implements PdfAiCompletionClient {
   Future<PdfAiCompletion> complete({
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
+    required AiExecutionSelection selection,
   }) async {
     this.messages.add(messages);
     final error = failure;

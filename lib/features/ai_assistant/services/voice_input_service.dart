@@ -68,9 +68,7 @@ class VoiceInputService extends ChangeNotifier {
       );
       if (_available) {
         _locales = await _speech.locales();
-        debugPrint(
-          '[VoiceInput] available=true locales=${_locales.length}',
-        );
+        debugPrint('[VoiceInput] available=true locales=${_locales.length}');
       } else {
         debugPrint('[VoiceInput] available=false after initialize');
       }

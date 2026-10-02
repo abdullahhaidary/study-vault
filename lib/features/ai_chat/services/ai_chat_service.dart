@@ -51,10 +51,11 @@ class AiChatService {
   Future<AiChat> createChat({String? modelId}) async {
     final now = DateTime.now();
     final preferred = modelId ?? await settings.getModelId();
+    final provider = AiProviderIdX.fromModelId(preferred);
     final chat = AiChatsCompanion.insert(
       id: _uuid.v4(),
       title: 'New chat',
-      modelId: _normalizeModel(preferred, await settings.getProvider()),
+      modelId: _normalizeModel(preferred, provider),
       createdAt: now,
       updatedAt: now,
       lastMessageAt: Value(now),
@@ -82,8 +83,6 @@ class AiChatService {
     await db.updateAiChat(
       chat.copyWith(modelId: normalized, updatedAt: DateTime.now()),
     );
-    await settings.setProvider(provider);
-    await settings.setModelIdFor(provider, normalized);
   }
 
   String _normalizeModel(String modelId, AiProviderId provider) {

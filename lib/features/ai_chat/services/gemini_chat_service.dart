@@ -10,6 +10,7 @@ import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
+import '../../ai_assistant/services/gemini_retry_policy.dart';
 import '../domain/ai_chat_models.dart';
 
 /// Multi-turn chat networking (provider-agnostic transport).
@@ -172,27 +173,33 @@ class HttpGeminiChatService implements AiChatTransport {
     );
 
     final started = DateTime.now();
-    late http.StreamedResponse response;
-    try {
-      final request = http.Request('POST', uri)
-        ..headers.addAll({
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key,
-        })
-        ..body = jsonEncode(body);
-      response = await _http.send(request).timeout(timeout);
-    } on TimeoutException {
-      throw const AiTimeoutException();
-    } on SocketException {
-      throw const AiOfflineException();
-    } on http.ClientException {
-      throw const AiOfflineException();
-    }
+    final response = await GeminiRetryPolicy.run(
+      settings: settings,
+      operation: () async {
+        late http.StreamedResponse attempt;
+        try {
+          final request = http.Request('POST', uri)
+            ..headers.addAll({
+              'Content-Type': 'application/json',
+              'x-goog-api-key': key,
+            })
+            ..body = jsonEncode(body);
+          attempt = await _http.send(request).timeout(timeout);
+        } on TimeoutException {
+          throw const AiTimeoutException();
+        } on SocketException {
+          throw const AiOfflineException();
+        } on http.ClientException {
+          throw const AiOfflineException();
+        }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final raw = await response.stream.bytesToString();
-      _throwForStatus(status: response.statusCode, body: raw, model: model);
-    }
+        if (attempt.statusCode < 200 || attempt.statusCode >= 300) {
+          final raw = await attempt.stream.bytesToString();
+          _throwForStatus(status: attempt.statusCode, body: raw, model: model);
+        }
+        return attempt;
+      },
+    );
 
     final full = StringBuffer();
     var lineBuffer = '';
@@ -323,6 +330,23 @@ class HttpGeminiChatService implements AiChatTransport {
   }
 
   Future<({String text, AiTokenUsage? usage})> _postGenerate({
+    required String model,
+    required String apiKey,
+    required Map<String, dynamic> body,
+    required Duration timeout,
+  }) {
+    return GeminiRetryPolicy.run(
+      settings: settings,
+      operation: () => _postGenerateOnce(
+        model: model,
+        apiKey: apiKey,
+        body: body,
+        timeout: timeout,
+      ),
+    );
+  }
+
+  Future<({String text, AiTokenUsage? usage})> _postGenerateOnce({
     required String model,
     required String apiKey,
     required Map<String, dynamic> body,

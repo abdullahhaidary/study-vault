@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
-import '../../ai_assistant/domain/deepseek_model_registry.dart';
-import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../search/domain/study_search_result.dart';
+
+export '../../ai_assistant/domain/ai_selectable_model.dart'
+    show AiSelectableModel;
 
 /// Message roles persisted in [AiChatMessages.role].
 abstract final class AiChatRole {
@@ -262,55 +262,6 @@ class AiChatStreamEvent {
   final AiTokenUsage? usage;
 
   bool get hasText => textDelta != null && textDelta!.isNotEmpty;
-}
-
-/// Provider-agnostic model row for chat model pickers.
-class AiSelectableModel {
-  const AiSelectableModel({
-    required this.id,
-    required this.displayName,
-    required this.description,
-    required this.recommended,
-    required this.group,
-    required this.provider,
-  });
-
-  final String id;
-  final String displayName;
-  final String description;
-  final bool recommended;
-
-  /// Legacy intra-provider group (Recommended / Fast / Other).
-  final String group;
-
-  final AiProviderId provider;
-
-  factory AiSelectableModel.fromGemini(GeminiModelDefinition m) {
-    final group = switch (m.tier) {
-      GeminiModelTier.recommended => 'Recommended',
-      GeminiModelTier.fast => 'Fast',
-      _ => m.recommended ? 'Recommended' : 'Other',
-    };
-    return AiSelectableModel(
-      id: m.id,
-      displayName: m.displayName,
-      description: m.description,
-      recommended: m.recommended,
-      group: group,
-      provider: AiProviderId.gemini,
-    );
-  }
-
-  factory AiSelectableModel.fromDeepSeek(DeepSeekModelDefinition m) {
-    return AiSelectableModel(
-      id: m.id,
-      displayName: m.displayName,
-      description: m.description,
-      recommended: m.recommended,
-      group: m.recommended ? 'Recommended' : 'Other',
-      provider: AiProviderId.deepseek,
-    );
-  }
 }
 
 /// Builds a short deterministic title from the first user message.

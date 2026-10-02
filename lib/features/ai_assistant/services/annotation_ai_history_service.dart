@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../domain/ai_actions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_token_usage.dart';
 import '../domain/annotation_ai_context.dart';
@@ -72,6 +73,7 @@ class AnnotationAiHistoryService {
   Future<AnnotationAiGeneration> generate({
     required AnnotationAiContext context,
     required AiStudyAction action,
+    required AiExecutionSelection selection,
     AiRephraseMode? rephraseMode,
     AiOrganizeMode? organizeMode,
     AiSummarizeMode? summarizeMode,
@@ -90,6 +92,7 @@ class AnnotationAiHistoryService {
     final result = await _ai.run(
       context: context,
       action: action,
+      selection: selection,
       rephraseMode: rephraseMode,
       organizeMode: organizeMode,
       summarizeMode: summarizeMode,
@@ -119,8 +122,8 @@ class AnnotationAiHistoryService {
       translateTarget: translateTarget,
       customPrompt: customPrompt,
       parentGenerationId: parentGenerationId,
-      modelName: modelName,
-      provider: provider,
+      modelName: result.usage?.model ?? selection.resolvedModelId,
+      provider: result.usage?.provider ?? selection.providerStorage,
       linkedQuestionSetId: persisted.linkedQuestionSetId,
       usage: result.usage,
     );
@@ -196,6 +199,7 @@ class AnnotationAiHistoryService {
   Future<AnnotationAiGeneration> regenerate({
     required AnnotationAiContext context,
     required AiStudyAction action,
+    required AiExecutionSelection selection,
     AnnotationAiGeneration? parent,
     AiRephraseMode? rephraseMode,
     AiOrganizeMode? organizeMode,
@@ -228,6 +232,7 @@ class AnnotationAiHistoryService {
     return generate(
       context: context,
       action: action,
+      selection: selection,
       rephraseMode: resolvedRephrase,
       organizeMode: resolvedOrganize,
       summarizeMode: resolvedSummarize,

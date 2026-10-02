@@ -12,10 +12,7 @@ import 'package:study_vault/features/ai_chat/presentation/widgets/message_bubble
 void main() {
   group('AiTokenUsage.compactLabel', () {
     test('tokens + cached', () {
-      const usage = AiTokenUsage(
-        totalTokens: 15900,
-        cacheHitTokens: 14000,
-      );
+      const usage = AiTokenUsage(totalTokens: 15900, cacheHitTokens: 14000);
       expect(usage.compactLabel, '15.9K tokens · 14K cached');
     });
 
@@ -94,10 +91,7 @@ void main() {
 
   group('feature surfaces', () {
     testWidgets('AI Chat assistant bubble shows usage', (tester) async {
-      const usage = AiTokenUsage(
-        totalTokens: 15900,
-        cacheHitTokens: 14000,
-      );
+      const usage = AiTokenUsage(totalTokens: 15900, cacheHitTokens: 14000);
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -172,10 +166,7 @@ void main() {
     testWidgets('text preview shows usage under AI version', (tester) async {
       const result = AiTextResult(
         markdown: 'Summary of the selection.',
-        usage: AiTokenUsage(
-          totalTokens: 4200,
-          cacheHitTokens: 3700,
-        ),
+        usage: AiTokenUsage(totalTokens: 4200, cacheHitTokens: 3700),
       );
 
       tester.view.physicalSize = const Size(1200, 800);

@@ -6,9 +6,9 @@ import '../../ai_assistant/data/ai_providers.dart';
 import '../services/pdf_ai_material_service.dart';
 
 final pdfAiCompletionClientProvider = Provider<PdfAiCompletionClient>((ref) {
-  return DeepSeekPdfAiCompletionClient(
-    ref.watch(deepseekAiServiceProvider),
-    ref.watch(aiSettingsStoreProvider),
+  return RoutingPdfAiCompletionClient(
+    gemini: ref.watch(geminiAiServiceProvider),
+    deepSeek: ref.watch(deepseekAiServiceProvider),
   );
 });
 

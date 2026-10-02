@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai_chat/data/ai_chat_providers.dart';
 import '../data/ai_providers.dart';
+import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
@@ -310,6 +311,47 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                         .setModelIdFor(provider, value);
                     await _refresh();
                   },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Gemini automatic retries',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<int>(
+                  initialValue: state.geminiRetryCount,
+                  items: [
+                    for (
+                      var count = 0;
+                      count <= AiSettingsStore.maxGeminiRetryCount;
+                      count++
+                    )
+                      DropdownMenuItem(
+                        value: count,
+                        child: Text(
+                          count == 0
+                              ? 'Off'
+                              : count == 1
+                              ? '1 retry'
+                              : '$count retries',
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await ref
+                        .read(aiSettingsStoreProvider)
+                        .setGeminiRetryCount(value);
+                    await _refresh();
+                  },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Retries Gemini rate-limit and quota responses with a '
+                  'short increasing delay. The initial request is not counted.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 if (provider == AiProviderId.deepseek) ...[
                   const SizedBox(height: 16),

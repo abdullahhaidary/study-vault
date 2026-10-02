@@ -13,7 +13,6 @@ import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
-import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
 import '../../ai_assistant/presentation/widgets/voice_input_button.dart';
@@ -25,14 +24,19 @@ import '../services/ai_chat_service.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import 'ai_chat_history_screen.dart';
 import 'chat_appearance_sheet.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import 'gemini_model_selector.dart';
 import 'widgets/chat_composer.dart';
 import 'widgets/chat_mention_picker.dart';
 import 'widgets/message_bubble.dart';
 
-/// Full-screen Study AI chat for the shell tab.
+/// Study AI chat. It can be shown full-screen or inside the global workspace.
 class AiChatScreen extends ConsumerStatefulWidget {
-  const AiChatScreen({super.key});
+  const AiChatScreen({super.key, this.embedded = false, this.onClose});
+
+  final bool embedded;
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
@@ -43,6 +47,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _composerKey = GlobalKey<ChatComposerState>();
   final _scrollController = ScrollController();
   final Map<String, GlobalKey> _messageKeys = {};
+  final Map<String, double> _chatScrollOffsets = {};
   bool _sending = false;
   String? _streamingText;
   String? _errorBanner;
@@ -52,6 +57,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   bool _mentionPickerOpen = false;
   String? _highlightMessageId;
   Timer? _highlightTimer;
+  String? _pendingScrollRestoreChatId;
 
   @override
   void initState() {
@@ -155,27 +161,30 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Future<void> _returnToApp() async {
     await _persistDraft();
     if (!mounted) return;
+    if (widget.onClose != null) {
+      widget.onClose!();
+      return;
+    }
     ref.read(shellTabProvider.notifier).state = ShellTab.home;
   }
 
+  String? _pendingModelId;
+
   Future<void> _selectModel(String currentId) async {
-    final selected = await showGeminiModelSelector(
+    final selected = await showAiModelSelector(
       context,
-      selectedModelId: currentId,
+      selected: AiExecutionSelection.fromModelId(currentId),
     );
     if (selected == null || !mounted) return;
 
     final chatId = ref.read(activeAiChatIdProvider);
-    final provider = AiProviderIdX.fromModelId(selected);
     if (chatId == null) {
-      await ref.read(aiSettingsStoreProvider).setProvider(provider);
-      await ref.read(aiSettingsStoreProvider).setModelIdFor(provider, selected);
-      ref.invalidate(aiSettingsStateProvider);
-      setState(() {});
+      setState(() => _pendingModelId = selected.requestedModelId);
       return;
     }
-    await ref.read(aiChatServiceProvider).setChatModel(chatId, selected);
-    ref.invalidate(aiSettingsStateProvider);
+    await ref
+        .read(aiChatServiceProvider)
+        .setChatModel(chatId, selected.requestedModelId);
   }
 
   Future<void> _addAttachment(AiContextItem item) async {
@@ -254,9 +263,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     try {
       var chatId = ref.read(activeAiChatIdProvider);
       if (chatId == null) {
-        final chat = await ref.read(aiChatServiceProvider).createChat();
+        final chat = await ref
+            .read(aiChatServiceProvider)
+            .createChat(modelId: _pendingModelId);
         chatId = chat.id;
         ref.read(activeAiChatIdProvider.notifier).state = chatId;
+        _pendingModelId = null;
       }
 
       if (preset == null) {
@@ -377,6 +389,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     });
   }
 
+  void _restoreChatScroll(String chatId) {
+    if (_pendingScrollRestoreChatId != chatId) return;
+    _pendingScrollRestoreChatId = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      final saved = _chatScrollOffsets[chatId];
+      _scrollController.jumpTo(
+        (saved ?? position.maxScrollExtent)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble(),
+      );
+    });
+  }
+
   void _hydrateDraft(AiChat? chat) {
     if (chat == null) {
       _draftHydrated = false;
@@ -414,6 +441,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     final modelId =
         chatAsync?.valueOrNull?.modelId ??
+        _pendingModelId ??
         settingsAsync.valueOrNull?.modelId ??
         GeminiModelRegistry.defaultModelId;
     final modelKnown = AiModels.isKnown(modelId);
@@ -426,7 +454,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     final theme = Theme.of(context);
-    final isActive = ref.watch(shellTabProvider) == ShellTab.aiChat;
+    final isActive =
+        widget.embedded || ref.watch(shellTabProvider) == ShellTab.aiChat;
     final drawerWidth = (MediaQuery.sizeOf(context).width * 0.86).clamp(
       280.0,
       360.0,
@@ -434,6 +463,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     ref.listen<String?>(activeAiChatIdProvider, (previous, next) {
       if (previous == next) return;
+      if (previous != null && _scrollController.hasClients) {
+        _chatScrollOffsets[previous] = _scrollController.offset;
+      }
+      _pendingScrollRestoreChatId = next;
       _draftHydrated = false;
       _composer.clear();
       setState(() {
@@ -467,15 +500,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       });
     }
 
-    return PopScope(
-      // AI Chat lives in the shell IndexedStack, not a pushed route — system
-      // back would otherwise leave the app. Send users Home instead.
-      canPop: !isActive,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop || !isActive) return;
-        await _returnToApp();
-      },
-      child: Scaffold(
+    final scaffold = Scaffold(
       drawerEdgeDragWidth: 72,
       drawer: Drawer(
         width: drawerWidth,
@@ -534,9 +559,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Leave chat',
+            tooltip: widget.embedded ? 'Minimize workspace' : 'Leave chat',
             onPressed: _returnToApp,
-            icon: const Icon(Icons.logout),
+            icon: Icon(widget.embedded ? Icons.minimize : Icons.logout),
           ),
           PopupMenuButton<String>(
             tooltip: 'More options',
@@ -601,6 +626,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         message: 'Could not load messages.',
                       ),
                       data: (messages) {
+                        _restoreChatScroll(chatId);
                         if (messages.isEmpty && _streamingText == null) {
                           return _EmptyChat(onPrompt: _send);
                         }
@@ -728,7 +754,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ],
         ),
       ),
-      ),
+    );
+
+    if (widget.embedded) return scaffold;
+    return PopScope(
+      // Full-screen chat lives in the shell rather than a pushed route.
+      canPop: !isActive,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || !isActive) return;
+        await _returnToApp();
+      },
+      child: scaffold,
     );
   }
 }

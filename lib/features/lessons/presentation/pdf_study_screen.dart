@@ -24,6 +24,8 @@ import '../../flashcards/data/flashcards_providers.dart';
 import '../../notes/data/notes_providers.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
+import '../../study_workspace/data/study_workspace_providers.dart';
+import '../../study_workspace/domain/study_workspace_models.dart';
 import 'widgets/material_outline_panel.dart';
 import 'widgets/pdf_study_dock.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -79,6 +81,16 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     _focusedPinId = widget.focusPinId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       recordMaterialStudyActivity(ref, materialId: widget.resourceId);
+      ref
+          .read(studyWorkspaceProvider.notifier)
+          .attachSource(
+            PdfWorkspaceSource(
+              materialId: widget.resourceId,
+              title: widget.title,
+              filePath: widget.filePath,
+              currentPage: widget.initialPage,
+            ),
+          );
     });
   }
 
@@ -820,6 +832,11 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                         },
                         onPageChanged: (pageNumber) {
                           setState(() => _currentPage = pageNumber);
+                          if (pageNumber != null) {
+                            ref
+                                .read(studyWorkspaceProvider.notifier)
+                                .updatePdfPage(widget.resourceId, pageNumber);
+                          }
                         },
                         onViewerReady: (document, controller) {
                           setState(() {

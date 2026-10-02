@@ -169,17 +169,21 @@ void main() {
         db: db,
         maxCharsPerAttachment: 100,
         maxCharsCombined: 150,
-        resolveMaterialPath: ({
-          required String lessonId,
-          required String storedFileName,
-        }) async => p.join(tempDir.path, storedFileName),
+        resolveMaterialPath:
+            ({
+              required String lessonId,
+              required String storedFileName,
+            }) async => p.join(tempDir.path, storedFileName),
         extractPages:
             ({required String filePath, Set<int>? pageNumbers}) async {
               if (filePath.endsWith('empty.pdf')) {
                 return const [];
               }
               return const [
-                SourcePageText(pageNumber: 1, text: 'Page one content about ML'),
+                SourcePageText(
+                  pageNumber: 1,
+                  text: 'Page one content about ML',
+                ),
                 SourcePageText(
                   pageNumber: 2,
                   text:
@@ -242,10 +246,11 @@ void main() {
     test('empty PDF extract sets emptyReason', () async {
       final emptyResolver = ChatContextResolver(
         db: db,
-        resolveMaterialPath: ({
-          required String lessonId,
-          required String storedFileName,
-        }) async => emptyPdfPath,
+        resolveMaterialPath:
+            ({
+              required String lessonId,
+              required String storedFileName,
+            }) async => emptyPdfPath,
         extractPages:
             ({required String filePath, Set<int>? pageNumbers}) async =>
                 const [],

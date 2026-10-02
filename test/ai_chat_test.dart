@@ -169,6 +169,8 @@ void main() {
 
     test('rename and change model keep history', () async {
       final chat = await service.createChat();
+      final beforeProvider = await settings.getProvider();
+      final beforeModel = await settings.getModelId();
       await service.sendMessage(chatId: chat.id, userText: 'Topic A');
       await service.renameChat(chat.id, 'My revision');
       await service.setChatModel(chat.id, 'gemini-3.5-flash-lite');
@@ -177,15 +179,17 @@ void main() {
       expect(updated!.title, 'My revision');
       expect(updated.modelId, 'gemini-3.5-flash-lite');
       expect(await db.getAiChatMessages(chat.id), hasLength(2));
-      expect(await settings.getModelId(), 'gemini-3.5-flash-lite');
+      // Per-chat model changes must not rewrite global settings.
+      expect(await settings.getProvider(), beforeProvider);
+      expect(await settings.getModelId(), beforeModel);
     });
 
-    test('setChatModel to DeepSeek switches default provider', () async {
+    test('setChatModel to DeepSeek updates chat only', () async {
       final chat = await service.createChat();
+      final beforeProvider = await settings.getProvider();
       await service.setChatModel(chat.id, 'deepseek-flash');
 
-      expect(await settings.getProvider(), AiProviderId.deepseek);
-      expect(await settings.getModelId(), 'deepseek-flash');
+      expect(await settings.getProvider(), beforeProvider);
       expect((await db.getAiChatById(chat.id))!.modelId, 'deepseek-flash');
     });
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
@@ -180,7 +181,8 @@ void main() {
       );
 
       final result = await router.run(
-        const AiStudyRequest(
+        AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.explain,
           sourceText: 'Gradient descent',
         ),
@@ -220,6 +222,7 @@ void main() {
 
         final result = await router.run(
           AiStudyRequest(
+            selection: testGeminiSelection(),
             action: AiStudyAction.explain,
             sourceText: 'PDF page 2 (image attached)',
             pageSendMode: AiPageSendMode.image,
@@ -356,7 +359,8 @@ void main() {
         );
 
         final result = await service.run(
-          const AiStudyRequest(
+          AiStudyRequest(
+            selection: testGeminiSelection(),
             action: AiStudyAction.generateFlashcards,
             sourceText: 'Gradient descent minimizes a cost function.',
             flashcardCount: 2,
@@ -485,6 +489,7 @@ void main() {
       List<AiConversationTurn> conversation = const [],
     }) {
       return AiStudyRequest(
+        selection: testGeminiSelection(),
         action: AiStudyAction.askAi,
         sourceText: document * 40,
         selectedText: document * 40,
@@ -533,10 +538,15 @@ void main() {
           ],
         ),
       );
-      expect(
-        messages.map((m) => m['role']).toList(),
-        ['system', 'user', 'user', 'assistant', 'user', 'assistant', 'user'],
-      );
+      expect(messages.map((m) => m['role']).toList(), [
+        'system',
+        'user',
+        'user',
+        'assistant',
+        'user',
+        'assistant',
+        'user',
+      ]);
       expect(messages[1]['content'], contains('SELECTED TEXT:'));
       expect(messages[2]['content'], 'Question 1');
       expect(messages[3]['content'], 'Answer 1');

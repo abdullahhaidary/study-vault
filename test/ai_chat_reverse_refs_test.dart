@@ -129,60 +129,55 @@ void main() {
     expect(only1.map((m) => m.userMessage), ['About lesson 1']);
   });
 
-  test('delete message removes reverse refs; delete chat removes all', () async {
-    final chat = await service.createChat();
-    await service.sendMessage(
-      chatId: chat.id,
-      userText: 'Q1',
-      attachments: const [
-        AiContextItem(
-          kind: AiContextKind.note,
-          id: 'note-1',
-          title: 'Note',
+  test(
+    'delete message removes reverse refs; delete chat removes all',
+    () async {
+      final chat = await service.createChat();
+      await service.sendMessage(
+        chatId: chat.id,
+        userText: 'Q1',
+        attachments: const [
+          AiContextItem(kind: AiContextKind.note, id: 'note-1', title: 'Note'),
+        ],
+      );
+      await service.sendMessage(
+        chatId: chat.id,
+        userText: 'Q2',
+        attachments: const [
+          AiContextItem(kind: AiContextKind.note, id: 'note-1', title: 'Note'),
+        ],
+      );
+
+      expect(
+        await db.countAiMessageContextRefs(
+          contextType: 'note',
+          contextId: 'note-1',
         ),
-      ],
-    );
-    await service.sendMessage(
-      chatId: chat.id,
-      userText: 'Q2',
-      attachments: const [
-        AiContextItem(
-          kind: AiContextKind.note,
-          id: 'note-1',
-          title: 'Note',
+        2,
+      );
+
+      final messages = await db.getAiChatMessages(chat.id);
+      final firstUser = messages.firstWhere((m) => m.role == AiChatRole.user);
+      await db.deleteAiChatMessage(firstUser.id);
+
+      expect(
+        await db.countAiMessageContextRefs(
+          contextType: 'note',
+          contextId: 'note-1',
         ),
-      ],
-    );
+        1,
+      );
 
-    expect(
-      await db.countAiMessageContextRefs(
-        contextType: 'note',
-        contextId: 'note-1',
-      ),
-      2,
-    );
-
-    final messages = await db.getAiChatMessages(chat.id);
-    final firstUser = messages.firstWhere((m) => m.role == AiChatRole.user);
-    await db.deleteAiChatMessage(firstUser.id);
-
-    expect(
-      await db.countAiMessageContextRefs(
-        contextType: 'note',
-        contextId: 'note-1',
-      ),
-      1,
-    );
-
-    await service.deleteChat(chat.id);
-    expect(
-      await db.countAiMessageContextRefs(
-        contextType: 'note',
-        contextId: 'note-1',
-      ),
-      0,
-    );
-  });
+      await service.deleteChat(chat.id);
+      expect(
+        await db.countAiMessageContextRefs(
+          contextType: 'note',
+          contextId: 'note-1',
+        ),
+        0,
+      );
+    },
+  );
 
   test('rename does not break reverse lookup by id', () async {
     final chat = await service.createChat();

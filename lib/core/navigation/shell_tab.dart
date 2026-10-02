@@ -10,11 +10,7 @@ final shellTabProvider = StateProvider<ShellTab>((ref) => ShellTab.home);
 
 /// Navigate to a shell surface, popping detail routes so the shell is visible.
 abstract final class ShellNavigation {
-  static void go(
-    BuildContext context,
-    WidgetRef ref,
-    ShellTab tab,
-  ) {
+  static void go(BuildContext context, WidgetRef ref, ShellTab tab) {
     ref.read(shellTabProvider.notifier).state = tab;
     final nav = Navigator.of(context);
     if (nav.canPop()) {
@@ -23,10 +19,7 @@ abstract final class ShellNavigation {
   }
 
   /// Open Settings as a pushed route, optionally focusing a section.
-  static void openSettings(
-    BuildContext context, {
-    String? section,
-  }) {
+  static void openSettings(BuildContext context, {String? section}) {
     Navigator.of(context).pushNamed(
       AppRoutes.settings,
       arguments: section == null ? null : {'section': section},

@@ -10,6 +10,9 @@ import '../domain/gemini_model_registry.dart';
 /// Stored outside Study Vault backup paths on purpose. API keys stay in
 /// secure storage, not here.
 abstract class AiSettingsStore {
+  static const defaultGeminiRetryCount = 3;
+  static const maxGeminiRetryCount = 5;
+
   Future<AiProviderId> getProvider();
   Future<void> setProvider(AiProviderId provider);
 
@@ -27,6 +30,8 @@ abstract class AiSettingsStore {
   Future<void> setLanguage(AiLanguage language);
   Future<String?> getStudyPreference();
   Future<void> setStudyPreference(String? value);
+  Future<int> getGeminiRetryCount();
+  Future<void> setGeminiRetryCount(int count);
   Future<bool> getPrivacyConsentAccepted();
   Future<void> setPrivacyConsentAccepted(bool accepted);
 
@@ -43,6 +48,7 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   static const _thinkingKey = 'ai_deepseek_thinking';
   static const _languageKey = 'ai_default_language';
   static const _preferenceKey = 'ai_study_preference';
+  static const _geminiRetryCountKey = 'ai_gemini_retry_count';
   static const _consentKey = 'ai_privacy_consent_v1';
 
   final SharedPreferences? _prefsOverride;
@@ -156,6 +162,24 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   }
 
   @override
+  Future<int> getGeminiRetryCount() async {
+    final prefs = await _prefs();
+    return (prefs.getInt(_geminiRetryCountKey) ??
+            AiSettingsStore.defaultGeminiRetryCount)
+        .clamp(0, AiSettingsStore.maxGeminiRetryCount)
+        .toInt();
+  }
+
+  @override
+  Future<void> setGeminiRetryCount(int count) async {
+    final prefs = await _prefs();
+    await prefs.setInt(
+      _geminiRetryCountKey,
+      count.clamp(0, AiSettingsStore.maxGeminiRetryCount).toInt(),
+    );
+  }
+
+  @override
   Future<bool> getPrivacyConsentAccepted() async {
     final prefs = await _prefs();
     return prefs.getBool(_consentKey) ?? false;
@@ -179,6 +203,7 @@ class MemoryAiSettingsStore implements AiSettingsStore {
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   String? _preference;
+  int _geminiRetryCount = AiSettingsStore.defaultGeminiRetryCount;
   bool _consent = false;
 
   @override
@@ -232,6 +257,16 @@ class MemoryAiSettingsStore implements AiSettingsStore {
   Future<void> setStudyPreference(String? value) async {
     final trimmed = value?.trim();
     _preference = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+  }
+
+  @override
+  Future<int> getGeminiRetryCount() async => _geminiRetryCount;
+
+  @override
+  Future<void> setGeminiRetryCount(int count) async {
+    _geminiRetryCount = count
+        .clamp(0, AiSettingsStore.maxGeminiRetryCount)
+        .toInt();
   }
 
   @override

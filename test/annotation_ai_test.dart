@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
@@ -100,6 +101,7 @@ void main() {
   group('AiPromptBuilder annotation prompts', () {
     AiStudyRequest base(AiStudyAction action, {String? custom}) {
       return AiStudyRequest(
+        selection: testGeminiSelection(),
         action: action,
         sourceText: 'Gradient descent updates weights.',
         selectedText: 'Gradient descent updates weights.',
@@ -180,6 +182,7 @@ void main() {
         () => service.run(
           context: const AnnotationAiContext(selectedText: '  '),
           action: AiStudyAction.explain,
+          selection: testGeminiSelection(),
         ),
         throwsA(isA<AiEmptySelectionException>()),
       );
@@ -192,6 +195,7 @@ void main() {
         () => service.run(
           context: AnnotationAiContext(selectedText: huge),
           action: AiStudyAction.explain,
+          selection: testGeminiSelection(),
         ),
         throwsA(isA<AiSourceTooLargeException>()),
       );
@@ -214,10 +218,12 @@ void main() {
       final first = await service.run(
         context: ctx,
         action: AiStudyAction.explain,
+      selection: testGeminiSelection(),
       );
       final second = await service.run(
         context: ctx,
         action: AiStudyAction.explain,
+        selection: testGeminiSelection(),
       );
 
       expect(first, isA<AiTextResult>());
@@ -239,11 +245,13 @@ void main() {
       await service.run(
         context: ctx,
         action: AiStudyAction.askAi,
+      selection: testGeminiSelection(),
         customPrompt: 'What is this?',
       );
       await service.run(
         context: ctx,
         action: AiStudyAction.askAi,
+        selection: testGeminiSelection(),
         customPrompt: 'What is this?',
       );
       expect(calls, 2);
@@ -256,6 +264,7 @@ void main() {
           selectedText: 'Learning rate α controls step size.',
         ),
         action: AiStudyAction.generateFlashcards,
+        selection: testGeminiSelection(),
         flashcardCount: 5,
       );
       expect(result, isA<AiFlashcardsResult>());
@@ -278,7 +287,8 @@ void main() {
       );
 
       await service.followUp(
-        context: ctx,
+      selection: testGeminiSelection(),
+      context: ctx,
         conversation: const [
           AiConversationTurn(
             userMessage: 'Explain',
@@ -324,7 +334,10 @@ void main() {
         pageNumber: 9,
         surroundingText: 'ctx',
       );
-      final req = ctx.toStudyRequest(action: AiStudyAction.define);
+      final req = ctx.toStudyRequest(
+        action: AiStudyAction.define,
+        selection: testGeminiSelection(),
+      );
       expect(req.pageNumber, 9);
       expect(req.materialId, 'm1');
       expect(req.lessonId, 'l1');

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../ai_questions/domain/quiz_models.dart';
 import 'ai_actions.dart';
+import 'ai_execution_selection.dart';
 import 'ai_token_usage.dart';
 
 /// Soft size limit before warning the user (characters).
@@ -57,6 +58,7 @@ class AiStudyRequest {
   const AiStudyRequest({
     required this.action,
     required this.sourceText,
+    required this.selection,
     this.language = AiLanguage.auto,
     this.rephraseMode,
     this.organizeMode,
@@ -83,6 +85,7 @@ class AiStudyRequest {
 
   final AiStudyAction action;
   final String sourceText;
+  final AiExecutionSelection selection;
   final AiLanguage language;
   final AiRephraseMode? rephraseMode;
   final AiOrganizeMode? organizeMode;
@@ -124,6 +127,7 @@ class AiStudyRequest {
   AiStudyRequest copyWith({
     AiStudyAction? action,
     String? sourceText,
+    AiExecutionSelection? selection,
     AiLanguage? language,
     AiRephraseMode? rephraseMode,
     AiOrganizeMode? organizeMode,
@@ -150,6 +154,7 @@ class AiStudyRequest {
     return AiStudyRequest(
       action: action ?? this.action,
       sourceText: sourceText ?? this.sourceText,
+      selection: selection ?? this.selection,
       language: language ?? this.language,
       rephraseMode: rephraseMode ?? this.rephraseMode,
       organizeMode: organizeMode ?? this.organizeMode,
@@ -183,6 +188,7 @@ class AiQuestionGenerationRequest {
     required this.count,
     required this.type,
     required this.difficulty,
+    required this.selection,
     this.language = AiLanguage.auto,
     this.userPreference,
     this.pageNumber,
@@ -193,6 +199,7 @@ class AiQuestionGenerationRequest {
   final int count;
   final AiQuestionType type;
   final AiQuestionDifficulty difficulty;
+  final AiExecutionSelection selection;
   final AiLanguage language;
   final String? userPreference;
   final int? pageNumber;
@@ -202,6 +209,7 @@ class AiQuestionGenerationRequest {
     return AiStudyRequest(
       action: AiStudyAction.generateQuestions,
       sourceText: sourceText,
+      selection: selection,
       language: language,
       questionType: type,
       questionCount: count,

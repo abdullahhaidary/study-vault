@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../data/ai_providers.dart';
-import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
@@ -46,12 +46,44 @@ class InlineAiController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<AiExecutionSelection> _resolveSelection(AiStudyAction action) async {
+    final existing = _state.selection;
+    if (existing != null) {
+      return AiExecutionSelection.resolve(
+        provider: existing.provider,
+        requestedModelId: existing.requestedModelId,
+        action: action,
+        thinkingMode: existing.thinkingMode,
+      );
+    }
+    final selected = _state.selected;
+    if (selected != null && (selected.modelName?.trim().isNotEmpty ?? false)) {
+      return AiExecutionSelection.fromStored(
+        provider: AiProviderIdX.fromStorage(selected.provider),
+        modelId: selected.modelName!,
+        action: action,
+      );
+    }
+    return AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: action,
+    );
+  }
+
+  void setSelection(AiExecutionSelection selection) {
+    _set(_state.copyWith(selection: selection));
+  }
+
   Future<void> bootstrap() async {
     final counts = await _history.getGenerationCounts(
       sourceFingerprint: _state.sourceFingerprint,
     );
+    final selection = await AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: null,
+    );
     if (_disposed) return;
-    _set(_state.copyWith(counts: counts));
+    _set(_state.copyWith(counts: counts, selection: selection));
   }
 
   /// Select a quick action. Loads existing history when present; otherwise generates.
@@ -149,17 +181,11 @@ class InlineAiController extends ChangeNotifier {
       }
       if (token != _runToken || _disposed) return;
 
-      final settings = ref.read(aiSettingsStoreProvider);
-      final provider = await settings.getProvider();
-      final storedModel = await settings.getModelIdFor(provider);
-      final modelName = resolveActiveModelId(
-        provider: provider,
-        storedModelId: storedModel,
-        action: action,
-      );
+      final selection = await _resolveSelection(action);
       final saved = await _history.regenerate(
         context: _state.context,
         action: action,
+        selection: selection,
         parent: _state.selected,
         rephraseMode: _state.rephraseMode,
         organizeMode: null,
@@ -167,8 +193,6 @@ class InlineAiController extends ChangeNotifier {
         translateTarget: _state.translateTarget,
         customPrompt: _state.customPrompt,
         regenerateInstruction: instruction,
-        modelName: modelName,
-        provider: provider.storageValue,
         sendMode: _state.pageSendMode,
       );
 
@@ -290,23 +314,15 @@ class InlineAiController extends ChangeNotifier {
       }
       if (token != _runToken || _disposed) return;
 
-      final settings = ref.read(aiSettingsStoreProvider);
-      final provider = await settings.getProvider();
-      final storedModel = await settings.getModelIdFor(provider);
-      final modelName = resolveActiveModelId(
-        provider: provider,
-        storedModelId: storedModel,
-        action: action,
-      );
+      final selection = await _resolveSelection(action);
       final saved = await _history.generate(
         context: _state.context,
         action: action,
+        selection: selection,
         summarizeMode: summarizeMode,
         rephraseMode: rephraseMode,
         translateTarget: translateTarget,
         customPrompt: customPrompt,
-        modelName: modelName,
-        provider: provider.storageValue,
         useCache: action.isCacheable,
         sendMode: _state.pageSendMode,
       );
@@ -444,10 +460,11 @@ class InlineAiController extends ChangeNotifier {
     _set(_state.copyWith(context: updated));
   }
 
-  AiStudyRequest buildStudyRequest() {
+  AiStudyRequest buildStudyRequest(AiExecutionSelection selection) {
     final action = _state.action ?? AiStudyAction.explain;
     return _state.context.toStudyRequest(
       action: action,
+      selection: selection,
       summarizeMode: _state.summarizeMode,
       rephraseMode: _state.rephraseMode,
       translateTarget: _state.translateTarget,

@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/system_bottom_inset.dart';
+import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
+import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../data/quiz_providers.dart';
 import '../domain/question_source.dart';
 import '../domain/quiz_models.dart';
@@ -97,6 +103,7 @@ Future<void> showGenerateQuestionsSheet(
           count: config.count,
           type: config.type,
           difficulty: config.difficulty,
+          selection: config.selection,
           sendMode: config.sendMode,
         );
     if (!context.mounted) return;
@@ -127,6 +134,7 @@ class _GenerateConfig {
     required this.count,
     required this.type,
     required this.difficulty,
+    required this.selection,
     this.sendMode = AiPageSendMode.text,
   });
 
@@ -134,31 +142,44 @@ class _GenerateConfig {
   final int count;
   final QuizQuestionType type;
   final QuizDifficulty difficulty;
+  final AiExecutionSelection selection;
   final AiPageSendMode sendMode;
 }
 
-class _GenerateQuestionsSheet extends StatefulWidget {
+class _GenerateQuestionsSheet extends ConsumerStatefulWidget {
   const _GenerateQuestionsSheet({required this.launch});
 
   final GenerateQuestionsLaunch launch;
 
   @override
-  State<_GenerateQuestionsSheet> createState() =>
+  ConsumerState<_GenerateQuestionsSheet> createState() =>
       _GenerateQuestionsSheetState();
 }
 
-class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
+class _GenerateQuestionsSheetState
+    extends ConsumerState<_GenerateQuestionsSheet> {
   late QuestionSourceType _source;
   int _count = 5;
   QuizQuestionType _type = QuizQuestionType.mixed;
   QuizDifficulty _difficulty = QuizDifficulty.mixed;
   AiPageSendMode _sendMode = AiPageSendMode.text;
+  AiExecutionSelection? _selection;
 
   @override
   void initState() {
     super.initState();
     _source =
         widget.launch.initialSource ?? widget.launch.availableSources.first;
+    _loadSelection();
+  }
+
+  Future<void> _loadSelection() async {
+    final selection = await AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: AiStudyAction.generateQuestions,
+    );
+    if (!mounted) return;
+    setState(() => _selection = selection);
   }
 
   @override
@@ -209,7 +230,28 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
                       ChoiceChip(
                         label: Text(mode.label),
                         selected: _sendMode == mode,
-                        onSelected: (_) => setState(() => _sendMode = mode),
+                        onSelected: (_) async {
+                          setState(() => _sendMode = mode);
+                          if (mode == AiPageSendMode.image) {
+                            final global =
+                                await AiExecutionSelection.fromGlobal(
+                                  ref.read(aiSettingsStoreProvider),
+                                  action: AiStudyAction.generateQuestions,
+                                );
+                            final geminiModel =
+                                global.provider == AiProviderId.gemini
+                                ? global.requestedModelId
+                                : GeminiModelRegistry.defaultModelId;
+                            if (!mounted) return;
+                            setState(() {
+                              _selection = AiExecutionSelection.resolve(
+                                provider: AiProviderId.gemini,
+                                requestedModelId: geminiModel,
+                                action: AiStudyAction.generateQuestions,
+                              );
+                            });
+                          }
+                        },
                       ),
                   ],
                 ),
@@ -270,22 +312,43 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
                     ),
                 ],
               ),
+              const SizedBox(height: 16),
+              Text('Model', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              if (_selection == null)
+                const LinearProgressIndicator()
+              else
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AiModelPickerButton(
+                    selection: _selection!,
+                    action: AiStudyAction.generateQuestions,
+                    constraints: _sendMode == AiPageSendMode.image
+                        ? AiExecutionConstraints.vision
+                        : AiExecutionConstraints.none,
+                    onChanged: (AiExecutionSelection next) =>
+                        setState(() => _selection = next),
+                  ),
+                ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(
-                    context,
-                    _GenerateConfig(
-                      sourceType: _source,
-                      count: _count,
-                      type: _type,
-                      difficulty: _difficulty,
-                      sendMode: _source == QuestionSourceType.page
-                          ? _sendMode
-                          : AiPageSendMode.text,
-                    ),
-                  );
-                },
+                onPressed: _selection == null
+                    ? null
+                    : () {
+                        Navigator.pop(
+                          context,
+                          _GenerateConfig(
+                            sourceType: _source,
+                            count: _count,
+                            type: _type,
+                            difficulty: _difficulty,
+                            selection: _selection!,
+                            sendMode: _source == QuestionSourceType.page
+                                ? _sendMode
+                                : AiPageSendMode.text,
+                          ),
+                        );
+                      },
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text('Generate'),
               ),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,45 +57,15 @@ class LessonDetailsScreen extends ConsumerWidget {
       if (material != null && context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Attached ${material.title}')));
+        ).showSnackBar(SnackBar(content: Text('Added ${material.title}')));
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not attach image: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not add image: $error')));
       }
     }
-  }
-
-  Future<void> _showAttachMenu(BuildContext context, WidgetRef ref) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf_outlined),
-              title: const Text('Attach PDF'),
-              onTap: () {
-                Navigator.pop(context);
-                _attachPdf(context, ref);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.image_outlined),
-              title: const Text('Attach image'),
-              onTap: () {
-                Navigator.pop(context);
-                _attachImage(context, ref);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _openMaterial(
@@ -130,12 +102,11 @@ class LessonDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     LessonMaterial material,
   ) async {
+    final isImage = isImageMimeType(material.mimeType);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          isImageMimeType(material.mimeType) ? 'Remove image?' : 'Remove PDF?',
-        ),
+        title: Text(isImage ? 'Remove image?' : 'Remove PDF?'),
         content: Text(
           '"${material.title}" will be removed from this lesson and deleted '
           'from local Study Vault storage. Study Pins on this resource will '
@@ -223,12 +194,6 @@ class LessonDetailsScreen extends ConsumerWidget {
     );
   }
 
-  IconData _iconFor(LessonMaterial material) {
-    return isImageMimeType(material.mimeType)
-        ? Icons.image_outlined
-        : Icons.picture_as_pdf_outlined;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lessonAsync = ref.watch(lessonByIdProvider(lessonId));
@@ -285,9 +250,9 @@ class LessonDetailsScreen extends ConsumerWidget {
             ),
           ],
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _showAttachMenu(context, ref),
-            icon: const Icon(Icons.attach_file),
-            label: const Text('Attach Material'),
+            onPressed: () => _attachPdf(context, ref),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Attach PDF'),
           ),
           bodySlivers: [
             SliverToBoxAdapter(
@@ -324,17 +289,26 @@ class LessonDetailsScreen extends ConsumerWidget {
                 ),
               ),
               data: (materials) {
+                final pdfs = [
+                  for (final material in materials)
+                    if (isPdfMimeType(material.mimeType)) material,
+                ];
+                final images = [
+                  for (final material in materials)
+                    if (isImageMimeType(material.mimeType)) material,
+                ];
+
                 return _ContiguousSliver(
                   children: [
                     DetailContent(
                       bottom: AppSpacing.xs,
                       child: const SectionHeader(title: 'Materials'),
                     ),
-                    if (materials.isEmpty)
+                    if (pdfs.isEmpty)
                       DetailContent(
                         bottom: AppSpacing.md,
                         child: Text(
-                          'No materials yet. Attach a PDF or image to study here.',
+                          'No PDFs yet. Attach a PDF to study here.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -345,21 +319,58 @@ class LessonDetailsScreen extends ConsumerWidget {
                         bottom: AppSpacing.md,
                         child: Column(
                           children: [
-                            for (final material in materials)
+                            for (final material in pdfs)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: AppSpacing.xs,
                                 ),
                                 child: GroupedItemTile(
                                   title: material.title,
-                                  subtitle: isImageMimeType(material.mimeType)
-                                      ? 'Image'
-                                      : 'PDF',
-                                  icon: _iconFor(material),
+                                  subtitle: 'PDF',
+                                  icon: Icons.picture_as_pdf_outlined,
                                   onTap: () => _openMaterial(context, material),
                                   onDelete: () =>
                                       _confirmDelete(context, ref, material),
                                   deleteLabel: 'Remove',
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    DetailContent(
+                      bottom: AppSpacing.xs,
+                      child: SectionHeader(
+                        title: 'Images',
+                        trailing: IconButton(
+                          tooltip: 'Add image from gallery',
+                          onPressed: () => _attachImage(context, ref),
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                        ),
+                      ),
+                    ),
+                    if (images.isEmpty)
+                      DetailContent(
+                        bottom: AppSpacing.md,
+                        child: _EmptyImagesCard(
+                          onAdd: () => _attachImage(context, ref),
+                        ),
+                      )
+                    else
+                      DetailContent(
+                        bottom: AppSpacing.md,
+                        child: Column(
+                          children: [
+                            for (final material in images)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm,
+                                ),
+                                child: _LessonImageCard(
+                                  material: material,
+                                  onOpen: () =>
+                                      _openMaterial(context, material),
+                                  onDelete: () =>
+                                      _confirmDelete(context, ref, material),
                                 ),
                               ),
                           ],
@@ -441,6 +452,178 @@ class LessonDetailsScreen extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _EmptyImagesCard extends StatelessWidget {
+  const _EmptyImagesCard({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.mdAll,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        onTap: onAdd,
+        borderRadius: AppRadii.mdAll,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.image_outlined,
+                size: 36,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Add a review image',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                'Pick an AI-generated overview or any image from your gallery.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LessonImageCard extends StatefulWidget {
+  const _LessonImageCard({
+    required this.material,
+    required this.onOpen,
+    required this.onDelete,
+  });
+
+  final LessonMaterial material;
+  final VoidCallback onOpen;
+  final VoidCallback onDelete;
+
+  @override
+  State<_LessonImageCard> createState() => _LessonImageCardState();
+}
+
+class _LessonImageCardState extends State<_LessonImageCard> {
+  late final Future<String> _pathFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _pathFuture = materialAbsolutePath(widget.material);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final material = widget.material;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.mdAll,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: widget.onOpen,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
+              child: FutureBuilder<String>(
+                future: _pathFuture,
+                builder: (context, snapshot) {
+                  final path = snapshot.data;
+                  if (path == null) {
+                    return ColoredBox(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  }
+                  return Image.file(
+                    File(path),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: theme.colorScheme.outline,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.xxs,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      material.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Image options',
+                    onSelected: (value) {
+                      if (value == 'remove') widget.onDelete();
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'remove',
+                        child: Text(
+                          'Remove',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

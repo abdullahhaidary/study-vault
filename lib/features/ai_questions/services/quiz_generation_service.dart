@@ -4,9 +4,9 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_models.dart';
-import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/services/ai_service.dart';
 import '../domain/question_source.dart';
@@ -38,6 +38,7 @@ class QuizGenerationService {
     required int count,
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
+    required AiExecutionSelection selection,
     AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     assert(() {
@@ -74,6 +75,7 @@ class QuizGenerationService {
         count: count,
         type: type,
         difficulty: difficulty,
+        selection: selection,
         sendMode: sendMode,
       );
 
@@ -83,12 +85,9 @@ class QuizGenerationService {
         );
       }
 
-      final modelId = resolveActiveModelId(
-        provider: await settings.getProvider(),
-        storedModelId: await settings.getModelId(),
-        action: AiStudyAction.generateQuestions,
-      );
-      final provider = await settings.getProvider();
+      final modelId = generated.usage?.model ?? selection.resolvedModelId;
+      final providerStorage =
+          generated.usage?.provider ?? selection.providerStorage;
       final set = await _persist(
         source: source,
         count: count,
@@ -96,7 +95,7 @@ class QuizGenerationService {
         difficulty: difficulty,
         quiz: generated.quiz,
         modelId: modelId,
-        provider: provider.storageValue,
+        provider: providerStorage,
         usage: generated.usage,
       );
       assert(() {
@@ -104,7 +103,7 @@ class QuizGenerationService {
         print(
           'QuizGen persisted set=${set.id} questions=${generated.quiz.questions.length} '
           'mcq=${generated.quiz.questions.where((q) => q.isMcq).length} '
-          'provider=${provider.storageValue} model=$modelId',
+          'provider=$providerStorage model=$modelId',
         );
         return true;
       }());
@@ -124,6 +123,7 @@ class QuizGenerationService {
     required int count,
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
+    required AiExecutionSelection selection,
     AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     final language = await settings.getLanguage();
@@ -144,14 +144,12 @@ class QuizGenerationService {
         type: type,
         difficulty: difficulty,
         language: language,
+        selection: selection,
         preference: preference,
         image: image,
         pageNumber: page,
       );
-      return (
-        quiz: _stampSourcePage(part.quiz, page),
-        usage: part.usage,
-      );
+      return (quiz: _stampSourcePage(part.quiz, page), usage: part.usage);
     }
 
     if (source.characterCount <= kAiHardSourceLimit) {
@@ -161,6 +159,7 @@ class QuizGenerationService {
         type: type,
         difficulty: difficulty,
         language: language,
+        selection: selection,
         preference: preference,
       );
     }
@@ -184,6 +183,7 @@ class QuizGenerationService {
         type: type,
         difficulty: difficulty,
         language: language,
+        selection: selection,
         preference: preference,
       );
       if (i == 0 && part.quiz.title.trim().isNotEmpty) title = part.quiz.title;
@@ -210,6 +210,7 @@ class QuizGenerationService {
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
     required AiLanguage language,
+    required AiExecutionSelection selection,
     String? preference,
     AiStudyImage? image,
     int? pageNumber,
@@ -230,6 +231,7 @@ class QuizGenerationService {
           count: count,
           type: _toAiType(type),
           difficulty: _toAiDifficulty(difficulty),
+          selection: selection,
           language: language,
           userPreference: preference,
           pageNumber: pageNumber ?? image?.pageNumber,

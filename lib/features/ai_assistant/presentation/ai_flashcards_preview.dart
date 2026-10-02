@@ -80,8 +80,9 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
               child: AiUsageIndicator(usage: widget.usage!),
             );
           }
-          final cardIndex =
-              widget.usage?.hasAnyMetric == true ? index - 1 : index;
+          final cardIndex = widget.usage?.hasAnyMetric == true
+              ? index - 1
+              : index;
           final card = _cards[cardIndex];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),

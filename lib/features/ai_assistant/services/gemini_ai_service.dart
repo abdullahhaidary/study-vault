@@ -8,6 +8,7 @@ import '../data/ai_credential_store.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_token_usage.dart';
@@ -15,6 +16,7 @@ import '../domain/gemini_model_registry.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
 import 'ai_service.dart';
+import 'gemini_retry_policy.dart';
 
 /// Gemini REST client using generateContent (official Google AI API).
 class GeminiAiService implements AiService {
@@ -84,9 +86,7 @@ class GeminiAiService implements AiService {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final model = GeminiModelRegistry.normalize(
-      await settings.getModelIdFor(_provider),
-    );
+    final model = request.selection.resolvedModelId;
     final preference = await settings.getStudyPreference();
     final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
@@ -211,6 +211,57 @@ class GeminiAiService implements AiService {
     return result;
   }
 
+  /// Whole-document multi-turn completion for PDF AI materials.
+  Future<AiTextResult> completeDocumentMessages({
+    required List<Map<String, String>> messages,
+    required int maxOutputTokens,
+    required AiExecutionSelection selection,
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    if (messages.isEmpty) {
+      throw const AiMalformedOutputException('The document prompt is empty.');
+    }
+    final key = await _requireKey();
+    if (!await settings.getPrivacyConsentAccepted()) {
+      throw const AiPrivacyNotAcceptedException();
+    }
+    final model = selection.resolvedModelId;
+    final contents = <Map<String, dynamic>>[];
+    for (final message in messages) {
+      final role = message['role'] ?? 'user';
+      final content = message['content'] ?? '';
+      if (content.trim().isEmpty) continue;
+      contents.add({
+        'role': role == 'assistant' ? 'model' : 'user',
+        'parts': [
+          {'text': content},
+        ],
+      });
+    }
+    if (contents.isEmpty) {
+      throw const AiMalformedOutputException('The document prompt is empty.');
+    }
+    final body = <String, dynamic>{
+      'contents': contents,
+      'generationConfig': {
+        'maxOutputTokens': maxOutputTokens,
+        'thinkingConfig': {'thinkingBudget': 0},
+      },
+    };
+    final completion = await _postGenerate(
+      model: model,
+      apiKey: key,
+      body: body,
+      timeout: timeout,
+    );
+    return AiTextResult(
+      markdown: completion.text,
+      usage:
+          completion.usage ??
+          AiTokenUsage(model: model, provider: _provider.storageValue),
+    );
+  }
+
   Map<String, dynamic>? _schemaFor(AiStudyAction action) {
     return switch (action) {
       AiStudyAction.createAnnotation => AiResponseSchemas.annotation,
@@ -256,6 +307,23 @@ class GeminiAiService implements AiService {
   }
 
   Future<({String text, AiTokenUsage? usage})> _postGenerate({
+    required String model,
+    required String apiKey,
+    required Map<String, dynamic> body,
+    required Duration timeout,
+  }) {
+    return GeminiRetryPolicy.run(
+      settings: settings,
+      operation: () => _postGenerateOnce(
+        model: model,
+        apiKey: apiKey,
+        body: body,
+        timeout: timeout,
+      ),
+    );
+  }
+
+  Future<({String text, AiTokenUsage? usage})> _postGenerateOnce({
     required String model,
     required String apiKey,
     required Map<String, dynamic> body,

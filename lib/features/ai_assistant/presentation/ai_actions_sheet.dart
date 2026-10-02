@@ -5,7 +5,7 @@ import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/ai_providers.dart';
-import '../data/ai_settings_store.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
@@ -15,6 +15,7 @@ import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
 import 'ai_preview_screen.dart';
 import 'ai_response_screen.dart';
+import 'widgets/ai_model_picker.dart';
 import 'widgets/voice_input_button.dart';
 
 /// Context for where AI was invoked.
@@ -92,7 +93,14 @@ Future<void> showAiActionsSheet(
       chosen.producesTextResult &&
       existingCount > 0 &&
       annotationContext != null) {
-    final request = annotationContext.toStudyRequest(action: chosen);
+    final selection = await AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: chosen,
+    );
+    final request = annotationContext.toStudyRequest(
+      action: chosen,
+      selection: selection,
+    );
     if (!context.mounted) return;
     await showAiResponseScreen(
       context,
@@ -192,9 +200,19 @@ Future<void> showAiActionsSheet(
       ref.read(studyPinCategoryMapProvider).valueOrNull ?? const {};
   final categoryNameToId = {for (final c in categories.values) c.name: c.id};
 
+  var selection = await AiExecutionSelection.fromGlobal(
+    ref.read(aiSettingsStoreProvider),
+    action: chosen,
+  );
+  if (!context.mounted) return;
+  selection =
+      await showAiModelSelector(context, selected: selection, action: chosen) ??
+      selection;
+
   final request =
       annotationContext?.toStudyRequest(
         action: chosen,
+        selection: selection,
         rephraseMode: rephraseMode,
         organizeMode: organizeMode,
         summarizeMode: summarizeMode,
@@ -206,6 +224,7 @@ Future<void> showAiActionsSheet(
       AiStudyRequest(
         action: chosen,
         sourceText: primary,
+        selection: selection,
         selectedText: selected,
         shortDescription: shortDescription,
         rephraseMode: rephraseMode,
@@ -259,10 +278,6 @@ Future<void> showAiActionsSheet(
     }
   } else if (result is AiAnnotationDraft) {
     if (annotationContext != null) {
-      final meta = await readAiGenerationMeta(
-        ref.read(aiSettingsStoreProvider),
-        action: chosen,
-      );
       await ref
           .read(annotationAiHistoryServiceProvider)
           .persistCompleted(
@@ -271,8 +286,8 @@ Future<void> showAiActionsSheet(
             responseText:
                 '## ${result.shortDescription}\n\n${result.fullNoteMarkdown}',
             responseKind: 'annotation',
-            modelName: meta.modelId,
-            provider: meta.providerStorage,
+            modelName: result.usage?.model ?? selection.resolvedModelId,
+            provider: result.usage?.provider ?? selection.providerStorage,
             usage: result.usage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
@@ -287,21 +302,18 @@ Future<void> showAiActionsSheet(
     );
   } else if (result is AiFlashcardsResult) {
     if (annotationContext != null) {
-      final meta = await readAiGenerationMeta(
-        ref.read(aiSettingsStoreProvider),
-        action: AiStudyAction.generateFlashcards,
-      );
       await ref
           .read(annotationAiHistoryServiceProvider)
           .persistCompleted(
             context: annotationContext,
             action: AiStudyAction.generateFlashcards,
+            // selection captured above for this run
             responseText: result.cards
                 .map((c) => 'Q: ${c.front}\nA: ${c.back}')
                 .join('\n\n---\n\n'),
             responseKind: 'flashcards',
-            modelName: meta.modelId,
-            provider: meta.providerStorage,
+            modelName: result.usage?.model ?? selection.resolvedModelId,
+            provider: result.usage?.provider ?? selection.providerStorage,
             usage: result.usage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));

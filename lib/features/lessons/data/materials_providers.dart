@@ -49,41 +49,42 @@ String guessMimeType(String fileName) {
 Future<LessonMaterial?> attachPdfToLesson(
   WidgetRef ref, {
   required String lessonId,
-}) {
-  return _attachFileToLesson(
-    ref,
-    lessonId: lessonId,
-    dialogTitle: 'Attach PDF',
-    allowedExtensions: const ['pdf'],
-  );
-}
-
-/// Picks a local image, copies it into app storage, and records metadata.
-Future<LessonMaterial?> attachImageToLesson(
-  WidgetRef ref, {
-  required String lessonId,
-}) {
-  return _attachFileToLesson(
-    ref,
-    lessonId: lessonId,
-    dialogTitle: 'Attach image',
-    allowedExtensions: const ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
-  );
-}
-
-Future<LessonMaterial?> _attachFileToLesson(
-  WidgetRef ref, {
-  required String lessonId,
-  required String dialogTitle,
-  required List<String> allowedExtensions,
 }) async {
   final result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
-    allowedExtensions: allowedExtensions,
+    allowedExtensions: const ['pdf'],
     withData: false,
-    dialogTitle: dialogTitle,
+    dialogTitle: 'Attach PDF',
   );
+  return _importPickedFile(ref, lessonId: lessonId, result: result);
+}
 
+/// Opens the gallery / image picker, copies into app storage, and records metadata.
+///
+/// Intended for lesson review images (often a single AI-generated overview).
+Future<LessonMaterial?> attachImageToLesson(
+  WidgetRef ref, {
+  required String lessonId,
+}) async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.image,
+    withData: false,
+    dialogTitle: 'Add image from gallery',
+  );
+  return _importPickedFile(
+    ref,
+    lessonId: lessonId,
+    result: result,
+    forceImageMime: true,
+  );
+}
+
+Future<LessonMaterial?> _importPickedFile(
+  WidgetRef ref, {
+  required String lessonId,
+  required FilePickerResult? result,
+  bool forceImageMime = false,
+}) async {
   if (result == null || result.files.isEmpty) return null;
 
   final picked = result.files.single;
@@ -95,7 +96,16 @@ Future<LessonMaterial?> _attachFileToLesson(
   final originalName = picked.name;
   final ext = p.extension(originalName).toLowerCase();
   final storedFileName = '${_uuid.v4()}$ext';
-  final mimeType = guessMimeType(originalName);
+  var mimeType = guessMimeType(originalName);
+  if (forceImageMime && !isImageMimeType(mimeType)) {
+    mimeType = switch (ext) {
+      '.png' => 'image/png',
+      '.gif' => 'image/gif',
+      '.webp' => 'image/webp',
+      '.bmp' => 'image/bmp',
+      _ => 'image/jpeg',
+    };
+  }
   final db = ref.read(databaseProvider);
   final now = DateTime.now();
   final sortOrder = await db.nextMaterialSortOrder(lessonId);

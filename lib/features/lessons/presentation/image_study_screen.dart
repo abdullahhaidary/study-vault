@@ -10,6 +10,8 @@ import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/lesson_progress_providers.dart';
+import '../../study_workspace/data/study_workspace_providers.dart';
+import '../../study_workspace/domain/study_workspace_models.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
@@ -57,6 +59,15 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     _loadImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       recordMaterialStudyActivity(ref, materialId: widget.resourceId);
+      ref
+          .read(studyWorkspaceProvider.notifier)
+          .attachSource(
+            ImageWorkspaceSource(
+              materialId: widget.resourceId,
+              title: widget.title,
+              filePath: widget.filePath,
+            ),
+          );
     });
   }
 

@@ -9,6 +9,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
+import '../../study_workspace/data/study_workspace_providers.dart';
+import '../../study_workspace/domain/study_workspace_models.dart';
 import '../../study_review/presentation/recent_reviews_screen.dart';
 import '../data/classes_providers.dart';
 import 'create_class_dialog.dart';
@@ -33,8 +35,9 @@ class HomeScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 tooltip: 'AI Chat',
-                onPressed: () =>
-                    ShellNavigation.go(context, ref, ShellTab.aiChat),
+                onPressed: () => ref
+                    .read(studyWorkspaceProvider.notifier)
+                    .open(StudyWorkspaceTab.chat),
                 icon: const Icon(Icons.auto_awesome_outlined),
               ),
               IconButton(
@@ -58,22 +61,13 @@ class HomeScreen extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'add_class',
-                    child: Text('Add Class'),
-                  ),
+                  PopupMenuItem(value: 'add_class', child: Text('Add Class')),
                   PopupMenuItem(
                     value: 'reviews',
                     child: Text('Recent Reviews'),
                   ),
-                  PopupMenuItem(
-                    value: 'favorites',
-                    child: Text('Favorites'),
-                  ),
-                  PopupMenuItem(
-                    value: 'settings',
-                    child: Text('Settings'),
-                  ),
+                  PopupMenuItem(value: 'favorites', child: Text('Favorites')),
+                  PopupMenuItem(value: 'settings', child: Text('Settings')),
                 ],
               ),
             ],

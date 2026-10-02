@@ -4,7 +4,14 @@ import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/presentation/ai_assistant_controller.dart';
+import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
+import '../../study_workspace/data/study_workspace_providers.dart';
+import '../../study_workspace/domain/study_workspace_models.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 import 'pdf_ai_material_reader_screen.dart';
@@ -15,17 +22,18 @@ Future<void> showPdfAiMaterialsSheet(
   required String title,
   required String filePath,
 }) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
-    builder: (_) => PdfAiMaterialsSheet(
-      materialId: materialId,
-      title: title,
-      filePath: filePath,
-    ),
-  );
+  ProviderScope.containerOf(context, listen: false)
+      .read(studyWorkspaceProvider.notifier)
+      .attachSource(
+        PdfWorkspaceSource(
+          materialId: materialId,
+          title: title,
+          filePath: filePath,
+        ),
+        open: true,
+        tab: StudyWorkspaceTab.summary,
+      );
+  return Future<void>.value();
 }
 
 class PdfAiMaterialsSheet extends ConsumerStatefulWidget {
@@ -60,6 +68,22 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
   Future<void> _generate(PdfAiMaterialType type) async {
     if (_generating.contains(type)) return;
 
+    if (!await AiAssistantController.ensureReady(context, ref)) return;
+    if (!mounted) return;
+    var selection = await AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: AiStudyAction.customPrompt,
+    );
+    if (!mounted) return;
+    selection =
+        await showAiModelSelector(
+          context,
+          selected: selection,
+          action: AiStudyAction.customPrompt,
+          title: 'Generate with',
+        ) ??
+        selection;
+
     setState(() => _generating.add(type));
     try {
       final generated = await ref
@@ -69,6 +93,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
             title: widget.title,
             filePath: widget.filePath,
             type: type,
+            selection: selection,
             customInstruction: '',
           );
       if (!mounted) return;
@@ -171,10 +196,8 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
                             _latestFor(materials, type),
                             fingerprint,
                           ),
-                          onTap: () => _onTap(
-                            type,
-                            _latestFor(materials, type),
-                          ),
+                          onTap: () =>
+                              _onTap(type, _latestFor(materials, type)),
                         ),
                       ),
                     const SizedBox(height: AppSpacing.sm),
@@ -309,10 +332,7 @@ class _MaterialTypeCard extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else if (!generated)
-                Icon(
-                  Icons.auto_awesome,
-                  color: theme.colorScheme.primary,
-                )
+                Icon(Icons.auto_awesome, color: theme.colorScheme.primary)
               else
                 Icon(
                   Icons.chevron_right,

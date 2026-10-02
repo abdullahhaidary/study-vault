@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/backup/backup_providers.dart';
 import 'package:study_vault/core/backup/backup_service.dart';
 import 'package:study_vault/core/database/app_database.dart';
@@ -236,7 +237,8 @@ void main() {
   group('AiPromptBuilder.buildQuestions', () {
     test('includes assessment requirements and exact count', () {
       final prompt = AiPromptBuilder.buildQuestions(
-        const AiStudyRequest(
+        AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.generateQuestions,
           sourceText: 'Source material about gradients.',
           questionType: AiQuestionType.mixed,
@@ -254,6 +256,7 @@ void main() {
     test('includes attached page image instructions', () {
       final prompt = AiPromptBuilder.buildQuestions(
         AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.generateQuestions,
           sourceText: 'PDF page 3 (image attached)',
           questionType: AiQuestionType.mcq,
@@ -338,7 +341,8 @@ void main() {
         pageNumber: 1,
       );
       final set = await generation.generateAndPersist(
-        source: source,
+      selection: testGeminiSelection(),
+      source: source,
         count: 5,
         type: QuizQuestionType.mixed,
         difficulty: QuizDifficulty.mixed,
@@ -395,7 +399,8 @@ void main() {
       };
       expect(
         () => generation.generateAndPersist(
-          source: QuestionSourceBuilder.fromSelectedText(text: 'x' * 20),
+      selection: testGeminiSelection(),
+      source: QuestionSourceBuilder.fromSelectedText(text: 'x' * 20),
           count: 5,
           type: QuizQuestionType.mcq,
           difficulty: QuizDifficulty.easy,
@@ -485,6 +490,12 @@ class MemoryAiSettingsStore implements AiSettingsStore {
 
   @override
   Future<void> setStudyPreference(String? value) async => _preference = value;
+
+  @override
+  Future<int> getGeminiRetryCount() async => 0;
+
+  @override
+  Future<void> setGeminiRetryCount(int count) async {}
 
   @override
   Future<bool> getPrivacyConsentAccepted() async => _privacy;

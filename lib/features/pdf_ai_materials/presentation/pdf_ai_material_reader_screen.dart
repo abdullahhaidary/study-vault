@@ -5,7 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/presentation/ai_assistant_controller.dart';
+import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
@@ -50,6 +55,22 @@ class _PdfAiMaterialReaderScreenState
     final instruction = await _showRegenerationDialog();
     if (instruction == null || !mounted) return;
 
+    if (!await AiAssistantController.ensureReady(context, ref)) return;
+    if (!mounted) return;
+    var selection = await AiExecutionSelection.fromGlobal(
+      ref.read(aiSettingsStoreProvider),
+      action: AiStudyAction.customPrompt,
+    );
+    if (!mounted) return;
+    selection =
+        await showAiModelSelector(
+          context,
+          selected: selection,
+          action: AiStudyAction.customPrompt,
+          title: 'Regenerate with',
+        ) ??
+        selection;
+
     setState(() => _generating = true);
     try {
       final generated = await ref
@@ -59,6 +80,7 @@ class _PdfAiMaterialReaderScreenState
             title: widget.pdfTitle,
             filePath: widget.filePath,
             type: widget.type,
+            selection: selection,
             customInstruction: instruction,
           );
       if (!mounted) return;

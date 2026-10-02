@@ -149,6 +149,7 @@ abstract final class AiAssistantController {
             .run(
               context: annotationContext,
               action: request.action,
+              selection: request.selection,
               rephraseMode: request.rephraseMode,
               organizeMode: request.organizeMode,
               summarizeMode: request.summarizeMode,

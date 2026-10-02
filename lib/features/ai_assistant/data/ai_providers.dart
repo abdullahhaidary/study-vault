@@ -23,7 +23,7 @@ final aiSettingsStoreProvider = Provider<AiSettingsStore>((ref) {
   return SharedPreferencesAiSettingsStore();
 });
 
-final geminiAiServiceProvider = Provider<AiService>((ref) {
+final geminiAiServiceProvider = Provider<GeminiAiService>((ref) {
   return GeminiAiService(
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),
@@ -107,6 +107,7 @@ class AiSettingsState {
     required this.thinkingMode,
     required this.language,
     required this.studyPreference,
+    required this.geminiRetryCount,
     required this.privacyConsent,
     required this.geminiConfigured,
     required this.deepseekConfigured,
@@ -118,6 +119,7 @@ class AiSettingsState {
   final AiThinkingMode thinkingMode;
   final AiLanguage language;
   final String? studyPreference;
+  final int geminiRetryCount;
   final bool privacyConsent;
   final bool geminiConfigured;
   final bool deepseekConfigured;
@@ -137,6 +139,7 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
     thinkingMode: await settings.getThinkingMode(),
     language: await settings.getLanguage(),
     studyPreference: await settings.getStudyPreference(),
+    geminiRetryCount: await settings.getGeminiRetryCount(),
     privacyConsent: await settings.getPrivacyConsentAccepted(),
     geminiConfigured: await creds.hasApiKeyFor(AiProviderId.gemini),
     deepseekConfigured: await creds.hasApiKeyFor(AiProviderId.deepseek),

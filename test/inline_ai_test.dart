@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/annotation_ai_context.dart';
@@ -125,10 +126,14 @@ void main() {
 
   group('AiPromptBuilder page actions', () {
     test('keyConcepts and examPoints produce grounded prompts', () {
-      final request = const AnnotationAiContext(
-        selectedText: 'Backpropagation updates weights',
-        pageNumber: 5,
-      ).toStudyRequest(action: AiStudyAction.keyConcepts);
+      final request =
+          const AnnotationAiContext(
+            selectedText: 'Backpropagation updates weights',
+            pageNumber: 5,
+          ).toStudyRequest(
+            action: AiStudyAction.keyConcepts,
+            selection: testGeminiSelection(),
+          );
 
       final keyPrompt = AiPromptBuilder.forRequest(request);
       expect(keyPrompt, contains('SELECTED TEXT:'));

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
@@ -88,7 +89,8 @@ void main() {
     'AiPromptBuilder preserves meaning and honors language instructions',
     () {
       final prompt = AiPromptBuilder.rephraseText(
-        const AiStudyRequest(
+        AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.rephrase,
           sourceText: 'Gradient Descent updates θ.',
           language: AiLanguage.persianDari,
@@ -109,16 +111,22 @@ void main() {
       const source = 'Gradient descent reduces cost.';
 
       final explain = await service.run(
-        const AiStudyRequest(action: AiStudyAction.explain, sourceText: source),
+        AiStudyRequest(
+          selection: testGeminiSelection(),
+          action: AiStudyAction.explain,
+          sourceText: source,
+        ),
       );
       final organize = await service.run(
-        const AiStudyRequest(
+        AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.organize,
           sourceText: source,
         ),
       );
       final flashcards = await service.run(
-        const AiStudyRequest(
+        AiStudyRequest(
+          selection: testGeminiSelection(),
           action: AiStudyAction.generateFlashcards,
           sourceText: source,
           flashcardCount: 2,

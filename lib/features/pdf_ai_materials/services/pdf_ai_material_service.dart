@@ -2,11 +2,11 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
-import '../../ai_assistant/data/ai_settings_store.dart';
-import '../../ai_assistant/domain/ai_actions.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/services/deepseek_ai_service.dart';
+import '../../ai_assistant/services/gemini_ai_service.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/services/pdf_text_extractor.dart';
 import '../domain/pdf_ai_material_models.dart';
@@ -29,34 +29,43 @@ abstract interface class PdfAiCompletionClient {
   Future<PdfAiCompletion> complete({
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
+    required AiExecutionSelection selection,
   });
 }
 
-class DeepSeekPdfAiCompletionClient implements PdfAiCompletionClient {
-  DeepSeekPdfAiCompletionClient(this._deepSeek, this._settings);
+/// Routes document completions to Gemini or DeepSeek from [selection].
+class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
+  RoutingPdfAiCompletionClient({
+    required GeminiAiService gemini,
+    required DeepSeekAiService deepSeek,
+  }) : _gemini = gemini,
+       _deepSeek = deepSeek;
 
+  final GeminiAiService _gemini;
   final DeepSeekAiService _deepSeek;
-  final AiSettingsStore _settings;
 
   @override
   Future<PdfAiCompletion> complete({
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
+    required AiExecutionSelection selection,
   }) async {
-    final result = await _deepSeek.completeDocumentMessages(
-      messages: messages,
-      maxOutputTokens: maxOutputTokens,
-    );
-    final storedModel = await _settings.getModelIdFor(AiProviderId.deepseek);
-    final model = resolveActiveModelId(
-      provider: AiProviderId.deepseek,
-      storedModelId: storedModel,
-      action: AiStudyAction.customPrompt,
-    );
+    final result = switch (selection.provider) {
+      AiProviderId.gemini => await _gemini.completeDocumentMessages(
+        messages: messages,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+      ),
+      AiProviderId.deepseek => await _deepSeek.completeDocumentMessages(
+        messages: messages,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+      ),
+    };
     return PdfAiCompletion(
       markdown: result.markdown,
-      provider: AiProviderId.deepseek.storageValue,
-      model: result.usage?.model ?? model,
+      provider: selection.providerStorage,
+      model: result.usage?.model ?? selection.resolvedModelId,
       usage: result.usage,
     );
   }
@@ -151,6 +160,7 @@ class PdfAiMaterialService {
     required String title,
     required String filePath,
     required PdfAiMaterialType type,
+    required AiExecutionSelection selection,
     String? customInstruction,
   }) async {
     final operationKey = '$materialId:${type.storageValue}';
@@ -163,6 +173,7 @@ class PdfAiMaterialService {
         title: title,
         filePath: filePath,
         type: type,
+        selection: selection,
         customInstruction: customInstruction,
       );
     } finally {
@@ -175,6 +186,7 @@ class PdfAiMaterialService {
     required String title,
     required String filePath,
     required PdfAiMaterialType type,
+    required AiExecutionSelection selection,
     String? customInstruction,
   }) async {
     final document = await prepareDocument(title: title, filePath: filePath);
@@ -190,12 +202,14 @@ class PdfAiMaterialService {
           customInstruction: customInstruction,
         ),
         maxOutputTokens: type.maxOutputTokens,
+        selection: selection,
       );
       calls.add(finalCompletion);
     } else {
       var digests = await _digestChunks(
         chunks: document.chunks(maxCharacters: chunkCharacters),
         calls: calls,
+        selection: selection,
       );
       var synthesis = PdfAiPromptBuilder.synthesisDocument(
         title: document.title,
@@ -211,6 +225,7 @@ class PdfAiMaterialService {
         digests = await _digestChunks(
           chunks: _splitDeterministically(synthesis, chunkCharacters),
           calls: calls,
+          selection: selection,
         );
         synthesis = PdfAiPromptBuilder.synthesisDocument(
           title: document.title,
@@ -225,13 +240,14 @@ class PdfAiMaterialService {
           customInstruction: customInstruction,
         ),
         maxOutputTokens: type.maxOutputTokens,
+        selection: selection,
       );
       calls.add(finalCompletion);
     }
     stopwatch.stop();
     final completedMarkdown = finalCompletion.markdown.trim();
     if (completedMarkdown.isEmpty) {
-      throw StateError('DeepSeek returned an empty study material.');
+      throw StateError('The AI returned an empty study material.');
     }
 
     final usage = AiTokenUsage.merge([
@@ -267,6 +283,7 @@ class PdfAiMaterialService {
   Future<List<String>> _digestChunks({
     required List<String> chunks,
     required List<PdfAiCompletion> calls,
+    required AiExecutionSelection selection,
   }) async {
     final digests = <String>[];
     for (var i = 0; i < chunks.length; i++) {
@@ -277,11 +294,12 @@ class PdfAiMaterialService {
           chunkCount: chunks.length,
         ),
         maxOutputTokens: chunkDigestMaxOutputTokens,
+        selection: selection,
       );
       calls.add(completion);
       final digest = completion.markdown.trim();
       if (digest.isEmpty) {
-        throw StateError('DeepSeek returned an empty chunk digest.');
+        throw StateError('The AI returned an empty chunk digest.');
       }
       digests.add(digest);
     }

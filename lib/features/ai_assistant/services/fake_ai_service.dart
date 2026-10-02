@@ -234,8 +234,11 @@ extension on AiStudyRequest {
       count: questionCount,
       type: questionType ?? AiQuestionType.mixed,
       difficulty: questionDifficulty,
+      selection: selection,
       language: language,
       userPreference: userPreference,
+      pageNumber: pageNumber,
+      image: image,
     );
   }
 }

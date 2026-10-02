@@ -5,6 +5,7 @@ import '../core/widgets/app_shell.dart';
 import '../features/classes/presentation/class_details_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
+import '../features/lessons/presentation/lesson_images_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/ai_questions/presentation/question_sets_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
@@ -32,6 +33,7 @@ abstract final class AppRoutes {
   static const noteEditor = '/note/edit';
   static const flashcardsList = '/flashcards';
   static const flashcardStudy = '/flashcards/study';
+  static const lessonImages = '/lesson-images';
   static const questionSets = '/ai-questions';
 }
 
@@ -99,6 +101,14 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => FlashcardStudyScreen(
           scope: settings.arguments as FlashcardsListScope,
+        ),
+      );
+
+    case AppRoutes.lessonImages:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => LessonImagesScreen(
+          scope: settings.arguments as LessonImagesScope,
         ),
       );
 

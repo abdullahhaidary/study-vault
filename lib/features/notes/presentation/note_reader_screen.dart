@@ -44,10 +44,7 @@ class NoteReaderScreen extends ConsumerWidget {
             children: [
               StudyRichTextViewer(storedValue: item.content),
               const SizedBox(height: 20),
-              AiDiscussionsSection(
-                kind: AiContextKind.note,
-                id: item.id,
-              ),
+              AiDiscussionsSection(kind: AiContextKind.note, id: item.id),
             ],
           ),
         );

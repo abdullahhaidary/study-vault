@@ -8,13 +8,16 @@ import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
+import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
 import '../domain/inline_ai_models.dart';
 import '../services/inline_ai_annotation_saver.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_assistant_controller.dart';
+import 'widgets/ai_model_picker.dart';
 import 'ai_flashcards_preview.dart';
 import 'ai_response_screen.dart';
 import 'inline_ai_controller.dart';
@@ -176,7 +179,14 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
   Future<void> _expand() async {
     final state = _controller.state;
     final action = state.action ?? AiStudyAction.explain;
-    final request = _controller.buildStudyRequest();
+    final selection =
+        state.selection ??
+        await AiExecutionSelection.fromGlobal(
+          ref.read(aiSettingsStoreProvider),
+          action: action,
+        );
+    if (!mounted) return;
+    final request = _controller.buildStudyRequest(selection);
     final result = state.hasResponse
         ? AiTextResult(markdown: state.markdown)
         : null;
@@ -347,6 +357,12 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       ref,
       request: state.context.toStudyRequest(
         action: AiStudyAction.generateFlashcards,
+        selection:
+            state.selection ??
+            await AiExecutionSelection.fromGlobal(
+              ref.read(aiSettingsStoreProvider),
+              action: AiStudyAction.generateFlashcards,
+            ),
         flashcardCount: count,
         pageSendMode: state.pageSendMode,
       ),
@@ -509,6 +525,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       onPageSendMode: widget.mode == InlineAiSourceMode.page
           ? _controller.setPageSendMode
           : null,
+      onSelectionChanged: _controller.setSelection,
       showAddToAnnotation:
           widget.mode == InlineAiSourceMode.selection ||
           _controller.existingPin != null,
@@ -570,6 +587,7 @@ class _InlineAiPanelCard extends StatelessWidget {
     required this.onRetry,
     required this.onSelectGeneration,
     this.onPageSendMode,
+    this.onSelectionChanged,
     required this.showAddToAnnotation,
   });
 
@@ -588,6 +606,7 @@ class _InlineAiPanelCard extends StatelessWidget {
   final VoidCallback onRetry;
   final void Function(AnnotationAiGeneration g) onSelectGeneration;
   final void Function(AiPageSendMode mode)? onPageSendMode;
+  final ValueChanged<AiExecutionSelection>? onSelectionChanged;
   final bool showAddToAnnotation;
 
   @override
@@ -671,6 +690,22 @@ class _InlineAiPanelCard extends StatelessWidget {
                         onSelected: busy ? null : (_) => onPageSendMode!(mode),
                       ),
                   ],
+                ),
+              ),
+            if (state.selection != null && onSelectionChanged != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: AiModelPickerButton(
+                    selection: state.selection!,
+                    action: state.action,
+                    compact: true,
+                    constraints: state.pageSendMode == AiPageSendMode.image
+                        ? AiExecutionConstraints.vision
+                        : AiExecutionConstraints.none,
+                    onChanged: busy ? (_) {} : onSelectionChanged!,
+                  ),
                 ),
               ),
             if (state.phase == InlineAiPhase.ready ||

@@ -1,11 +1,12 @@
 import 'package:flutter/painting.dart';
 
 import 'ai_actions.dart';
+import 'ai_execution_selection.dart';
 import 'ai_models.dart';
 
 /// Normalized study context for annotation / PDF-selection AI.
 ///
-/// Built once in the UI layer; Gemini receives [AiStudyRequest] derived from
+/// Built once in the UI layer; the model receives [AiStudyRequest] derived from
 /// this — never raw widget state.
 class AnnotationAiContext {
   const AnnotationAiContext({
@@ -43,7 +44,7 @@ class AnnotationAiContext {
   /// Optional PDF path for re-extracting surrounding text later.
   final String? filePath;
 
-  /// Best primary text for Gemini (selection, else annotation body).
+  /// Best primary text (selection, else annotation body).
   String get primaryText {
     final selected = selectedText.trim();
     if (selected.isNotEmpty) return selected;
@@ -54,6 +55,7 @@ class AnnotationAiContext {
 
   AiStudyRequest toStudyRequest({
     required AiStudyAction action,
+    required AiExecutionSelection selection,
     AiRephraseMode? rephraseMode,
     AiOrganizeMode? organizeMode,
     AiSummarizeMode? summarizeMode,
@@ -78,6 +80,7 @@ class AnnotationAiContext {
     return AiStudyRequest(
       action: action,
       sourceText: source,
+      selection: selection,
       language: languageOverride ?? language,
       rephraseMode: rephraseMode,
       organizeMode: organizeMode,
