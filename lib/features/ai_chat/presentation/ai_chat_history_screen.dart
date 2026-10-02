@@ -5,12 +5,15 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../ai_assistant/domain/gemini_model_registry.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
 import '../data/ai_chat_providers.dart';
 
 /// Conversation history for Study AI.
 class AiChatHistoryScreen extends ConsumerStatefulWidget {
-  const AiChatHistoryScreen({super.key});
+  const AiChatHistoryScreen({super.key, this.asDrawer = false});
+
+  /// When true, this panel lives in a [Drawer] (swipe from the start edge).
+  final bool asDrawer;
 
   @override
   ConsumerState<AiChatHistoryScreen> createState() =>
@@ -27,14 +30,23 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
     super.dispose();
   }
 
+  void _dismiss() {
+    if (!mounted) return;
+    if (widget.asDrawer) {
+      Scaffold.maybeOf(context)?.closeDrawer();
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
   Future<void> _newChat() async {
     ref.read(activeAiChatIdProvider.notifier).state = null;
-    if (mounted) Navigator.of(context).pop();
+    _dismiss();
   }
 
   Future<void> _open(AiChat chat) async {
     ref.read(activeAiChatIdProvider.notifier).state = chat.id;
-    if (mounted) Navigator.of(context).pop();
+    _dismiss();
   }
 
   Future<void> _rename(AiChat chat) async {
@@ -104,6 +116,7 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.asDrawer,
         title: const Text('Chats'),
         actions: [
           IconButton(
@@ -213,8 +226,7 @@ class _ChatHistoryTile extends ConsumerWidget {
 
     final when = chat.lastMessageAt ?? chat.updatedAt;
     final dateLabel = _friendlyDate(when);
-    final modelLabel = GeminiModelRegistry.displayName(chat.modelId);
-    final modelKnown = GeminiModelRegistry.isKnown(chat.modelId);
+    final modelLabel = AiModels.chatDisplayName(chat.modelId);
 
     return ListTile(
       tileColor: theme.colorScheme.surface,
@@ -229,7 +241,7 @@ class _ChatHistoryTile extends ConsumerWidget {
         style: theme.textTheme.titleSmall,
       ),
       subtitle: Text(
-        '${preview ?? '…'}\n$dateLabel · ${modelKnown ? modelLabel : 'Previous model unavailable'}',
+        '${preview ?? '…'}\n$dateLabel · $modelLabel',
         maxLines: 3,
         overflow: TextOverflow.ellipsis,
       ),

@@ -147,6 +147,15 @@ void main() {
       expect(await settings.getModelId(), 'gemini-3.5-flash-lite');
     });
 
+    test('setChatModel to DeepSeek switches default provider', () async {
+      final chat = await service.createChat();
+      await service.setChatModel(chat.id, 'deepseek-flash');
+
+      expect(await settings.getProvider(), AiProviderId.deepseek);
+      expect(await settings.getModelId(), 'deepseek-flash');
+      expect((await db.getAiChatById(chat.id))!.modelId, 'deepseek-flash');
+    });
+
     test(
       'retry removes error message and does not duplicate user turn',
       () async {

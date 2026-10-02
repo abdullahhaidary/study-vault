@@ -1,3 +1,4 @@
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 
@@ -53,6 +54,7 @@ class AiSelectableModel {
     required this.description,
     required this.recommended,
     required this.group,
+    required this.provider,
   });
 
   final String id;
@@ -60,8 +62,10 @@ class AiSelectableModel {
   final String description;
   final bool recommended;
 
-  /// UI group: Recommended / Fast / Other.
+  /// Legacy intra-provider group (Recommended / Fast / Other).
   final String group;
+
+  final AiProviderId provider;
 
   factory AiSelectableModel.fromGemini(GeminiModelDefinition m) {
     final group = switch (m.tier) {
@@ -75,6 +79,7 @@ class AiSelectableModel {
       description: m.description,
       recommended: m.recommended,
       group: group,
+      provider: AiProviderId.gemini,
     );
   }
 
@@ -85,6 +90,7 @@ class AiSelectableModel {
       description: m.description,
       recommended: m.recommended,
       group: m.recommended ? 'Recommended' : 'Other',
+      provider: AiProviderId.deepseek,
     );
   }
 }

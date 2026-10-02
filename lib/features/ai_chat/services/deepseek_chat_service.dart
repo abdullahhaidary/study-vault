@@ -9,6 +9,7 @@ import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
+import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
 
@@ -400,7 +401,29 @@ class RoutingAiChatTransport implements AiChatTransport {
   Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    return (await _active()).listAvailableChatModels(timeout: timeout);
+    Future<List<AiSelectableModel>> safeList(AiChatTransport t) async {
+      try {
+        return await t.listAvailableChatModels(timeout: timeout);
+      } on Object {
+        return const [];
+      }
+    }
+
+    final lists = await Future.wait([
+      safeList(gemini),
+      safeList(deepseek),
+    ]);
+    final geminiModels = lists[0].isEmpty
+        ? GeminiModelRegistry.fallbackChatModels()
+              .map(AiSelectableModel.fromGemini)
+              .toList(growable: false)
+        : lists[0];
+    final deepseekModels = lists[1].isEmpty
+        ? DeepSeekModelRegistry.selectableModels()
+              .map(AiSelectableModel.fromDeepSeek)
+              .toList(growable: false)
+        : lists[1];
+    return [...geminiModels, ...deepseekModels];
   }
 
   @override

@@ -162,6 +162,22 @@ abstract final class AiModels {
     };
     return modelLabel;
   }
+
+  /// True if [id] is a current Gemini or DeepSeek selectable model (or Auto).
+  static bool isKnown(String id) {
+    if (DeepSeekModelIds.isAuto(id)) return true;
+    if (DeepSeekModelRegistry.isKnown(id)) return true;
+    return GeminiModelRegistry.isKnown(id);
+  }
+
+  /// Chat subtitle / app bar label. Unknown ids stay marked unavailable.
+  static String chatDisplayName(String id) {
+    if (DeepSeekModelIds.isAuto(id)) return 'DeepSeek Auto';
+    if (DeepSeekModelRegistry.isKnown(id)) {
+      return DeepSeekModelRegistry.displayName(id);
+    }
+    return GeminiModelRegistry.displayName(id);
+  }
 }
 
 extension AiStudyActionX on AiStudyAction {

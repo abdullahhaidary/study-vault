@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../data/ai_chat_providers.dart';
@@ -29,44 +30,51 @@ class _AiModelSelectorSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final modelsAsync = ref.watch(availableChatModelsProvider);
     final theme = Theme.of(context);
+    final height = MediaQuery.sizeOf(context).height * 0.72;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        child: modelsAsync.when(
-          loading: () => const SizedBox(
-            height: 180,
-            child: Center(child: CircularProgressIndicator()),
+      child: SizedBox(
+        height: height,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
           ),
-          error: (_, _) => _ModelList(
-            models: [
-              ...GeminiModelRegistry.fallbackChatModels().map(
-                AiSelectableModel.fromGemini,
-              ),
-              ...DeepSeekModelRegistry.selectableModels().map(
-                AiSelectableModel.fromDeepSeek,
-              ),
-            ],
-            selectedModelId: selectedModelId,
-          ),
-          data: (models) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Choose AI Model', style: theme.textTheme.titleLarge),
-              const SizedBox(height: AppSpacing.sm),
-              Flexible(
-                child: _ModelList(
-                  models: models,
-                  selectedModelId: selectedModelId,
+          child: modelsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => _ModelList(
+              models: [
+                ...GeminiModelRegistry.fallbackChatModels().map(
+                  AiSelectableModel.fromGemini,
                 ),
-              ),
-            ],
+                ...DeepSeekModelRegistry.selectableModels().map(
+                  AiSelectableModel.fromDeepSeek,
+                ),
+              ],
+              selectedModelId: selectedModelId,
+            ),
+            data: (models) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Choose AI', style: theme.textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Pick Gemini or DeepSeek for this chat.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: _ModelList(
+                    models: models,
+                    selectedModelId: selectedModelId,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -83,29 +91,35 @@ class _ModelList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final groups = <String, List<AiSelectableModel>>{};
+    final byProvider = <AiProviderId, List<AiSelectableModel>>{};
     for (final model in models) {
-      groups.putIfAbsent(model.group, () => []).add(model);
+      byProvider.putIfAbsent(model.provider, () => []).add(model);
     }
+    final order = [
+      AiProviderId.gemini,
+      AiProviderId.deepseek,
+      ...byProvider.keys.where(
+        (id) => id != AiProviderId.gemini && id != AiProviderId.deepseek,
+      ),
+    ];
 
     return ListView(
-      shrinkWrap: true,
       children: [
-        for (final entry in groups.entries)
-          if (entry.value.isNotEmpty) ...[
+        for (final provider in order)
+          if (byProvider[provider] case final items?) ...[
             Padding(
               padding: const EdgeInsets.only(
                 top: AppSpacing.md,
                 bottom: AppSpacing.xs,
               ),
               child: Text(
-                entry.key,
+                provider.displayName,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
-            for (final model in entry.value)
+            for (final model in items)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
@@ -142,12 +156,11 @@ class _ModelList extends StatelessWidget {
                   ],
                 ),
                 subtitle: Text(
-                  '${model.description}\n${model.id}',
+                  model.description,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                isThreeLine: true,
                 onTap: () => Navigator.pop(context, model.id),
               ),
           ],

@@ -3,9 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
-import '../../ai_assistant/domain/ai_provider.dart';
-import '../../ai_assistant/domain/deepseek_model_registry.dart';
-import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import '../services/ai_chat_service.dart';
 import '../services/deepseek_chat_service.dart';
@@ -69,19 +66,5 @@ final aiChatLastMessageProvider = StreamProvider.family<AiChatMessage?, String>(
 final availableChatModelsProvider = FutureProvider<List<AiSelectableModel>>((
   ref,
 ) async {
-  final configured = await ref.watch(aiConfiguredProvider.future);
-  final provider = await ref.watch(aiSettingsStoreProvider).getProvider();
-  if (!configured) {
-    return switch (provider) {
-      AiProviderId.gemini =>
-        GeminiModelRegistry.fallbackChatModels()
-            .map(AiSelectableModel.fromGemini)
-            .toList(growable: false),
-      AiProviderId.deepseek =>
-        DeepSeekModelRegistry.selectableModels()
-            .map(AiSelectableModel.fromDeepSeek)
-            .toList(growable: false),
-    };
-  }
   return ref.watch(aiChatTransportProvider).listAvailableChatModels();
 });

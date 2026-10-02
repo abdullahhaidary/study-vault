@@ -97,6 +97,20 @@ void main() {
       expect(DeepSeekModelRegistry.normalize('unknown'), 'deepseek-flash');
     });
 
+    test('chat labels DeepSeek models instead of unavailable', () {
+      expect(AiModels.isKnown(DeepSeekModelRegistry.flash), isTrue);
+      expect(AiModels.isKnown(DeepSeekModelIds.auto), isTrue);
+      expect(
+        AiModels.chatDisplayName(DeepSeekModelRegistry.flash),
+        'DeepSeek Flash',
+      );
+      expect(AiModels.chatDisplayName(DeepSeekModelIds.auto), 'DeepSeek Auto');
+      expect(
+        AiModels.chatDisplayName('totally-gone-model'),
+        'Previous model unavailable',
+      );
+    });
+
     test('auto routing prefers pro for heavy actions', () {
       expect(
         resolveActiveModelId(

@@ -7,7 +7,9 @@ import '../../../app/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
 import '../data/ai_chat_providers.dart';
@@ -89,15 +91,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     });
   }
 
-  Future<void> _openHistory() async {
-    await _persistDraft();
-    if (!mounted) return;
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const AiChatHistoryScreen()));
-    _draftHydrated = false;
-  }
-
   Future<void> _selectModel(String currentId) async {
     final selected = await showGeminiModelSelector(
       context,
@@ -106,8 +99,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     if (selected == null || !mounted) return;
 
     final chatId = ref.read(activeAiChatIdProvider);
+    final provider = AiProviderIdX.fromModelId(selected);
     if (chatId == null) {
-      await ref.read(aiSettingsStoreProvider).setModelId(selected);
+      await ref.read(aiSettingsStoreProvider).setProvider(provider);
+      await ref.read(aiSettingsStoreProvider).setModelIdFor(provider, selected);
       ref.invalidate(aiSettingsStateProvider);
       setState(() {});
       return;
@@ -226,10 +221,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         chatAsync?.valueOrNull?.modelId ??
         settingsAsync.valueOrNull?.modelId ??
         GeminiModelRegistry.defaultModelId;
-    final modelKnown = GeminiModelRegistry.isKnown(modelId);
-    final modelLabel = modelKnown
-        ? GeminiModelRegistry.displayName(modelId)
-        : 'Previous model unavailable';
+    final modelKnown = AiModels.isKnown(modelId);
+    final modelLabel = AiModels.chatDisplayName(modelId);
 
     // Hydrate draft once per opened chat (after build).
     final draft = chatAsync?.valueOrNull?.draftText;
@@ -244,13 +237,33 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     final theme = Theme.of(context);
+    final drawerWidth = (MediaQuery.sizeOf(context).width * 0.86).clamp(
+      280.0,
+      360.0,
+    );
+
+    ref.listen<String?>(activeAiChatIdProvider, (previous, next) {
+      if (previous == next) return;
+      _draftHydrated = false;
+      _composer.clear();
+    });
 
     return Scaffold(
+      drawerEdgeDragWidth: 72,
+      drawer: Drawer(
+        width: drawerWidth,
+        child: const AiChatHistoryScreen(asDrawer: true),
+      ),
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Chat history',
-          onPressed: _openHistory,
-          icon: const Icon(Icons.menu),
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: 'Chat history',
+            onPressed: () async {
+              await _persistDraft();
+              if (context.mounted) Scaffold.of(context).openDrawer();
+            },
+            icon: const Icon(Icons.menu),
+          ),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
