@@ -1,10 +1,12 @@
 const express = require('express');
 const multer = require('multer');
+const os = require('os');
 const path = require('path');
 const fs = require('fs');
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const UPLOADS = path.join(__dirname, 'uploads');
+const PUBLIC = path.join(__dirname, 'public');
 
 if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
 
@@ -23,9 +25,30 @@ const upload = multer({
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(PUBLIC));
 
-function listUploads() {
+function listUploadNames() {
   return fs.readdirSync(UPLOADS).filter((f) => !f.startsWith('.'));
+}
+
+function listUploadsDetailed() {
+  return listUploadNames()
+    .map((name) => {
+      const filePath = path.join(UPLOADS, name);
+      try {
+        const stat = fs.statSync(filePath);
+        if (!stat.isFile()) return null;
+        return {
+          name,
+          size: stat.size,
+          mtime: stat.mtimeMs,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.mtime - a.mtime);
 }
 
 function safeJoinUploads(name) {
@@ -56,102 +79,34 @@ function sendZip(res, entries, zipName) {
   res.end(zipBuf);
 }
 
-app.get('/', (_req, res) => {
-  const files = listUploads();
-  const list = files
-    .map((f) => {
-      const enc = encodeURIComponent(f);
-      return `<li>
-        <label class="pick">
-          <input type="checkbox" name="files" value="${f.replace(/"/g, '&quot;')}" />
-          <span class="name">${f}</span>
-        </label>
-        <div class="actions">
-          <a class="btn" href="/download/${enc}">Download</a>
-          <a class="btn secondary" href="/zip/${enc}">ZIP (iPhone)</a>
-        </div>
-      </li>`;
-    })
-    .join('') || '<li class="empty">No files yet</li>';
+function lanAddresses() {
+  const nets = os.networkInterfaces();
+  const out = [];
+  for (const entries of Object.values(nets)) {
+    if (!entries) continue;
+    for (const net of entries) {
+      if (net.family === 'IPv4' && !net.internal) out.push(net.address);
+    }
+  }
+  return out;
+}
 
-  const batchBar = files.length
-    ? `<div class="batch">
-        <label><input type="checkbox" id="select-all" /> Select all</label>
-        <button type="submit" formaction="/batch-zip" formmethod="post">Download selected (ZIP)</button>
-        <a class="btn secondary" href="/batch-zip?all=1">Download all (ZIP)</a>
-      </div>`
-    : '';
-
-  res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>File Share</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    form.upload { margin: 24px 0; padding: 16px; border: 1px solid #ddd; border-radius: 8px; display: grid; gap: 10px; }
-    form.upload .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    #upload-status { color: #666; font-size: 13px; }
-    ul { list-style: none; padding: 0; margin: 0; }
-    li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eee; }
-    li.empty { color: #666; }
-    .pick { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
-    .pick input { margin-top: 3px; flex-shrink: 0; }
-    .name { flex: 1; word-break: break-all; font-size: 14px; }
-    .actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .btn, button {
-      padding: 8px 12px; background: #1a73e8; color: #fff; text-decoration: none;
-      border-radius: 6px; font-size: 13px; white-space: nowrap; text-align: center;
-      border: none; cursor: pointer; font: inherit;
-    }
-    .btn.secondary, a.btn.secondary { background: #5f6368; display: inline-block; }
-    .hint { color: #666; font-size: 13px; line-height: 1.45; }
-    .batch {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-      margin: 12px 0 8px; padding: 12px; background: #f6f8fa; border-radius: 8px;
-    }
-  </style>
-</head>
-<body>
-  <h1>File Share</h1>
-  <form class="upload" action="/upload" method="post" enctype="multipart/form-data">
-    <div class="row">
-      <input type="file" name="files" id="files" multiple required />
-      <button type="submit">Upload</button>
-    </div>
-    <div id="upload-status">Select one or many files, then Upload.</div>
-  </form>
-  <h2>Files</h2>
-  <p class="hint">
-    Upload accepts multiple files. For download: select files → <b>Download selected (ZIP)</b>,
-    or <b>Download all</b>. On iPhone, single-file <b>ZIP (iPhone)</b> still works best for videos.
-  </p>
-  <form id="batch">
-    ${batchBar}
-    <ul>${list}</ul>
-  </form>
-  <script>
-    const all = document.getElementById('select-all');
-    if (all) {
-      all.addEventListener('change', () => {
-        document.querySelectorAll('#batch input[name="files"]').forEach((c) => { c.checked = all.checked; });
-      });
-    }
-    const picker = document.getElementById('files');
-    const status = document.getElementById('upload-status');
-    if (picker && status) {
-      picker.addEventListener('change', () => {
-        const n = picker.files ? picker.files.length : 0;
-        status.textContent = n ? n + ' file(s) ready to upload' : 'Select one or many files, then Upload.';
-      });
-    }
-  </script>
-</body>
-</html>`);
+app.get('/api/files', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ files: listUploadsDetailed() });
 });
 
-app.post('/upload', upload.array('files', 100), (_req, res) => {
+app.post('/upload', upload.array('files', 100), (req, res) => {
+  const count = req.files?.length ?? 0;
+  const wantsJson =
+    req.xhr ||
+    (req.get('accept') || '').includes('application/json') ||
+    req.get('x-requested-with') === 'XMLHttpRequest';
+
+  if (wantsJson || req.get('content-type')?.includes('multipart/form-data')) {
+    // XHR uploads from the redesigned UI
+    return res.status(200).json({ ok: true, count });
+  }
   res.redirect('/');
 });
 
@@ -184,13 +139,17 @@ app.get('/zip/:name', (req, res) => {
 function handleBatchZip(req, res) {
   let selected;
   if (req.query.all === '1' || req.body?.all === '1') {
-    selected = listUploads().map((name) => safeJoinUploads(name)).filter(Boolean);
+    selected = listUploadNames()
+      .map((name) => safeJoinUploads(name))
+      .filter(Boolean);
   } else {
     selected = resolveSelected(req.body?.files || req.query.files);
   }
 
   if (!selected.length) {
-    return res.status(400).send('No files selected. Go back and check at least one file.');
+    return res
+      .status(400)
+      .send('No files selected. Go back and check at least one file.');
   }
 
   const entries = selected.map(({ base, file }) => ({
@@ -282,6 +241,8 @@ function crc32(buf) {
 }
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`File share running at http://localhost:${PORT}`);
-  console.log(`LAN: http://192.168.0.103:${PORT}`);
+  console.log(`Study Vault Share → http://localhost:${PORT}`);
+  for (const ip of lanAddresses()) {
+    console.log(`                 → http://${ip}:${PORT}`);
+  }
 });

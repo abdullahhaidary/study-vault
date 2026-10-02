@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../subjects/data/subject_groups_providers.dart';
 import '../../subjects/data/subjects_providers.dart';
@@ -38,6 +41,10 @@ class ClassDetailsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete'),
           ),
@@ -55,113 +62,61 @@ class ClassDetailsScreen extends ConsumerWidget {
     final classAsync = ref.watch(classByIdProvider(classId));
     final subjectsAsync = ref.watch(subjectsForClassProvider(classId));
     final groupsAsync = ref.watch(subjectGroupsForClassProvider(classId));
-    final theme = Theme.of(context);
-    final isWide = MediaQuery.sizeOf(context).width >= 720;
 
     return classAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: AppLoading()),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
-        body: Center(child: Text('Error: $error')),
+        body: const AppErrorState(message: 'Could not load this class.'),
       ),
       data: (classItem) {
         if (classItem == null) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(child: Text('Class not found')),
+            body: const AppErrorState(message: 'Class not found'),
           );
         }
 
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                title: Text(classItem.name),
-                actions: [
-                  FavoriteStarButton(
-                    entityType: FavoriteEntityType.class_,
-                    entityId: classId,
-                  ),
-                  if (isWide) ...[
-                    TextButton.icon(
-                      onPressed: () =>
-                          SubjectGroupDialog.show(context, classId: classId),
-                      icon: const Icon(Icons.create_new_folder_outlined),
-                      label: const Text('Add Subject Group'),
-                    ),
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: FilledButton.icon(
-                        onPressed: () =>
-                            CreateSubjectDialog.show(context, classId: classId),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Subject'),
-                      ),
-                    ),
-                  ] else
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'group') {
-                          SubjectGroupDialog.show(context, classId: classId);
-                        } else if (value == 'subject') {
-                          CreateSubjectDialog.show(context, classId: classId);
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(
-                          value: 'group',
-                          child: Text('Add Subject Group'),
-                        ),
-                        PopupMenuItem(
-                          value: 'subject',
-                          child: Text('Add Subject'),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              if (classItem.description != null &&
-                  classItem.description!.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Text(
-                      classItem.description!,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                  child: Text(
-                    'Subjects',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              ..._buildSubjectContent(
-                context,
-                ref,
-                subjectsAsync: subjectsAsync,
-                groupsAsync: groupsAsync,
-              ),
-            ],
+        return DetailScaffold(
+          title: classItem.name,
+          description: classItem.description,
+          actions: [
+            FavoriteStarButton(
+              entityType: FavoriteEntityType.class_,
+              entityId: classId,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (value) {
+                if (value == 'group') {
+                  SubjectGroupDialog.show(context, classId: classId);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'group', child: Text('Add Subject Group')),
+              ],
+            ),
+          ],
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () =>
+                CreateSubjectDialog.show(context, classId: classId),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Subject'),
           ),
-          floatingActionButton: isWide
-              ? null
-              : FloatingActionButton(
-                  onPressed: () =>
-                      CreateSubjectDialog.show(context, classId: classId),
-                  child: const Icon(Icons.add),
-                ),
+          bodySlivers: [
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: 0,
+                child: const SectionHeader(title: 'Subjects'),
+              ),
+            ),
+            ..._buildSubjectContent(
+              context,
+              ref,
+              subjectsAsync: subjectsAsync,
+              groupsAsync: groupsAsync,
+            ),
+          ],
         );
       },
     );
@@ -174,24 +129,20 @@ class ClassDetailsScreen extends ConsumerWidget {
     required AsyncValue<List<SubjectGroup>> groupsAsync,
   }) {
     if (subjectsAsync.isLoading || groupsAsync.isLoading) {
-      return [
-        const SliverFillRemaining(
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ];
+      return [const SliverFillRemaining(child: AppLoading())];
     }
 
     if (subjectsAsync.hasError) {
       return [
-        SliverFillRemaining(
-          child: Center(child: Text('Error: ${subjectsAsync.error}')),
+        const SliverFillRemaining(
+          child: AppErrorState(message: 'Could not load subjects.'),
         ),
       ];
     }
     if (groupsAsync.hasError) {
       return [
-        SliverFillRemaining(
-          child: Center(child: Text('Error: ${groupsAsync.error}')),
+        const SliverFillRemaining(
+          child: AppErrorState(message: 'Could not load subject groups.'),
         ),
       ];
     }
@@ -214,6 +165,7 @@ class ClassDetailsScreen extends ConsumerWidget {
     }
 
     final children = <Widget>[];
+    final theme = Theme.of(context);
 
     for (final group in groupList) {
       final inGroup = subjectList
@@ -234,11 +186,11 @@ class ClassDetailsScreen extends ConsumerWidget {
       if (inGroup.isEmpty) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: Text(
               'No subjects in this group',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
               ),
             ),
           ),
@@ -247,7 +199,7 @@ class ClassDetailsScreen extends ConsumerWidget {
         for (final subject in inGroup) {
           children.add(
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: GroupedItemTile(
                 title: subject.name,
                 subtitle: subject.description,
@@ -267,7 +219,7 @@ class ClassDetailsScreen extends ConsumerWidget {
           );
         }
       }
-      children.add(const SizedBox(height: 8));
+      children.add(const SizedBox(height: AppSpacing.xs));
     }
 
     final ungrouped = subjectList
@@ -280,11 +232,11 @@ class ClassDetailsScreen extends ConsumerWidget {
       if (ungrouped.isEmpty && groupList.isNotEmpty) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: Text(
               'No ungrouped subjects',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
               ),
             ),
           ),
@@ -293,7 +245,7 @@ class ClassDetailsScreen extends ConsumerWidget {
       for (final subject in ungrouped) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: GroupedItemTile(
               title: subject.name,
               subtitle: subject.description,
@@ -315,9 +267,14 @@ class ClassDetailsScreen extends ConsumerWidget {
     }
 
     return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 88),
-        sliver: SliverList(delegate: SliverChildListDelegate(children)),
+      SliverToBoxAdapter(
+        child: DetailContent(
+          bottom: 88,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
       ),
     ];
   }

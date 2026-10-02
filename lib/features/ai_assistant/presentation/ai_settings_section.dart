@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../ai_chat/data/ai_chat_providers.dart';
 import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
@@ -357,6 +358,53 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                         .setPrivacyConsentAccepted(value);
                     await _refresh();
                   },
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Clear all AI chats?'),
+                        content: const Text(
+                          'Every Study AI conversation on this device will be '
+                          'deleted. This cannot be undone.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.colorScheme.error,
+                              foregroundColor: theme.colorScheme.onError,
+                            ),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Clear chats'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok != true) return;
+                    await ref.read(aiChatServiceProvider).deleteAllChats();
+                    ref.read(activeAiChatIdProvider.notifier).state = null;
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('AI chat history cleared.'),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  label: Text(
+                    'Clear chat history',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
                 ),
               ],
             ),

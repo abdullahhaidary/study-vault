@@ -1,7 +1,7 @@
 {
   "name": "file-share-server",
   "version": "1.0.0",
-  "description": "Minimal local file sharing server",
+  "description": "Study Vault local LAN file share",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

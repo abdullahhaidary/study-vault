@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../data/review_session_providers.dart';
 import '../domain/review_models.dart';
 import 'review_setup_screen.dart';
 
-/// Compact Study Review entry card/button for detail screens.
+/// Compact Study Review entry for detail screens.
 class ReviewEntryButton extends ConsumerWidget {
   const ReviewEntryButton({
     super.key,
@@ -36,29 +37,23 @@ class ReviewEntryButton extends ConsumerWidget {
           );
         }
 
-        return Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Study', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                if (count == 0)
-                  Text(
-                    'No annotations yet',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                else
-                  FilledButton.tonalIcon(
-                    onPressed: () => openReviewSetup(context, scope: scope),
-                    icon: const Icon(Icons.school_outlined),
-                    label: Text('Review $count Pins'),
-                  ),
-              ],
+        if (count == 0) {
+          return Text(
+            'No annotations to review yet',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          );
+        }
+
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () => openReviewSetup(context, scope: scope),
+            icon: const Icon(Icons.school_outlined),
+            label: Text('Review $count Pins'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(AppTouch.min, AppTouch.min),
             ),
           ),
         );

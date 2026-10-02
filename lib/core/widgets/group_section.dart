@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_spacing.dart';
+
 /// A lightweight section heading with optional overflow actions.
 ///
 /// Used for subject groups and lesson groups — not a large card.
@@ -23,7 +25,7 @@ class GroupSectionHeader extends StatelessWidget {
     final hasActions = onEdit != null || onDelete != null;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
       child: Row(
         children: [
           Expanded(
@@ -35,7 +37,6 @@ class GroupSectionHeader extends StatelessWidget {
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.primary,
-                    letterSpacing: 0.2,
                   ),
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
@@ -68,12 +69,15 @@ class GroupSectionHeader extends StatelessWidget {
                     child: Text('Edit group'),
                   ),
                 if (onDelete != null)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: _GroupAction.delete,
-                    child: Text('Delete group'),
+                    child: Text(
+                      'Delete group',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
                   ),
               ],
-              child: Icon(Icons.more_horiz, color: theme.colorScheme.outline),
+              icon: Icon(Icons.more_vert, color: theme.colorScheme.outline),
             ),
         ],
       ),
@@ -84,6 +88,8 @@ class GroupSectionHeader extends StatelessWidget {
 enum _GroupAction { edit, delete }
 
 /// Compact list tile for items under a group heading.
+///
+/// Shows icon, title, subtitle, and either a chevron or a single overflow menu.
 class GroupedItemTile extends StatelessWidget {
   const GroupedItemTile({
     super.key,
@@ -93,6 +99,8 @@ class GroupedItemTile extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.editLabel = 'Edit',
+    this.deleteLabel = 'Delete',
   });
 
   final String title;
@@ -101,78 +109,101 @@ class GroupedItemTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final String editLabel;
+  final String deleteLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasMenu = onEdit != null || onDelete != null;
 
     return Material(
-      color: theme.colorScheme.surfaceContainerLowest,
-      borderRadius: BorderRadius.circular(12),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.mdAll,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        onLongPress: onEdit ?? onDelete,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 22, color: theme.colorScheme.secondary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (subtitle != null && subtitle!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppTouch.min),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: theme.colorScheme.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        subtitle!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              if (onEdit != null)
-                IconButton(
-                  tooltip: 'Edit',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onEdit,
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                    color: theme.colorScheme.outline,
                   ),
                 ),
-              if (onDelete != null)
-                IconButton(
-                  tooltip: 'Remove',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onDelete,
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              if (onEdit == null && onDelete == null)
-                Icon(Icons.chevron_right, color: theme.colorScheme.outline),
-            ],
+                if (hasMenu)
+                  PopupMenuButton<_ItemAction>(
+                    tooltip: 'Options',
+                    onSelected: (action) {
+                      switch (action) {
+                        case _ItemAction.edit:
+                          onEdit?.call();
+                        case _ItemAction.delete:
+                          onDelete?.call();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (onEdit != null)
+                        PopupMenuItem(
+                          value: _ItemAction.edit,
+                          child: Text(editLabel),
+                        ),
+                      if (onDelete != null)
+                        PopupMenuItem(
+                          value: _ItemAction.delete,
+                          child: Text(
+                            deleteLabel,
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                        ),
+                    ],
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.outline,
+                    ),
+                  )
+                else
+                  Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+enum _ItemAction { edit, delete }

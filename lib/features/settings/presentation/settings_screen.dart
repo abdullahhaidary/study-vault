@@ -4,14 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/backup/backup_manifest.dart';
 import '../../../core/backup/backup_providers.dart';
 import '../../../core/backup/backup_service.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
 
 /// App settings — AI Assistant + Backup & Restore.
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key, this.initialSection});
+  const SettingsScreen({
+    super.key,
+    this.initialSection,
+    this.embeddedInShell = false,
+  });
 
   /// Optional: `ai` scrolls/focuses the AI Assistant section.
   final String? initialSection;
+
+  final bool embeddedInShell;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -23,44 +31,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialSection == 'ai') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _aiKey.currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(
-            ctx,
-            duration: const Duration(milliseconds: 300),
-            alignment: 0.1,
-          );
-        }
-      });
+    _scrollToSectionIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSection != oldWidget.initialSection) {
+      _scrollToSectionIfNeeded();
     }
+  }
+
+  void _scrollToSectionIfNeeded() {
+    if (widget.initialSection != 'ai') return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _aiKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          alignment: 0.1,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final page = AppSpacing.pageInsets(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        automaticallyImplyLeading: !widget.embeddedInShell,
+        title: const Text('Settings'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: EdgeInsets.fromLTRB(
+          page.left,
+          AppSpacing.sm,
+          page.right,
+          AppSpacing.xxl,
+        ),
         children: [
-          KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
-          const SizedBox(height: 28),
-          Text(
-            'Backup & Restore',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Protect your local Study Vault data. Backup files are not '
-            'encrypted — store them somewhere safe outside this app. '
-            'Gemini API keys are never included in backups.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.contentMaxWidth,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
+                  const SizedBox(height: AppSpacing.xl),
+                  const SectionHeader(title: 'Backup & Restore'),
+                  Text(
+                    'Backups are not encrypted. Store them somewhere safe. '
+                    'API keys are never included.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _BackupRestoreCard(),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          const _BackupRestoreCard(),
         ],
       ),
     );
@@ -117,8 +155,14 @@ class _BackupRestoreCard extends ConsumerWidget {
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: busy ? null : () => _onRestorePressed(context, ref),
-              icon: const Icon(Icons.restore_outlined),
-              label: const Text('Restore Backup'),
+              icon: Icon(
+                Icons.restore_outlined,
+                color: busy ? null : theme.colorScheme.error,
+              ),
+              label: Text(
+                'Restore Backup',
+                style: TextStyle(color: busy ? null : theme.colorScheme.error),
+              ),
             ),
             if (progress.phase != BackupPhase.idle) ...[
               const SizedBox(height: 16),
@@ -196,6 +240,10 @@ class _RestoreConfirmDialog extends StatelessWidget {
           child: const Text('Cancel'),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Restore'),
         ),

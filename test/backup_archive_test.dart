@@ -15,7 +15,7 @@ void main() {
       final original = BackupManifest(
         backupFormatVersion: 1,
         appVersion: '1.0.0+1',
-        databaseSchemaVersion: 7,
+        databaseSchemaVersion: 9,
         createdAt: DateTime.utc(2026, 10, 1, 20, 35),
         platform: 'linux',
         databaseSha256: 'abc',
@@ -28,7 +28,7 @@ void main() {
       expect(roundTrip.format, BackupManifest.formatId);
       expect(roundTrip.backupFormatVersion, 1);
       expect(roundTrip.appVersion, '1.0.0+1');
-      expect(roundTrip.databaseSchemaVersion, 7);
+      expect(roundTrip.databaseSchemaVersion, 9);
       expect(roundTrip.platform, 'linux');
       expect(roundTrip.databaseSha256, 'abc');
       expect(roundTrip.filesIndexSha256, 'def');
@@ -166,7 +166,7 @@ void main() {
         final validated = await BackupArchive.extractAndValidate(
           archive,
           extract,
-          currentSchemaVersion: 7,
+          currentSchemaVersion: 9,
         );
 
         expect(validated.manifest.materialFileCount, 2);
@@ -203,7 +203,7 @@ void main() {
       final validated = await BackupArchive.extractAndValidate(
         archive,
         extract,
-        currentSchemaVersion: 7,
+        currentSchemaVersion: 9,
       );
       expect(validated.manifest.materialFileCount, 0);
     });
@@ -212,7 +212,7 @@ void main() {
       final archive = await buildSampleArchive(schemaVersion: 5);
       final manifest = await BackupArchive.peekManifest(
         archive,
-        currentSchemaVersion: 7,
+        currentSchemaVersion: 9,
       );
       expect(manifest.databaseSchemaVersion, 5);
     });
@@ -226,7 +226,7 @@ void main() {
       await encoder.close();
 
       expect(
-        () => BackupArchive.peekManifest(out, currentSchemaVersion: 7),
+        () => BackupArchive.peekManifest(out, currentSchemaVersion: 9),
         throwsA(isA<BackupValidationException>()),
       );
     });
@@ -234,7 +234,7 @@ void main() {
     test('missing database rejected', () async {
       final archive = await buildSampleArchive(omitDatabase: true);
       expect(
-        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 7),
+        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 9),
         throwsA(isA<BackupValidationException>()),
       );
     });
@@ -242,7 +242,7 @@ void main() {
     test('unsupported backup format rejected', () async {
       final archive = await buildSampleArchive(formatVersion: 99);
       expect(
-        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 7),
+        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 9),
         throwsA(isA<BackupIncompatibleException>()),
       );
     });
@@ -250,7 +250,7 @@ void main() {
     test('newer DB schema rejected safely', () async {
       final archive = await buildSampleArchive(schemaVersion: 99);
       expect(
-        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 7),
+        () => BackupArchive.peekManifest(archive, currentSchemaVersion: 9),
         throwsA(isA<BackupIncompatibleException>()),
       );
     });
@@ -259,7 +259,7 @@ void main() {
       final archive = await buildSampleArchive(schemaVersion: 4);
       final manifest = await BackupArchive.peekManifest(
         archive,
-        currentSchemaVersion: 7,
+        currentSchemaVersion: 9,
       );
       expect(manifest.databaseSchemaVersion, 4);
     });
@@ -292,7 +292,7 @@ void main() {
         () => BackupArchive.extractAndValidate(
           bad,
           Directory(p.join(temp.path, 'bad_out')),
-          currentSchemaVersion: 7,
+          currentSchemaVersion: 9,
         ),
         throwsA(isA<BackupValidationException>()),
       );
@@ -302,7 +302,7 @@ void main() {
       final junk = File(p.join(temp.path, 'junk.svbackup'));
       await junk.writeAsString('not-a-zip');
       expect(
-        () => BackupArchive.peekManifest(junk, currentSchemaVersion: 7),
+        () => BackupArchive.peekManifest(junk, currentSchemaVersion: 9),
         throwsA(isA<BackupValidationException>()),
       );
     });

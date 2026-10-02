@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/navigation/shell_tab.dart';
+import '../core/widgets/app_shell.dart';
 import '../features/classes/presentation/class_details_screen.dart';
-import '../features/classes/presentation/home_screen.dart';
-import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
@@ -23,6 +23,7 @@ abstract final class AppRoutes {
   static const pdfStudy = '/pdf-study';
   static const imageStudy = '/image-study';
   static const search = '/search';
+  static const aiChat = '/ai-chat';
   static const favorites = '/favorites';
   static const settings = '/settings';
   static const noteReader = '/note';
@@ -37,19 +38,26 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     case AppRoutes.home:
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const HomeScreen(),
+        builder: (_) => const AppShell(initialTab: ShellTab.home),
       );
 
     case AppRoutes.search:
+      // Global search remains available outside the shell tab bar.
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => const SearchScreen(),
       );
 
+    case AppRoutes.aiChat:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const AppShell(initialTab: ShellTab.aiChat),
+      );
+
     case AppRoutes.favorites:
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const FavoritesScreen(),
+        builder: (_) => const AppShell(initialTab: ShellTab.favorites),
       );
 
     case AppRoutes.settings:
@@ -58,9 +66,17 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       if (args is Map) {
         section = args['section'] as String?;
       }
+      // Deep-link with a section keeps a dedicated page so callers can push
+      // Settings from dialogs without replacing the whole shell stack.
+      if (section != null) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => SettingsScreen(initialSection: section),
+        );
+      }
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => SettingsScreen(initialSection: section),
+        builder: (_) => const AppShell(initialTab: ShellTab.settings),
       );
 
     case AppRoutes.noteReader:
@@ -140,7 +156,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     default:
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const HomeScreen(),
+        builder: (_) => const AppShell(initialTab: ShellTab.home),
       );
   }
 }

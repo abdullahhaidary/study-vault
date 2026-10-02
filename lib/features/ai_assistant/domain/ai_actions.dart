@@ -1,3 +1,5 @@
+import 'gemini_model_registry.dart';
+
 /// Study-focused AI actions (user-initiated only).
 enum AiStudyAction {
   explain,
@@ -11,11 +13,7 @@ enum AiStudyAction {
   generateQuestions,
 }
 
-enum AiLanguage {
-  auto,
-  english,
-  persianDari,
-}
+enum AiLanguage { auto, english, persianDari }
 
 enum AiRephraseMode {
   clearer,
@@ -44,41 +42,31 @@ enum AiSummarizeMode {
   examSummary,
 }
 
-enum AiQuestionType {
-  conceptual,
-  shortAnswer,
-  mixed,
-}
+enum AiQuestionType { conceptual, shortAnswer, mixed }
 
-/// Centralized Gemini model IDs — do not scatter elsewhere.
-///
-/// Keep in sync with https://ai.google.dev/gemini-api/docs/models
+/// Centralized Gemini model IDs — delegates to [GeminiModelRegistry].
 abstract final class AiModelIds {
-  /// Current recommended Flash model for study actions.
-  static const recommended = 'gemini-3.8-flash';
+  static const recommended = GeminiModelRegistry.defaultModelId;
 
-  /// Previous-generation Flash (broad availability fallback).
+  /// Compatibility aliases used by older settings UI / tests.
   static const flash25 = 'gemini-2.5-flash';
-
-  /// Cheaper / faster lite variant.
   static const flashLite = 'gemini-2.5-flash-lite';
 
-  static const all = [recommended, flash25, flashLite];
+  /// Models offered in the study-action settings dropdown.
+  static List<String> get all => GeminiModelRegistry.fallbackChatModels()
+      .map((m) => m.id)
+      .toList(growable: false);
 
-  static String label(String id) => switch (id) {
-    recommended => 'Recommended (Gemini 3.8 Flash)',
-    flash25 => 'Gemini 2.5 Flash',
-    flashLite => 'Gemini 2.5 Flash-Lite',
-    _ => id,
-  };
+  static String label(String id) {
+    final def = GeminiModelRegistry.byId(id);
+    if (def == null) return id;
+    return def.recommended
+        ? 'Recommended (${def.displayName})'
+        : def.displayName;
+  }
 
   /// Falls back when a stored preference is obsolete / unavailable.
-  static String normalize(String? id) {
-    // Migrate older stored preferences to the current recommended model.
-    if (id == 'gemini-3.5-flash') return recommended;
-    if (id != null && all.contains(id)) return id;
-    return recommended;
-  }
+  static String normalize(String? id) => GeminiModelRegistry.normalize(id);
 }
 
 extension AiStudyActionX on AiStudyAction {
@@ -98,23 +86,23 @@ extension AiStudyActionX on AiStudyAction {
     AiStudyAction.explain => 'Explain',
     AiStudyAction.simplify => 'Simplify',
     AiStudyAction.rephrase => 'Rephrase',
-    AiStudyAction.fixGrammar => 'Fix Grammar',
+    AiStudyAction.fixGrammar => 'Fix grammar',
     AiStudyAction.organize => 'Organize',
     AiStudyAction.summarize => 'Summarize',
-    AiStudyAction.createAnnotation => 'Create Annotation',
-    AiStudyAction.generateFlashcards => 'Generate Flashcards',
-    AiStudyAction.generateQuestions => 'Generate Questions',
+    AiStudyAction.createAnnotation => 'Create annotation',
+    AiStudyAction.generateFlashcards => 'Generate flashcards',
+    AiStudyAction.generateQuestions => 'Generate questions',
   };
 }
 
 extension AiLanguageX on AiLanguage {
+  String get storageValue => name;
+
   String get label => switch (this) {
     AiLanguage.auto => 'Auto',
     AiLanguage.english => 'English',
-    AiLanguage.persianDari => 'Persian/Dari',
+    AiLanguage.persianDari => 'Persian / Dari',
   };
-
-  String get storageValue => name;
 
   static AiLanguage fromStorage(String? value) {
     return AiLanguage.values.firstWhere(

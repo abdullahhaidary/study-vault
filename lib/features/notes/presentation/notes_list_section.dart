@@ -47,7 +47,12 @@ class NotesListSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text('Notes', style: theme.textTheme.titleMedium),
+              Text(
+                'Notes',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const Spacer(),
               TextButton.icon(
                 onPressed: () => _create(context, ref),
@@ -58,7 +63,7 @@ class NotesListSection extends ConsumerWidget {
           ),
           if (items.isEmpty)
             Text(
-              'No notes yet.',
+              'No notes yet',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -67,7 +72,10 @@ class NotesListSection extends ConsumerWidget {
             ...items.map(
               (note) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.sticky_note_2_outlined),
+                leading: Icon(
+                  Icons.sticky_note_2_outlined,
+                  color: theme.colorScheme.primary,
+                ),
                 title: AutoDirectionText(note.title),
                 subtitle:
                     note.plainTextContent == null ||
@@ -78,6 +86,10 @@ class NotesListSection extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.outline,
+                ),
                 onTap: () => Navigator.of(
                   context,
                 ).pushNamed(AppRoutes.noteReader, arguments: note.id),

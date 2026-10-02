@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../data/favorites_providers.dart';
 
 /// App-bar / inline favorite star toggle.
@@ -29,7 +30,7 @@ class FavoriteStarButton extends ConsumerWidget {
           toggleFavorite(ref, entityType: entityType, entityId: entityId),
       icon: Icon(
         isFav ? Icons.star : Icons.star_border,
-        color: isFav ? Theme.of(context).colorScheme.tertiary : null,
+        color: isFav ? AppColors.gold : null,
       ),
     );
   }

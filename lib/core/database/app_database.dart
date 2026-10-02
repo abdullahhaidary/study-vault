@@ -326,6 +326,40 @@ class Flashcards extends Table {
   ];
 }
 
+/// Gemini AI Chat conversations (local source of truth).
+class AiChats extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 120)();
+  TextColumn get modelId => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get lastMessageAt => dateTime().nullable()();
+
+  /// Unsent composer draft restored when reopening the chat.
+  TextColumn get draftText => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Messages belonging to an [AiChats] conversation.
+class AiChatMessages extends Table {
+  TextColumn get id => text()();
+  TextColumn get chatId =>
+      text().references(AiChats, #id, onDelete: KeyAction.cascade)();
+
+  /// `user` | `assistant` | `system`
+  TextColumn get role => text()();
+  TextColumn get content => text()();
+
+  /// `ok` | `error` | null (normal).
+  TextColumn get status => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -343,6 +377,8 @@ class Flashcards extends Table {
     MaterialBookmarks,
     StudyNotes,
     Flashcards,
+    AiChats,
+    AiChatMessages,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -352,13 +388,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
     onCreate: (Migrator m) async {
       await m.createAll();
       await seedBuiltInCategories();
+      await _createAiChatIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -407,8 +447,28 @@ class AppDatabase extends _$AppDatabase {
           "WHERE progress_status IS NULL OR progress_status = ''",
         );
       }
+      if (from < 9) {
+        await m.createTable(aiChats);
+        await m.createTable(aiChatMessages);
+        await _createAiChatIndexes();
+      }
     },
   );
+
+  Future<void> _createAiChatIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_chats_last_message_at '
+      'ON ai_chats (last_message_at)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_chat_id '
+      'ON ai_chat_messages (chat_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_created_at '
+      'ON ai_chat_messages (created_at)',
+    );
+  }
 
   /// Inserts built-in categories once (idempotent by primary key).
   Future<void> seedBuiltInCategories() async {
@@ -1235,6 +1295,84 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteFlashcard(String id) async {
     await deleteFavoritesForEntities(FavoriteEntityType.flashcard, [id]);
     await (delete(flashcards)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── AI Chat ──────────────────────────────────────────────
+
+  Stream<List<AiChat>> watchAiChats() {
+    return (select(aiChats)..orderBy([
+          (t) => OrderingTerm.desc(t.lastMessageAt),
+          (t) => OrderingTerm.desc(t.updatedAt),
+        ]))
+        .watch();
+  }
+
+  Future<List<AiChat>> getAiChats() {
+    return (select(aiChats)..orderBy([
+          (t) => OrderingTerm.desc(t.lastMessageAt),
+          (t) => OrderingTerm.desc(t.updatedAt),
+        ]))
+        .get();
+  }
+
+  Future<AiChat?> getAiChatById(String id) {
+    return (select(aiChats)..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<AiChat?> watchAiChatById(String id) {
+    return (select(aiChats)..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
+  Future<void> insertAiChat(AiChatsCompanion entry) {
+    return into(aiChats).insert(entry);
+  }
+
+  Future<void> updateAiChat(AiChat chat) {
+    return update(aiChats).replace(chat);
+  }
+
+  Future<void> deleteAiChat(String id) async {
+    await (delete(aiChatMessages)..where((t) => t.chatId.equals(id))).go();
+    await (delete(aiChats)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> deleteAllAiChats() async {
+    await delete(aiChatMessages).go();
+    await delete(aiChats).go();
+  }
+
+  Stream<List<AiChatMessage>> watchAiChatMessages(String chatId) {
+    return (select(aiChatMessages)
+          ..where((t) => t.chatId.equals(chatId))
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .watch();
+  }
+
+  Future<List<AiChatMessage>> getAiChatMessages(String chatId) {
+    return (select(aiChatMessages)
+          ..where((t) => t.chatId.equals(chatId))
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+  }
+
+  Future<AiChatMessage?> getLastAiChatMessage(String chatId) {
+    return (select(aiChatMessages)
+          ..where((t) => t.chatId.equals(chatId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> insertAiChatMessage(AiChatMessagesCompanion entry) {
+    return into(aiChatMessages).insert(entry);
+  }
+
+  Future<void> updateAiChatMessage(AiChatMessage message) {
+    return update(aiChatMessages).replace(message);
+  }
+
+  Future<void> deleteAiChatMessage(String id) async {
+    await (delete(aiChatMessages)..where((t) => t.id.equals(id))).go();
   }
 }
 

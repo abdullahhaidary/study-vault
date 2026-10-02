@@ -1,0 +1,443 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../app/routes.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/gemini_model_registry.dart';
+import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
+import '../data/ai_chat_providers.dart';
+import '../domain/ai_chat_models.dart';
+import 'ai_chat_history_screen.dart';
+import 'gemini_model_selector.dart';
+import 'widgets/chat_composer.dart';
+import 'widgets/message_bubble.dart';
+
+/// Full-screen Study AI chat for the shell tab.
+class AiChatScreen extends ConsumerStatefulWidget {
+  const AiChatScreen({super.key});
+
+  @override
+  ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
+}
+
+class _AiChatScreenState extends ConsumerState<AiChatScreen> {
+  final _composer = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _sending = false;
+  String? _streamingText;
+  String? _errorBanner;
+  Timer? _draftTimer;
+  bool _draftHydrated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _composer.addListener(_onComposerChanged);
+  }
+
+  @override
+  void dispose() {
+    _draftTimer?.cancel();
+    _composer.removeListener(_onComposerChanged);
+    _composer.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onComposerChanged() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
+  }
+
+  Future<void> _persistDraft() async {
+    final chatId = ref.read(activeAiChatIdProvider);
+    if (chatId == null) return;
+    await ref.read(aiChatServiceProvider).saveDraft(chatId, _composer.text);
+  }
+
+  Future<void> _ensureConfigured() async {
+    final configured = await ref.read(aiConfiguredProvider.future);
+    if (!configured && mounted) {
+      await showAiMissingKeyDialog(context);
+    }
+    final consent = await ref.read(aiPrivacyConsentProvider.future);
+    if (!consent && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Accept the AI privacy notice in Settings first.'),
+        ),
+      );
+      await Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.settings, arguments: {'section': 'ai'});
+    }
+  }
+
+  Future<void> _newChat() async {
+    await _persistDraft();
+    _composer.clear();
+    _draftHydrated = false;
+    ref.read(activeAiChatIdProvider.notifier).state = null;
+    setState(() {
+      _streamingText = null;
+      _errorBanner = null;
+    });
+  }
+
+  Future<void> _openHistory() async {
+    await _persistDraft();
+    if (!mounted) return;
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AiChatHistoryScreen()));
+    _draftHydrated = false;
+  }
+
+  Future<void> _selectModel(String currentId) async {
+    final selected = await showGeminiModelSelector(
+      context,
+      selectedModelId: currentId,
+    );
+    if (selected == null || !mounted) return;
+
+    final chatId = ref.read(activeAiChatIdProvider);
+    if (chatId == null) {
+      await ref.read(aiSettingsStoreProvider).setModelId(selected);
+      ref.invalidate(aiSettingsStateProvider);
+      setState(() {});
+      return;
+    }
+    await ref.read(aiChatServiceProvider).setChatModel(chatId, selected);
+    ref.invalidate(aiSettingsStateProvider);
+  }
+
+  Future<void> _send([String? preset]) async {
+    final text = (preset ?? _composer.text).trim();
+    if (text.isEmpty || _sending) return;
+
+    await _ensureConfigured();
+    final configured = await ref.read(aiConfiguredProvider.future);
+    final consent = await ref.read(aiPrivacyConsentProvider.future);
+    if (!configured || !consent) return;
+
+    setState(() {
+      _sending = true;
+      _errorBanner = null;
+      _streamingText = '';
+    });
+
+    try {
+      var chatId = ref.read(activeAiChatIdProvider);
+      if (chatId == null) {
+        final chat = await ref.read(aiChatServiceProvider).createChat();
+        chatId = chat.id;
+        ref.read(activeAiChatIdProvider.notifier).state = chatId;
+      }
+
+      if (preset == null) {
+        _composer.clear();
+      }
+
+      await for (final partial
+          in ref
+              .read(aiChatServiceProvider)
+              .streamSend(chatId: chatId, userText: text)) {
+        if (!mounted) return;
+        setState(() => _streamingText = partial);
+        _scrollToBottom();
+      }
+      if (mounted) {
+        setState(() => _streamingText = null);
+      }
+      _scrollToBottom();
+    } on AiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorBanner = e.message;
+          _streamingText = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errorBanner = 'Something went wrong. Please try again.';
+          _streamingText = null;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _retry() async {
+    final chatId = ref.read(activeAiChatIdProvider);
+    if (chatId == null || _sending) return;
+    setState(() {
+      _sending = true;
+      _errorBanner = null;
+    });
+    try {
+      await ref.read(aiChatServiceProvider).retryLast(chatId: chatId);
+    } on AiException catch (e) {
+      if (mounted) setState(() => _errorBanner = e.message);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _onAttach() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Attaching Study Vault content will be available in a future update.',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chatId = ref.watch(activeAiChatIdProvider);
+    final settingsAsync = ref.watch(aiSettingsStateProvider);
+    final chatAsync = chatId == null
+        ? null
+        : ref.watch(aiChatByIdProvider(chatId));
+    final messagesAsync = chatId == null
+        ? null
+        : ref.watch(aiChatMessagesProvider(chatId));
+
+    final modelId =
+        chatAsync?.valueOrNull?.modelId ??
+        settingsAsync.valueOrNull?.modelId ??
+        GeminiModelRegistry.defaultModelId;
+    final modelKnown = GeminiModelRegistry.isKnown(modelId);
+    final modelLabel = modelKnown
+        ? GeminiModelRegistry.displayName(modelId)
+        : 'Previous model unavailable';
+
+    // Hydrate draft once per opened chat (after build).
+    final draft = chatAsync?.valueOrNull?.draftText;
+    if (chatId == null) {
+      _draftHydrated = false;
+    } else if (!_draftHydrated && draft != null && draft.isNotEmpty) {
+      _draftHydrated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _composer.text.isNotEmpty) return;
+        _composer.text = draft;
+      });
+    }
+
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Chat history',
+          onPressed: _openHistory,
+          icon: const Icon(Icons.menu),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Study AI'),
+            InkWell(
+              onTap: () => _selectModel(modelId),
+              borderRadius: AppRadii.smAll,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        modelLabel,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: modelKnown
+                              ? theme.colorScheme.onSurfaceVariant
+                              : theme.colorScheme.error,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.expand_more,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'New chat',
+            onPressed: _sending ? null : _newChat,
+            icon: const Icon(Icons.edit_square),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_errorBanner != null)
+            Material(
+              color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+              child: ListTile(
+                dense: true,
+                title: Text(
+                  _errorBanner!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _errorBanner = null),
+                ),
+              ),
+            ),
+          Expanded(
+            child: chatId == null
+                ? _EmptyChat(onPrompt: _send)
+                : messagesAsync!.when(
+                    loading: () => const AppLoading(),
+                    error: (_, _) => const AppErrorState(
+                      message: 'Could not load messages.',
+                    ),
+                    data: (messages) {
+                      if (messages.isEmpty && _streamingText == null) {
+                        return _EmptyChat(onPrompt: _send);
+                      }
+                      final showStream =
+                          _streamingText != null &&
+                          (_streamingText!.isNotEmpty || _sending);
+                      return ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                          AppSpacing.md,
+                          AppSpacing.md,
+                        ),
+                        itemCount: messages.length + (showStream ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (showStream && index == messages.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,
+                              ),
+                              child: MessageBubble(
+                                role: AiChatRole.assistant,
+                                content: _streamingText!,
+                                isStreaming: true,
+                              ),
+                            );
+                          }
+                          final message = messages[index];
+                          final isLastError =
+                              index == messages.length - 1 &&
+                              message.status == AiChatMessageStatus.error;
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
+                            child: MessageBubble(
+                              role: message.role,
+                              content: message.content,
+                              status: message.status,
+                              onRetry: isLastError ? _retry : null,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+          const Divider(height: 1),
+          ChatComposer(
+            controller: _composer,
+            sending: _sending,
+            onSend: _send,
+            onAttach: _onAttach,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyChat extends StatelessWidget {
+  const _EmptyChat({required this.onPrompt});
+
+  final ValueChanged<String> onPrompt;
+
+  static const _suggestions = [
+    'Explain a concept',
+    'Create practice questions',
+    'Summarize a topic',
+    'Help me revise',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 40,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text('Study AI', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Ask anything about your studies.',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final prompt in _suggestions)
+                    ActionChip(
+                      label: Text(prompt),
+                      onPressed: () => onPrompt(prompt),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

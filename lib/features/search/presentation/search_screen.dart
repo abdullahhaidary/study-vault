@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/navigation/study_navigator.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../favorites/data/favorites_display_providers.dart';
-import '../../favorites/presentation/favorites_screen.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/search_providers.dart';
 import '../domain/study_search_result.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.embeddedInShell = false});
+
+  /// When true, this screen is a shell tab (no back affordance / favorites action).
+  final bool embeddedInShell;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -32,143 +36,115 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
+  Future<void> _openFilters() async {
+    final categories = await ref.read(studyPinCategoriesProvider.future);
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _SearchFiltersSheet(categories: categories),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final queryState = ref.watch(searchQueryProvider);
     final resultsAsync = ref.watch(searchResultsProvider);
-    final categoriesAsync = ref.watch(studyPinCategoriesProvider);
     final theme = Theme.of(context);
-    final isWide = MediaQuery.sizeOf(context).width >= 720;
+    final page = AppSpacing.pageInsets(context);
+    final activeChips = _activeFilterChips(queryState, ref);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Study Vault'),
-        actions: [
-          IconButton(
-            tooltip: 'Favorites',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const FavoritesScreen()),
-              );
-            },
-            icon: const Icon(Icons.star_outline),
-          ),
-        ],
+        automaticallyImplyLeading: !widget.embeddedInShell,
+        title: const Text('Search'),
       ),
       body: Column(
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
-              isWide ? 48 : 16,
-              8,
-              isWide ? 48 : 16,
-              8,
+              page.left,
+              AppSpacing.xs,
+              page.right,
+              0,
             ),
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search classes, lessons, notes, flashcards…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: queryState.query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          ref.read(searchQueryProvider.notifier).setQuery('');
-                        },
-                      ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.contentMaxWidth,
               ),
-              onChanged: (value) {
-                ref.read(searchQueryProvider.notifier).setQuery(value);
-              },
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                for (final filter in SearchResultFilter.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(filter.label),
-                      selected: queryState.typeFilter == filter,
-                      onSelected: (_) {
-                        ref
-                            .read(searchQueryProvider.notifier)
-                            .setTypeFilter(filter);
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      autofocus: widget.embeddedInShell,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Search classes, lessons, notes…',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: queryState.query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Clear',
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _controller.clear();
+                                  ref
+                                      .read(searchQueryProvider.notifier)
+                                      .setQuery('');
+                                },
+                              ),
+                      ),
+                      onChanged: (value) {
+                        ref.read(searchQueryProvider.notifier).setQuery(value);
                       },
                     ),
                   ),
-                FilterChip(
-                  label: const Text('Favorites only'),
-                  selected: queryState.favoritesOnly,
-                  onSelected: (v) {
-                    ref.read(searchQueryProvider.notifier).setFavoritesOnly(v);
-                  },
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.xs),
+                  IconButton.filledTonal(
+                    tooltip: 'Filters',
+                    onPressed: _openFilters,
+                    icon: Badge(
+                      isLabelVisible: activeChips.isNotEmpty,
+                      smallSize: 8,
+                      child: const Icon(Icons.tune),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          if (queryState.typeFilter == SearchResultFilter.pins ||
-              queryState.typeFilter == SearchResultFilter.all)
-            categoriesAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (cats) => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                child: Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: const Text('Any category'),
-                        selected: queryState.categoryId == null,
-                        onSelected: (_) {
-                          ref
-                              .read(searchQueryProvider.notifier)
-                              .setCategoryId(null);
-                        },
-                      ),
-                    ),
-                    for (final cat in cats)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(cat.name),
-                          selected: queryState.categoryId == cat.id,
-                          avatar: CircleAvatar(
-                            backgroundColor: Color(cat.colorValue),
-                            radius: 6,
-                          ),
-                          onSelected: (_) {
-                            ref
-                                .read(searchQueryProvider.notifier)
-                                .setCategoryId(
-                                  queryState.categoryId == cat.id
-                                      ? null
-                                      : cat.id,
-                                );
-                          },
-                        ),
-                      ),
-                  ],
+          if (activeChips.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                page.left,
+                AppSpacing.sm,
+                page.right,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: AppSpacing.contentMaxWidth,
+                  ),
+                  child: Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: activeChips,
+                  ),
                 ),
               ),
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Expanded(
             child: queryState.query.trim().isEmpty
                 ? _InitialSearchBody(theme: theme)
                 : resultsAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Search failed: $e')),
+                    loading: () => const AppLoading(),
+                    error: (e, _) =>
+                        const AppErrorState(message: 'Search failed.'),
                     data: (results) {
                       if (results.isEmpty) {
                         return EmptyState(
@@ -180,22 +156,163 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       }
                       return ListView.separated(
                         padding: EdgeInsets.fromLTRB(
-                          isWide ? 48 : 16,
+                          page.left,
                           0,
-                          isWide ? 48 : 16,
-                          24,
+                          page.right,
+                          AppSpacing.xl,
                         ),
                         itemCount: results.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 6),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.xs),
                         itemBuilder: (context, index) {
                           final r = results[index];
-                          return _SearchResultTile(result: r);
+                          return Align(
+                            alignment: Alignment.topCenter,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: AppSpacing.contentMaxWidth,
+                              ),
+                              child: _SearchResultTile(result: r),
+                            ),
+                          );
                         },
                       );
                     },
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<Widget> _activeFilterChips(SearchQueryState state, WidgetRef ref) {
+    final chips = <Widget>[];
+    final notifier = ref.read(searchQueryProvider.notifier);
+
+    if (state.typeFilter != SearchResultFilter.all) {
+      chips.add(
+        InputChip(
+          label: Text(state.typeFilter.label),
+          onDeleted: () => notifier.setTypeFilter(SearchResultFilter.all),
+        ),
+      );
+    }
+    if (state.favoritesOnly) {
+      chips.add(
+        InputChip(
+          label: const Text('Favorites only'),
+          onDeleted: () => notifier.setFavoritesOnly(false),
+        ),
+      );
+    }
+    if (state.categoryId != null) {
+      final cats = ref.watch(studyPinCategoriesProvider).valueOrNull;
+      String? name;
+      if (cats != null) {
+        for (final c in cats) {
+          if (c.id == state.categoryId) {
+            name = c.name;
+            break;
+          }
+        }
+      }
+      chips.add(
+        InputChip(
+          label: Text(name ?? 'Category'),
+          onDeleted: () => notifier.setCategoryId(null),
+        ),
+      );
+    }
+    return chips;
+  }
+}
+
+class _SearchFiltersSheet extends ConsumerWidget {
+  const _SearchFiltersSheet({required this.categories});
+
+  final List<StudyPinCategory> categories;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(searchQueryProvider);
+    final notifier = ref.read(searchQueryProvider.notifier);
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Filters', style: theme.textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.md),
+              Text('Type', style: theme.textTheme.titleSmall),
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  for (final filter in SearchResultFilter.values)
+                    ChoiceChip(
+                      label: Text(filter.label),
+                      selected: state.typeFilter == filter,
+                      onSelected: (_) => notifier.setTypeFilter(filter),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Favorites only'),
+                value: state.favoritesOnly,
+                onChanged: notifier.setFavoritesOnly,
+              ),
+              if (state.typeFilter == SearchResultFilter.pins ||
+                  state.typeFilter == SearchResultFilter.all) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text('Pin category', style: theme.textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Any'),
+                      selected: state.categoryId == null,
+                      onSelected: (_) => notifier.setCategoryId(null),
+                    ),
+                    for (final cat in categories)
+                      ChoiceChip(
+                        label: Text(cat.name),
+                        selected: state.categoryId == cat.id,
+                        avatar: CircleAvatar(
+                          backgroundColor: Color(cat.colorValue),
+                          radius: 6,
+                        ),
+                        onSelected: (_) {
+                          notifier.setCategoryId(
+                            state.categoryId == cat.id ? null : cat.id,
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -209,47 +326,66 @@ class _InitialSearchBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favs = ref.watch(homeFavoritesProvider);
+    final page = AppSpacing.pageInsets(context);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: EdgeInsets.fromLTRB(
+        page.left,
+        AppSpacing.md,
+        page.right,
+        AppSpacing.xl,
+      ),
       children: [
-        Text(
-          'Search classes, subjects, lessons, materials and annotations.',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppSpacing.contentMaxWidth,
+          ),
+          child: Text(
+            'Search classes, subjects, lessons, materials, and annotations.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         favs.when(
           loading: () => const SizedBox.shrink(),
           error: (_, _) => const SizedBox.shrink(),
           data: (items) {
             if (items.isEmpty) return const SizedBox.shrink();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Favorites', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                for (final item in items.take(5))
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.star),
-                    title: Text(item.title),
-                    subtitle: Text(item.breadcrumb),
-                    onTap: () => StudyNavigator.openEntity(
-                      context,
-                      ref,
-                      kind: item.kind,
-                      id: item.entityId,
-                      materialId: item.materialId,
-                      materialTitle: item.materialTitle,
-                      mimeType: item.mimeType,
-                      pageNumber: item.pageNumber,
-                      focusPinId: item.kind == StudyEntityKind.studyPin
-                          ? item.entityId
-                          : null,
+            return ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSpacing.contentMaxWidth,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Favorites', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.xs),
+                  for (final item in items.take(5))
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.star,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      title: Text(item.title),
+                      subtitle: Text(item.breadcrumb),
+                      onTap: () => StudyNavigator.openEntity(
+                        context,
+                        ref,
+                        kind: item.kind,
+                        id: item.entityId,
+                        materialId: item.materialId,
+                        materialTitle: item.materialTitle,
+                        mimeType: item.mimeType,
+                        pageNumber: item.pageNumber,
+                        focusPinId: item.kind == StudyEntityKind.studyPin
+                            ? item.entityId
+                            : null,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -267,11 +403,12 @@ class _SearchResultTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return ListTile(
+      tileColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadii.mdAll,
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
-      leading: Icon(_iconFor(result.kind)),
+      leading: Icon(_iconFor(result.kind), color: theme.colorScheme.primary),
       title: Row(
         children: [
           Expanded(child: AutoDirectionText(result.title)),
@@ -284,9 +421,11 @@ class _SearchResultTile extends ConsumerWidget {
           if (result.subtitle != null) result.subtitle!,
           result.breadcrumb,
           if (result.matchedSnippet != null) '"${result.matchedSnippet}"',
-        ].join('\n'),
+        ].join(' · '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
-      isThreeLine: true,
+      trailing: Icon(Icons.chevron_right, color: theme.colorScheme.outline),
       onTap: () => StudyNavigator.openSearchResult(context, ref, result),
     );
   }

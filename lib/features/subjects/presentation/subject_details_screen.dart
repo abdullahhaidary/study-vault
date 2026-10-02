@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
-import '../../../core/widgets/responsive_grid.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../lessons/data/lesson_groups_providers.dart';
 import '../../lessons/data/lessons_providers.dart';
@@ -43,6 +45,10 @@ class SubjectDetailsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete'),
           ),
@@ -60,158 +66,91 @@ class SubjectDetailsScreen extends ConsumerWidget {
     final subjectAsync = ref.watch(subjectByIdProvider(subjectId));
     final lessonsAsync = ref.watch(lessonsForSubjectProvider(subjectId));
     final groupsAsync = ref.watch(lessonGroupsForSubjectProvider(subjectId));
-    final theme = Theme.of(context);
-    final isWide = MediaQuery.sizeOf(context).width >= 720;
 
     return subjectAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: AppLoading()),
       error: (error, _) => Scaffold(
         appBar: AppBar(),
-        body: Center(child: Text('Error: $error')),
+        body: const AppErrorState(message: 'Could not load this subject.'),
       ),
       data: (subject) {
         if (subject == null) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(child: Text('Subject not found')),
+            body: const AppErrorState(message: 'Subject not found'),
           );
         }
 
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                title: Text(subject.name),
-                actions: [
-                  FavoriteStarButton(
-                    entityType: FavoriteEntityType.subject,
-                    entityId: subjectId,
-                  ),
-                  if (isWide) ...[
-                    TextButton.icon(
-                      onPressed: () =>
-                          LessonGroupDialog.show(context, subjectId: subjectId),
-                      icon: const Icon(Icons.create_new_folder_outlined),
-                      label: const Text('Add Lesson Group'),
-                    ),
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: FilledButton.icon(
-                        onPressed: () => CreateLessonDialog.show(
-                          context,
-                          subjectId: subjectId,
-                        ),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Lesson'),
-                      ),
-                    ),
-                  ] else
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'group') {
-                          LessonGroupDialog.show(context, subjectId: subjectId);
-                        } else if (value == 'lesson') {
-                          CreateLessonDialog.show(
-                            context,
-                            subjectId: subjectId,
-                          );
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(
-                          value: 'group',
-                          child: Text('Add Lesson Group'),
-                        ),
-                        PopupMenuItem(
-                          value: 'lesson',
-                          child: Text('Add Lesson'),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              if (subject.description != null &&
-                  subject.description!.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                    child: Text(
-                      subject.description!,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: ReviewEntryButton(
-                    scope: ReviewScope(
-                      type: ReviewScopeType.subject,
-                      id: subjectId,
-                      title: subject.name,
-                    ),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                  child: Text(
-                    'Lessons',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              ..._buildLessonContent(
-                context,
-                ref,
-                lessonsAsync: lessonsAsync,
-                groupsAsync: groupsAsync,
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                  child: Text(
-                    'Notes & reference',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 88),
-                sliver: SliverToBoxAdapter(
-                  child: ResponsiveGrid(
-                    children: [
-                      const _PlaceholderCard(
-                        icon: Icons.menu_book_outlined,
-                        title: 'Reference Books',
-                        subtitle:
-                            'Coming soon — attach PDFs and textbooks here.',
-                      ),
-                      NotesListSection.subject(subjectId: subjectId),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+        return DetailScaffold(
+          title: subject.name,
+          description: subject.description,
+          actions: [
+            FavoriteStarButton(
+              entityType: FavoriteEntityType.subject,
+              entityId: subjectId,
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (value) {
+                if (value == 'group') {
+                  LessonGroupDialog.show(context, subjectId: subjectId);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'group', child: Text('Add Lesson Group')),
+              ],
+            ),
+          ],
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () =>
+                CreateLessonDialog.show(context, subjectId: subjectId),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Lesson'),
           ),
-          floatingActionButton: isWide
-              ? null
-              : FloatingActionButton(
-                  onPressed: () =>
-                      CreateLessonDialog.show(context, subjectId: subjectId),
-                  child: const Icon(Icons.add),
+          bodySlivers: [
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: AppSpacing.md,
+                child: ReviewEntryButton(
+                  scope: ReviewScope(
+                    type: ReviewScopeType.subject,
+                    id: subjectId,
+                    title: subject.name,
+                  ),
                 ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: 0,
+                child: const SectionHeader(title: 'Lessons'),
+              ),
+            ),
+            ..._buildLessonContent(
+              context,
+              ref,
+              lessonsAsync: lessonsAsync,
+              groupsAsync: groupsAsync,
+            ),
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: 88,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SectionHeader(
+                      title: 'Notes',
+                      padding: EdgeInsets.only(
+                        top: AppSpacing.lg,
+                        bottom: AppSpacing.sm,
+                      ),
+                    ),
+                    NotesListSection.subject(subjectId: subjectId),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -227,8 +166,8 @@ class SubjectDetailsScreen extends ConsumerWidget {
       return [
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+            padding: EdgeInsets.all(AppSpacing.xl),
+            child: AppLoading(),
           ),
         ),
       ];
@@ -236,20 +175,18 @@ class SubjectDetailsScreen extends ConsumerWidget {
 
     if (lessonsAsync.hasError) {
       return [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Error: ${lessonsAsync.error}'),
+        const SliverToBoxAdapter(
+          child: DetailContent(
+            child: AppErrorState(message: 'Could not load lessons.'),
           ),
         ),
       ];
     }
     if (groupsAsync.hasError) {
       return [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Error: ${groupsAsync.error}'),
+        const SliverToBoxAdapter(
+          child: DetailContent(
+            child: AppErrorState(message: 'Could not load lesson groups.'),
           ),
         ),
       ];
@@ -275,6 +212,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
     }
 
     final children = <Widget>[];
+    final theme = Theme.of(context);
 
     for (final group in groupList) {
       final inGroup = lessonList
@@ -295,11 +233,11 @@ class SubjectDetailsScreen extends ConsumerWidget {
       if (inGroup.isEmpty) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: Text(
               'No lessons in this group',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
               ),
             ),
           ),
@@ -308,7 +246,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
         for (final lesson in inGroup) {
           children.add(
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: GroupedItemTile(
                 title: lesson.name,
                 subtitle: _lessonSubtitle(lesson),
@@ -328,7 +266,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
           );
         }
       }
-      children.add(const SizedBox(height: 8));
+      children.add(const SizedBox(height: AppSpacing.xs));
     }
 
     final ungrouped = lessonList.where((l) => l.lessonGroupId == null).toList();
@@ -339,11 +277,11 @@ class SubjectDetailsScreen extends ConsumerWidget {
       if (ungrouped.isEmpty && groupList.isNotEmpty) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: Text(
               'No ungrouped lessons',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
               ),
             ),
           ),
@@ -352,7 +290,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
       for (final lesson in ungrouped) {
         children.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: GroupedItemTile(
               title: lesson.name,
               subtitle: _lessonSubtitle(lesson),
@@ -374,9 +312,14 @@ class SubjectDetailsScreen extends ConsumerWidget {
     }
 
     return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-        sliver: SliverList(delegate: SliverChildListDelegate(children)),
+      SliverToBoxAdapter(
+        child: DetailContent(
+          bottom: 0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
       ),
     ];
   }
@@ -392,48 +335,5 @@ class SubjectDetailsScreen extends ConsumerWidget {
       progress.label,
       studied,
     ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
-  }
-}
-
-class _PlaceholderCard extends StatelessWidget {
-  const _PlaceholderCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 32, color: theme.colorScheme.primary),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
