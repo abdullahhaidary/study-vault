@@ -9,6 +9,7 @@ import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
+import '../../ai_assistant/domain/deepseek_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
@@ -120,8 +121,11 @@ class HttpDeepSeekChatService implements AiChatTransport {
       'messages': messages,
       'stream': true,
       'max_tokens': 4096,
+      'stream_options': {'include_usage': true},
       ..._thinkingPayload(thinking),
     };
+
+    final started = DateTime.now();
 
     late http.StreamedResponse response;
     try {
@@ -147,6 +151,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
 
     final full = StringBuffer();
     var lineBuffer = '';
+    DeepSeekPromptUsage? usage;
     await for (final chunk in response.stream.transform(utf8.decoder)) {
       lineBuffer += chunk;
       while (true) {
@@ -157,12 +162,20 @@ class HttpDeepSeekChatService implements AiChatTransport {
         if (!line.startsWith('data:')) continue;
         final payload = line.substring(5).trim();
         if (payload.isEmpty || payload == '[DONE]') continue;
+        usage =
+            DeepSeekPromptUsage.fromResponse(_tryDecodeJson(payload)) ?? usage;
         final delta = _extractContentDelta(payload);
         if (delta == null || delta.isEmpty) continue;
         full.write(delta);
         yield delta;
       }
     }
+
+    logDeepSeekUsage(
+      model: model,
+      usage: usage,
+      durationMs: DateTime.now().difference(started).inMilliseconds,
+    );
 
     if (full.isEmpty) {
       throw const AiEmptyResultException();
@@ -240,6 +253,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     };
 
     late http.Response response;
+    final started = DateTime.now();
     try {
       response = await _http
           .post(
@@ -270,6 +284,11 @@ class HttpDeepSeekChatService implements AiChatTransport {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) throw const AiMalformedOutputException();
+      logDeepSeekUsage(
+        model: model,
+        usage: DeepSeekPromptUsage.fromResponse(decoded),
+        durationMs: DateTime.now().difference(started).inMilliseconds,
+      );
       final choices = decoded['choices'];
       if (choices is! List || choices.isEmpty) {
         throw const AiEmptyResultException();
@@ -287,6 +306,14 @@ class HttpDeepSeekChatService implements AiChatTransport {
       rethrow;
     } on Object {
       throw const AiMalformedOutputException();
+    }
+  }
+
+  Object? _tryDecodeJson(String payload) {
+    try {
+      return jsonDecode(payload);
+    } on Object {
+      return null;
     }
   }
 
@@ -409,10 +436,7 @@ class RoutingAiChatTransport implements AiChatTransport {
       }
     }
 
-    final lists = await Future.wait([
-      safeList(gemini),
-      safeList(deepseek),
-    ]);
+    final lists = await Future.wait([safeList(gemini), safeList(deepseek)]);
     final geminiModels = lists[0].isEmpty
         ? GeminiModelRegistry.fallbackChatModels()
               .map(AiSelectableModel.fromGemini)

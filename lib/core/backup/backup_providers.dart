@@ -7,7 +7,7 @@ import 'backup_manifest.dart';
 import 'backup_service.dart';
 
 /// Must stay in sync with [AppDatabase.schemaVersion].
-const kStudyVaultSchemaVersion = 11;
+const kStudyVaultSchemaVersion = 12;
 
 final studyBackupServiceProvider = Provider<BackupService>((ref) {
   return BackupService(currentSchemaVersion: kStudyVaultSchemaVersion);

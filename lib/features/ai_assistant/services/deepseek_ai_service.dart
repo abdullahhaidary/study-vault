@@ -11,6 +11,7 @@ import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/deepseek_model_registry.dart';
+import '../domain/deepseek_usage.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
 import 'ai_service.dart';
@@ -87,12 +88,21 @@ class DeepSeekAiService implements AiService {
     );
     final model = await _resolveModel(action: request.action);
     final thinking = await _resolveThinking(action: request.action);
-    // Shared prompt builder already embeds system rules + conversation.
-    final prompt = AiPromptBuilder.forRequest(enriched);
+    // Stable system + document-first user body so DeepSeek can cache prefixes.
     final structured = _isStructured(request.action);
 
     final messages = <Map<String, String>>[
-      {'role': 'user', 'content': prompt},
+      {
+        'role': 'system',
+        'content': AiPromptBuilder.systemPreamble(
+          language: AiPromptBuilder.preambleLanguage(enriched),
+          userPreference: enriched.userPreference,
+        ),
+      },
+      {
+        'role': 'user',
+        'content': AiPromptBuilder.userContentForRequest(enriched),
+      },
     ];
 
     final started = DateTime.now();
@@ -253,6 +263,7 @@ class DeepSeekAiService implements AiService {
     };
 
     late http.Response response;
+    final started = DateTime.now();
     try {
       response = await _http
           .post(
@@ -272,7 +283,11 @@ class DeepSeekAiService implements AiService {
       throw const AiOfflineException();
     }
 
-    return _parseCompletionResponse(response: response, model: model);
+    return _parseCompletionResponse(
+      response: response,
+      model: model,
+      durationMs: DateTime.now().difference(started).inMilliseconds,
+    );
   }
 
   Map<String, dynamic> _thinkingPayload(AiThinkingMode mode) {
@@ -301,6 +316,7 @@ class DeepSeekAiService implements AiService {
   String _parseCompletionResponse({
     required http.Response response,
     required String model,
+    int? durationMs,
   }) {
     final apiMessage = _errorMessage(response.body);
     final lower = apiMessage.toLowerCase();
@@ -362,6 +378,11 @@ class DeepSeekAiService implements AiService {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) throw const AiMalformedOutputException();
+      logDeepSeekUsage(
+        model: model,
+        usage: DeepSeekPromptUsage.fromResponse(decoded),
+        durationMs: durationMs,
+      );
       final choices = decoded['choices'];
       if (choices is! List || choices.isEmpty) {
         throw const AiEmptyResultException();

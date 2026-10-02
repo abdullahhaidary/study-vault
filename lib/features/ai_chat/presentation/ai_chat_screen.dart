@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -14,9 +15,11 @@ import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
 import '../data/ai_chat_providers.dart';
 import '../domain/ai_chat_models.dart';
+import '../services/ai_chat_service.dart';
 import 'ai_chat_history_screen.dart';
 import 'gemini_model_selector.dart';
 import 'widgets/chat_composer.dart';
+import 'widgets/chat_mention_picker.dart';
 import 'widgets/message_bubble.dart';
 
 /// Full-screen Study AI chat for the shell tab.
@@ -29,12 +32,15 @@ class AiChatScreen extends ConsumerStatefulWidget {
 
 class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _composer = TextEditingController();
+  final _composerKey = GlobalKey<ChatComposerState>();
   final _scrollController = ScrollController();
   bool _sending = false;
   String? _streamingText;
   String? _errorBanner;
   Timer? _draftTimer;
   bool _draftHydrated = false;
+  List<AiContextItem> _attachments = [];
+  bool _mentionPickerOpen = false;
 
   @override
   void initState() {
@@ -59,7 +65,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Future<void> _persistDraft() async {
     final chatId = ref.read(activeAiChatIdProvider);
     if (chatId == null) return;
-    await ref.read(aiChatServiceProvider).saveDraft(chatId, _composer.text);
+    await ref
+        .read(aiChatServiceProvider)
+        .saveDraft(
+          chatId,
+          _composer.text,
+          draftAttachments: _attachments,
+        );
   }
 
   Future<void> _ensureConfigured() async {
@@ -88,6 +100,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     setState(() {
       _streamingText = null;
       _errorBanner = null;
+      _attachments = [];
     });
   }
 
@@ -111,19 +124,77 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     ref.invalidate(aiSettingsStateProvider);
   }
 
+  Future<void> _addAttachment(AiContextItem item) async {
+    if (_attachments.any((a) => a.kind == item.kind && a.id == item.id)) {
+      return;
+    }
+    if (_attachments.length >= AiChatService.maxAttachmentsPerMessage) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'You can attach up to ${AiChatService.maxAttachmentsPerMessage} items.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _attachments = [..._attachments, item]);
+    await _persistDraft();
+  }
+
+  Future<void> _removeAttachment(AiContextItem item) async {
+    setState(() {
+      _attachments = [
+        for (final a in _attachments)
+          if (!(a.kind == item.kind && a.id == item.id)) a,
+      ];
+    });
+    await _persistDraft();
+  }
+
+  Future<void> _pickAttachment({String initialQuery = ''}) async {
+    if (_mentionPickerOpen) return;
+    _mentionPickerOpen = true;
+    try {
+      final selected = await showChatMentionPicker(
+        context,
+        initialQuery: initialQuery,
+      );
+      if (selected == null || !mounted) return;
+      _composerKey.currentState?.clearActiveMentionToken();
+      await _addAttachment(selected);
+    } finally {
+      _mentionPickerOpen = false;
+    }
+  }
+
+  Future<void> _onMentionQuery(String? query) async {
+    if (query == null) return;
+    // Open picker once when `@` is typed; pass the current query.
+    if (_mentionPickerOpen) return;
+    await _pickAttachment(initialQuery: query);
+  }
+
   Future<void> _send([String? preset]) async {
     final text = (preset ?? _composer.text).trim();
-    if (text.isEmpty || _sending) return;
+    final pendingAttachments = List<AiContextItem>.from(_attachments);
+    if ((text.isEmpty && pendingAttachments.isEmpty) || _sending) return;
 
     await _ensureConfigured();
     final configured = await ref.read(aiConfiguredProvider.future);
     final consent = await ref.read(aiPrivacyConsentProvider.future);
     if (!configured || !consent) return;
 
+    final sendText = text.isEmpty
+        ? 'Please use the attached study content.'
+        : text;
+
     setState(() {
       _sending = true;
       _errorBanner = null;
       _streamingText = '';
+      _attachments = [];
     });
 
     try {
@@ -139,9 +210,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       }
 
       await for (final partial
-          in ref
-              .read(aiChatServiceProvider)
-              .streamSend(chatId: chatId, userText: text)) {
+          in ref.read(aiChatServiceProvider).streamSend(
+            chatId: chatId,
+            userText: sendText,
+            attachments: pendingAttachments,
+          )) {
         if (!mounted) return;
         setState(() => _streamingText = partial);
         _scrollToBottom();
@@ -155,6 +228,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         setState(() {
           _errorBanner = e.message;
           _streamingText = null;
+          _attachments = pendingAttachments;
         });
       }
     } catch (_) {
@@ -162,6 +236,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         setState(() {
           _errorBanner = 'Something went wrong. Please try again.';
           _streamingText = null;
+          _attachments = pendingAttachments;
         });
       }
     } finally {
@@ -196,14 +271,24 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     });
   }
 
-  void _onAttach() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Attaching Study Vault content will be available in a future update.',
-        ),
-      ),
-    );
+  void _hydrateDraft(AiChat? chat) {
+    if (chat == null) {
+      _draftHydrated = false;
+      return;
+    }
+    if (_draftHydrated) return;
+    _draftHydrated = true;
+    final draft = chat.draftText;
+    final draftAttachments = AiContextItem.decodeList(chat.draftContextJson);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_composer.text.isEmpty && draft != null && draft.isNotEmpty) {
+        _composer.text = draft;
+      }
+      if (_attachments.isEmpty && draftAttachments.isNotEmpty) {
+        setState(() => _attachments = draftAttachments);
+      }
+    });
   }
 
   @override
@@ -224,16 +309,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final modelKnown = AiModels.isKnown(modelId);
     final modelLabel = AiModels.chatDisplayName(modelId);
 
-    // Hydrate draft once per opened chat (after build).
-    final draft = chatAsync?.valueOrNull?.draftText;
     if (chatId == null) {
       _draftHydrated = false;
-    } else if (!_draftHydrated && draft != null && draft.isNotEmpty) {
-      _draftHydrated = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _composer.text.isNotEmpty) return;
-        _composer.text = draft;
-      });
+    } else {
+      _hydrateDraft(chatAsync?.valueOrNull);
     }
 
     final theme = Theme.of(context);
@@ -246,6 +325,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       if (previous == next) return;
       _draftHydrated = false;
       _composer.clear();
+      setState(() => _attachments = []);
     });
 
     return Scaffold(
@@ -367,6 +447,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           final isLastError =
                               index == messages.length - 1 &&
                               message.status == AiChatMessageStatus.error;
+                          final attachments = message.role == AiChatRole.user
+                              ? AiContextItem.decodeList(message.contextJson)
+                              : const <AiContextItem>[];
                           return Padding(
                             padding: const EdgeInsets.only(
                               bottom: AppSpacing.sm,
@@ -375,6 +458,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               role: message.role,
                               content: message.content,
                               status: message.status,
+                              attachments: attachments,
                               onRetry: isLastError ? _retry : null,
                             ),
                           );
@@ -385,10 +469,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ),
           const Divider(height: 1),
           ChatComposer(
+            key: _composerKey,
             controller: _composer,
             sending: _sending,
+            attachments: _attachments,
             onSend: _send,
-            onAttach: _onAttach,
+            onAttach: () => _pickAttachment(),
+            onMentionQuery: _onMentionQuery,
+            onRemoveAttachment: _removeAttachment,
           ),
         ],
       ),
@@ -428,7 +516,7 @@ class _EmptyChat extends StatelessWidget {
               Text('Study AI', style: theme.textTheme.headlineSmall),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Ask anything about your studies.',
+                'Ask anything about your studies. Type @ to attach a lesson or PDF.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

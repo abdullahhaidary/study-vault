@@ -20,11 +20,11 @@ import 'package:study_vault/features/ai_questions/services/quiz_session_service.
 
 void main() {
   group('schema / backup version alignment', () {
-    test('schema version is 11 everywhere', () {
+    test('schema version is 12 everywhere', () {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
-      expect(db.schemaVersion, 11);
-      expect(kStudyVaultSchemaVersion, 11);
-      expect(BackupService().currentSchemaVersion, 11);
+      expect(db.schemaVersion, 12);
+      expect(kStudyVaultSchemaVersion, 12);
+      expect(BackupService().currentSchemaVersion, 12);
       return db.close();
     });
   });

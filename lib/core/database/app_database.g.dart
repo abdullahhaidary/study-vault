@@ -8321,6 +8321,17 @@ class $AiChatsTable extends AiChats with TableInfo<$AiChatsTable, AiChat> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _draftContextJsonMeta = const VerificationMeta(
+    'draftContextJson',
+  );
+  @override
+  late final GeneratedColumn<String> draftContextJson = GeneratedColumn<String>(
+    'draft_context_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -8330,6 +8341,7 @@ class $AiChatsTable extends AiChats with TableInfo<$AiChatsTable, AiChat> {
     updatedAt,
     lastMessageAt,
     draftText,
+    draftContextJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8395,6 +8407,15 @@ class $AiChatsTable extends AiChats with TableInfo<$AiChatsTable, AiChat> {
         draftText.isAcceptableOrUnknown(data['draft_text']!, _draftTextMeta),
       );
     }
+    if (data.containsKey('draft_context_json')) {
+      context.handle(
+        _draftContextJsonMeta,
+        draftContextJson.isAcceptableOrUnknown(
+          data['draft_context_json']!,
+          _draftContextJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -8432,6 +8453,10 @@ class $AiChatsTable extends AiChats with TableInfo<$AiChatsTable, AiChat> {
         DriftSqlType.string,
         data['${effectivePrefix}draft_text'],
       ),
+      draftContextJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}draft_context_json'],
+      ),
     );
   }
 
@@ -8451,6 +8476,9 @@ class AiChat extends DataClass implements Insertable<AiChat> {
 
   /// Unsent composer draft restored when reopening the chat.
   final String? draftText;
+
+  /// JSON list of draft [AiContextItem] chips (metadata; packed text optional).
+  final String? draftContextJson;
   const AiChat({
     required this.id,
     required this.title,
@@ -8459,6 +8487,7 @@ class AiChat extends DataClass implements Insertable<AiChat> {
     required this.updatedAt,
     this.lastMessageAt,
     this.draftText,
+    this.draftContextJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8473,6 +8502,9 @@ class AiChat extends DataClass implements Insertable<AiChat> {
     }
     if (!nullToAbsent || draftText != null) {
       map['draft_text'] = Variable<String>(draftText);
+    }
+    if (!nullToAbsent || draftContextJson != null) {
+      map['draft_context_json'] = Variable<String>(draftContextJson);
     }
     return map;
   }
@@ -8490,6 +8522,9 @@ class AiChat extends DataClass implements Insertable<AiChat> {
       draftText: draftText == null && nullToAbsent
           ? const Value.absent()
           : Value(draftText),
+      draftContextJson: draftContextJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(draftContextJson),
     );
   }
 
@@ -8506,6 +8541,7 @@ class AiChat extends DataClass implements Insertable<AiChat> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       lastMessageAt: serializer.fromJson<DateTime?>(json['lastMessageAt']),
       draftText: serializer.fromJson<String?>(json['draftText']),
+      draftContextJson: serializer.fromJson<String?>(json['draftContextJson']),
     );
   }
   @override
@@ -8519,6 +8555,7 @@ class AiChat extends DataClass implements Insertable<AiChat> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'lastMessageAt': serializer.toJson<DateTime?>(lastMessageAt),
       'draftText': serializer.toJson<String?>(draftText),
+      'draftContextJson': serializer.toJson<String?>(draftContextJson),
     };
   }
 
@@ -8530,6 +8567,7 @@ class AiChat extends DataClass implements Insertable<AiChat> {
     DateTime? updatedAt,
     Value<DateTime?> lastMessageAt = const Value.absent(),
     Value<String?> draftText = const Value.absent(),
+    Value<String?> draftContextJson = const Value.absent(),
   }) => AiChat(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -8540,6 +8578,9 @@ class AiChat extends DataClass implements Insertable<AiChat> {
         ? lastMessageAt.value
         : this.lastMessageAt,
     draftText: draftText.present ? draftText.value : this.draftText,
+    draftContextJson: draftContextJson.present
+        ? draftContextJson.value
+        : this.draftContextJson,
   );
   AiChat copyWithCompanion(AiChatsCompanion data) {
     return AiChat(
@@ -8552,6 +8593,9 @@ class AiChat extends DataClass implements Insertable<AiChat> {
           ? data.lastMessageAt.value
           : this.lastMessageAt,
       draftText: data.draftText.present ? data.draftText.value : this.draftText,
+      draftContextJson: data.draftContextJson.present
+          ? data.draftContextJson.value
+          : this.draftContextJson,
     );
   }
 
@@ -8564,7 +8608,8 @@ class AiChat extends DataClass implements Insertable<AiChat> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('lastMessageAt: $lastMessageAt, ')
-          ..write('draftText: $draftText')
+          ..write('draftText: $draftText, ')
+          ..write('draftContextJson: $draftContextJson')
           ..write(')'))
         .toString();
   }
@@ -8578,6 +8623,7 @@ class AiChat extends DataClass implements Insertable<AiChat> {
     updatedAt,
     lastMessageAt,
     draftText,
+    draftContextJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -8589,7 +8635,8 @@ class AiChat extends DataClass implements Insertable<AiChat> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.lastMessageAt == this.lastMessageAt &&
-          other.draftText == this.draftText);
+          other.draftText == this.draftText &&
+          other.draftContextJson == this.draftContextJson);
 }
 
 class AiChatsCompanion extends UpdateCompanion<AiChat> {
@@ -8600,6 +8647,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
   final Value<DateTime> updatedAt;
   final Value<DateTime?> lastMessageAt;
   final Value<String?> draftText;
+  final Value<String?> draftContextJson;
   final Value<int> rowid;
   const AiChatsCompanion({
     this.id = const Value.absent(),
@@ -8609,6 +8657,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
     this.updatedAt = const Value.absent(),
     this.lastMessageAt = const Value.absent(),
     this.draftText = const Value.absent(),
+    this.draftContextJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AiChatsCompanion.insert({
@@ -8619,6 +8668,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
     required DateTime updatedAt,
     this.lastMessageAt = const Value.absent(),
     this.draftText = const Value.absent(),
+    this.draftContextJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -8633,6 +8683,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? lastMessageAt,
     Expression<String>? draftText,
+    Expression<String>? draftContextJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -8643,6 +8694,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (lastMessageAt != null) 'last_message_at': lastMessageAt,
       if (draftText != null) 'draft_text': draftText,
+      if (draftContextJson != null) 'draft_context_json': draftContextJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8655,6 +8707,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
     Value<DateTime>? updatedAt,
     Value<DateTime?>? lastMessageAt,
     Value<String?>? draftText,
+    Value<String?>? draftContextJson,
     Value<int>? rowid,
   }) {
     return AiChatsCompanion(
@@ -8665,6 +8718,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
       updatedAt: updatedAt ?? this.updatedAt,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       draftText: draftText ?? this.draftText,
+      draftContextJson: draftContextJson ?? this.draftContextJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8693,6 +8747,9 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
     if (draftText.present) {
       map['draft_text'] = Variable<String>(draftText.value);
     }
+    if (draftContextJson.present) {
+      map['draft_context_json'] = Variable<String>(draftContextJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8709,6 +8766,7 @@ class AiChatsCompanion extends UpdateCompanion<AiChat> {
           ..write('updatedAt: $updatedAt, ')
           ..write('lastMessageAt: $lastMessageAt, ')
           ..write('draftText: $draftText, ')
+          ..write('draftContextJson: $draftContextJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8771,6 +8829,17 @@ class $AiChatMessagesTable extends AiChatMessages
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _contextJsonMeta = const VerificationMeta(
+    'contextJson',
+  );
+  @override
+  late final GeneratedColumn<String> contextJson = GeneratedColumn<String>(
+    'context_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -8789,6 +8858,7 @@ class $AiChatMessagesTable extends AiChatMessages
     role,
     content,
     status,
+    contextJson,
     createdAt,
   ];
   @override
@@ -8838,6 +8908,15 @@ class $AiChatMessagesTable extends AiChatMessages
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('context_json')) {
+      context.handle(
+        _contextJsonMeta,
+        contextJson.isAcceptableOrUnknown(
+          data['context_json']!,
+          _contextJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -8875,6 +8954,10 @@ class $AiChatMessagesTable extends AiChatMessages
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       ),
+      contextJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context_json'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -8898,6 +8981,9 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
 
   /// `ok` | `error` | null (normal).
   final String? status;
+
+  /// JSON list of attached study context (includes packedText once at send).
+  final String? contextJson;
   final DateTime createdAt;
   const AiChatMessage({
     required this.id,
@@ -8905,6 +8991,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     required this.role,
     required this.content,
     this.status,
+    this.contextJson,
     required this.createdAt,
   });
   @override
@@ -8916,6 +9003,9 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     map['content'] = Variable<String>(content);
     if (!nullToAbsent || status != null) {
       map['status'] = Variable<String>(status);
+    }
+    if (!nullToAbsent || contextJson != null) {
+      map['context_json'] = Variable<String>(contextJson);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -8930,6 +9020,9 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       status: status == null && nullToAbsent
           ? const Value.absent()
           : Value(status),
+      contextJson: contextJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contextJson),
       createdAt: Value(createdAt),
     );
   }
@@ -8945,6 +9038,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       role: serializer.fromJson<String>(json['role']),
       content: serializer.fromJson<String>(json['content']),
       status: serializer.fromJson<String?>(json['status']),
+      contextJson: serializer.fromJson<String?>(json['contextJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -8957,6 +9051,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       'role': serializer.toJson<String>(role),
       'content': serializer.toJson<String>(content),
       'status': serializer.toJson<String?>(status),
+      'contextJson': serializer.toJson<String?>(contextJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -8967,6 +9062,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     String? role,
     String? content,
     Value<String?> status = const Value.absent(),
+    Value<String?> contextJson = const Value.absent(),
     DateTime? createdAt,
   }) => AiChatMessage(
     id: id ?? this.id,
@@ -8974,6 +9070,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     role: role ?? this.role,
     content: content ?? this.content,
     status: status.present ? status.value : this.status,
+    contextJson: contextJson.present ? contextJson.value : this.contextJson,
     createdAt: createdAt ?? this.createdAt,
   );
   AiChatMessage copyWithCompanion(AiChatMessagesCompanion data) {
@@ -8983,6 +9080,9 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       role: data.role.present ? data.role.value : this.role,
       content: data.content.present ? data.content.value : this.content,
       status: data.status.present ? data.status.value : this.status,
+      contextJson: data.contextJson.present
+          ? data.contextJson.value
+          : this.contextJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -8995,13 +9095,15 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           ..write('role: $role, ')
           ..write('content: $content, ')
           ..write('status: $status, ')
+          ..write('contextJson: $contextJson, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, chatId, role, content, status, createdAt);
+  int get hashCode =>
+      Object.hash(id, chatId, role, content, status, contextJson, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -9011,6 +9113,7 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           other.role == this.role &&
           other.content == this.content &&
           other.status == this.status &&
+          other.contextJson == this.contextJson &&
           other.createdAt == this.createdAt);
 }
 
@@ -9020,6 +9123,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
   final Value<String> role;
   final Value<String> content;
   final Value<String?> status;
+  final Value<String?> contextJson;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const AiChatMessagesCompanion({
@@ -9028,6 +9132,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     this.role = const Value.absent(),
     this.content = const Value.absent(),
     this.status = const Value.absent(),
+    this.contextJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -9037,6 +9142,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     required String role,
     required String content,
     this.status = const Value.absent(),
+    this.contextJson = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -9050,6 +9156,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     Expression<String>? role,
     Expression<String>? content,
     Expression<String>? status,
+    Expression<String>? contextJson,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -9059,6 +9166,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
       if (role != null) 'role': role,
       if (content != null) 'content': content,
       if (status != null) 'status': status,
+      if (contextJson != null) 'context_json': contextJson,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -9070,6 +9178,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     Value<String>? role,
     Value<String>? content,
     Value<String?>? status,
+    Value<String?>? contextJson,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -9079,6 +9188,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
       role: role ?? this.role,
       content: content ?? this.content,
       status: status ?? this.status,
+      contextJson: contextJson ?? this.contextJson,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -9102,6 +9212,9 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (contextJson.present) {
+      map['context_json'] = Variable<String>(contextJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -9119,6 +9232,7 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
           ..write('role: $role, ')
           ..write('content: $content, ')
           ..write('status: $status, ')
+          ..write('contextJson: $contextJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -21986,6 +22100,7 @@ typedef $$AiChatsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<DateTime?> lastMessageAt,
       Value<String?> draftText,
+      Value<String?> draftContextJson,
       Value<int> rowid,
     });
 typedef $$AiChatsTableUpdateCompanionBuilder =
@@ -21997,6 +22112,7 @@ typedef $$AiChatsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<DateTime?> lastMessageAt,
       Value<String?> draftText,
+      Value<String?> draftContextJson,
       Value<int> rowid,
     });
 
@@ -22064,6 +22180,11 @@ class $$AiChatsTableFilterComposer
 
   ColumnFilters<String> get draftText => $composableBuilder(
     column: $table.draftText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get draftContextJson => $composableBuilder(
+    column: $table.draftContextJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -22136,6 +22257,11 @@ class $$AiChatsTableOrderingComposer
     column: $table.draftText,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get draftContextJson => $composableBuilder(
+    column: $table.draftContextJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AiChatsTableAnnotationComposer
@@ -22169,6 +22295,11 @@ class $$AiChatsTableAnnotationComposer
 
   GeneratedColumn<String> get draftText =>
       $composableBuilder(column: $table.draftText, builder: (column) => column);
+
+  GeneratedColumn<String> get draftContextJson => $composableBuilder(
+    column: $table.draftContextJson,
+    builder: (column) => column,
+  );
 
   Expression<T> aiChatMessagesRefs<T extends Object>(
     Expression<T> Function($$AiChatMessagesTableAnnotationComposer a) f,
@@ -22231,6 +22362,7 @@ class $$AiChatsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> lastMessageAt = const Value.absent(),
                 Value<String?> draftText = const Value.absent(),
+                Value<String?> draftContextJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AiChatsCompanion(
                 id: id,
@@ -22240,6 +22372,7 @@ class $$AiChatsTableTableManager
                 updatedAt: updatedAt,
                 lastMessageAt: lastMessageAt,
                 draftText: draftText,
+                draftContextJson: draftContextJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -22251,6 +22384,7 @@ class $$AiChatsTableTableManager
                 required DateTime updatedAt,
                 Value<DateTime?> lastMessageAt = const Value.absent(),
                 Value<String?> draftText = const Value.absent(),
+                Value<String?> draftContextJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AiChatsCompanion.insert(
                 id: id,
@@ -22260,6 +22394,7 @@ class $$AiChatsTableTableManager
                 updatedAt: updatedAt,
                 lastMessageAt: lastMessageAt,
                 draftText: draftText,
+                draftContextJson: draftContextJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -22326,6 +22461,7 @@ typedef $$AiChatMessagesTableCreateCompanionBuilder =
       required String role,
       required String content,
       Value<String?> status,
+      Value<String?> contextJson,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -22336,6 +22472,7 @@ typedef $$AiChatMessagesTableUpdateCompanionBuilder =
       Value<String> role,
       Value<String> content,
       Value<String?> status,
+      Value<String?> contextJson,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -22392,6 +22529,11 @@ class $$AiChatMessagesTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contextJson => $composableBuilder(
+    column: $table.contextJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -22453,6 +22595,11 @@ class $$AiChatMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get contextJson => $composableBuilder(
+    column: $table.contextJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -22502,6 +22649,11 @@ class $$AiChatMessagesTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get contextJson => $composableBuilder(
+    column: $table.contextJson,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -22565,6 +22717,7 @@ class $$AiChatMessagesTableTableManager
                 Value<String> role = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 Value<String?> status = const Value.absent(),
+                Value<String?> contextJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AiChatMessagesCompanion(
@@ -22573,6 +22726,7 @@ class $$AiChatMessagesTableTableManager
                 role: role,
                 content: content,
                 status: status,
+                contextJson: contextJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -22583,6 +22737,7 @@ class $$AiChatMessagesTableTableManager
                 required String role,
                 required String content,
                 Value<String?> status = const Value.absent(),
+                Value<String?> contextJson = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => AiChatMessagesCompanion.insert(
@@ -22591,6 +22746,7 @@ class $$AiChatMessagesTableTableManager
                 role: role,
                 content: content,
                 status: status,
+                contextJson: contextJson,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

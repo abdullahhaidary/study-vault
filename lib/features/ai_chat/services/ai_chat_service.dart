@@ -8,6 +8,7 @@ import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
+import 'chat_context_resolver.dart';
 import 'gemini_chat_service.dart';
 
 /// Orchestrates local chat persistence + provider completions.
@@ -19,14 +20,19 @@ class AiChatService {
 
     /// Backward-compatible alias for older call sites / tests.
     AiChatTransport? gemini,
+    ChatContextResolver? contextResolver,
     Uuid? uuid,
   }) : transport = transport ?? gemini!,
+       contextResolver = contextResolver ?? ChatContextResolver(db: db),
        _uuid = uuid ?? const Uuid();
 
   final AppDatabase db;
   final AiChatTransport transport;
   final AiSettingsStore settings;
+  final ChatContextResolver contextResolver;
   final Uuid _uuid;
+
+  static const maxAttachmentsPerMessage = 4;
 
   Stream<List<AiChat>> watchChats() => db.watchAiChats();
 
@@ -83,13 +89,21 @@ class AiChatService {
     };
   }
 
-  Future<void> saveDraft(String chatId, String? draft) async {
+  Future<void> saveDraft(
+    String chatId,
+    String? draft, {
+    List<AiContextItem>? draftAttachments,
+  }) async {
     final chat = await db.getAiChatById(chatId);
     if (chat == null) return;
     final value = draft?.trim();
+    final contextJson = draftAttachments == null
+        ? chat.draftContextJson
+        : AiContextItem.encodeList(draftAttachments, draft: true);
     await db.updateAiChat(
       chat.copyWith(
         draftText: Value(value == null || value.isEmpty ? null : value),
+        draftContextJson: Value(contextJson),
         updatedAt: DateTime.now(),
       ),
     );
@@ -99,6 +113,37 @@ class AiChatService {
 
   Future<void> deleteAllChats() => db.deleteAllAiChats();
 
+  List<AiChatTurn> _historyTurns(List<AiChatMessage> messages) {
+    return [
+      for (final m in messages)
+        if (m.status != AiChatMessageStatus.error)
+          AiChatTurn(
+            role: m.role,
+            content: _apiContentForMessage(m),
+          ),
+    ];
+  }
+
+  String _apiContentForMessage(AiChatMessage message) {
+    if (message.role != AiChatRole.user) return message.content;
+    final attachments = AiContextItem.decodeList(message.contextJson);
+    if (attachments.isEmpty) return message.content;
+    return AiContextItem.composeApiContent(
+      userText: message.content,
+      attachments: attachments,
+    );
+  }
+
+  Future<List<AiContextItem>> _resolveAttachments(
+    List<AiContextItem> attachments,
+  ) async {
+    if (attachments.isEmpty) return const [];
+    final clipped = attachments.length > maxAttachmentsPerMessage
+        ? attachments.sublist(0, maxAttachmentsPerMessage)
+        : attachments;
+    return contextResolver.resolveAll(clipped);
+  }
+
   /// Sends [userText], persists both sides, returns the assistant message.
   ///
   /// Uses non-stream complete so persistence stays simple; UI may call
@@ -106,6 +151,7 @@ class AiChatService {
   Future<AiChatMessage> sendMessage({
     required String chatId,
     required String userText,
+    List<AiContextItem> attachments = const [],
   }) async {
     final text = userText.trim();
     if (text.isEmpty) {
@@ -117,6 +163,7 @@ class AiChatService {
       throw const AiServerException('Chat not found.');
     }
 
+    final resolved = await _resolveAttachments(attachments);
     final now = DateTime.now();
     final userMessage = AiChatMessagesCompanion.insert(
       id: _uuid.v4(),
@@ -124,6 +171,7 @@ class AiChatService {
       role: AiChatRole.user,
       content: text,
       status: const Value(AiChatMessageStatus.ok),
+      contextJson: Value(AiContextItem.encodeList(resolved)),
       createdAt: now,
     );
     await db.insertAiChatMessage(userMessage);
@@ -140,13 +188,11 @@ class AiChatService {
         updatedAt: now,
         lastMessageAt: Value(now),
         draftText: const Value(null),
+        draftContextJson: const Value(null),
       ),
     );
 
-    final history = existing
-        .where((m) => m.status != AiChatMessageStatus.error)
-        .map((m) => AiChatTurn(role: m.role, content: m.content))
-        .toList();
+    final history = _historyTurns(existing);
 
     try {
       final completion = await transport.complete(
@@ -195,6 +241,7 @@ class AiChatService {
   Stream<String> streamSend({
     required String chatId,
     required String userText,
+    List<AiContextItem> attachments = const [],
   }) async* {
     final text = userText.trim();
     if (text.isEmpty) {
@@ -206,6 +253,7 @@ class AiChatService {
       throw const AiServerException('Chat not found.');
     }
 
+    final resolved = await _resolveAttachments(attachments);
     final now = DateTime.now();
     await db.insertAiChatMessage(
       AiChatMessagesCompanion.insert(
@@ -214,6 +262,7 @@ class AiChatService {
         role: AiChatRole.user,
         content: text,
         status: const Value(AiChatMessageStatus.ok),
+        contextJson: Value(AiContextItem.encodeList(resolved)),
         createdAt: now,
       ),
     );
@@ -229,13 +278,11 @@ class AiChatService {
         updatedAt: now,
         lastMessageAt: Value(now),
         draftText: const Value(null),
+        draftContextJson: const Value(null),
       ),
     );
 
-    final history = existing
-        .where((m) => m.status != AiChatMessageStatus.error)
-        .map((m) => AiChatTurn(role: m.role, content: m.content))
-        .toList();
+    final history = _historyTurns(existing);
 
     final buffer = StringBuffer();
     try {
@@ -300,8 +347,16 @@ class AiChatService {
       throw const AiServerException('Nothing to retry.');
     }
 
+    final attachments = AiContextItem.decodeList(lastUser.contextJson);
     // Remove the last user message then resend to avoid duplicates.
     await db.deleteAiChatMessage(lastUser.id);
-    return sendMessage(chatId: chatId, userText: lastUser.content);
+    return sendMessage(
+      chatId: chatId,
+      userText: lastUser.content,
+      attachments: [
+        for (final a in attachments)
+          a.copyWith(clearPackedText: true, clearEmptyReason: true),
+      ],
+    );
   }
 }

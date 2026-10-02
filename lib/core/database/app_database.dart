@@ -338,6 +338,9 @@ class AiChats extends Table {
   /// Unsent composer draft restored when reopening the chat.
   TextColumn get draftText => text().nullable()();
 
+  /// JSON list of draft [AiContextItem] chips (metadata; packed text optional).
+  TextColumn get draftContextJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -354,6 +357,9 @@ class AiChatMessages extends Table {
 
   /// `ok` | `error` | null (normal).
   TextColumn get status => text().nullable()();
+
+  /// JSON list of attached study context (includes packedText once at send).
+  TextColumn get contextJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -564,7 +570,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -641,6 +647,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         await m.createTable(annotationAiGenerations);
         await _createAnnotationAiGenerationIndexes();
+      }
+      if (from < 12) {
+        await m.addColumn(aiChats, aiChats.draftContextJson);
+        await m.addColumn(aiChatMessages, aiChatMessages.contextJson);
       }
     },
   );

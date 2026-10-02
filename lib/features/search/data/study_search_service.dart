@@ -525,4 +525,175 @@ ORDER BY b.updated_at DESC LIMIT 50
         ),
     ];
   }
+
+  /// Recent lessons / materials / notes / pins for empty `@` mention query.
+  Future<List<StudySearchResult>> suggestMentions({int limit = 24}) async {
+    final results = <StudySearchResult>[];
+    final favoriteLessonIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.lesson,
+    );
+    final favoriteMaterialIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.material,
+    );
+    final favoriteNoteIds = await _db.favoriteIdsOfType(FavoriteEntityType.note);
+    final favoritePinIds = await _db.favoriteIdsOfType(
+      FavoriteEntityType.studyPin,
+    );
+
+    final lessonRows = await _db
+        .customSelect(
+          '''
+SELECT l.id, l.name, l.subject_id AS subjectId,
+       s.name AS subjectName, s.class_id AS classId, c.name AS className
+FROM lessons l
+JOIN subjects s ON s.id = l.subject_id
+JOIN classes c ON c.id = s.class_id
+ORDER BY COALESCE(l.last_studied_at, l.updated_at) DESC
+LIMIT 8
+''',
+          readsFrom: {_db.lessons, _db.subjects, _db.classes},
+        )
+        .get();
+    for (final row in lessonRows) {
+      results.add(
+        StudySearchResult(
+          kind: StudyEntityKind.lesson,
+          id: row.read<String>('id'),
+          title: row.read<String>('name'),
+          breadcrumb:
+              '${row.read<String>('className')} › ${row.read<String>('subjectName')}',
+          subtitle: 'Lesson',
+          isFavorite: favoriteLessonIds.contains(row.read<String>('id')),
+          classId: row.read<String>('classId'),
+          subjectId: row.read<String>('subjectId'),
+          lessonId: row.read<String>('id'),
+        ),
+      );
+    }
+
+    final materialRows = await _db
+        .customSelect(
+          '''
+SELECT m.id, m.title, m.mime_type AS mimeType, m.lesson_id AS lessonId,
+       l.name AS lessonName, l.subject_id AS subjectId,
+       s.name AS subjectName, s.class_id AS classId, c.name AS className
+FROM lesson_materials m
+JOIN lessons l ON l.id = m.lesson_id
+JOIN subjects s ON s.id = l.subject_id
+JOIN classes c ON c.id = s.class_id
+ORDER BY m.updated_at DESC
+LIMIT 8
+''',
+          readsFrom: {
+            _db.lessonMaterials,
+            _db.lessons,
+            _db.subjects,
+            _db.classes,
+          },
+        )
+        .get();
+    for (final row in materialRows) {
+      results.add(
+        StudySearchResult(
+          kind: StudyEntityKind.material,
+          id: row.read<String>('id'),
+          title: row.read<String>('title'),
+          breadcrumb:
+              '${row.read<String>('className')} › ${row.read<String>('subjectName')} › ${row.read<String>('lessonName')}',
+          subtitle: 'Material',
+          isFavorite: favoriteMaterialIds.contains(row.read<String>('id')),
+          classId: row.read<String>('classId'),
+          subjectId: row.read<String>('subjectId'),
+          lessonId: row.read<String>('lessonId'),
+          materialId: row.read<String>('id'),
+          materialTitle: row.read<String>('title'),
+          mimeType: row.read<String>('mimeType'),
+        ),
+      );
+    }
+
+    final noteRows = await _db
+        .customSelect(
+          '''
+SELECT n.id, n.title, n.lesson_id AS lessonId, l.name AS lessonName
+FROM study_notes n
+LEFT JOIN lessons l ON l.id = n.lesson_id
+WHERE n.deleted_at IS NULL
+ORDER BY n.updated_at DESC
+LIMIT 6
+''',
+          readsFrom: {_db.studyNotes, _db.lessons},
+        )
+        .get();
+    for (final row in noteRows) {
+      final lessonName = row.read<String?>('lessonName');
+      results.add(
+        StudySearchResult(
+          kind: StudyEntityKind.note,
+          id: row.read<String>('id'),
+          title: row.read<String>('title'),
+          breadcrumb: lessonName ?? 'Note',
+          subtitle: 'Note',
+          isFavorite: favoriteNoteIds.contains(row.read<String>('id')),
+          lessonId: row.read<String?>('lessonId'),
+        ),
+      );
+    }
+
+    final pinRows = await _db
+        .customSelect(
+          '''
+SELECT p.id, p.short_text AS shortText, p.page_number AS pageNumber,
+       p.resource_id AS materialId, m.title AS materialTitle,
+       m.lesson_id AS lessonId, m.mime_type AS mimeType
+FROM study_pins p
+JOIN lesson_materials m ON m.id = p.resource_id
+WHERE p.deleted_at IS NULL
+ORDER BY p.updated_at DESC
+LIMIT 6
+''',
+          readsFrom: {_db.studyPins, _db.lessonMaterials},
+        )
+        .get();
+    for (final row in pinRows) {
+      final page = row.read<int?>('pageNumber');
+      results.add(
+        StudySearchResult(
+          kind: StudyEntityKind.studyPin,
+          id: row.read<String>('id'),
+          title: row.read<String>('shortText'),
+          breadcrumb: page == null
+              ? row.read<String>('materialTitle')
+              : '${row.read<String>('materialTitle')} • page $page',
+          subtitle: 'Pin',
+          isFavorite: favoritePinIds.contains(row.read<String>('id')),
+          lessonId: row.read<String>('lessonId'),
+          materialId: row.read<String>('materialId'),
+          materialTitle: row.read<String>('materialTitle'),
+          mimeType: row.read<String>('mimeType'),
+          pageNumber: page,
+        ),
+      );
+    }
+
+    if (results.length <= limit) return results;
+    return results.sublist(0, limit);
+  }
+
+  /// Mention picker search: empty → recent; otherwise lessons/materials/notes/pins.
+  Future<List<StudySearchResult>> searchForMentions(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return suggestMentions();
+
+    final results = <StudySearchResult>[];
+    for (final filter in [
+      SearchResultFilter.lessons,
+      SearchResultFilter.materials,
+      SearchResultFilter.notes,
+      SearchResultFilter.pins,
+    ]) {
+      results.addAll(await search(query: q, typeFilter: filter));
+    }
+    return results;
+  }
 }

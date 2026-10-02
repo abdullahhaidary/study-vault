@@ -13,6 +13,7 @@ class MessageBubble extends StatelessWidget {
     required this.role,
     required this.content,
     this.status,
+    this.attachments = const [],
     this.onRetry,
     this.isStreaming = false,
   });
@@ -20,6 +21,7 @@ class MessageBubble extends StatelessWidget {
   final String role;
   final String content;
   final String? status;
+  final List<AiContextItem> attachments;
   final VoidCallback? onRetry;
   final bool isStreaming;
 
@@ -71,6 +73,30 @@ class MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (attachments.isNotEmpty) ...[
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        for (final item in attachments)
+                          Chip(
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            avatar: Icon(
+                              _iconFor(item.kind),
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            label: Text(
+                              item.chipLabel,
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                  ],
                   Directionality(
                     textDirection: direction,
                     child: _isUser
@@ -120,4 +146,11 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+
+  IconData _iconFor(AiContextKind kind) => switch (kind) {
+    AiContextKind.lesson => Icons.article_outlined,
+    AiContextKind.material => Icons.picture_as_pdf_outlined,
+    AiContextKind.note => Icons.sticky_note_2_outlined,
+    AiContextKind.studyPin => Icons.push_pin_outlined,
+  };
 }
