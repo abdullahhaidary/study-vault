@@ -473,7 +473,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         child: const AiChatHistoryScreen(asDrawer: true),
       ),
       appBar: AppBar(
-        centerTitle: true,
+        centerTitle: false,
+        titleSpacing: 0,
         backgroundColor: theme.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         leading: Builder(
@@ -486,60 +487,70 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             icon: const Icon(Icons.menu),
           ),
         ),
-        title: InkWell(
-          onTap: () => _selectModel(modelId),
-          borderRadius: AppRadii.smAll,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: AppSpacing.xxs,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    modelLabel,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: modelKnown
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.error,
-                      fontWeight: FontWeight.w600,
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            onTap: () => _selectModel(modelId),
+            borderRadius: AppRadii.smAll,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xxs,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      modelLabel,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: modelKnown
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 2),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 20,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ],
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         actions: [
           IconButton(
-            tooltip: 'Back to app',
+            tooltip: 'Leave chat',
             onPressed: _returnToApp,
-            icon: const Icon(Icons.home_outlined),
-          ),
-          IconButton(
-            tooltip: 'New chat',
-            onPressed: _sending ? null : _newChat,
-            icon: const Icon(Icons.edit_square),
+            icon: const Icon(Icons.logout),
           ),
           PopupMenuButton<String>(
             tooltip: 'More options',
             icon: const Icon(Icons.more_horiz),
             onSelected: (value) {
-              if (value == 'appearance') {
-                showChatAppearanceSheet(context);
+              switch (value) {
+                case 'new_chat':
+                  if (!_sending) _newChat();
+                case 'appearance':
+                  showChatAppearanceSheet(context);
               }
             },
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
+                value: 'new_chat',
+                enabled: !_sending,
+                child: const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_square),
+                  title: Text('New chat'),
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'appearance',
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
