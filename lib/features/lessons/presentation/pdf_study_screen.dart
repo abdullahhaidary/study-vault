@@ -499,7 +499,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     );
     if (!mounted) return;
 
-    if (!aiContext.hasUsableText) {
+    if (!aiContext.hasUsableText &&
+        (aiContext.filePath == null || aiContext.pageNumber == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This page has no extractable text.')),
       );

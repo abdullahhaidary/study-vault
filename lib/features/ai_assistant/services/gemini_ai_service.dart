@@ -70,7 +70,7 @@ class GeminiAiService implements AiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(seconds: 60),
   }) async {
-    _assertSourceSize(request.sourceText);
+    _assertSource(request);
     if ((request.action == AiStudyAction.askAi ||
             request.action == AiStudyAction.customPrompt) &&
         (request.customPrompt == null ||
@@ -93,13 +93,21 @@ class GeminiAiService implements AiService {
 
     final prompt = AiPromptBuilder.forRequest(enriched);
     final structured = _schemaFor(request.action);
+    final parts = <Map<String, dynamic>>[
+      {'text': prompt},
+    ];
+    final pageImage = request.image;
+    if (pageImage != null) {
+      parts.add({
+        'inlineData': {
+          'mimeType': pageImage.mimeType,
+          'data': base64Encode(pageImage.bytes),
+        },
+      });
+    }
     final body = <String, dynamic>{
       'contents': [
-        {
-          'parts': [
-            {'text': prompt},
-          ],
-        },
+        {'parts': parts},
       ],
       'generationConfig': {
         'maxOutputTokens': 8192,
@@ -125,7 +133,8 @@ class GeminiAiService implements AiService {
       print(
         'AI ${request.action.name} model=$model ok in '
         '${DateTime.now().difference(started).inMilliseconds}ms '
-        'chars=${request.effectiveSourceLength} responseChars=${text.length}',
+        'chars=${request.effectiveSourceLength} responseChars=${text.length}'
+        '${request.hasPageImage ? ' imageBytes=${request.image!.bytes.length}' : ''}',
       );
       return true;
     }());
@@ -203,6 +212,22 @@ class GeminiAiService implements AiService {
       );
     }
     return key;
+  }
+
+  void _assertSource(AiStudyRequest request) {
+    if (request.hasPageImage) {
+      final bytes = request.image!.bytes.length;
+      if (bytes == 0) {
+        throw const AiMalformedOutputException(
+          'Could not render this PDF page as an image.',
+        );
+      }
+      if (bytes > kAiMaxPageImageBytes) {
+        throw const AiSourceTooLargeException();
+      }
+      return;
+    }
+    _assertSourceSize(request.sourceText);
   }
 
   void _assertSourceSize(String source) {

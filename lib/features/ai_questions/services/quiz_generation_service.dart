@@ -10,6 +10,7 @@ import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/services/ai_service.dart';
 import '../domain/question_source.dart';
 import '../domain/quiz_models.dart';
+import 'pdf_page_image_extractor.dart';
 
 const _uuid = Uuid();
 
@@ -36,18 +37,28 @@ class QuizGenerationService {
     required int count,
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
+    AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     assert(() {
       // ignore: avoid_print
       print(
         'QuizGen start type=${type.storageValue} count=$count '
         'difficulty=${difficulty.storageValue} '
+        'send=${sendMode.name} '
         'sourceChars=${source.characterCount} pages=${source.pageTexts.length}',
       );
       return true;
     }());
 
-    if (source.isEmpty) {
+    if (sendMode == AiPageSendMode.image) {
+      if (source.type != QuestionSourceType.page ||
+          source.pageNumbers.length != 1 ||
+          source.filePath == null) {
+        throw const AiMalformedOutputException(
+          'Image send is only available for a single PDF page.',
+        );
+      }
+    } else if (source.isEmpty) {
       throw const AiMalformedOutputException(
         'No study content available for this source.',
       );
@@ -62,6 +73,7 @@ class QuizGenerationService {
         count: count,
         type: type,
         difficulty: difficulty,
+        sendMode: sendMode,
       );
 
       if (generated.questions.length != count) {
@@ -110,9 +122,34 @@ class QuizGenerationService {
     required int count,
     required QuizQuestionType type,
     required QuizDifficulty difficulty,
+    AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     final language = await settings.getLanguage();
     final preference = await settings.getStudyPreference();
+
+    if (sendMode == AiPageSendMode.image) {
+      final page = source.pageNumbers.first;
+      final image = await PdfPageImageExtractor.renderJpeg(
+        filePath: source.filePath!,
+        pageNumber: page,
+      );
+      final label = source.text.trim().isEmpty
+          ? 'PDF page $page (image attached)'
+          : source.text;
+      return _stampSourcePage(
+        await _callAi(
+          text: label,
+          count: count,
+          type: type,
+          difficulty: difficulty,
+          language: language,
+          preference: preference,
+          image: image,
+          pageNumber: page,
+        ),
+        page,
+      );
+    }
 
     if (source.characterCount <= kAiHardSourceLimit) {
       return _callAi(
@@ -166,12 +203,15 @@ class QuizGenerationService {
     required QuizDifficulty difficulty,
     required AiLanguage language,
     String? preference,
+    AiStudyImage? image,
+    int? pageNumber,
   }) async {
     assert(() {
       // ignore: avoid_print
       print(
         'QuizGen AI call type=${type.storageValue} count=$count '
-        'chunkChars=${text.length}',
+        'chunkChars=${text.length}'
+        '${image == null ? '' : ' imageBytes=${image.bytes.length}'}',
       );
       return true;
     }());
@@ -184,6 +224,8 @@ class QuizGenerationService {
           difficulty: _toAiDifficulty(difficulty),
           language: language,
           userPreference: preference,
+          pageNumber: pageNumber ?? image?.pageNumber,
+          image: image,
         ),
       );
       final generated = result.generated;
@@ -201,6 +243,25 @@ class QuizGenerationService {
       }());
       rethrow;
     }
+  }
+
+  static GeneratedQuiz _stampSourcePage(GeneratedQuiz quiz, int page) {
+    return GeneratedQuiz(
+      title: quiz.title,
+      questions: [
+        for (final q in quiz.questions)
+          GeneratedQuizQuestion(
+            type: q.type,
+            question: q.question,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: q.difficulty,
+            options: q.options,
+            sourcePage: q.sourcePage ?? page,
+            sourceText: q.sourceText,
+          ),
+      ],
+    );
   }
 
   List<String> _chunkSource(QuestionSource source) {

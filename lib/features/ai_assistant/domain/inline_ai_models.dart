@@ -2,6 +2,7 @@ import 'dart:ui' show Offset;
 
 import '../../../core/database/app_database.dart';
 import 'ai_actions.dart';
+import 'ai_models.dart';
 import 'annotation_ai_context.dart';
 import 'annotation_ai_history.dart';
 
@@ -76,6 +77,7 @@ class InlineAiViewState {
     this.rephraseMode,
     this.translateTarget,
     this.customPrompt,
+    this.pageSendMode = AiPageSendMode.text,
   });
 
   final InlineAiSourceMode mode;
@@ -91,6 +93,7 @@ class InlineAiViewState {
   final AiRephraseMode? rephraseMode;
   final AiLanguage? translateTarget;
   final String? customPrompt;
+  final AiPageSendMode pageSendMode;
 
   String get sourceFingerprint =>
       AnnotationAiSourceFingerprint.fromContext(context);
@@ -122,6 +125,7 @@ class InlineAiViewState {
     AiRephraseMode? rephraseMode,
     AiLanguage? translateTarget,
     String? customPrompt,
+    AiPageSendMode? pageSendMode,
     bool clearAction = false,
     bool clearSelected = false,
     bool clearError = false,
@@ -140,6 +144,7 @@ class InlineAiViewState {
       rephraseMode: rephraseMode ?? this.rephraseMode,
       translateTarget: translateTarget ?? this.translateTarget,
       customPrompt: customPrompt ?? this.customPrompt,
+      pageSendMode: pageSendMode ?? this.pageSendMode,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -185,6 +186,52 @@ void main() {
       expect(deepseekCalls, 1);
       expect(geminiCalls, 0);
     });
+
+    test(
+      'routes page images to Gemini even when DeepSeek is selected',
+      () async {
+        final settings = MemoryAiSettingsStore();
+        await settings.setProvider(AiProviderId.deepseek);
+        await settings.setPrivacyConsentAccepted(true);
+
+        var geminiCalls = 0;
+        var deepseekCalls = 0;
+
+        final router = RoutingAiService(
+          settings: settings,
+          gemini: FakeAiService(
+            handler: (request) async {
+              geminiCalls++;
+              expect(request.hasPageImage, isTrue);
+              return const AiTextResult(markdown: 'gemini-vision');
+            },
+          ),
+          deepseek: FakeAiService(
+            handler: (request) async {
+              deepseekCalls++;
+              return const AiTextResult(markdown: 'deepseek');
+            },
+          ),
+        );
+
+        final result = await router.run(
+          AiStudyRequest(
+            action: AiStudyAction.explain,
+            sourceText: 'PDF page 2 (image attached)',
+            pageSendMode: AiPageSendMode.image,
+            image: AiStudyImage(
+              bytes: Uint8List.fromList(const [1, 2, 3, 4]),
+              mimeType: 'image/jpeg',
+              pageNumber: 2,
+            ),
+          ),
+        );
+        expect(result, isA<AiTextResult>());
+        expect((result as AiTextResult).markdown, 'gemini-vision');
+        expect(geminiCalls, 1);
+        expect(deepseekCalls, 0);
+      },
+    );
   });
 
   group('DeepSeekAiService HTTP', () {

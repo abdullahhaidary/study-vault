@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../data/quiz_providers.dart';
 import '../domain/question_source.dart';
@@ -41,7 +42,13 @@ Future<void> showGenerateQuestionsSheet(
   );
   if (config == null || !context.mounted) return;
 
-  if (!await AiAssistantController.ensureReady(context, ref)) return;
+  if (!await AiAssistantController.ensureReady(
+    context,
+    ref,
+    requireGemini: config.sendMode == AiPageSendMode.image,
+  )) {
+    return;
+  }
   if (!context.mounted) return;
 
   QuestionSource source;
@@ -55,7 +62,8 @@ Future<void> showGenerateQuestionsSheet(
     return;
   }
 
-  if (source.isEmpty) {
+  final allowEmpty = config.sendMode == AiPageSendMode.image;
+  if (source.isEmpty && !allowEmpty) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('No content available for that source.')),
@@ -89,6 +97,7 @@ Future<void> showGenerateQuestionsSheet(
           count: config.count,
           type: config.type,
           difficulty: config.difficulty,
+          sendMode: config.sendMode,
         );
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
@@ -118,12 +127,14 @@ class _GenerateConfig {
     required this.count,
     required this.type,
     required this.difficulty,
+    this.sendMode = AiPageSendMode.text,
   });
 
   final QuestionSourceType sourceType;
   final int count;
   final QuizQuestionType type;
   final QuizDifficulty difficulty;
+  final AiPageSendMode sendMode;
 }
 
 class _GenerateQuestionsSheet extends StatefulWidget {
@@ -141,6 +152,7 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
   int _count = 5;
   QuizQuestionType _type = QuizQuestionType.mixed;
   QuizDifficulty _difficulty = QuizDifficulty.mixed;
+  AiPageSendMode _sendMode = AiPageSendMode.text;
 
   @override
   void initState() {
@@ -177,11 +189,39 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
                     ChoiceChip(
                       label: Text(s.label),
                       selected: _source == s,
-                      onSelected: (_) => setState(() => _source = s),
+                      onSelected: (_) => setState(() {
+                        _source = s;
+                        if (s != QuestionSourceType.page) {
+                          _sendMode = AiPageSendMode.text;
+                        }
+                      }),
                     ),
                 ],
               ),
               const SizedBox(height: 16),
+              if (_source == QuestionSourceType.page) ...[
+                Text('Send as', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final mode in AiPageSendMode.values)
+                      ChoiceChip(
+                        label: Text(mode.label),
+                        selected: _sendMode == mode,
+                        onSelected: (_) => setState(() => _sendMode = mode),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _sendMode == AiPageSendMode.image
+                      ? 'Sends a picture of this page (diagrams and slides). Uses Gemini.'
+                      : 'Sends extracted text only (usually cheaper).',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+              ],
               Text(
                 'Number of questions',
                 style: Theme.of(context).textTheme.titleSmall,
@@ -240,6 +280,9 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
                       count: _count,
                       type: _type,
                       difficulty: _difficulty,
+                      sendMode: _source == QuestionSourceType.page
+                          ? _sendMode
+                          : AiPageSendMode.text,
                     ),
                   );
                 },

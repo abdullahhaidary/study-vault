@@ -102,8 +102,11 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     super.dispose();
   }
 
-  Future<bool> _ensureReady() =>
-      AiAssistantController.ensureReady(context, ref);
+  Future<bool> _ensureReady() => AiAssistantController.ensureReady(
+    context,
+    ref,
+    requireGemini: _controller.state.pageSendMode == AiPageSendMode.image,
+  );
 
   Future<void> _run(AiStudyAction action) async {
     if (action == AiStudyAction.generateQuestions) {
@@ -343,6 +346,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       request: state.context.toStudyRequest(
         action: AiStudyAction.generateFlashcards,
         flashcardCount: count,
+        pageSendMode: state.pageSendMode,
       ),
       annotationContext: state.context,
     );
@@ -526,6 +530,9 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
         _run(action);
       },
       onSelectGeneration: _controller.selectGeneration,
+      onPageSendMode: widget.mode == InlineAiSourceMode.page
+          ? _controller.setPageSendMode
+          : null,
       showAddToAnnotation:
           widget.mode == InlineAiSourceMode.selection ||
           _controller.existingPin != null,
@@ -586,6 +593,7 @@ class _InlineAiPanelCard extends StatelessWidget {
     required this.onMore,
     required this.onRetry,
     required this.onSelectGeneration,
+    this.onPageSendMode,
     required this.showAddToAnnotation,
   });
 
@@ -603,6 +611,7 @@ class _InlineAiPanelCard extends StatelessWidget {
   final Future<void> Function() onMore;
   final VoidCallback onRetry;
   final void Function(AnnotationAiGeneration g) onSelectGeneration;
+  final void Function(AiPageSendMode mode)? onPageSendMode;
   final bool showAddToAnnotation;
 
   @override
@@ -665,6 +674,29 @@ class _InlineAiPanelCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (onPageSendMode != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Send as',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    for (final mode in AiPageSendMode.values)
+                      ChoiceChip(
+                        label: Text(mode.label),
+                        selected: state.pageSendMode == mode,
+                        onSelected: busy ? null : (_) => onPageSendMode!(mode),
+                      ),
+                  ],
+                ),
+              ),
             if (state.phase == InlineAiPhase.ready ||
                 (state.phase == InlineAiPhase.error && !state.hasResponse))
               Padding(

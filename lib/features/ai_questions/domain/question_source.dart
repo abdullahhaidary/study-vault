@@ -16,6 +16,7 @@ class QuestionSource {
     this.pageNumbers = const [],
     this.referenceLabel,
     this.metadata = const {},
+    this.filePath,
   });
 
   final QuestionSourceType type;
@@ -32,6 +33,7 @@ class QuestionSource {
   final List<int> pageNumbers;
   final String? referenceLabel;
   final Map<String, Object?> metadata;
+  final String? filePath;
 
   bool get isEmpty => text.trim().isEmpty;
 
@@ -68,6 +70,7 @@ abstract final class QuestionSourceBuilder {
     String? lessonId,
     String? subjectId,
     int? pageNumber,
+    String? filePath,
   }) {
     final cleaned = _clean(text);
     return QuestionSource(
@@ -83,6 +86,7 @@ abstract final class QuestionSourceBuilder {
       referenceLabel: pageNumber == null
           ? 'Selected text'
           : 'Selected text (page $pageNumber)',
+      filePath: filePath,
     );
   }
 
@@ -92,6 +96,7 @@ abstract final class QuestionSourceBuilder {
     String? materialId,
     String? lessonId,
     String? subjectId,
+    String? filePath,
   }) {
     return fromPages(
       pages: [SourcePageText(pageNumber: pageNumber, text: pageText)],
@@ -99,6 +104,7 @@ abstract final class QuestionSourceBuilder {
       lessonId: lessonId,
       subjectId: subjectId,
       type: QuestionSourceType.page,
+      filePath: filePath,
     );
   }
 
@@ -108,6 +114,7 @@ abstract final class QuestionSourceBuilder {
     String? lessonId,
     String? subjectId,
     QuestionSourceType type = QuestionSourceType.pages,
+    String? filePath,
   }) {
     final normalized =
         pages
@@ -143,6 +150,7 @@ abstract final class QuestionSourceBuilder {
           : pageNumbers.length == 1
           ? 'Page ${pageNumbers.first}'
           : 'Pages ${pageNumbers.first}–${pageNumbers.last}',
+      filePath: filePath,
     );
   }
 
@@ -151,6 +159,7 @@ abstract final class QuestionSourceBuilder {
     String? materialId,
     String? lessonId,
     String? subjectId,
+    String? filePath,
   }) {
     return fromPages(
       pages: pages,
@@ -158,6 +167,7 @@ abstract final class QuestionSourceBuilder {
       lessonId: lessonId,
       subjectId: subjectId,
       type: QuestionSourceType.material,
+      filePath: filePath,
     );
   }
 

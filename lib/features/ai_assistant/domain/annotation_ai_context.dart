@@ -67,10 +67,17 @@ class AnnotationAiContext {
     List<AiConversationTurn> conversation = const [],
     AiLanguage? languageOverride,
     AiLanguage? translateTarget,
+    AiPageSendMode pageSendMode = AiPageSendMode.text,
+    AiStudyImage? image,
   }) {
+    final usingImage = pageSendMode == AiPageSendMode.image || image != null;
+    final primary = primaryText;
+    final source = primary.isNotEmpty
+        ? primary
+        : 'PDF page ${pageNumber ?? ''} (image attached)'.trim();
     return AiStudyRequest(
       action: action,
-      sourceText: primaryText,
+      sourceText: source,
       language: languageOverride ?? language,
       rephraseMode: rephraseMode,
       organizeMode: organizeMode,
@@ -83,7 +90,7 @@ class AnnotationAiContext {
       userPreference: userPreference,
       selectedText: selectedText.trim().isEmpty ? null : selectedText.trim(),
       shortDescription: shortDescription,
-      surroundingText: surroundingText,
+      surroundingText: usingImage ? null : surroundingText,
       pageNumber: pageNumber,
       materialId: materialId,
       lessonId: lessonId,
@@ -91,6 +98,8 @@ class AnnotationAiContext {
       customPrompt: customPrompt,
       conversation: conversation,
       translateTarget: translateTarget,
+      pageSendMode: usingImage ? AiPageSendMode.image : AiPageSendMode.text,
+      image: image,
     );
   }
 }

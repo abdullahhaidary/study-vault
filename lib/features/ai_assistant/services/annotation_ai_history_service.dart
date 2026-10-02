@@ -84,6 +84,7 @@ class AnnotationAiHistoryService {
     String? modelName,
     String? provider,
     bool useCache = false,
+    AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     final result = await _ai.run(
       context: context,
@@ -98,6 +99,7 @@ class AnnotationAiHistoryService {
       categoryNames: categoryNames,
       categoryNameToId: categoryNameToId,
       useCache: useCache,
+      sendMode: sendMode,
     );
 
     final persisted = _serializeResult(result);
@@ -195,6 +197,7 @@ class AnnotationAiHistoryService {
     Map<String, String> categoryNameToId = const {},
     String? modelName,
     String? provider,
+    AiPageSendMode sendMode = AiPageSendMode.text,
   }) {
     final instruction = regenerateInstruction?.trim();
     final existing = customPrompt?.trim();
@@ -226,6 +229,7 @@ class AnnotationAiHistoryService {
       modelName: modelName,
       provider: provider,
       useCache: false,
+      sendMode: sendMode,
     );
   }
 

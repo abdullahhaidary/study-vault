@@ -2,6 +2,7 @@ import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
+import '../../ai_questions/services/pdf_page_image_extractor.dart';
 import 'ai_service.dart';
 
 /// Domain façade for annotation / selection AI.
@@ -41,8 +42,25 @@ class AnnotationAiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(seconds: 60),
     bool useCache = true,
+    AiPageSendMode sendMode = AiPageSendMode.text,
+    AiStudyImage? image,
   }) async {
-    if (!context.hasUsableText) {
+    AiStudyImage? resolvedImage = image;
+    if (sendMode == AiPageSendMode.image && resolvedImage == null) {
+      final path = context.filePath;
+      final page = context.pageNumber;
+      if (path == null || page == null) {
+        throw const AiMalformedOutputException(
+          'No PDF page available to send as an image.',
+        );
+      }
+      resolvedImage = await PdfPageImageExtractor.renderJpeg(
+        filePath: path,
+        pageNumber: page,
+      );
+    }
+
+    if (!context.hasUsableText && resolvedImage == null) {
       throw const AiEmptySelectionException();
     }
 
@@ -57,9 +75,14 @@ class AnnotationAiService {
       conversation: conversation,
       translateTarget: translateTarget,
       languageOverride: languageOverride,
+      pageSendMode: resolvedImage == null
+          ? AiPageSendMode.text
+          : AiPageSendMode.image,
+      image: resolvedImage,
     );
 
-    if (request.effectiveSourceLength > kAiHardSourceLimit) {
+    if (resolvedImage == null &&
+        request.effectiveSourceLength > kAiHardSourceLimit) {
       throw const AiSourceTooLargeException();
     }
 
@@ -142,6 +165,8 @@ class AnnotationAiService {
       request.surroundingText ?? '',
       request.customPrompt ?? '',
       request.pageNumber?.toString() ?? '',
+      request.pageSendMode.name,
+      request.hasPageImage ? 'img' : '',
     ].join('\u001f');
   }
 

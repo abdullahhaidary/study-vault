@@ -5,6 +5,7 @@ import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_missing_key_dialog.dart';
@@ -15,12 +16,28 @@ abstract final class AiAssistantController {
   static bool _requestInFlight = false;
 
   /// Ensures key + privacy consent. Returns false if user cancelled.
-  static Future<bool> ensureReady(BuildContext context, WidgetRef ref) async {
-    final service = ref.read(aiServiceProvider);
-    if (!await service.isConfigured) {
-      if (!context.mounted) return false;
-      await showAiMissingKeyDialog(context);
-      return false;
+  static Future<bool> ensureReady(
+    BuildContext context,
+    WidgetRef ref, {
+    bool requireGemini = false,
+  }) async {
+    if (requireGemini) {
+      final creds = ref.read(aiCredentialStoreProvider);
+      if (!await creds.hasApiKeyFor(AiProviderId.gemini)) {
+        if (!context.mounted) return false;
+        await showAiMissingKeyDialog(
+          context,
+          requireProvider: AiProviderId.gemini,
+        );
+        return false;
+      }
+    } else {
+      final service = ref.read(aiServiceProvider);
+      if (!await service.isConfigured) {
+        if (!context.mounted) return false;
+        await showAiMissingKeyDialog(context);
+        return false;
+      }
     }
     final settings = ref.read(aiSettingsStoreProvider);
     if (!await settings.getPrivacyConsentAccepted()) {
@@ -49,13 +66,13 @@ abstract final class AiAssistantController {
     }
 
     final sourceLen = request.effectiveSourceLength;
-    if (request.sourceText.trim().isEmpty) {
+    if (!request.hasPageImage && request.sourceText.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select or provide text for AI first.')),
       );
       return null;
     }
-    if (sourceLen > kAiSoftSourceLimit) {
+    if (!request.hasPageImage && sourceLen > kAiSoftSourceLimit) {
       final cont = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -79,7 +96,16 @@ abstract final class AiAssistantController {
       if (cont != true) return null;
     }
 
-    if (!context.mounted || !await ensureReady(context, ref)) return null;
+    if (!context.mounted ||
+        !await ensureReady(
+          context,
+          ref,
+          requireGemini:
+              request.hasPageImage ||
+              request.pageSendMode == AiPageSendMode.image,
+        )) {
+      return null;
+    }
     if (!context.mounted) return null;
 
     var cancelled = false;
@@ -133,6 +159,8 @@ abstract final class AiAssistantController {
               translateTarget: request.translateTarget,
               languageOverride: language,
               categoryNameToId: categoryNameToId,
+              sendMode: request.pageSendMode,
+              image: request.image,
             );
       } else {
         result = await ref

@@ -5,21 +5,29 @@ import '../../../app/routes.dart';
 import '../data/ai_providers.dart';
 import '../domain/ai_provider.dart';
 
-Future<void> showAiMissingKeyDialog(BuildContext context, {WidgetRef? ref}) {
+Future<void> showAiMissingKeyDialog(
+  BuildContext context, {
+  WidgetRef? ref,
+  AiProviderId? requireProvider,
+}) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) {
       return Consumer(
         builder: (context, consumerRef, _) {
           final state = consumerRef.watch(aiSettingsStateProvider);
-          final name = state.maybeWhen(
-            data: (s) => s.provider.displayName,
-            orElse: () => 'AI',
-          );
+          final name =
+              requireProvider?.displayName ??
+              state.maybeWhen(
+                data: (s) => s.provider.displayName,
+                orElse: () => 'AI',
+              );
           return AlertDialog(
             title: Text('$name API key required'),
             content: Text(
-              'Add your $name API key in Settings to use AI features.',
+              requireProvider == AiProviderId.gemini
+                  ? 'Sending a page as an image uses Gemini vision. Add a Gemini API key in Settings.'
+                  : 'Add your $name API key in Settings to use AI features.',
             ),
             actions: [
               TextButton(

@@ -1,10 +1,13 @@
 import '../data/ai_settings_store.dart';
+import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import 'ai_service.dart';
 
 /// Routes study AI calls to the user-selected provider without leaking
 /// `if (gemini)` / `if (deepseek)` into feature UI.
+///
+/// Page images always go to Gemini (DeepSeek has no vision).
 class RoutingAiService implements AiService {
   RoutingAiService({
     required this.settings,
@@ -24,6 +27,15 @@ class RoutingAiService implements AiService {
     };
   }
 
+  Future<AiService> _forImage() async {
+    if (!await gemini.isConfigured) {
+      throw const AiNotConfiguredException(
+        'Add a Gemini API key in Settings to send a page as an image.',
+      );
+    }
+    return gemini;
+  }
+
   @override
   Future<bool> get isConfigured async => (await _active()).isConfigured;
 
@@ -40,7 +52,8 @@ class RoutingAiService implements AiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(seconds: 60),
   }) async {
-    return (await _active()).run(
+    final service = request.hasPageImage ? await _forImage() : await _active();
+    return service.run(
       request,
       categoryNameToId: categoryNameToId,
       timeout: timeout,
@@ -52,6 +65,7 @@ class RoutingAiService implements AiService {
     AiQuestionGenerationRequest request, {
     Duration timeout = const Duration(seconds: 90),
   }) async {
-    return (await _active()).generateQuestions(request, timeout: timeout);
+    final service = request.image != null ? await _forImage() : await _active();
+    return service.generateQuestions(request, timeout: timeout);
   }
 }

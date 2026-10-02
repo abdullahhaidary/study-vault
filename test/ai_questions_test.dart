@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/backup/backup_providers.dart';
@@ -247,6 +249,25 @@ void main() {
       expect(prompt, contains('Return JSON only'));
       expect(prompt, contains('Do not return markdown'));
       expect(prompt, contains('Source material about gradients.'));
+    });
+
+    test('includes attached page image instructions', () {
+      final prompt = AiPromptBuilder.buildQuestions(
+        AiStudyRequest(
+          action: AiStudyAction.generateQuestions,
+          sourceText: 'PDF page 3 (image attached)',
+          questionType: AiQuestionType.mcq,
+          questionCount: 5,
+          pageSendMode: AiPageSendMode.image,
+          image: AiStudyImage(
+            bytes: Uint8List.fromList(const [0, 1, 2]),
+            mimeType: 'image/jpeg',
+            pageNumber: 3,
+          ),
+        ),
+      );
+      expect(prompt, contains('JPEG of a single PDF page'));
+      expect(prompt, contains('Do not invent other pages'));
     });
   });
 

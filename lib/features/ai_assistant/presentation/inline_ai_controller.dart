@@ -169,6 +169,7 @@ class InlineAiController extends ChangeNotifier {
         regenerateInstruction: instruction,
         modelName: modelName,
         provider: provider.storageValue,
+        sendMode: _state.pageSendMode,
       );
 
       if (token != _runToken || _disposed) return;
@@ -243,12 +244,13 @@ class InlineAiController extends ChangeNotifier {
       ),
     );
 
-    if (!_state.context.hasUsableText) {
+    if (!_state.context.hasUsableText &&
+        _state.pageSendMode != AiPageSendMode.image) {
       _set(
         _state.copyWith(
           phase: InlineAiPhase.error,
           errorMessage: _state.mode == InlineAiSourceMode.page
-              ? 'This page has no extractable text.'
+              ? 'This page has no extractable text. Send as Image instead.'
               : 'Select text for AI first.',
         ),
       );
@@ -258,7 +260,8 @@ class InlineAiController extends ChangeNotifier {
     final sourceLen =
         _state.context.primaryText.length +
         (_state.context.surroundingText?.length ?? 0);
-    if (sourceLen > kAiHardSourceLimit) {
+    if (_state.pageSendMode != AiPageSendMode.image &&
+        sourceLen > kAiHardSourceLimit) {
       _set(
         _state.copyWith(
           phase: InlineAiPhase.error,
@@ -305,6 +308,7 @@ class InlineAiController extends ChangeNotifier {
         modelName: modelName,
         provider: provider.storageValue,
         useCache: action.isCacheable,
+        sendMode: _state.pageSendMode,
       );
 
       if (token != _runToken || _disposed) return;
@@ -412,6 +416,12 @@ class InlineAiController extends ChangeNotifier {
     );
   }
 
+  void setPageSendMode(AiPageSendMode mode) {
+    if (_state.mode != InlineAiSourceMode.page) return;
+    if (_state.pageSendMode == mode) return;
+    _set(_state.copyWith(pageSendMode: mode));
+  }
+
   void requestAskFocus() {
     _set(_state.copyWith(focusAskField: true));
   }
@@ -442,6 +452,7 @@ class InlineAiController extends ChangeNotifier {
       rephraseMode: _state.rephraseMode,
       translateTarget: _state.translateTarget,
       customPrompt: _state.customPrompt ?? _state.selected?.customPrompt,
+      pageSendMode: _state.pageSendMode,
     );
   }
 

@@ -218,6 +218,7 @@ abstract final class QuestionSourceLaunches {
           lessonId: lessonId,
           subjectId: subjectId,
           pageNumber: pageNumber ?? currentPage,
+          filePath: filePath,
         );
       case QuestionSourceType.page:
         final page = currentPage ?? pageNumber ?? 1;
@@ -231,6 +232,7 @@ abstract final class QuestionSourceLaunches {
           materialId: materialId,
           lessonId: lessonId,
           subjectId: subjectId,
+          filePath: filePath,
         );
       case QuestionSourceType.pages:
         var wanted = <int>{...?selectedPages};
@@ -248,6 +250,7 @@ abstract final class QuestionSourceLaunches {
           materialId: materialId,
           lessonId: lessonId,
           subjectId: subjectId,
+          filePath: filePath,
         );
       case QuestionSourceType.material:
         final pages = await PdfTextExtractor.extractPages(filePath: filePath);
@@ -256,6 +259,7 @@ abstract final class QuestionSourceLaunches {
           materialId: materialId,
           lessonId: lessonId,
           subjectId: subjectId,
+          filePath: filePath,
         );
       case QuestionSourceType.annotations:
         final pins = await db.getStudyPinsForResource(materialId);

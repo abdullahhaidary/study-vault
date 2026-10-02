@@ -52,14 +52,27 @@ Return concise but educational answers.
   static String materialBlock(AiStudyRequest request) {
     final selected = (request.selectedText ?? request.sourceText).trim();
     final buffer = StringBuffer();
-    if (request.pageNumber != null) {
-      buffer.writeln('PAGE: ${request.pageNumber}');
+    if (request.pageNumber != null || request.image?.pageNumber != null) {
+      buffer.writeln(
+        'PAGE: ${request.pageNumber ?? request.image!.pageNumber}',
+      );
       buffer.writeln();
     }
-    buffer.writeln('SELECTED TEXT:');
+    if (request.hasPageImage) {
+      buffer.writeln(
+        'A JPEG of this single PDF page/slide is attached. '
+        'Use the visual (text, diagrams, photos). Do not invent other pages.',
+      );
+      buffer.writeln();
+    }
+    buffer.writeln(
+      request.hasPageImage ? 'PAGE TEXT (may be empty):' : 'SELECTED TEXT:',
+    );
     buffer.writeln(selected);
     final surrounding = request.surroundingText?.trim();
-    if (surrounding != null && surrounding.isNotEmpty) {
+    if (!request.hasPageImage &&
+        surrounding != null &&
+        surrounding.isNotEmpty) {
       buffer.writeln();
       buffer.writeln(
         'SURROUNDING CONTEXT (clarify meaning only; do not digress):',
@@ -335,6 +348,7 @@ Return concise but educational answers.
         '- Preserve the source page number when available (see "--- Page N ---" markers or PAGE:).\n'
         '- Return JSON only.\n'
         '- Do not return markdown.\n\n'
+        '${request.hasPageImage ? 'A JPEG of a single PDF page/slide is attached. Generate questions from that visual (including diagrams). Do not invent other pages.\n\n' : ''}'
         'Question type instruction: $typeHint\n'
         'Difficulty instruction: $difficultyHint\n'
         'Return JSON matching the schema with title + questions.\n\n'

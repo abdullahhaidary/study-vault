@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../ai_questions/domain/quiz_models.dart';
 import 'ai_actions.dart';
 
@@ -9,6 +11,35 @@ const kAiHardSourceLimit = 40000;
 
 /// Max surrounding context characters included with a selection.
 const kAiSurroundingContextLimit = 2500;
+
+/// Longest side (pixels) when rendering a PDF page for vision.
+const kAiPageImageLongestSide = 1024.0;
+
+/// Hard cap on encoded JPEG bytes for one page image.
+const kAiMaxPageImageBytes = 400 * 1024;
+
+/// How a single PDF page is sent to the model.
+enum AiPageSendMode { text, image }
+
+extension AiPageSendModeX on AiPageSendMode {
+  String get label => switch (this) {
+    AiPageSendMode.text => 'Text',
+    AiPageSendMode.image => 'Image',
+  };
+}
+
+/// One locally rendered PDF page (never the PDF file itself).
+class AiStudyImage {
+  const AiStudyImage({
+    required this.bytes,
+    required this.mimeType,
+    this.pageNumber,
+  });
+
+  final Uint8List bytes;
+  final String mimeType;
+  final int? pageNumber;
+}
 
 /// One turn in a lightweight annotation-scoped follow-up chat.
 class AiConversationTurn {
@@ -45,6 +76,8 @@ class AiStudyRequest {
     this.customPrompt,
     this.conversation = const [],
     this.translateTarget,
+    this.pageSendMode = AiPageSendMode.text,
+    this.image,
   });
 
   final AiStudyAction action;
@@ -78,6 +111,11 @@ class AiStudyRequest {
   /// Target language for [AiStudyAction.translate].
   final AiLanguage? translateTarget;
 
+  final AiPageSendMode pageSendMode;
+  final AiStudyImage? image;
+
+  bool get hasPageImage => image != null;
+
   /// Combined character budget used for size checks (source + surrounding).
   int get effectiveSourceLength =>
       sourceText.length + (surroundingText?.length ?? 0);
@@ -105,6 +143,8 @@ class AiStudyRequest {
     String? customPrompt,
     List<AiConversationTurn>? conversation,
     AiLanguage? translateTarget,
+    AiPageSendMode? pageSendMode,
+    AiStudyImage? image,
   }) {
     return AiStudyRequest(
       action: action ?? this.action,
@@ -129,6 +169,8 @@ class AiStudyRequest {
       customPrompt: customPrompt ?? this.customPrompt,
       conversation: conversation ?? this.conversation,
       translateTarget: translateTarget ?? this.translateTarget,
+      pageSendMode: pageSendMode ?? this.pageSendMode,
+      image: image ?? this.image,
     );
   }
 }
@@ -142,6 +184,8 @@ class AiQuestionGenerationRequest {
     required this.difficulty,
     this.language = AiLanguage.auto,
     this.userPreference,
+    this.pageNumber,
+    this.image,
   });
 
   final String sourceText;
@@ -150,6 +194,8 @@ class AiQuestionGenerationRequest {
   final AiQuestionDifficulty difficulty;
   final AiLanguage language;
   final String? userPreference;
+  final int? pageNumber;
+  final AiStudyImage? image;
 
   AiStudyRequest toStudyRequest() {
     return AiStudyRequest(
@@ -160,6 +206,9 @@ class AiQuestionGenerationRequest {
       questionCount: count,
       questionDifficulty: difficulty,
       userPreference: userPreference,
+      pageNumber: pageNumber ?? image?.pageNumber,
+      pageSendMode: image == null ? AiPageSendMode.text : AiPageSendMode.image,
+      image: image,
     );
   }
 }

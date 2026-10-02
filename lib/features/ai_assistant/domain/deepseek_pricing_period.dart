@@ -13,14 +13,14 @@ enum DeepSeekPricingPeriod { peak, offPeak }
 
 extension DeepSeekPricingPeriodX on DeepSeekPricingPeriod {
   String get label => switch (this) {
-        DeepSeekPricingPeriod.peak => 'Peak',
-        DeepSeekPricingPeriod.offPeak => 'Off-peak',
-      };
+    DeepSeekPricingPeriod.peak => 'Peak',
+    DeepSeekPricingPeriod.offPeak => 'Off-peak',
+  };
 
   String get shortHint => switch (this) {
-        DeepSeekPricingPeriod.peak => 'Higher rates right now',
-        DeepSeekPricingPeriod.offPeak => 'Cheaper rates right now (~½ peak)',
-      };
+    DeepSeekPricingPeriod.peak => 'Higher rates right now',
+    DeepSeekPricingPeriod.offPeak => 'Cheaper rates right now (~½ peak)',
+  };
 }
 
 abstract final class DeepSeekPricingSchedule {

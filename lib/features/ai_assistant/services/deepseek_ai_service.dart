@@ -62,6 +62,11 @@ class DeepSeekAiService implements AiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    if (request.image != null) {
+      throw const AiMalformedOutputException(
+        'Add a Gemini API key in Settings to send a page as an image.',
+      );
+    }
     _assertSourceSize(request.sourceText);
     if ((request.action == AiStudyAction.askAi ||
             request.action == AiStudyAction.customPrompt) &&
