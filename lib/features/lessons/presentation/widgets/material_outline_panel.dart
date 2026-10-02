@@ -43,14 +43,23 @@ class MaterialOutlinePanel extends ConsumerStatefulWidget {
       _MaterialOutlinePanelState();
 }
 
-class _MaterialOutlinePanelState extends ConsumerState<MaterialOutlinePanel> {
+class _MaterialOutlinePanelState extends ConsumerState<MaterialOutlinePanel>
+    with SingleTickerProviderStateMixin {
   late final Future<List<PdfOutlineNode>> _outline;
+  late final TabController _tabController;
   int? _outlineCount;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 5, vsync: this);
     _outline = _loadOutline();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<List<PdfOutlineNode>> _loadOutline() async {
@@ -88,116 +97,113 @@ class _MaterialOutlinePanelState extends ConsumerState<MaterialOutlinePanel> {
         ) ??
         0;
 
-    return DefaultTabController(
-      length: 5,
-      child: Column(
-        children: [
-          TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              _CountTab(label: 'Outline', count: _outlineCount ?? 0),
-              _CountTab(label: 'Bookmarks', count: widget.bookmarks.length),
-              _CountTab(
-                label: 'Annotations',
-                count: widget.pins
-                    .where((pin) => pin.pageNumber != null)
-                    .length,
+    final tabs = [
+      _PanelTab(label: 'Outline', count: _outlineCount ?? 0),
+      _PanelTab(label: 'Bookmarks', count: widget.bookmarks.length),
+      _PanelTab(
+        label: 'Annotations',
+        count: widget.pins.where((pin) => pin.pageNumber != null).length,
+      ),
+      _PanelTab(label: 'Questions', count: questionCount),
+      _PanelTab(label: 'Chats', count: chatsCount),
+    ];
+
+    return Column(
+      children: [
+        AnimatedBuilder(
+          animation: _tabController,
+          builder: (context, _) => _PanelTabButtons(
+            tabs: tabs,
+            selectedIndex: _tabController.index,
+            onSelected: _tabController.animateTo,
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              FutureBuilder<List<PdfOutlineNode>>(
+                future: _outline,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final nodes = snapshot.data!;
+                  if (nodes.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'This PDF does not contain a table of contents.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+                  final flat = _flatten(nodes);
+                  return ListView.builder(
+                    itemCount: flat.length,
+                    itemBuilder: (context, index) {
+                      final entry = flat[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.only(
+                          left: 16 + entry.depth * 16.0,
+                          right: 8,
+                        ),
+                        title: Text(
+                          entry.node.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: entry.node.dest == null
+                            ? null
+                            : () => widget.controller.goToDest(entry.node.dest),
+                      );
+                    },
+                  );
+                },
               ),
-              _CountTab(label: 'Questions', count: questionCount),
-              _CountTab(label: 'Chats', count: chatsCount),
+              ListView.builder(
+                itemCount: widget.bookmarks.length,
+                itemBuilder: (context, index) {
+                  final bookmark = widget.bookmarks[index];
+                  return ListTile(
+                    selected: bookmark.pageNumber == widget.currentPage,
+                    leading: const Icon(Icons.bookmark),
+                    title: Text(
+                      bookmark.title ?? 'Page ${bookmark.pageNumber}',
+                    ),
+                    subtitle: Text('Page ${bookmark.pageNumber}'),
+                    onTap: () => widget.onBookmarkTap(bookmark),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') widget.onBookmarkEdit(bookmark);
+                        if (value == 'delete') {
+                          widget.onBookmarkDelete(bookmark);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit title')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              _annotations(),
+              _questions(questionSets),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(8),
+                child: AiDiscussionsList(
+                  kind: AiContextKind.material,
+                  id: widget.materialId,
+                  dense: true,
+                ),
+              ),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                FutureBuilder<List<PdfOutlineNode>>(
-                  future: _outline,
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final nodes = snapshot.data!;
-                    if (nodes.isEmpty) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'This PDF does not contain a table of contents.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    }
-                    final flat = _flatten(nodes);
-                    return ListView.builder(
-                      itemCount: flat.length,
-                      itemBuilder: (context, index) {
-                        final entry = flat[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.only(
-                            left: 16 + entry.depth * 16.0,
-                            right: 8,
-                          ),
-                          title: Text(
-                            entry.node.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: entry.node.dest == null
-                              ? null
-                              : () =>
-                                    widget.controller.goToDest(entry.node.dest),
-                        );
-                      },
-                    );
-                  },
-                ),
-                ListView.builder(
-                  itemCount: widget.bookmarks.length,
-                  itemBuilder: (context, index) {
-                    final bookmark = widget.bookmarks[index];
-                    return ListTile(
-                      selected: bookmark.pageNumber == widget.currentPage,
-                      leading: const Icon(Icons.bookmark),
-                      title: Text(
-                        bookmark.title ?? 'Page ${bookmark.pageNumber}',
-                      ),
-                      subtitle: Text('Page ${bookmark.pageNumber}'),
-                      onTap: () => widget.onBookmarkTap(bookmark),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') widget.onBookmarkEdit(bookmark);
-                          if (value == 'delete') {
-                            widget.onBookmarkDelete(bookmark);
-                          }
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Text('Edit title'),
-                          ),
-                          PopupMenuItem(value: 'delete', child: Text('Delete')),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                _annotations(),
-                _questions(questionSets),
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(8),
-                  child: AiDiscussionsList(
-                    kind: AiContextKind.material,
-                    id: widget.materialId,
-                    dense: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -294,38 +300,116 @@ class _MaterialOutlinePanelState extends ConsumerState<MaterialOutlinePanel> {
   }
 }
 
-class _CountTab extends StatelessWidget {
-  const _CountTab({required this.label, required this.count});
+class _PanelTab {
+  const _PanelTab({required this.label, required this.count});
 
   final String label;
   final int count;
+}
+
+class _PanelTabButtons extends StatelessWidget {
+  const _PanelTabButtons({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<_PanelTab> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label),
-          const SizedBox(width: 6),
-          Container(
-            constraints: const BoxConstraints(minWidth: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+    return Material(
+      color: theme.colorScheme.surface,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: theme.colorScheme.outlineVariant),
           ),
-        ],
+        ),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var index = 0; index < tabs.length; index++)
+              _PanelTabButton(
+                tab: tabs[index],
+                selected: selectedIndex == index,
+                onPressed: () => onSelected(index),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelTabButton extends StatelessWidget {
+  const _PanelTabButton({
+    required this.tab,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final _PanelTab tab;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: selected ? colors.primary : colors.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(11, 7, 7, 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tab.label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: selected ? colors.onPrimary : colors.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                constraints: const BoxConstraints(minWidth: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? colors.onPrimary.withValues(alpha: 0.18)
+                      : colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${tab.count}',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: selected
+                        ? colors.onPrimary
+                        : colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
