@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../data/pin_categories_providers.dart';
+import '../domain/pin_category_style.dart';
 import '../domain/pin_type.dart';
 import '../domain/study_note_codec.dart';
 import 'widgets/study_rich_text_editor.dart';
@@ -295,6 +297,58 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
         : 'Add Point Annotation';
   }
 
+  Future<void> _pickCategory(List<StudyPinCategory> categories) async {
+    final chosen = await showModalBottomSheet<Object>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Category', style: theme.textTheme.titleMedium),
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.label_off_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                title: const Text('General'),
+                trailing: _categoryId == null
+                    ? Icon(Icons.check, color: theme.colorScheme.primary)
+                    : null,
+                onTap: () => Navigator.pop(context, '__general__'),
+              ),
+              for (final cat in categories)
+                ListTile(
+                  leading: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Color(cat.colorValue),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  title: Text(cat.name),
+                  trailing: _categoryId == cat.id
+                      ? Icon(Icons.check, color: theme.colorScheme.primary)
+                      : null,
+                  onTap: () => Navigator.pop(context, cat.id),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted || chosen == null) return;
+    setState(() {
+      _categoryId = chosen == '__general__' ? null : chosen as String;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -306,6 +360,16 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
         widget.pinType == StudyPinType.text &&
         selected != null &&
         selected.isNotEmpty;
+    final categories =
+        ref.watch(studyPinCategoriesProvider).valueOrNull ?? const [];
+    final selectedCategory = categories
+        .where((c) => c.id == _categoryId)
+        .firstOrNull;
+    final categoryLabel = PinCategoryStyle.labelOf(selectedCategory);
+    final categoryColor = PinCategoryStyle.colorOf(
+      selectedCategory,
+      theme.colorScheme,
+    );
 
     return SafeArea(
       child: ConstrainedBox(
@@ -318,7 +382,66 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
               Expanded(
                 child: ListView(
                   children: [
-                    Text(_title, style: theme.textTheme.titleLarge),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _title,
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Tooltip(
+                          message: 'Category',
+                          child: Material(
+                            color: categoryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(999),
+                              onTap: () => _pickCategory(categories),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: categoryColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      categoryLabel,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.1,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Icon(
+                                      Icons.expand_more,
+                                      size: 14,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     if (showSelected) ...[
                       const SizedBox(height: AppSpacing.md),
                       Text(
@@ -355,61 +478,10 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
                       maxLength: 500,
                       decoration: const InputDecoration(
                         labelText: 'Short description',
-                        helperText: 'Keep this short, ideally 5–7 words.',
                         counterText: '',
                       ),
                       onSubmitted: (_) => _save(),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'Category',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    ref
-                        .watch(studyPinCategoriesProvider)
-                        .when(
-                          loading: () => const LinearProgressIndicator(),
-                          error: (_, _) =>
-                              const Text('Could not load categories'),
-                          data: (categories) {
-                            return DropdownButtonFormField<String?>(
-                              // ignore: deprecated_member_use
-                              value: _categoryId,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                              ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('General'),
-                                ),
-                                for (final cat in categories)
-                                  DropdownMenuItem<String?>(
-                                    value: cat.id,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 12,
-                                          height: 12,
-                                          decoration: BoxDecoration(
-                                            color: Color(cat.colorValue),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(cat.name),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (value) =>
-                                  setState(() => _categoryId = value),
-                            );
-                          },
-                        ),
                     const SizedBox(height: AppSpacing.md),
                     Row(
                       children: [
