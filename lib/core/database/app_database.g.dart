@@ -8851,6 +8851,94 @@ class $AiChatMessagesTable extends AiChatMessages
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _aiProviderMeta = const VerificationMeta(
+    'aiProvider',
+  );
+  @override
+  late final GeneratedColumn<String> aiProvider = GeneratedColumn<String>(
+    'ai_provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aiModelMeta = const VerificationMeta(
+    'aiModel',
+  );
+  @override
+  late final GeneratedColumn<String> aiModel = GeneratedColumn<String>(
+    'ai_model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _promptTokensMeta = const VerificationMeta(
+    'promptTokens',
+  );
+  @override
+  late final GeneratedColumn<int> promptTokens = GeneratedColumn<int>(
+    'prompt_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTokensMeta = const VerificationMeta(
+    'completionTokens',
+  );
+  @override
+  late final GeneratedColumn<int> completionTokens = GeneratedColumn<int>(
+    'completion_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalTokensMeta = const VerificationMeta(
+    'totalTokens',
+  );
+  @override
+  late final GeneratedColumn<int> totalTokens = GeneratedColumn<int>(
+    'total_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheHitTokensMeta = const VerificationMeta(
+    'cacheHitTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheHitTokens = GeneratedColumn<int>(
+    'cache_hit_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheMissTokensMeta = const VerificationMeta(
+    'cacheMissTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheMissTokens = GeneratedColumn<int>(
+    'cache_miss_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestDurationMsMeta = const VerificationMeta(
+    'requestDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> requestDurationMs = GeneratedColumn<int>(
+    'request_duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -8860,6 +8948,14 @@ class $AiChatMessagesTable extends AiChatMessages
     status,
     contextJson,
     createdAt,
+    aiProvider,
+    aiModel,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8925,6 +9021,72 @@ class $AiChatMessagesTable extends AiChatMessages
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('ai_provider')) {
+      context.handle(
+        _aiProviderMeta,
+        aiProvider.isAcceptableOrUnknown(data['ai_provider']!, _aiProviderMeta),
+      );
+    }
+    if (data.containsKey('ai_model')) {
+      context.handle(
+        _aiModelMeta,
+        aiModel.isAcceptableOrUnknown(data['ai_model']!, _aiModelMeta),
+      );
+    }
+    if (data.containsKey('prompt_tokens')) {
+      context.handle(
+        _promptTokensMeta,
+        promptTokens.isAcceptableOrUnknown(
+          data['prompt_tokens']!,
+          _promptTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_tokens')) {
+      context.handle(
+        _completionTokensMeta,
+        completionTokens.isAcceptableOrUnknown(
+          data['completion_tokens']!,
+          _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_tokens')) {
+      context.handle(
+        _totalTokensMeta,
+        totalTokens.isAcceptableOrUnknown(
+          data['total_tokens']!,
+          _totalTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_hit_tokens')) {
+      context.handle(
+        _cacheHitTokensMeta,
+        cacheHitTokens.isAcceptableOrUnknown(
+          data['cache_hit_tokens']!,
+          _cacheHitTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_miss_tokens')) {
+      context.handle(
+        _cacheMissTokensMeta,
+        cacheMissTokens.isAcceptableOrUnknown(
+          data['cache_miss_tokens']!,
+          _cacheMissTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_duration_ms')) {
+      context.handle(
+        _requestDurationMsMeta,
+        requestDurationMs.isAcceptableOrUnknown(
+          data['request_duration_ms']!,
+          _requestDurationMsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -8962,6 +9124,38 @@ class $AiChatMessagesTable extends AiChatMessages
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      aiProvider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ai_provider'],
+      ),
+      aiModel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ai_model'],
+      ),
+      promptTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prompt_tokens'],
+      ),
+      completionTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_tokens'],
+      ),
+      totalTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_tokens'],
+      ),
+      cacheHitTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_hit_tokens'],
+      ),
+      cacheMissTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_miss_tokens'],
+      ),
+      requestDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}request_duration_ms'],
+      ),
     );
   }
 
@@ -8985,6 +9179,16 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
   /// JSON list of attached study context (includes packedText once at send).
   final String? contextJson;
   final DateTime createdAt;
+
+  /// Optional provider usage metrics (assistant turns only).
+  final String? aiProvider;
+  final String? aiModel;
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+  final int? cacheHitTokens;
+  final int? cacheMissTokens;
+  final int? requestDurationMs;
   const AiChatMessage({
     required this.id,
     required this.chatId,
@@ -8993,6 +9197,14 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     this.status,
     this.contextJson,
     required this.createdAt,
+    this.aiProvider,
+    this.aiModel,
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+    this.cacheHitTokens,
+    this.cacheMissTokens,
+    this.requestDurationMs,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -9008,6 +9220,30 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       map['context_json'] = Variable<String>(contextJson);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || aiProvider != null) {
+      map['ai_provider'] = Variable<String>(aiProvider);
+    }
+    if (!nullToAbsent || aiModel != null) {
+      map['ai_model'] = Variable<String>(aiModel);
+    }
+    if (!nullToAbsent || promptTokens != null) {
+      map['prompt_tokens'] = Variable<int>(promptTokens);
+    }
+    if (!nullToAbsent || completionTokens != null) {
+      map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || totalTokens != null) {
+      map['total_tokens'] = Variable<int>(totalTokens);
+    }
+    if (!nullToAbsent || cacheHitTokens != null) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens);
+    }
+    if (!nullToAbsent || cacheMissTokens != null) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens);
+    }
+    if (!nullToAbsent || requestDurationMs != null) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs);
+    }
     return map;
   }
 
@@ -9024,6 +9260,30 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           ? const Value.absent()
           : Value(contextJson),
       createdAt: Value(createdAt),
+      aiProvider: aiProvider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiProvider),
+      aiModel: aiModel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiModel),
+      promptTokens: promptTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptTokens),
+      completionTokens: completionTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completionTokens),
+      totalTokens: totalTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalTokens),
+      cacheHitTokens: cacheHitTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheHitTokens),
+      cacheMissTokens: cacheMissTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheMissTokens),
+      requestDurationMs: requestDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestDurationMs),
     );
   }
 
@@ -9040,6 +9300,14 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       status: serializer.fromJson<String?>(json['status']),
       contextJson: serializer.fromJson<String?>(json['contextJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      aiProvider: serializer.fromJson<String?>(json['aiProvider']),
+      aiModel: serializer.fromJson<String?>(json['aiModel']),
+      promptTokens: serializer.fromJson<int?>(json['promptTokens']),
+      completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      totalTokens: serializer.fromJson<int?>(json['totalTokens']),
+      cacheHitTokens: serializer.fromJson<int?>(json['cacheHitTokens']),
+      cacheMissTokens: serializer.fromJson<int?>(json['cacheMissTokens']),
+      requestDurationMs: serializer.fromJson<int?>(json['requestDurationMs']),
     );
   }
   @override
@@ -9053,6 +9321,14 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
       'status': serializer.toJson<String?>(status),
       'contextJson': serializer.toJson<String?>(contextJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'aiProvider': serializer.toJson<String?>(aiProvider),
+      'aiModel': serializer.toJson<String?>(aiModel),
+      'promptTokens': serializer.toJson<int?>(promptTokens),
+      'completionTokens': serializer.toJson<int?>(completionTokens),
+      'totalTokens': serializer.toJson<int?>(totalTokens),
+      'cacheHitTokens': serializer.toJson<int?>(cacheHitTokens),
+      'cacheMissTokens': serializer.toJson<int?>(cacheMissTokens),
+      'requestDurationMs': serializer.toJson<int?>(requestDurationMs),
     };
   }
 
@@ -9064,6 +9340,14 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     Value<String?> status = const Value.absent(),
     Value<String?> contextJson = const Value.absent(),
     DateTime? createdAt,
+    Value<String?> aiProvider = const Value.absent(),
+    Value<String?> aiModel = const Value.absent(),
+    Value<int?> promptTokens = const Value.absent(),
+    Value<int?> completionTokens = const Value.absent(),
+    Value<int?> totalTokens = const Value.absent(),
+    Value<int?> cacheHitTokens = const Value.absent(),
+    Value<int?> cacheMissTokens = const Value.absent(),
+    Value<int?> requestDurationMs = const Value.absent(),
   }) => AiChatMessage(
     id: id ?? this.id,
     chatId: chatId ?? this.chatId,
@@ -9072,6 +9356,22 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
     status: status.present ? status.value : this.status,
     contextJson: contextJson.present ? contextJson.value : this.contextJson,
     createdAt: createdAt ?? this.createdAt,
+    aiProvider: aiProvider.present ? aiProvider.value : this.aiProvider,
+    aiModel: aiModel.present ? aiModel.value : this.aiModel,
+    promptTokens: promptTokens.present ? promptTokens.value : this.promptTokens,
+    completionTokens: completionTokens.present
+        ? completionTokens.value
+        : this.completionTokens,
+    totalTokens: totalTokens.present ? totalTokens.value : this.totalTokens,
+    cacheHitTokens: cacheHitTokens.present
+        ? cacheHitTokens.value
+        : this.cacheHitTokens,
+    cacheMissTokens: cacheMissTokens.present
+        ? cacheMissTokens.value
+        : this.cacheMissTokens,
+    requestDurationMs: requestDurationMs.present
+        ? requestDurationMs.value
+        : this.requestDurationMs,
   );
   AiChatMessage copyWithCompanion(AiChatMessagesCompanion data) {
     return AiChatMessage(
@@ -9084,6 +9384,28 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           ? data.contextJson.value
           : this.contextJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      aiProvider: data.aiProvider.present
+          ? data.aiProvider.value
+          : this.aiProvider,
+      aiModel: data.aiModel.present ? data.aiModel.value : this.aiModel,
+      promptTokens: data.promptTokens.present
+          ? data.promptTokens.value
+          : this.promptTokens,
+      completionTokens: data.completionTokens.present
+          ? data.completionTokens.value
+          : this.completionTokens,
+      totalTokens: data.totalTokens.present
+          ? data.totalTokens.value
+          : this.totalTokens,
+      cacheHitTokens: data.cacheHitTokens.present
+          ? data.cacheHitTokens.value
+          : this.cacheHitTokens,
+      cacheMissTokens: data.cacheMissTokens.present
+          ? data.cacheMissTokens.value
+          : this.cacheMissTokens,
+      requestDurationMs: data.requestDurationMs.present
+          ? data.requestDurationMs.value
+          : this.requestDurationMs,
     );
   }
 
@@ -9096,14 +9418,37 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           ..write('content: $content, ')
           ..write('status: $status, ')
           ..write('contextJson: $contextJson, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('aiProvider: $aiProvider, ')
+          ..write('aiModel: $aiModel, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, chatId, role, content, status, contextJson, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    chatId,
+    role,
+    content,
+    status,
+    contextJson,
+    createdAt,
+    aiProvider,
+    aiModel,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -9114,7 +9459,15 @@ class AiChatMessage extends DataClass implements Insertable<AiChatMessage> {
           other.content == this.content &&
           other.status == this.status &&
           other.contextJson == this.contextJson &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.aiProvider == this.aiProvider &&
+          other.aiModel == this.aiModel &&
+          other.promptTokens == this.promptTokens &&
+          other.completionTokens == this.completionTokens &&
+          other.totalTokens == this.totalTokens &&
+          other.cacheHitTokens == this.cacheHitTokens &&
+          other.cacheMissTokens == this.cacheMissTokens &&
+          other.requestDurationMs == this.requestDurationMs);
 }
 
 class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
@@ -9125,6 +9478,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
   final Value<String?> status;
   final Value<String?> contextJson;
   final Value<DateTime> createdAt;
+  final Value<String?> aiProvider;
+  final Value<String?> aiModel;
+  final Value<int?> promptTokens;
+  final Value<int?> completionTokens;
+  final Value<int?> totalTokens;
+  final Value<int?> cacheHitTokens;
+  final Value<int?> cacheMissTokens;
+  final Value<int?> requestDurationMs;
   final Value<int> rowid;
   const AiChatMessagesCompanion({
     this.id = const Value.absent(),
@@ -9134,6 +9495,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     this.status = const Value.absent(),
     this.contextJson = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.aiProvider = const Value.absent(),
+    this.aiModel = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AiChatMessagesCompanion.insert({
@@ -9144,6 +9513,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     this.status = const Value.absent(),
     this.contextJson = const Value.absent(),
     required DateTime createdAt,
+    this.aiProvider = const Value.absent(),
+    this.aiModel = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        chatId = Value(chatId),
@@ -9158,6 +9535,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     Expression<String>? status,
     Expression<String>? contextJson,
     Expression<DateTime>? createdAt,
+    Expression<String>? aiProvider,
+    Expression<String>? aiModel,
+    Expression<int>? promptTokens,
+    Expression<int>? completionTokens,
+    Expression<int>? totalTokens,
+    Expression<int>? cacheHitTokens,
+    Expression<int>? cacheMissTokens,
+    Expression<int>? requestDurationMs,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9168,6 +9553,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
       if (status != null) 'status': status,
       if (contextJson != null) 'context_json': contextJson,
       if (createdAt != null) 'created_at': createdAt,
+      if (aiProvider != null) 'ai_provider': aiProvider,
+      if (aiModel != null) 'ai_model': aiModel,
+      if (promptTokens != null) 'prompt_tokens': promptTokens,
+      if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (totalTokens != null) 'total_tokens': totalTokens,
+      if (cacheHitTokens != null) 'cache_hit_tokens': cacheHitTokens,
+      if (cacheMissTokens != null) 'cache_miss_tokens': cacheMissTokens,
+      if (requestDurationMs != null) 'request_duration_ms': requestDurationMs,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9180,6 +9573,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     Value<String?>? status,
     Value<String?>? contextJson,
     Value<DateTime>? createdAt,
+    Value<String?>? aiProvider,
+    Value<String?>? aiModel,
+    Value<int?>? promptTokens,
+    Value<int?>? completionTokens,
+    Value<int?>? totalTokens,
+    Value<int?>? cacheHitTokens,
+    Value<int?>? cacheMissTokens,
+    Value<int?>? requestDurationMs,
     Value<int>? rowid,
   }) {
     return AiChatMessagesCompanion(
@@ -9190,6 +9591,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
       status: status ?? this.status,
       contextJson: contextJson ?? this.contextJson,
       createdAt: createdAt ?? this.createdAt,
+      aiProvider: aiProvider ?? this.aiProvider,
+      aiModel: aiModel ?? this.aiModel,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
+      totalTokens: totalTokens ?? this.totalTokens,
+      cacheHitTokens: cacheHitTokens ?? this.cacheHitTokens,
+      cacheMissTokens: cacheMissTokens ?? this.cacheMissTokens,
+      requestDurationMs: requestDurationMs ?? this.requestDurationMs,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9218,6 +9627,30 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (aiProvider.present) {
+      map['ai_provider'] = Variable<String>(aiProvider.value);
+    }
+    if (aiModel.present) {
+      map['ai_model'] = Variable<String>(aiModel.value);
+    }
+    if (promptTokens.present) {
+      map['prompt_tokens'] = Variable<int>(promptTokens.value);
+    }
+    if (completionTokens.present) {
+      map['completion_tokens'] = Variable<int>(completionTokens.value);
+    }
+    if (totalTokens.present) {
+      map['total_tokens'] = Variable<int>(totalTokens.value);
+    }
+    if (cacheHitTokens.present) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens.value);
+    }
+    if (cacheMissTokens.present) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens.value);
+    }
+    if (requestDurationMs.present) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9234,6 +9667,14 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
           ..write('status: $status, ')
           ..write('contextJson: $contextJson, ')
           ..write('createdAt: $createdAt, ')
+          ..write('aiProvider: $aiProvider, ')
+          ..write('aiModel: $aiModel, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9487,6 +9928,72 @@ class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _promptTokensMeta = const VerificationMeta(
+    'promptTokens',
+  );
+  @override
+  late final GeneratedColumn<int> promptTokens = GeneratedColumn<int>(
+    'prompt_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTokensMeta = const VerificationMeta(
+    'completionTokens',
+  );
+  @override
+  late final GeneratedColumn<int> completionTokens = GeneratedColumn<int>(
+    'completion_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalTokensMeta = const VerificationMeta(
+    'totalTokens',
+  );
+  @override
+  late final GeneratedColumn<int> totalTokens = GeneratedColumn<int>(
+    'total_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheHitTokensMeta = const VerificationMeta(
+    'cacheHitTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheHitTokens = GeneratedColumn<int>(
+    'cache_hit_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheMissTokensMeta = const VerificationMeta(
+    'cacheMissTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheMissTokens = GeneratedColumn<int>(
+    'cache_miss_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestDurationMsMeta = const VerificationMeta(
+    'requestDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> requestDurationMs = GeneratedColumn<int>(
+    'request_duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -9532,6 +10039,12 @@ class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
     generationNumber,
     linkedQuestionSetId,
     linkedFlashcardBatchId,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
     createdAt,
     updatedAt,
   ];
@@ -9715,6 +10228,60 @@ class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
         ),
       );
     }
+    if (data.containsKey('prompt_tokens')) {
+      context.handle(
+        _promptTokensMeta,
+        promptTokens.isAcceptableOrUnknown(
+          data['prompt_tokens']!,
+          _promptTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_tokens')) {
+      context.handle(
+        _completionTokensMeta,
+        completionTokens.isAcceptableOrUnknown(
+          data['completion_tokens']!,
+          _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_tokens')) {
+      context.handle(
+        _totalTokensMeta,
+        totalTokens.isAcceptableOrUnknown(
+          data['total_tokens']!,
+          _totalTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_hit_tokens')) {
+      context.handle(
+        _cacheHitTokensMeta,
+        cacheHitTokens.isAcceptableOrUnknown(
+          data['cache_hit_tokens']!,
+          _cacheHitTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_miss_tokens')) {
+      context.handle(
+        _cacheMissTokensMeta,
+        cacheMissTokens.isAcceptableOrUnknown(
+          data['cache_miss_tokens']!,
+          _cacheMissTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_duration_ms')) {
+      context.handle(
+        _requestDurationMsMeta,
+        requestDurationMs.isAcceptableOrUnknown(
+          data['request_duration_ms']!,
+          _requestDurationMsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -9824,6 +10391,30 @@ class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
         DriftSqlType.string,
         data['${effectivePrefix}linked_flashcard_batch_id'],
       ),
+      promptTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prompt_tokens'],
+      ),
+      completionTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_tokens'],
+      ),
+      totalTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_tokens'],
+      ),
+      cacheHitTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_hit_tokens'],
+      ),
+      cacheMissTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_miss_tokens'],
+      ),
+      requestDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}request_duration_ms'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -9882,6 +10473,14 @@ class AnnotationAiGeneration extends DataClass
   final int generationNumber;
   final String? linkedQuestionSetId;
   final String? linkedFlashcardBatchId;
+
+  /// Optional provider usage metrics for this generation.
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+  final int? cacheHitTokens;
+  final int? cacheMissTokens;
+  final int? requestDurationMs;
   final DateTime createdAt;
   final DateTime updatedAt;
   const AnnotationAiGeneration({
@@ -9906,6 +10505,12 @@ class AnnotationAiGeneration extends DataClass
     required this.generationNumber,
     this.linkedQuestionSetId,
     this.linkedFlashcardBatchId,
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+    this.cacheHitTokens,
+    this.cacheMissTokens,
+    this.requestDurationMs,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -9961,6 +10566,24 @@ class AnnotationAiGeneration extends DataClass
         linkedFlashcardBatchId,
       );
     }
+    if (!nullToAbsent || promptTokens != null) {
+      map['prompt_tokens'] = Variable<int>(promptTokens);
+    }
+    if (!nullToAbsent || completionTokens != null) {
+      map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || totalTokens != null) {
+      map['total_tokens'] = Variable<int>(totalTokens);
+    }
+    if (!nullToAbsent || cacheHitTokens != null) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens);
+    }
+    if (!nullToAbsent || cacheMissTokens != null) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens);
+    }
+    if (!nullToAbsent || requestDurationMs != null) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -10015,6 +10638,24 @@ class AnnotationAiGeneration extends DataClass
       linkedFlashcardBatchId: linkedFlashcardBatchId == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedFlashcardBatchId),
+      promptTokens: promptTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptTokens),
+      completionTokens: completionTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completionTokens),
+      totalTokens: totalTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalTokens),
+      cacheHitTokens: cacheHitTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheHitTokens),
+      cacheMissTokens: cacheMissTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheMissTokens),
+      requestDurationMs: requestDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestDurationMs),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -10053,6 +10694,12 @@ class AnnotationAiGeneration extends DataClass
       linkedFlashcardBatchId: serializer.fromJson<String?>(
         json['linkedFlashcardBatchId'],
       ),
+      promptTokens: serializer.fromJson<int?>(json['promptTokens']),
+      completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      totalTokens: serializer.fromJson<int?>(json['totalTokens']),
+      cacheHitTokens: serializer.fromJson<int?>(json['cacheHitTokens']),
+      cacheMissTokens: serializer.fromJson<int?>(json['cacheMissTokens']),
+      requestDurationMs: serializer.fromJson<int?>(json['requestDurationMs']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -10084,6 +10731,12 @@ class AnnotationAiGeneration extends DataClass
       'linkedFlashcardBatchId': serializer.toJson<String?>(
         linkedFlashcardBatchId,
       ),
+      'promptTokens': serializer.toJson<int?>(promptTokens),
+      'completionTokens': serializer.toJson<int?>(completionTokens),
+      'totalTokens': serializer.toJson<int?>(totalTokens),
+      'cacheHitTokens': serializer.toJson<int?>(cacheHitTokens),
+      'cacheMissTokens': serializer.toJson<int?>(cacheMissTokens),
+      'requestDurationMs': serializer.toJson<int?>(requestDurationMs),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -10111,6 +10764,12 @@ class AnnotationAiGeneration extends DataClass
     int? generationNumber,
     Value<String?> linkedQuestionSetId = const Value.absent(),
     Value<String?> linkedFlashcardBatchId = const Value.absent(),
+    Value<int?> promptTokens = const Value.absent(),
+    Value<int?> completionTokens = const Value.absent(),
+    Value<int?> totalTokens = const Value.absent(),
+    Value<int?> cacheHitTokens = const Value.absent(),
+    Value<int?> cacheMissTokens = const Value.absent(),
+    Value<int?> requestDurationMs = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => AnnotationAiGeneration(
@@ -10145,6 +10804,20 @@ class AnnotationAiGeneration extends DataClass
     linkedFlashcardBatchId: linkedFlashcardBatchId.present
         ? linkedFlashcardBatchId.value
         : this.linkedFlashcardBatchId,
+    promptTokens: promptTokens.present ? promptTokens.value : this.promptTokens,
+    completionTokens: completionTokens.present
+        ? completionTokens.value
+        : this.completionTokens,
+    totalTokens: totalTokens.present ? totalTokens.value : this.totalTokens,
+    cacheHitTokens: cacheHitTokens.present
+        ? cacheHitTokens.value
+        : this.cacheHitTokens,
+    cacheMissTokens: cacheMissTokens.present
+        ? cacheMissTokens.value
+        : this.cacheMissTokens,
+    requestDurationMs: requestDurationMs.present
+        ? requestDurationMs.value
+        : this.requestDurationMs,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -10203,6 +10876,24 @@ class AnnotationAiGeneration extends DataClass
       linkedFlashcardBatchId: data.linkedFlashcardBatchId.present
           ? data.linkedFlashcardBatchId.value
           : this.linkedFlashcardBatchId,
+      promptTokens: data.promptTokens.present
+          ? data.promptTokens.value
+          : this.promptTokens,
+      completionTokens: data.completionTokens.present
+          ? data.completionTokens.value
+          : this.completionTokens,
+      totalTokens: data.totalTokens.present
+          ? data.totalTokens.value
+          : this.totalTokens,
+      cacheHitTokens: data.cacheHitTokens.present
+          ? data.cacheHitTokens.value
+          : this.cacheHitTokens,
+      cacheMissTokens: data.cacheMissTokens.present
+          ? data.cacheMissTokens.value
+          : this.cacheMissTokens,
+      requestDurationMs: data.requestDurationMs.present
+          ? data.requestDurationMs.value
+          : this.requestDurationMs,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -10232,6 +10923,12 @@ class AnnotationAiGeneration extends DataClass
           ..write('generationNumber: $generationNumber, ')
           ..write('linkedQuestionSetId: $linkedQuestionSetId, ')
           ..write('linkedFlashcardBatchId: $linkedFlashcardBatchId, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -10261,6 +10958,12 @@ class AnnotationAiGeneration extends DataClass
     generationNumber,
     linkedQuestionSetId,
     linkedFlashcardBatchId,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
     createdAt,
     updatedAt,
   ]);
@@ -10289,6 +10992,12 @@ class AnnotationAiGeneration extends DataClass
           other.generationNumber == this.generationNumber &&
           other.linkedQuestionSetId == this.linkedQuestionSetId &&
           other.linkedFlashcardBatchId == this.linkedFlashcardBatchId &&
+          other.promptTokens == this.promptTokens &&
+          other.completionTokens == this.completionTokens &&
+          other.totalTokens == this.totalTokens &&
+          other.cacheHitTokens == this.cacheHitTokens &&
+          other.cacheMissTokens == this.cacheMissTokens &&
+          other.requestDurationMs == this.requestDurationMs &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -10316,6 +11025,12 @@ class AnnotationAiGenerationsCompanion
   final Value<int> generationNumber;
   final Value<String?> linkedQuestionSetId;
   final Value<String?> linkedFlashcardBatchId;
+  final Value<int?> promptTokens;
+  final Value<int?> completionTokens;
+  final Value<int?> totalTokens;
+  final Value<int?> cacheHitTokens;
+  final Value<int?> cacheMissTokens;
+  final Value<int?> requestDurationMs;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -10341,6 +11056,12 @@ class AnnotationAiGenerationsCompanion
     this.generationNumber = const Value.absent(),
     this.linkedQuestionSetId = const Value.absent(),
     this.linkedFlashcardBatchId = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -10367,6 +11088,12 @@ class AnnotationAiGenerationsCompanion
     required int generationNumber,
     this.linkedQuestionSetId = const Value.absent(),
     this.linkedFlashcardBatchId = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -10400,6 +11127,12 @@ class AnnotationAiGenerationsCompanion
     Expression<int>? generationNumber,
     Expression<String>? linkedQuestionSetId,
     Expression<String>? linkedFlashcardBatchId,
+    Expression<int>? promptTokens,
+    Expression<int>? completionTokens,
+    Expression<int>? totalTokens,
+    Expression<int>? cacheHitTokens,
+    Expression<int>? cacheMissTokens,
+    Expression<int>? requestDurationMs,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -10429,6 +11162,12 @@ class AnnotationAiGenerationsCompanion
         'linked_question_set_id': linkedQuestionSetId,
       if (linkedFlashcardBatchId != null)
         'linked_flashcard_batch_id': linkedFlashcardBatchId,
+      if (promptTokens != null) 'prompt_tokens': promptTokens,
+      if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (totalTokens != null) 'total_tokens': totalTokens,
+      if (cacheHitTokens != null) 'cache_hit_tokens': cacheHitTokens,
+      if (cacheMissTokens != null) 'cache_miss_tokens': cacheMissTokens,
+      if (requestDurationMs != null) 'request_duration_ms': requestDurationMs,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -10457,6 +11196,12 @@ class AnnotationAiGenerationsCompanion
     Value<int>? generationNumber,
     Value<String?>? linkedQuestionSetId,
     Value<String?>? linkedFlashcardBatchId,
+    Value<int?>? promptTokens,
+    Value<int?>? completionTokens,
+    Value<int?>? totalTokens,
+    Value<int?>? cacheHitTokens,
+    Value<int?>? cacheMissTokens,
+    Value<int?>? requestDurationMs,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -10484,6 +11229,12 @@ class AnnotationAiGenerationsCompanion
       linkedQuestionSetId: linkedQuestionSetId ?? this.linkedQuestionSetId,
       linkedFlashcardBatchId:
           linkedFlashcardBatchId ?? this.linkedFlashcardBatchId,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
+      totalTokens: totalTokens ?? this.totalTokens,
+      cacheHitTokens: cacheHitTokens ?? this.cacheHitTokens,
+      cacheMissTokens: cacheMissTokens ?? this.cacheMissTokens,
+      requestDurationMs: requestDurationMs ?? this.requestDurationMs,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -10560,6 +11311,24 @@ class AnnotationAiGenerationsCompanion
         linkedFlashcardBatchId.value,
       );
     }
+    if (promptTokens.present) {
+      map['prompt_tokens'] = Variable<int>(promptTokens.value);
+    }
+    if (completionTokens.present) {
+      map['completion_tokens'] = Variable<int>(completionTokens.value);
+    }
+    if (totalTokens.present) {
+      map['total_tokens'] = Variable<int>(totalTokens.value);
+    }
+    if (cacheHitTokens.present) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens.value);
+    }
+    if (cacheMissTokens.present) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens.value);
+    }
+    if (requestDurationMs.present) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -10596,6 +11365,12 @@ class AnnotationAiGenerationsCompanion
           ..write('generationNumber: $generationNumber, ')
           ..write('linkedQuestionSetId: $linkedQuestionSetId, ')
           ..write('linkedFlashcardBatchId: $linkedFlashcardBatchId, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -10752,6 +11527,72 @@ class $QuestionSetsTable extends QuestionSets
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _promptTokensMeta = const VerificationMeta(
+    'promptTokens',
+  );
+  @override
+  late final GeneratedColumn<int> promptTokens = GeneratedColumn<int>(
+    'prompt_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTokensMeta = const VerificationMeta(
+    'completionTokens',
+  );
+  @override
+  late final GeneratedColumn<int> completionTokens = GeneratedColumn<int>(
+    'completion_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalTokensMeta = const VerificationMeta(
+    'totalTokens',
+  );
+  @override
+  late final GeneratedColumn<int> totalTokens = GeneratedColumn<int>(
+    'total_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheHitTokensMeta = const VerificationMeta(
+    'cacheHitTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheHitTokens = GeneratedColumn<int>(
+    'cache_hit_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheMissTokensMeta = const VerificationMeta(
+    'cacheMissTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheMissTokens = GeneratedColumn<int>(
+    'cache_miss_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestDurationMsMeta = const VerificationMeta(
+    'requestDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> requestDurationMs = GeneratedColumn<int>(
+    'request_duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -10788,6 +11629,12 @@ class $QuestionSetsTable extends QuestionSets
     difficulty,
     aiProvider,
     aiModel,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
     createdAt,
     updatedAt,
   ];
@@ -10893,6 +11740,60 @@ class $QuestionSetsTable extends QuestionSets
         aiModel.isAcceptableOrUnknown(data['ai_model']!, _aiModelMeta),
       );
     }
+    if (data.containsKey('prompt_tokens')) {
+      context.handle(
+        _promptTokensMeta,
+        promptTokens.isAcceptableOrUnknown(
+          data['prompt_tokens']!,
+          _promptTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_tokens')) {
+      context.handle(
+        _completionTokensMeta,
+        completionTokens.isAcceptableOrUnknown(
+          data['completion_tokens']!,
+          _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_tokens')) {
+      context.handle(
+        _totalTokensMeta,
+        totalTokens.isAcceptableOrUnknown(
+          data['total_tokens']!,
+          _totalTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_hit_tokens')) {
+      context.handle(
+        _cacheHitTokensMeta,
+        cacheHitTokens.isAcceptableOrUnknown(
+          data['cache_hit_tokens']!,
+          _cacheHitTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_miss_tokens')) {
+      context.handle(
+        _cacheMissTokensMeta,
+        cacheMissTokens.isAcceptableOrUnknown(
+          data['cache_miss_tokens']!,
+          _cacheMissTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_duration_ms')) {
+      context.handle(
+        _requestDurationMsMeta,
+        requestDurationMs.isAcceptableOrUnknown(
+          data['request_duration_ms']!,
+          _requestDurationMsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -10966,6 +11867,30 @@ class $QuestionSetsTable extends QuestionSets
         DriftSqlType.string,
         data['${effectivePrefix}ai_model'],
       ),
+      promptTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prompt_tokens'],
+      ),
+      completionTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_tokens'],
+      ),
+      totalTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_tokens'],
+      ),
+      cacheHitTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_hit_tokens'],
+      ),
+      cacheMissTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_miss_tokens'],
+      ),
+      requestDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}request_duration_ms'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -11004,6 +11929,14 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
   final String difficulty;
   final String aiProvider;
   final String? aiModel;
+
+  /// Optional aggregated usage for the generation request(s).
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+  final int? cacheHitTokens;
+  final int? cacheMissTokens;
+  final int? requestDurationMs;
   final DateTime createdAt;
   final DateTime updatedAt;
   const QuestionSet({
@@ -11019,6 +11952,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
     required this.difficulty,
     required this.aiProvider,
     this.aiModel,
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+    this.cacheHitTokens,
+    this.cacheMissTokens,
+    this.requestDurationMs,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -11046,6 +11985,24 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
     map['ai_provider'] = Variable<String>(aiProvider);
     if (!nullToAbsent || aiModel != null) {
       map['ai_model'] = Variable<String>(aiModel);
+    }
+    if (!nullToAbsent || promptTokens != null) {
+      map['prompt_tokens'] = Variable<int>(promptTokens);
+    }
+    if (!nullToAbsent || completionTokens != null) {
+      map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || totalTokens != null) {
+      map['total_tokens'] = Variable<int>(totalTokens);
+    }
+    if (!nullToAbsent || cacheHitTokens != null) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens);
+    }
+    if (!nullToAbsent || cacheMissTokens != null) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens);
+    }
+    if (!nullToAbsent || requestDurationMs != null) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -11076,6 +12033,24 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
       aiModel: aiModel == null && nullToAbsent
           ? const Value.absent()
           : Value(aiModel),
+      promptTokens: promptTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptTokens),
+      completionTokens: completionTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completionTokens),
+      totalTokens: totalTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalTokens),
+      cacheHitTokens: cacheHitTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheHitTokens),
+      cacheMissTokens: cacheMissTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheMissTokens),
+      requestDurationMs: requestDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestDurationMs),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -11099,6 +12074,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
       difficulty: serializer.fromJson<String>(json['difficulty']),
       aiProvider: serializer.fromJson<String>(json['aiProvider']),
       aiModel: serializer.fromJson<String?>(json['aiModel']),
+      promptTokens: serializer.fromJson<int?>(json['promptTokens']),
+      completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      totalTokens: serializer.fromJson<int?>(json['totalTokens']),
+      cacheHitTokens: serializer.fromJson<int?>(json['cacheHitTokens']),
+      cacheMissTokens: serializer.fromJson<int?>(json['cacheMissTokens']),
+      requestDurationMs: serializer.fromJson<int?>(json['requestDurationMs']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -11119,6 +12100,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
       'difficulty': serializer.toJson<String>(difficulty),
       'aiProvider': serializer.toJson<String>(aiProvider),
       'aiModel': serializer.toJson<String?>(aiModel),
+      'promptTokens': serializer.toJson<int?>(promptTokens),
+      'completionTokens': serializer.toJson<int?>(completionTokens),
+      'totalTokens': serializer.toJson<int?>(totalTokens),
+      'cacheHitTokens': serializer.toJson<int?>(cacheHitTokens),
+      'cacheMissTokens': serializer.toJson<int?>(cacheMissTokens),
+      'requestDurationMs': serializer.toJson<int?>(requestDurationMs),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -11137,6 +12124,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
     String? difficulty,
     String? aiProvider,
     Value<String?> aiModel = const Value.absent(),
+    Value<int?> promptTokens = const Value.absent(),
+    Value<int?> completionTokens = const Value.absent(),
+    Value<int?> totalTokens = const Value.absent(),
+    Value<int?> cacheHitTokens = const Value.absent(),
+    Value<int?> cacheMissTokens = const Value.absent(),
+    Value<int?> requestDurationMs = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => QuestionSet(
@@ -11154,6 +12147,20 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
     difficulty: difficulty ?? this.difficulty,
     aiProvider: aiProvider ?? this.aiProvider,
     aiModel: aiModel.present ? aiModel.value : this.aiModel,
+    promptTokens: promptTokens.present ? promptTokens.value : this.promptTokens,
+    completionTokens: completionTokens.present
+        ? completionTokens.value
+        : this.completionTokens,
+    totalTokens: totalTokens.present ? totalTokens.value : this.totalTokens,
+    cacheHitTokens: cacheHitTokens.present
+        ? cacheHitTokens.value
+        : this.cacheHitTokens,
+    cacheMissTokens: cacheMissTokens.present
+        ? cacheMissTokens.value
+        : this.cacheMissTokens,
+    requestDurationMs: requestDurationMs.present
+        ? requestDurationMs.value
+        : this.requestDurationMs,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -11185,6 +12192,24 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
           ? data.aiProvider.value
           : this.aiProvider,
       aiModel: data.aiModel.present ? data.aiModel.value : this.aiModel,
+      promptTokens: data.promptTokens.present
+          ? data.promptTokens.value
+          : this.promptTokens,
+      completionTokens: data.completionTokens.present
+          ? data.completionTokens.value
+          : this.completionTokens,
+      totalTokens: data.totalTokens.present
+          ? data.totalTokens.value
+          : this.totalTokens,
+      cacheHitTokens: data.cacheHitTokens.present
+          ? data.cacheHitTokens.value
+          : this.cacheHitTokens,
+      cacheMissTokens: data.cacheMissTokens.present
+          ? data.cacheMissTokens.value
+          : this.cacheMissTokens,
+      requestDurationMs: data.requestDurationMs.present
+          ? data.requestDurationMs.value
+          : this.requestDurationMs,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -11205,6 +12230,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
           ..write('difficulty: $difficulty, ')
           ..write('aiProvider: $aiProvider, ')
           ..write('aiModel: $aiModel, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -11225,6 +12256,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
     difficulty,
     aiProvider,
     aiModel,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cacheHitTokens,
+    cacheMissTokens,
+    requestDurationMs,
     createdAt,
     updatedAt,
   );
@@ -11244,6 +12281,12 @@ class QuestionSet extends DataClass implements Insertable<QuestionSet> {
           other.difficulty == this.difficulty &&
           other.aiProvider == this.aiProvider &&
           other.aiModel == this.aiModel &&
+          other.promptTokens == this.promptTokens &&
+          other.completionTokens == this.completionTokens &&
+          other.totalTokens == this.totalTokens &&
+          other.cacheHitTokens == this.cacheHitTokens &&
+          other.cacheMissTokens == this.cacheMissTokens &&
+          other.requestDurationMs == this.requestDurationMs &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -11261,6 +12304,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
   final Value<String> difficulty;
   final Value<String> aiProvider;
   final Value<String?> aiModel;
+  final Value<int?> promptTokens;
+  final Value<int?> completionTokens;
+  final Value<int?> totalTokens;
+  final Value<int?> cacheHitTokens;
+  final Value<int?> cacheMissTokens;
+  final Value<int?> requestDurationMs;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -11277,6 +12326,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
     this.difficulty = const Value.absent(),
     this.aiProvider = const Value.absent(),
     this.aiModel = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -11294,6 +12349,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
     required String difficulty,
     this.aiProvider = const Value.absent(),
     this.aiModel = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.cacheHitTokens = const Value.absent(),
+    this.cacheMissTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -11318,6 +12379,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
     Expression<String>? difficulty,
     Expression<String>? aiProvider,
     Expression<String>? aiModel,
+    Expression<int>? promptTokens,
+    Expression<int>? completionTokens,
+    Expression<int>? totalTokens,
+    Expression<int>? cacheHitTokens,
+    Expression<int>? cacheMissTokens,
+    Expression<int>? requestDurationMs,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -11335,6 +12402,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
       if (difficulty != null) 'difficulty': difficulty,
       if (aiProvider != null) 'ai_provider': aiProvider,
       if (aiModel != null) 'ai_model': aiModel,
+      if (promptTokens != null) 'prompt_tokens': promptTokens,
+      if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (totalTokens != null) 'total_tokens': totalTokens,
+      if (cacheHitTokens != null) 'cache_hit_tokens': cacheHitTokens,
+      if (cacheMissTokens != null) 'cache_miss_tokens': cacheMissTokens,
+      if (requestDurationMs != null) 'request_duration_ms': requestDurationMs,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -11354,6 +12427,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
     Value<String>? difficulty,
     Value<String>? aiProvider,
     Value<String?>? aiModel,
+    Value<int?>? promptTokens,
+    Value<int?>? completionTokens,
+    Value<int?>? totalTokens,
+    Value<int?>? cacheHitTokens,
+    Value<int?>? cacheMissTokens,
+    Value<int?>? requestDurationMs,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -11371,6 +12450,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
       difficulty: difficulty ?? this.difficulty,
       aiProvider: aiProvider ?? this.aiProvider,
       aiModel: aiModel ?? this.aiModel,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
+      totalTokens: totalTokens ?? this.totalTokens,
+      cacheHitTokens: cacheHitTokens ?? this.cacheHitTokens,
+      cacheMissTokens: cacheMissTokens ?? this.cacheMissTokens,
+      requestDurationMs: requestDurationMs ?? this.requestDurationMs,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -11416,6 +12501,24 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
     if (aiModel.present) {
       map['ai_model'] = Variable<String>(aiModel.value);
     }
+    if (promptTokens.present) {
+      map['prompt_tokens'] = Variable<int>(promptTokens.value);
+    }
+    if (completionTokens.present) {
+      map['completion_tokens'] = Variable<int>(completionTokens.value);
+    }
+    if (totalTokens.present) {
+      map['total_tokens'] = Variable<int>(totalTokens.value);
+    }
+    if (cacheHitTokens.present) {
+      map['cache_hit_tokens'] = Variable<int>(cacheHitTokens.value);
+    }
+    if (cacheMissTokens.present) {
+      map['cache_miss_tokens'] = Variable<int>(cacheMissTokens.value);
+    }
+    if (requestDurationMs.present) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -11443,6 +12546,12 @@ class QuestionSetsCompanion extends UpdateCompanion<QuestionSet> {
           ..write('difficulty: $difficulty, ')
           ..write('aiProvider: $aiProvider, ')
           ..write('aiModel: $aiModel, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('cacheHitTokens: $cacheHitTokens, ')
+          ..write('cacheMissTokens: $cacheMissTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -22463,6 +23572,14 @@ typedef $$AiChatMessagesTableCreateCompanionBuilder =
       Value<String?> status,
       Value<String?> contextJson,
       required DateTime createdAt,
+      Value<String?> aiProvider,
+      Value<String?> aiModel,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       Value<int> rowid,
     });
 typedef $$AiChatMessagesTableUpdateCompanionBuilder =
@@ -22474,6 +23591,14 @@ typedef $$AiChatMessagesTableUpdateCompanionBuilder =
       Value<String?> status,
       Value<String?> contextJson,
       Value<DateTime> createdAt,
+      Value<String?> aiProvider,
+      Value<String?> aiModel,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       Value<int> rowid,
     });
 
@@ -22542,6 +23667,46 @@ class $$AiChatMessagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get aiProvider => $composableBuilder(
+    column: $table.aiProvider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aiModel => $composableBuilder(
+    column: $table.aiModel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$AiChatsTableFilterComposer get chatId {
     final $$AiChatsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -22605,6 +23770,46 @@ class $$AiChatMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get aiProvider => $composableBuilder(
+    column: $table.aiProvider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aiModel => $composableBuilder(
+    column: $table.aiModel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AiChatsTableOrderingComposer get chatId {
     final $$AiChatsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -22657,6 +23862,44 @@ class $$AiChatMessagesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get aiProvider => $composableBuilder(
+    column: $table.aiProvider,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get aiModel =>
+      $composableBuilder(column: $table.aiModel, builder: (column) => column);
+
+  GeneratedColumn<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => column,
+  );
 
   $$AiChatsTableAnnotationComposer get chatId {
     final $$AiChatsTableAnnotationComposer composer = $composerBuilder(
@@ -22719,6 +23962,14 @@ class $$AiChatMessagesTableTableManager
                 Value<String?> status = const Value.absent(),
                 Value<String?> contextJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> aiProvider = const Value.absent(),
+                Value<String?> aiModel = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AiChatMessagesCompanion(
                 id: id,
@@ -22728,6 +23979,14 @@ class $$AiChatMessagesTableTableManager
                 status: status,
                 contextJson: contextJson,
                 createdAt: createdAt,
+                aiProvider: aiProvider,
+                aiModel: aiModel,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -22739,6 +23998,14 @@ class $$AiChatMessagesTableTableManager
                 Value<String?> status = const Value.absent(),
                 Value<String?> contextJson = const Value.absent(),
                 required DateTime createdAt,
+                Value<String?> aiProvider = const Value.absent(),
+                Value<String?> aiModel = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AiChatMessagesCompanion.insert(
                 id: id,
@@ -22748,6 +24015,14 @@ class $$AiChatMessagesTableTableManager
                 status: status,
                 contextJson: contextJson,
                 createdAt: createdAt,
+                aiProvider: aiProvider,
+                aiModel: aiModel,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -22841,6 +24116,12 @@ typedef $$AnnotationAiGenerationsTableCreateCompanionBuilder =
       required int generationNumber,
       Value<String?> linkedQuestionSetId,
       Value<String?> linkedFlashcardBatchId,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -22868,6 +24149,12 @@ typedef $$AnnotationAiGenerationsTableUpdateCompanionBuilder =
       Value<int> generationNumber,
       Value<String?> linkedQuestionSetId,
       Value<String?> linkedFlashcardBatchId,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -23036,6 +24323,36 @@ class $$AnnotationAiGenerationsTableFilterComposer
 
   ColumnFilters<String> get linkedFlashcardBatchId => $composableBuilder(
     column: $table.linkedFlashcardBatchId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -23218,6 +24535,36 @@ class $$AnnotationAiGenerationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -23387,6 +24734,36 @@ class $$AnnotationAiGenerationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -23527,6 +24904,12 @@ class $$AnnotationAiGenerationsTableTableManager
                 Value<int> generationNumber = const Value.absent(),
                 Value<String?> linkedQuestionSetId = const Value.absent(),
                 Value<String?> linkedFlashcardBatchId = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -23552,6 +24935,12 @@ class $$AnnotationAiGenerationsTableTableManager
                 generationNumber: generationNumber,
                 linkedQuestionSetId: linkedQuestionSetId,
                 linkedFlashcardBatchId: linkedFlashcardBatchId,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -23579,6 +24968,12 @@ class $$AnnotationAiGenerationsTableTableManager
                 required int generationNumber,
                 Value<String?> linkedQuestionSetId = const Value.absent(),
                 Value<String?> linkedFlashcardBatchId = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -23604,6 +24999,12 @@ class $$AnnotationAiGenerationsTableTableManager
                 generationNumber: generationNumber,
                 linkedQuestionSetId: linkedQuestionSetId,
                 linkedFlashcardBatchId: linkedFlashcardBatchId,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -23729,6 +25130,12 @@ typedef $$QuestionSetsTableCreateCompanionBuilder =
       required String difficulty,
       Value<String> aiProvider,
       Value<String?> aiModel,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -23747,6 +25154,12 @@ typedef $$QuestionSetsTableUpdateCompanionBuilder =
       Value<String> difficulty,
       Value<String> aiProvider,
       Value<String?> aiModel,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> cacheHitTokens,
+      Value<int?> cacheMissTokens,
+      Value<int?> requestDurationMs,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -23896,6 +25309,36 @@ class $$QuestionSetsTableFilterComposer
 
   ColumnFilters<String> get aiModel => $composableBuilder(
     column: $table.aiModel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -24083,6 +25526,36 @@ class $$QuestionSetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -24210,6 +25683,36 @@ class $$QuestionSetsTableAnnotationComposer
 
   GeneratedColumn<String> get aiModel =>
       $composableBuilder(column: $table.aiModel, builder: (column) => column);
+
+  GeneratedColumn<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheHitTokens => $composableBuilder(
+    column: $table.cacheHitTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheMissTokens => $composableBuilder(
+    column: $table.cacheMissTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -24383,6 +25886,12 @@ class $$QuestionSetsTableTableManager
                 Value<String> difficulty = const Value.absent(),
                 Value<String> aiProvider = const Value.absent(),
                 Value<String?> aiModel = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -24399,6 +25908,12 @@ class $$QuestionSetsTableTableManager
                 difficulty: difficulty,
                 aiProvider: aiProvider,
                 aiModel: aiModel,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -24417,6 +25932,12 @@ class $$QuestionSetsTableTableManager
                 required String difficulty,
                 Value<String> aiProvider = const Value.absent(),
                 Value<String?> aiModel = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> cacheHitTokens = const Value.absent(),
+                Value<int?> cacheMissTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -24433,6 +25954,12 @@ class $$QuestionSetsTableTableManager
                 difficulty: difficulty,
                 aiProvider: aiProvider,
                 aiModel: aiModel,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                cacheHitTokens: cacheHitTokens,
+                cacheMissTokens: cacheMissTokens,
+                requestDurationMs: requestDurationMs,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

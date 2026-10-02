@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
+import 'widgets/ai_usage_indicator.dart';
 
 Future<void> showAiQuestionsPreview(
   BuildContext context, {
@@ -37,13 +38,21 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showUsage = questions.usage?.hasAnyMetric == true;
     return Scaffold(
       appBar: AppBar(title: const Text('Study questions')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: questions.questions.length,
+        itemCount: questions.questions.length + (showUsage ? 1 : 0),
         itemBuilder: (context, index) {
-          final q = questions.questions[index];
+          if (showUsage && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AiUsageIndicator(usage: questions.usage!),
+            );
+          }
+          final qIndex = showUsage ? index - 1 : index;
+          final q = questions.questions[qIndex];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
@@ -52,7 +61,7 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Q${index + 1}. ${q.question}',
+                    'Q${qIndex + 1}. ${q.question}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),

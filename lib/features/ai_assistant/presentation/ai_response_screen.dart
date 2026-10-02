@@ -12,11 +12,15 @@ import '../data/ai_providers.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_token_usage.dart';
 import '../domain/annotation_ai_context.dart';
 import '../domain/annotation_ai_history.dart';
+import '../services/ai_prompt_builder.dart';
 import '../services/markdown_to_quill.dart';
 import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
+import 'widgets/ai_usage_indicator.dart';
+import 'widgets/voice_input_button.dart';
 
 /// Result of the annotation AI response screen.
 class AiResponseScreenResult {
@@ -100,6 +104,9 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
   /// Transient follow-up answer; does not mutate immutable history rows.
   String? _followUpOverride;
 
+  /// Frozen first answer used as the seed assistant turn for multi-turn asks.
+  String? _seedAssistantMarkdown;
+
   AnnotationAiContext get _context {
     return widget.annotationContext ??
         AnnotationAiContext(
@@ -122,6 +129,23 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
       _selected?.responseText ??
       widget.initialResult?.markdown ??
       '';
+
+  AiTokenUsage? get _usageForDisplay {
+    final selected = _selected;
+    if (selected != null) {
+      return aiTokenUsageFromColumns(
+        promptTokens: selected.promptTokens,
+        completionTokens: selected.completionTokens,
+        totalTokens: selected.totalTokens,
+        cacheHitTokens: selected.cacheHitTokens,
+        cacheMissTokens: selected.cacheMissTokens,
+        model: selected.modelName,
+        provider: selected.provider,
+        durationMs: selected.requestDurationMs,
+      );
+    }
+    return widget.initialResult?.usage;
+  }
 
   @override
   void initState() {
@@ -156,6 +180,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
           customPrompt: widget.request.customPrompt,
           modelName: meta.modelId,
           provider: meta.providerStorage,
+          usage: widget.initialResult!.usage,
         );
         gens = [...gens, saved];
       }
@@ -254,34 +279,12 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
   }
 
   Future<void> _regenerateWithInstruction() async {
-    final controller = TextEditingController();
-    final instruction = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Regenerate with instruction'),
-        content: AutoDirectionTextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 2,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Make it shorter / use a banking example…',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Regenerate'),
-          ),
-        ],
-      ),
+    final instruction = await showAiPromptDialog(
+      context,
+      title: 'Regenerate with instruction',
+      hint: 'Make it shorter / use a banking example…',
+      confirmLabel: 'Regenerate',
     );
-    controller.dispose();
     if (instruction == null || instruction.isEmpty || !mounted) return;
     await _newVersion(regenerateInstruction: instruction, parent: _selected);
   }
@@ -383,20 +386,26 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (ctx == null) return;
 
     setState(() => _busy = true);
-    final prior = List<AiConversationTurn>.from(_conversation);
+    _seedAssistantMarkdown ??= _markdown;
+    final seedUser = AiPromptBuilder.deepSeekLatestUserContent(
+      widget.request.copyWith(conversation: const []),
+    );
+    final conversation = <AiConversationTurn>[
+      AiConversationTurn(
+        userMessage: seedUser.isNotEmpty
+            ? seedUser
+            : 'Please help with the selected study material.',
+        assistantMarkdown: _seedAssistantMarkdown!,
+      ),
+      ..._conversation,
+    ];
     final result = await AiAssistantController.runWithLoading(
       context,
       ref,
       request: ctx.toStudyRequest(
         action: AiStudyAction.askAi,
         customPrompt: question,
-        conversation: [
-          ...prior,
-          AiConversationTurn(
-            userMessage: 'Previous answer context',
-            assistantMarkdown: _markdown,
-          ),
-        ],
+        conversation: conversation,
       ),
       annotationContext: ctx,
     );
@@ -408,7 +417,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
         ref.read(aiSettingsStoreProvider),
         action: AiStudyAction.askAi,
       );
-      await history.persistCompleted(
+      final saved = await history.persistCompleted(
         context: ctx,
         action: AiStudyAction.askAi,
         responseText: result.markdown,
@@ -416,6 +425,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
         parentGenerationId: _selected?.id,
         modelName: meta.modelId,
         provider: meta.providerStorage,
+        usage: result.usage,
       );
       ref.invalidate(
         annotationAiGenerationCountsProvider(
@@ -427,10 +437,12 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
         _conversation.add(
           AiConversationTurn(
             userMessage: question,
-            assistantMarkdown: _markdown,
+            assistantMarkdown: result.markdown,
           ),
         );
         _followUpOverride = result.markdown;
+        _selected = saved;
+        _generations = [..._generations, saved];
         _followUpController.clear();
       });
     }
@@ -619,6 +631,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                                           _selected = g;
                                           _conversation.clear();
                                           _followUpOverride = null;
+                                          _seedAssistantMarkdown = null;
                                         });
                                       },
                               ),
@@ -679,7 +692,16 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                           ),
                         )
                       : SingleChildScrollView(
-                          child: StudyRichTextViewer(storedValue: stored),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              StudyRichTextViewer(storedValue: stored),
+                              if (_usageForDisplay != null) ...[
+                                const SizedBox(height: 8),
+                                AiUsageIndicator(usage: _usageForDisplay!),
+                              ],
+                            ],
+                          ),
                         ),
                 ),
               ),
@@ -704,7 +726,11 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                       onSubmitted: (_) => _sendFollowUp(),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  VoiceInputButton(
+                    controller: _followUpController,
+                    enabled: !_busy,
+                    compact: true,
+                  ),
                   IconButton.filled(
                     onPressed: _busy ? null : _sendFollowUp,
                     icon: const Icon(Icons.send),

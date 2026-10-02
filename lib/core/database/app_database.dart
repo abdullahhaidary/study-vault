@@ -362,6 +362,16 @@ class AiChatMessages extends Table {
   TextColumn get contextJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
+  /// Optional provider usage metrics (assistant turns only).
+  TextColumn get aiProvider => text().nullable()();
+  TextColumn get aiModel => text().nullable()();
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  IntColumn get totalTokens => integer().nullable()();
+  IntColumn get cacheHitTokens => integer().nullable()();
+  IntColumn get cacheMissTokens => integer().nullable()();
+  IntColumn get requestDurationMs => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -422,6 +432,14 @@ class AnnotationAiGenerations extends Table {
   TextColumn get linkedQuestionSetId => text().nullable()();
   TextColumn get linkedFlashcardBatchId => text().nullable()();
 
+  /// Optional provider usage metrics for this generation.
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  IntColumn get totalTokens => integer().nullable()();
+  IntColumn get cacheHitTokens => integer().nullable()();
+  IntColumn get cacheMissTokens => integer().nullable()();
+  IntColumn get requestDurationMs => integer().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -460,6 +478,15 @@ class QuestionSets extends Table {
   TextColumn get difficulty => text()();
   TextColumn get aiProvider => text().withDefault(const Constant('gemini'))();
   TextColumn get aiModel => text().nullable()();
+
+  /// Optional aggregated usage for the generation request(s).
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  IntColumn get totalTokens => integer().nullable()();
+  IntColumn get cacheHitTokens => integer().nullable()();
+  IntColumn get cacheMissTokens => integer().nullable()();
+  IntColumn get requestDurationMs => integer().nullable()();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -570,7 +597,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -651,6 +678,48 @@ class AppDatabase extends _$AppDatabase {
       if (from < 12) {
         await m.addColumn(aiChats, aiChats.draftContextJson);
         await m.addColumn(aiChatMessages, aiChatMessages.contextJson);
+      }
+      if (from < 13) {
+        await m.addColumn(aiChatMessages, aiChatMessages.aiProvider);
+        await m.addColumn(aiChatMessages, aiChatMessages.aiModel);
+        await m.addColumn(aiChatMessages, aiChatMessages.promptTokens);
+        await m.addColumn(aiChatMessages, aiChatMessages.completionTokens);
+        await m.addColumn(aiChatMessages, aiChatMessages.totalTokens);
+        await m.addColumn(aiChatMessages, aiChatMessages.cacheHitTokens);
+        await m.addColumn(aiChatMessages, aiChatMessages.cacheMissTokens);
+        await m.addColumn(aiChatMessages, aiChatMessages.requestDurationMs);
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.promptTokens,
+        );
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.completionTokens,
+        );
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.totalTokens,
+        );
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.cacheHitTokens,
+        );
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.cacheMissTokens,
+        );
+        await m.addColumn(
+          annotationAiGenerations,
+          annotationAiGenerations.requestDurationMs,
+        );
+      }
+      if (from < 14) {
+        await m.addColumn(questionSets, questionSets.promptTokens);
+        await m.addColumn(questionSets, questionSets.completionTokens);
+        await m.addColumn(questionSets, questionSets.totalTokens);
+        await m.addColumn(questionSets, questionSets.cacheHitTokens);
+        await m.addColumn(questionSets, questionSets.cacheMissTokens);
+        await m.addColumn(questionSets, questionSets.requestDurationMs);
       }
     },
   );

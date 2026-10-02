@@ -8,6 +8,7 @@ import '../../ai_assistant/data/ai_credential_store.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 
@@ -25,7 +26,8 @@ abstract class AiChatTransport {
     Duration timeout = const Duration(seconds: 90),
   });
 
-  Stream<String> streamComplete({
+  /// Yields text deltas, then optionally a final event with [AiChatStreamEvent.usage].
+  Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
@@ -129,17 +131,27 @@ class HttpGeminiChatService implements AiChatTransport {
       modelId: model,
       studyPreference: preference,
     );
-    final text = await _postGenerate(
+    final started = DateTime.now();
+    final result = await _postGenerate(
       model: model,
       apiKey: key,
       body: body,
       timeout: timeout,
     );
-    return AiChatCompletion(text: text, modelId: model);
+    final durationMs = DateTime.now().difference(started).inMilliseconds;
+    return AiChatCompletion(
+      text: result.text,
+      modelId: model,
+      usage: result.usage?.copyWith(
+        model: model,
+        provider: 'gemini',
+        durationMs: durationMs,
+      ),
+    );
   }
 
   @override
-  Stream<String> streamComplete({
+  Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
@@ -159,6 +171,7 @@ class HttpGeminiChatService implements AiChatTransport {
       '$baseUrl/models/$model:streamGenerateContent?alt=sse',
     );
 
+    final started = DateTime.now();
     late http.StreamedResponse response;
     try {
       final request = http.Request('POST', uri)
@@ -183,6 +196,7 @@ class HttpGeminiChatService implements AiChatTransport {
 
     final full = StringBuffer();
     var lineBuffer = '';
+    AiTokenUsage? usage;
     await for (final chunk in response.stream.transform(utf8.decoder)) {
       lineBuffer += chunk;
       while (true) {
@@ -193,15 +207,42 @@ class HttpGeminiChatService implements AiChatTransport {
         if (!line.startsWith('data:')) continue;
         final payload = line.substring(5).trim();
         if (payload.isEmpty || payload == '[DONE]') continue;
-        final delta = _extractTextDelta(payload);
-        if (delta == null || delta.isEmpty) continue;
-        full.write(delta);
-        yield delta;
+        try {
+          final decoded = jsonDecode(payload);
+          if (decoded is Map) {
+            final chunkUsage = AiTokenUsage.fromGeminiResponse(
+              decoded,
+              model: model,
+              provider: 'gemini',
+            );
+            if (chunkUsage != null) usage = chunkUsage;
+            final delta = _extractCandidateText(decoded);
+            if (delta != null && delta.isNotEmpty) {
+              full.write(delta);
+              yield AiChatStreamEvent(textDelta: delta);
+            }
+          }
+        } on Object {
+          final delta = _extractTextDelta(payload);
+          if (delta == null || delta.isEmpty) continue;
+          full.write(delta);
+          yield AiChatStreamEvent(textDelta: delta);
+        }
       }
     }
 
     if (full.isEmpty) {
       throw const AiEmptyResultException();
+    }
+    final durationMs = DateTime.now().difference(started).inMilliseconds;
+    if (usage != null) {
+      yield AiChatStreamEvent(
+        usage: usage.copyWith(
+          model: model,
+          provider: 'gemini',
+          durationMs: durationMs,
+        ),
+      );
     }
   }
 
@@ -281,7 +322,7 @@ class HttpGeminiChatService implements AiChatTransport {
     return key;
   }
 
-  Future<String> _postGenerate({
+  Future<({String text, AiTokenUsage? usage})> _postGenerate({
     required String model,
     required String apiKey,
     required Map<String, dynamic> body,
@@ -323,7 +364,12 @@ class HttpGeminiChatService implements AiChatTransport {
       if (text == null || text.isEmpty) {
         throw const AiEmptyResultException();
       }
-      return text;
+      final usage = AiTokenUsage.fromGeminiResponse(
+        decoded,
+        model: model,
+        provider: 'gemini',
+      );
+      return (text: text, usage: usage);
     } on AiException {
       rethrow;
     } on Object {
@@ -487,7 +533,7 @@ class FakeGeminiChatService implements AiChatTransport {
   }
 
   @override
-  Stream<String> streamComplete({
+  Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
@@ -500,10 +546,10 @@ class FakeGeminiChatService implements AiChatTransport {
     // Yield in two chunks to exercise stream consumers without fake typing.
     final mid = (result.text.length / 2).floor();
     if (mid > 0) {
-      yield result.text.substring(0, mid);
-      yield result.text.substring(mid);
+      yield AiChatStreamEvent(textDelta: result.text.substring(0, mid));
+      yield AiChatStreamEvent(textDelta: result.text.substring(mid));
     } else {
-      yield result.text;
+      yield AiChatStreamEvent(textDelta: result.text);
     }
   }
 }

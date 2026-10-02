@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
@@ -114,14 +115,24 @@ class AiChatService {
   Future<void> deleteAllChats() => db.deleteAllAiChats();
 
   List<AiChatTurn> _historyTurns(List<AiChatMessage> messages) {
-    return [
-      for (final m in messages)
-        if (m.status != AiChatMessageStatus.error)
-          AiChatTurn(
-            role: m.role,
-            content: _apiContentForMessage(m),
-          ),
-    ];
+    var pinnedFirstUser = false;
+    final turns = <AiChatTurn>[];
+    for (final m in messages) {
+      if (m.status == AiChatMessageStatus.error) continue;
+      var pin = false;
+      if (m.role == AiChatRole.user && !pinnedFirstUser) {
+        pin = true;
+        pinnedFirstUser = true;
+      }
+      turns.add(
+        AiChatTurn(
+          role: m.role,
+          content: _apiContentForMessage(m),
+          pinForCache: pin,
+        ),
+      );
+    }
+    return turns;
   }
 
   String _apiContentForMessage(AiChatMessage message) {
@@ -200,6 +211,7 @@ class AiChatService {
         history: history,
       );
       final assistantNow = DateTime.now();
+      final usage = completion.usage;
       final assistant = AiChatMessagesCompanion.insert(
         id: _uuid.v4(),
         chatId: chatId,
@@ -207,6 +219,17 @@ class AiChatService {
         content: completion.text,
         status: const Value(AiChatMessageStatus.ok),
         createdAt: assistantNow,
+        aiProvider: Value(
+          usage?.provider ??
+              AiProviderIdX.fromModelId(chat.modelId).storageValue,
+        ),
+        aiModel: Value(usage?.model ?? completion.modelId ?? chat.modelId),
+        promptTokens: Value(usage?.promptTokens),
+        completionTokens: Value(usage?.completionTokens),
+        totalTokens: Value(usage?.totalTokens),
+        cacheHitTokens: Value(usage?.cacheHitTokens),
+        cacheMissTokens: Value(usage?.cacheMissTokens),
+        requestDurationMs: Value(usage?.durationMs),
       );
       await db.insertAiChatMessage(assistant);
       final updatedChat = await db.getAiChatById(chatId);
@@ -285,11 +308,15 @@ class AiChatService {
     final history = _historyTurns(existing);
 
     final buffer = StringBuffer();
+    AiTokenUsage? usage;
     try {
-      await for (final delta in transport.streamComplete(
+      await for (final event in transport.streamComplete(
         modelId: chat.modelId,
         history: history,
       )) {
+        if (event.usage != null) usage = event.usage;
+        final delta = event.textDelta;
+        if (delta == null || delta.isEmpty) continue;
         buffer.write(delta);
         yield buffer.toString();
       }
@@ -302,6 +329,17 @@ class AiChatService {
           content: buffer.toString(),
           status: const Value(AiChatMessageStatus.ok),
           createdAt: assistantNow,
+          aiProvider: Value(
+            usage?.provider ??
+                AiProviderIdX.fromModelId(chat.modelId).storageValue,
+          ),
+          aiModel: Value(usage?.model ?? chat.modelId),
+          promptTokens: Value(usage?.promptTokens),
+          completionTokens: Value(usage?.completionTokens),
+          totalTokens: Value(usage?.totalTokens),
+          cacheHitTokens: Value(usage?.cacheHitTokens),
+          cacheMissTokens: Value(usage?.cacheMissTokens),
+          requestDurationMs: Value(usage?.durationMs),
         ),
       );
       final updatedChat = await db.getAiChatById(chatId);

@@ -31,6 +31,7 @@ dependencies:
   flutter_secure_storage: ^10.3.4
   shared_preferences: ^2.5.5
   flutter_markdown: ^0.7.7+1
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

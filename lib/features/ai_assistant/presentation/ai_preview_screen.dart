@@ -7,6 +7,7 @@ import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
+import 'widgets/ai_usage_indicator.dart';
 
 enum AiPreviewApplyAction { replace, insertBelow, copy, cancel }
 
@@ -67,7 +68,16 @@ class AiTextPreviewScreen extends StatelessWidget {
     );
     Widget aiPane() => _Pane(
       title: 'AI Version',
-      child: StudyRichTextViewer(storedValue: stored),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StudyRichTextViewer(storedValue: stored),
+          if (result.usage != null && result.usage!.hasAnyMetric) ...[
+            const SizedBox(height: 8),
+            AiUsageIndicator(usage: result.usage!),
+          ],
+        ],
+      ),
     );
 
     return Scaffold(

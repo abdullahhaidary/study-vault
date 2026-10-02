@@ -18,6 +18,8 @@ import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
 import 'ai_response_screen.dart';
 import 'inline_ai_controller.dart';
+import 'widgets/ai_usage_indicator.dart';
+import 'widgets/voice_input_button.dart';
 
 /// Callbacks the PDF study screen provides for persistence side-effects.
 class InlineAiHostCallbacks {
@@ -457,39 +459,13 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     );
   }
 
-  Future<String?> _promptDialog({
-    required String title,
-    required String hint,
-  }) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: AutoDirectionTextField(
-          controller: controller,
-          autofocus: true,
-          minLines: 2,
-          maxLines: 4,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+  Future<String?> _promptDialog({required String title, required String hint}) {
+    return showAiPromptDialog(
+      context,
+      title: title,
+      hint: hint,
+      confirmLabel: 'OK',
     );
-    controller.dispose();
-    return result;
   }
 
   @override
@@ -801,6 +777,12 @@ class _InlineAiPanelCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
+                  VoiceInputButton(
+                    controller: askController,
+                    focusNode: askFocus,
+                    enabled: !busy,
+                    compact: true,
+                  ),
                   IconButton.filled(
                     tooltip: 'Send',
                     onPressed: busy ? null : onSubmitAsk,
@@ -905,10 +887,32 @@ class _InlineAiPanelCard extends StatelessWidget {
     }
 
     final stored = MarkdownToQuill.toDeltaJson(state.markdown);
+    final usage = state.selected == null
+        ? null
+        : aiTokenUsageFromColumns(
+            promptTokens: state.selected!.promptTokens,
+            completionTokens: state.selected!.completionTokens,
+            totalTokens: state.selected!.totalTokens,
+            cacheHitTokens: state.selected!.cacheHitTokens,
+            cacheMissTokens: state.selected!.cacheMissTokens,
+            model: state.selected!.modelName,
+            provider: state.selected!.provider,
+            durationMs: state.selected!.requestDurationMs,
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: SingleChildScrollView(
-        child: StudyRichTextViewer(storedValue: stored),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            StudyRichTextViewer(storedValue: stored),
+            if (usage != null) ...[
+              const SizedBox(height: 8),
+              AiUsageIndicator(usage: usage),
+              const SizedBox(height: 4),
+            ],
+          ],
+        ),
       ),
     );
   }

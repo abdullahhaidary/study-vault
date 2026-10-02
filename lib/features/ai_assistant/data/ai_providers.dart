@@ -13,6 +13,8 @@ import '../services/deepseek_ai_service.dart';
 import '../services/gemini_ai_service.dart';
 import '../services/routing_ai_service.dart';
 
+export 'voice_input_providers.dart' show voiceInputServiceProvider;
+
 final aiCredentialStoreProvider = Provider<AiCredentialStore>((ref) {
   return SecureAiCredentialStore();
 });

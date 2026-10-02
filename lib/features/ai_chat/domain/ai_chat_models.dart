@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../search/domain/study_search_result.dart';
@@ -86,7 +87,9 @@ class AiContextItem {
   String get chipLabel => '@$title';
 
   bool get hasUsableText =>
-      packedText != null && packedText!.trim().isNotEmpty && emptyReason == null;
+      packedText != null &&
+      packedText!.trim().isNotEmpty &&
+      emptyReason == null;
 
   AiContextItem copyWith({
     AiContextKind? kind,
@@ -225,18 +228,40 @@ class AiContextItem {
 
 /// One turn sent to the chat transport (already persisted or in-flight).
 class AiChatTurn {
-  const AiChatTurn({required this.role, required this.content});
+  const AiChatTurn({
+    required this.role,
+    required this.content,
+    this.pinForCache = false,
+  });
 
   final String role;
   final String content;
+
+  /// When true, DeepSeek history trimming must keep this turn (document /
+  /// first study context). System messages are always kept separately.
+  final bool pinForCache;
 }
 
 /// Result of a completed (non-stream) chat completion.
 class AiChatCompletion {
-  const AiChatCompletion({required this.text, this.modelId});
+  const AiChatCompletion({required this.text, this.modelId, this.usage});
 
   final String text;
   final String? modelId;
+  final AiTokenUsage? usage;
+}
+
+/// One event from a streaming chat completion.
+class AiChatStreamEvent {
+  const AiChatStreamEvent({this.textDelta, this.usage});
+
+  /// Incremental assistant text (may be empty/null on the final usage event).
+  final String? textDelta;
+
+  /// Present on the final event when the provider reported usage.
+  final AiTokenUsage? usage;
+
+  bool get hasText => textDelta != null && textDelta!.isNotEmpty;
 }
 
 /// Provider-agnostic model row for chat model pickers.

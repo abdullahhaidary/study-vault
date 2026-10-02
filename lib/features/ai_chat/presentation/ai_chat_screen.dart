@@ -16,6 +16,7 @@ import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
 import '../data/ai_chat_providers.dart';
 import '../domain/ai_chat_models.dart';
 import '../services/ai_chat_service.dart';
+import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import 'ai_chat_history_screen.dart';
 import 'gemini_model_selector.dart';
 import 'widgets/chat_composer.dart';
@@ -67,11 +68,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     if (chatId == null) return;
     await ref
         .read(aiChatServiceProvider)
-        .saveDraft(
-          chatId,
-          _composer.text,
-          draftAttachments: _attachments,
-        );
+        .saveDraft(chatId, _composer.text, draftAttachments: _attachments);
   }
 
   Future<void> _ensureConfigured() async {
@@ -210,11 +207,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       }
 
       await for (final partial
-          in ref.read(aiChatServiceProvider).streamSend(
-            chatId: chatId,
-            userText: sendText,
-            attachments: pendingAttachments,
-          )) {
+          in ref
+              .read(aiChatServiceProvider)
+              .streamSend(
+                chatId: chatId,
+                userText: sendText,
+                attachments: pendingAttachments,
+              )) {
         if (!mounted) return;
         setState(() => _streamingText = partial);
         _scrollToBottom();
@@ -460,6 +459,19 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               status: message.status,
                               attachments: attachments,
                               onRetry: isLastError ? _retry : null,
+                              usage: message.role == AiChatRole.assistant
+                                  ? aiTokenUsageFromColumns(
+                                      promptTokens: message.promptTokens,
+                                      completionTokens:
+                                          message.completionTokens,
+                                      totalTokens: message.totalTokens,
+                                      cacheHitTokens: message.cacheHitTokens,
+                                      cacheMissTokens: message.cacheMissTokens,
+                                      model: message.aiModel,
+                                      provider: message.aiProvider,
+                                      durationMs: message.requestDurationMs,
+                                    )
+                                  : null,
                             ),
                           );
                         },

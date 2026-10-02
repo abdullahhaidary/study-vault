@@ -11,6 +11,7 @@ import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/deepseek_model_registry.dart';
+import '../domain/ai_token_usage.dart';
 import '../domain/deepseek_usage.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
@@ -88,25 +89,11 @@ class DeepSeekAiService implements AiService {
     );
     final model = await _resolveModel(action: request.action);
     final thinking = await _resolveThinking(action: request.action);
-    // Stable system + document-first user body so DeepSeek can cache prefixes.
     final structured = _isStructured(request.action);
-
-    final messages = <Map<String, String>>[
-      {
-        'role': 'system',
-        'content': AiPromptBuilder.systemPreamble(
-          language: AiPromptBuilder.preambleLanguage(enriched),
-          userPreference: enriched.userPreference,
-        ),
-      },
-      {
-        'role': 'user',
-        'content': AiPromptBuilder.userContentForRequest(enriched),
-      },
-    ];
+    final messages = AiPromptBuilder.deepSeekMessages(enriched);
 
     final started = DateTime.now();
-    final text = await _chatCompletions(
+    final completion = await _chatCompletions(
       apiKey: key,
       model: model,
       messages: messages,
@@ -115,6 +102,8 @@ class DeepSeekAiService implements AiService {
       thinking: thinking,
       timeout: timeout,
     );
+    final text = completion.text;
+    final usage = completion.usage;
 
     assert(() {
       // Never log source/PDF content or API keys — action + timing only.
@@ -128,7 +117,7 @@ class DeepSeekAiService implements AiService {
     }());
 
     try {
-      return switch (request.action) {
+      final result = switch (request.action) {
         AiStudyAction.explain ||
         AiStudyAction.simplify ||
         AiStudyAction.rephrase ||
@@ -155,6 +144,12 @@ class DeepSeekAiService implements AiService {
           expectedCount: request.questionCount,
           requestedType: request.questionType,
         ),
+      };
+      return switch (result) {
+        AiTextResult r => r.withUsage(usage),
+        AiAnnotationDraft r => r.withUsage(usage),
+        AiFlashcardsResult r => r.withUsage(usage),
+        AiQuestionsResult r => r.withUsage(usage),
       };
     } on AiException catch (e) {
       assert(() {
@@ -243,7 +238,7 @@ class DeepSeekAiService implements AiService {
     }
   }
 
-  Future<String> _chatCompletions({
+  Future<({String text, AiTokenUsage? usage})> _chatCompletions({
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
@@ -313,7 +308,7 @@ class DeepSeekAiService implements AiService {
     };
   }
 
-  String _parseCompletionResponse({
+  ({String text, AiTokenUsage? usage}) _parseCompletionResponse({
     required http.Response response,
     required String model,
     int? durationMs,
@@ -378,11 +373,13 @@ class DeepSeekAiService implements AiService {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) throw const AiMalformedOutputException();
-      logDeepSeekUsage(
+      final usage = AiTokenUsage.fromProviderResponse(
+        decoded,
         model: model,
-        usage: DeepSeekPromptUsage.fromResponse(decoded),
+        provider: 'deepseek',
         durationMs: durationMs,
       );
+      logDeepSeekUsage(model: model, usage: usage, durationMs: durationMs);
       final choices = decoded['choices'];
       if (choices is! List || choices.isEmpty) {
         throw const AiEmptyResultException();
@@ -396,7 +393,7 @@ class DeepSeekAiService implements AiService {
       if (content is! String) throw const AiEmptyResultException();
       final text = content.trim();
       if (text.isEmpty) throw const AiEmptyResultException();
-      return text;
+      return (text: text, usage: usage);
     } on AiException {
       rethrow;
     } on Object {

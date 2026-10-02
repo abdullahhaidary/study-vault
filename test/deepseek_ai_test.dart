@@ -12,11 +12,13 @@ import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/domain/deepseek_model_registry.dart';
 import 'package:study_vault/features/ai_assistant/domain/deepseek_pricing_period.dart';
-import 'package:study_vault/features/ai_assistant/domain/deepseek_usage.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
 import 'package:study_vault/features/ai_assistant/services/deepseek_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/routing_ai_service.dart';
+import 'package:study_vault/features/ai_chat/domain/ai_chat_models.dart';
+import 'package:study_vault/features/ai_chat/services/deepseek_chat_service.dart';
 
 void main() {
   group('DeepSeekPricingSchedule', () {
@@ -406,24 +408,30 @@ void main() {
     });
   });
 
-  group('DeepSeekPromptUsage', () {
+  group('AiTokenUsage', () {
     test('reads official cache hit/miss fields and ratio', () {
-      final usage = DeepSeekPromptUsage.fromResponse({
-        'usage': {
-          'prompt_tokens': 14210,
-          'completion_tokens': 1025,
-          'total_tokens': 15235,
-          'prompt_cache_hit_tokens': 13400,
-          'prompt_cache_miss_tokens': 810,
+      final usage = AiTokenUsage.fromProviderResponse(
+        {
+          'usage': {
+            'prompt_tokens': 14210,
+            'completion_tokens': 1025,
+            'total_tokens': 15235,
+            'prompt_cache_hit_tokens': 13400,
+            'prompt_cache_miss_tokens': 810,
+          },
         },
-      });
+        model: 'deepseek-flash',
+        durationMs: 412,
+      );
       expect(usage, isNotNull);
       expect(usage!.promptTokens, 14210);
-      expect(usage.promptCacheHitTokens, 13400);
-      expect(usage.promptCacheMissTokens, 810);
+      expect(usage.cacheHitTokens, 13400);
+      expect(usage.cacheMissTokens, 810);
       expect(usage.completionTokens, 1025);
-      expect(usage.cacheHitRatioPercent, closeTo(94.3, 0.05));
-      final log = usage.formatLog(model: 'deepseek-flash', durationMs: 412);
+      expect(usage.cacheHitRatio, closeTo(94.3, 0.05));
+      final log = usage
+          .copyWith(model: 'deepseek-flash', durationMs: 412)
+          .formatLog();
       expect(log, contains('Model: deepseek-flash'));
       expect(log, contains('Prompt tokens: 14,210'));
       expect(log, contains('Cache hit tokens: 13,400'));
@@ -435,13 +443,13 @@ void main() {
     });
 
     test('handles missing cache fields', () {
-      final usage = DeepSeekPromptUsage.fromUsageMap({
+      final usage = AiTokenUsage.fromUsageMap({
         'prompt_tokens': 10,
         'completion_tokens': 2,
       });
-      expect(usage!.promptCacheHitTokens, isNull);
-      expect(usage.cacheHitRatioPercent, isNull);
-      expect(usage.formatLog(model: 'deepseek-flash'), contains('n/a'));
+      expect(usage!.cacheHitTokens, isNull);
+      expect(usage.cacheHitRatio, isNull);
+      expect(usage.formatLog(), contains('n/a'));
     });
   });
 
@@ -452,45 +460,73 @@ void main() {
         'the cost function. Learning rate controls step size. '
         'This paragraph is repeated so the reusable prefix is large. ';
 
-    AiStudyRequest ask(String question) {
+    AiStudyRequest ask(
+      String question, {
+      List<AiConversationTurn> conversation = const [],
+    }) {
       return AiStudyRequest(
         action: AiStudyAction.askAi,
         sourceText: document * 40,
         selectedText: document * 40,
         language: AiLanguage.english,
         customPrompt: question,
+        conversation: conversation,
       );
     }
 
     test('three follow-up questions share an identical document prefix', () {
-      final a = AiPromptBuilder.userContentForRequest(
+      final a = AiPromptBuilder.deepSeekMessages(
         ask('What is this document about?'),
       );
-      final b = AiPromptBuilder.userContentForRequest(
+      final b = AiPromptBuilder.deepSeekMessages(
         ask('Give me the three most important points.'),
       );
-      final c = AiPromptBuilder.userContentForRequest(
+      final c = AiPromptBuilder.deepSeekMessages(
         ask('Quiz me on this document.'),
       );
 
-      final prefixAb = _sharedPrefix(a, b);
-      final prefixAc = _sharedPrefix(a, c);
-      expect(prefixAb, contains('SELECTED TEXT:'));
-      expect(prefixAb, contains('Gradient descent is an iterative'));
-      expect(prefixAc, contains('Gradient descent is an iterative'));
-      expect(prefixAb.length, greaterThan(document.length * 20));
-
-      expect(
-        a.indexOf('SELECTED TEXT:'),
-        lessThan(a.indexOf('STUDENT QUESTION:')),
-      );
-      expect(
-        a.indexOf('What is this document about?'),
-        greaterThan(a.indexOf('SELECTED TEXT:')),
-      );
+      expect(a[0]['role'], 'system');
+      expect(a[1]['role'], 'user');
+      expect(a[1]['content'], contains('SELECTED TEXT:'));
+      expect(a[1]['content'], contains('Gradient descent'));
+      expect(a[0]['content'], b[0]['content']);
+      expect(a[1]['content'], b[1]['content']);
+      expect(a[1]['content'], c[1]['content']);
+      expect(a[2]['role'], 'user');
+      expect(a[2]['content'], 'What is this document about?');
+      expect(b[2]['content'], 'Give me the three most important points.');
     });
 
-    test('HTTP messages use system + document-first user body', () async {
+    test('follow-ups use real multi-turn roles after the document', () {
+      final messages = AiPromptBuilder.deepSeekMessages(
+        ask(
+          'Question 3',
+          conversation: const [
+            AiConversationTurn(
+              userMessage: 'Question 1',
+              assistantMarkdown: 'Answer 1',
+            ),
+            AiConversationTurn(
+              userMessage: 'Question 2',
+              assistantMarkdown: 'Answer 2',
+            ),
+          ],
+        ),
+      );
+      expect(
+        messages.map((m) => m['role']).toList(),
+        ['system', 'user', 'user', 'assistant', 'user', 'assistant', 'user'],
+      );
+      expect(messages[1]['content'], contains('SELECTED TEXT:'));
+      expect(messages[2]['content'], 'Question 1');
+      expect(messages[3]['content'], 'Answer 1');
+      expect(messages[4]['content'], 'Question 2');
+      expect(messages[5]['content'], 'Answer 2');
+      expect(messages[6]['content'], 'Question 3');
+      expect(messages[1]['content'], isNot(contains('Question 3')));
+    });
+
+    test('HTTP messages use system + document-first multi-turn body', () async {
       final bodies = <Map<String, dynamic>>[];
       var call = 0;
       final client = MockClient((request) async {
@@ -536,39 +572,51 @@ void main() {
         'Give me the three most important points.',
         'Quiz me on this document.',
       ];
+      final results = <AiStudyResult>[];
       for (final q in questions) {
-        await service.run(ask(q));
+        results.add(await service.run(ask(q)));
       }
 
       expect(bodies, hasLength(3));
-      String? previousUser;
+      expect(results[0].usage?.cacheHitTokens, 0);
+      expect(results[1].usage?.cacheHitTokens, 12000);
+      expect(results[2].usage?.cacheHitTokens, 12000);
+      String? document;
       for (final body in bodies) {
         final messages = body['messages'] as List;
         expect(messages[0]['role'], 'system');
         expect(messages[1]['role'], 'user');
-        final user = messages[1]['content'] as String;
-        expect(user, startsWith('SELECTED TEXT:'));
-        expect(
-          user.indexOf('STUDENT QUESTION:'),
-          greaterThan(user.indexOf('SELECTED TEXT:')),
-        );
-        if (previousUser != null) {
-          expect(
-            _sharedPrefix(previousUser, user),
-            contains('Gradient descent'),
-          );
-        }
-        previousUser = user;
+        final doc = messages[1]['content'] as String;
+        expect(doc, contains('SELECTED TEXT:'));
+        document ??= doc;
+        expect(doc, document);
+        expect(messages.last['role'], 'user');
+        expect(messages.last['content'], isNot(contains('SELECTED TEXT:')));
       }
     });
   });
-}
 
-String _sharedPrefix(String a, String b) {
-  final n = a.length < b.length ? a.length : b.length;
-  var i = 0;
-  while (i < n && a.codeUnitAt(i) == b.codeUnitAt(i)) {
-    i++;
-  }
-  return a.substring(0, i);
+  group('DeepSeek history trim preserves document', () {
+    test('drops oldest Q/A before the pinned document turn', () {
+      final history = <AiChatTurn>[
+        AiChatTurn(
+          role: 'user',
+          content: 'Attached Study Vault context:\n${'DOC' * 100}',
+          pinForCache: true,
+        ),
+        const AiChatTurn(role: 'assistant', content: 'A1'),
+        const AiChatTurn(role: 'user', content: 'Q2'),
+        const AiChatTurn(role: 'assistant', content: 'A2'),
+        const AiChatTurn(role: 'user', content: 'Q3'),
+      ];
+      final trimmed = HttpDeepSeekChatService.trimHistoryPreservingDocument(
+        history,
+        maxMessages: 4,
+        maxChars: 80000,
+      );
+      expect(trimmed.first.content, contains('Attached Study Vault context:'));
+      expect(trimmed.last.content, 'Q3');
+      expect(trimmed.any((t) => t.content == 'A1'), isFalse);
+    });
+  });
 }

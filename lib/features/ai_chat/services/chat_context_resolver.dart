@@ -48,7 +48,8 @@ class ChatContextResolver {
       id: hit.id,
       title: hit.title,
       lessonId: hit.lessonId,
-      materialId: hit.materialId ?? (kind == AiContextKind.material ? hit.id : null),
+      materialId:
+          hit.materialId ?? (kind == AiContextKind.material ? hit.id : null),
     );
   }
 
@@ -75,11 +76,11 @@ class ChatContextResolver {
     return resolved;
   }
 
-  Future<AiContextItem> resolveOne(
-    AiContextItem draft, {
-    int? budget,
-  }) async {
-    final cap = (budget ?? maxCharsPerAttachment).clamp(0, maxCharsPerAttachment);
+  Future<AiContextItem> resolveOne(AiContextItem draft, {int? budget}) async {
+    final cap = (budget ?? maxCharsPerAttachment).clamp(
+      0,
+      maxCharsPerAttachment,
+    );
     return switch (draft.kind) {
       AiContextKind.material => _resolveMaterial(draft, cap),
       AiContextKind.lesson => _resolveLesson(draft, cap),

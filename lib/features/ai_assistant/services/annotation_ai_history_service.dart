@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_token_usage.dart';
 import '../domain/annotation_ai_context.dart';
 import '../domain/annotation_ai_history.dart';
 import 'annotation_ai_service.dart';
@@ -121,6 +122,7 @@ class AnnotationAiHistoryService {
       modelName: modelName,
       provider: provider,
       linkedQuestionSetId: persisted.linkedQuestionSetId,
+      usage: result.usage,
     );
   }
 
@@ -140,6 +142,7 @@ class AnnotationAiHistoryService {
     String? provider,
     String? linkedQuestionSetId,
     String? linkedFlashcardBatchId,
+    AiTokenUsage? usage,
   }) {
     final fingerprint = AnnotationAiSourceFingerprint.fromContext(context);
     final now = DateTime.now();
@@ -171,13 +174,19 @@ class AnnotationAiHistoryService {
         responseText: responseText,
         responseKind: Value(responseKind),
         language: Value(context.language.name),
-        modelName: Value(modelName),
-        provider: Value(provider ?? 'gemini'),
+        modelName: Value(modelName ?? usage?.model),
+        provider: Value(provider ?? usage?.provider ?? 'gemini'),
         promptVersion: Value(AnnotationAiPromptVersions.forAction(action)),
         parentGenerationId: Value(parentGenerationId),
         generationNumber: generationNumber,
         linkedQuestionSetId: Value(linkedQuestionSetId),
         linkedFlashcardBatchId: Value(linkedFlashcardBatchId),
+        promptTokens: Value(usage?.promptTokens),
+        completionTokens: Value(usage?.completionTokens),
+        totalTokens: Value(usage?.totalTokens),
+        cacheHitTokens: Value(usage?.cacheHitTokens),
+        cacheMissTokens: Value(usage?.cacheMissTokens),
+        requestDurationMs: Value(usage?.durationMs),
         createdAt: now,
         updatedAt: now,
       ),

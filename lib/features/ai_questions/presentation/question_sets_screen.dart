@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import '../data/quiz_providers.dart';
 import '../domain/quiz_models.dart';
 import 'quiz_session_screen.dart';
@@ -64,9 +65,29 @@ class QuestionSetsScreen extends ConsumerWidget {
                 ),
                 tileColor: Theme.of(context).colorScheme.surfaceContainerLow,
                 title: Text(set.title),
-                subtitle: Text(
-                  '${set.questionCount} questions · ${type.label} · ${difficulty.label}',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${set.questionCount} questions · ${type.label} · ${difficulty.label}',
+                    ),
+                    if (aiTokenUsageFromColumns(
+                          promptTokens: set.promptTokens,
+                          completionTokens: set.completionTokens,
+                          totalTokens: set.totalTokens,
+                          cacheHitTokens: set.cacheHitTokens,
+                          cacheMissTokens: set.cacheMissTokens,
+                          model: set.aiModel,
+                          provider: set.aiProvider,
+                          durationMs: set.requestDurationMs,
+                        )
+                        case final usage?) ...[
+                      const SizedBox(height: 4),
+                      AiUsageIndicator(usage: usage),
+                    ],
+                  ],
                 ),
+                isThreeLine: true,
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) async {
                     if (value == 'delete') {

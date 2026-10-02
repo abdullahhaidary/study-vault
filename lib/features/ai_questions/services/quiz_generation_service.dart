@@ -7,6 +7,7 @@ import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/services/ai_service.dart';
 import '../domain/question_source.dart';
 import '../domain/quiz_models.dart';
@@ -76,9 +77,9 @@ class QuizGenerationService {
         sendMode: sendMode,
       );
 
-      if (generated.questions.length != count) {
+      if (generated.quiz.questions.length != count) {
         throw AiMalformedOutputException(
-          'Expected exactly $count questions, got ${generated.questions.length}.',
+          'Expected exactly $count questions, got ${generated.quiz.questions.length}.',
         );
       }
 
@@ -93,15 +94,16 @@ class QuizGenerationService {
         count: count,
         type: type,
         difficulty: difficulty,
-        quiz: generated,
+        quiz: generated.quiz,
         modelId: modelId,
         provider: provider.storageValue,
+        usage: generated.usage,
       );
       assert(() {
         // ignore: avoid_print
         print(
-          'QuizGen persisted set=${set.id} questions=${generated.questions.length} '
-          'mcq=${generated.questions.where((q) => q.isMcq).length} '
+          'QuizGen persisted set=${set.id} questions=${generated.quiz.questions.length} '
+          'mcq=${generated.quiz.questions.where((q) => q.isMcq).length} '
           'provider=${provider.storageValue} model=$modelId',
         );
         return true;
@@ -117,7 +119,7 @@ class QuizGenerationService {
     }
   }
 
-  Future<GeneratedQuiz> _generateWithChunking({
+  Future<({GeneratedQuiz quiz, AiTokenUsage? usage})> _generateWithChunking({
     required QuestionSource source,
     required int count,
     required QuizQuestionType type,
@@ -136,18 +138,19 @@ class QuizGenerationService {
       final label = source.text.trim().isEmpty
           ? 'PDF page $page (image attached)'
           : source.text;
-      return _stampSourcePage(
-        await _callAi(
-          text: label,
-          count: count,
-          type: type,
-          difficulty: difficulty,
-          language: language,
-          preference: preference,
-          image: image,
-          pageNumber: page,
-        ),
-        page,
+      final part = await _callAi(
+        text: label,
+        count: count,
+        type: type,
+        difficulty: difficulty,
+        language: language,
+        preference: preference,
+        image: image,
+        pageNumber: page,
+      );
+      return (
+        quiz: _stampSourcePage(part.quiz, page),
+        usage: part.usage,
       );
     }
 
@@ -169,6 +172,7 @@ class QuizGenerationService {
 
     final perChunk = _distributeCounts(count, chunks.length);
     final merged = <GeneratedQuizQuestion>[];
+    final usages = <AiTokenUsage?>[];
     var title = 'Generated Quiz';
 
     for (var i = 0; i < chunks.length; i++) {
@@ -182,8 +186,9 @@ class QuizGenerationService {
         language: language,
         preference: preference,
       );
-      if (i == 0 && part.title.trim().isNotEmpty) title = part.title;
-      merged.addAll(part.questions);
+      if (i == 0 && part.quiz.title.trim().isNotEmpty) title = part.quiz.title;
+      merged.addAll(part.quiz.questions);
+      usages.add(part.usage);
     }
 
     if (merged.length < count) {
@@ -193,10 +198,13 @@ class QuizGenerationService {
       );
     }
 
-    return GeneratedQuiz(title: title, questions: merged.take(count).toList());
+    return (
+      quiz: GeneratedQuiz(title: title, questions: merged.take(count).toList()),
+      usage: AiTokenUsage.merge(usages),
+    );
   }
 
-  Future<GeneratedQuiz> _callAi({
+  Future<({GeneratedQuiz quiz, AiTokenUsage? usage})> _callAi({
     required String text,
     required int count,
     required QuizQuestionType type,
@@ -234,7 +242,7 @@ class QuizGenerationService {
           'Expected exactly $count validated questions from AI.',
         );
       }
-      return generated;
+      return (quiz: generated, usage: result.usage);
     } on AiException catch (e) {
       assert(() {
         // ignore: avoid_print
@@ -318,6 +326,7 @@ class QuizGenerationService {
     required GeneratedQuiz quiz,
     required String modelId,
     required String provider,
+    AiTokenUsage? usage,
   }) async {
     final now = DateTime.now();
     final setId = _uuid.v4();
@@ -334,6 +343,12 @@ class QuizGenerationService {
       difficulty: difficulty.storageValue,
       aiProvider: Value(provider),
       aiModel: Value(modelId),
+      promptTokens: Value(usage?.promptTokens),
+      completionTokens: Value(usage?.completionTokens),
+      totalTokens: Value(usage?.totalTokens),
+      cacheHitTokens: Value(usage?.cacheHitTokens),
+      cacheMissTokens: Value(usage?.cacheMissTokens),
+      requestDurationMs: Value(usage?.durationMs),
       createdAt: now,
       updatedAt: now,
     );

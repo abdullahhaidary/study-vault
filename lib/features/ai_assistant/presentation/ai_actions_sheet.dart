@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -16,6 +15,7 @@ import 'ai_assistant_controller.dart';
 import 'ai_flashcards_preview.dart';
 import 'ai_preview_screen.dart';
 import 'ai_response_screen.dart';
+import 'widgets/voice_input_button.dart';
 
 /// Context for where AI was invoked.
 enum AiActionContext { pdfSelection, noteEditor, pinReader }
@@ -273,6 +273,7 @@ Future<void> showAiActionsSheet(
             responseKind: 'annotation',
             modelName: meta.modelId,
             provider: meta.providerStorage,
+            usage: result.usage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
     }
@@ -301,6 +302,7 @@ Future<void> showAiActionsSheet(
             responseKind: 'flashcards',
             modelName: meta.modelId,
             provider: meta.providerStorage,
+            usage: result.usage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
     }
@@ -308,6 +310,7 @@ Future<void> showAiActionsSheet(
     await showAiFlashcardsPreview(
       context,
       cards: result.cards,
+      usage: result.usage,
       onCreate: onFlashcardsCreate,
     );
   }
@@ -468,37 +471,8 @@ Future<String?> _promptDialog(
   BuildContext context, {
   required String title,
   required String hint,
-}) async {
-  final controller = TextEditingController();
-  final result = await showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: AutoDirectionTextField(
-        controller: controller,
-        autofocus: true,
-        minLines: 2,
-        maxLines: 5,
-        decoration: InputDecoration(
-          hintText: hint,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, controller.text.trim()),
-          child: const Text('Run'),
-        ),
-      ],
-    ),
-  );
-  controller.dispose();
-  if (result == null || result.isEmpty) return null;
-  return result;
+}) {
+  return showAiPromptDialog(context, title: title, hint: hint);
 }
 
 Future<T?> _pickEnum<T>(

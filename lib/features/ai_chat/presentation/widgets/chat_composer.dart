@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/auto_direction_text_field.dart';
 import '../../../../core/widgets/system_bottom_inset.dart';
+import '../../../ai_assistant/presentation/widgets/voice_input_button.dart';
 import '../../domain/ai_chat_models.dart';
 
-/// Multiline chat input with attach chips, @ mentions, and send.
+/// Multiline chat input with attach chips, @ mentions, voice, and send.
 class ChatComposer extends StatefulWidget {
   const ChatComposer({
     super.key,
@@ -71,7 +72,10 @@ class ChatComposerState extends State<ChatComposer> {
       callback(null);
       return;
     }
-    final before = text.substring(0, selection.baseOffset.clamp(0, text.length));
+    final before = text.substring(
+      0,
+      selection.baseOffset.clamp(0, text.length),
+    );
     final match = _mentionRegex.firstMatch(before);
     if (match == null) {
       callback(null);
@@ -85,7 +89,10 @@ class ChatComposerState extends State<ChatComposer> {
     final text = widget.controller.text;
     final selection = widget.controller.selection;
     if (!selection.isValid) return;
-    final before = text.substring(0, selection.baseOffset.clamp(0, text.length));
+    final before = text.substring(
+      0,
+      selection.baseOffset.clamp(0, text.length),
+    );
     final match = _mentionRegex.firstMatch(before);
     if (match == null) return;
     final start = match.start;
@@ -185,7 +192,11 @@ class ChatComposerState extends State<ChatComposer> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.xs),
+                      VoiceInputButton(
+                        controller: widget.controller,
+                        enabled: widget.enabled && !widget.sending,
+                        compact: true,
+                      ),
                       IconButton.filled(
                         tooltip: 'Send',
                         onPressed: canSend ? widget.onSend : null,

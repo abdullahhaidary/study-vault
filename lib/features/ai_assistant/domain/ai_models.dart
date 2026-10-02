@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../ai_questions/domain/quiz_models.dart';
 import 'ai_actions.dart';
+import 'ai_token_usage.dart';
 
 /// Soft size limit before warning the user (characters).
 const kAiSoftSourceLimit = 12000;
@@ -214,12 +215,18 @@ class AiQuestionGenerationRequest {
 }
 
 sealed class AiStudyResult {
-  const AiStudyResult();
+  const AiStudyResult({this.usage});
+
+  /// Optional provider usage attached after the API call.
+  final AiTokenUsage? usage;
 }
 
 class AiTextResult extends AiStudyResult {
-  const AiTextResult({required this.markdown});
+  const AiTextResult({required this.markdown, super.usage});
   final String markdown;
+
+  AiTextResult withUsage(AiTokenUsage? next) =>
+      AiTextResult(markdown: markdown, usage: next);
 }
 
 class AiAnnotationDraft extends AiStudyResult {
@@ -227,11 +234,19 @@ class AiAnnotationDraft extends AiStudyResult {
     required this.shortDescription,
     required this.fullNoteMarkdown,
     this.suggestedCategory,
+    super.usage,
   });
 
   final String shortDescription;
   final String fullNoteMarkdown;
   final String? suggestedCategory;
+
+  AiAnnotationDraft withUsage(AiTokenUsage? next) => AiAnnotationDraft(
+    shortDescription: shortDescription,
+    fullNoteMarkdown: fullNoteMarkdown,
+    suggestedCategory: suggestedCategory,
+    usage: next,
+  );
 }
 
 class AiFlashcardDraft {
@@ -241,8 +256,11 @@ class AiFlashcardDraft {
 }
 
 class AiFlashcardsResult extends AiStudyResult {
-  const AiFlashcardsResult({required this.cards});
+  const AiFlashcardsResult({required this.cards, super.usage});
   final List<AiFlashcardDraft> cards;
+
+  AiFlashcardsResult withUsage(AiTokenUsage? next) =>
+      AiFlashcardsResult(cards: cards, usage: next);
 }
 
 /// Legacy-compatible draft used by the simple preview screen.
@@ -273,6 +291,7 @@ class AiQuestionsResult extends AiStudyResult {
     required this.questions,
     this.title = 'Generated Quiz',
     this.generated,
+    super.usage,
   });
 
   final String title;
@@ -280,4 +299,11 @@ class AiQuestionsResult extends AiStudyResult {
 
   /// Strictly validated quiz payload used for persistence / Quiz Mode.
   final GeneratedQuiz? generated;
+
+  AiQuestionsResult withUsage(AiTokenUsage? next) => AiQuestionsResult(
+    questions: questions,
+    title: title,
+    generated: generated,
+    usage: next,
+  );
 }

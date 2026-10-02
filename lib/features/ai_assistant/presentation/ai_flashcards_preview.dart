@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_token_usage.dart';
 import '../services/markdown_to_quill.dart';
+import 'widgets/ai_usage_indicator.dart';
 
 Future<void> showAiFlashcardsPreview(
   BuildContext context, {
   required List<AiFlashcardDraft> cards,
+  AiTokenUsage? usage,
   Future<void> Function(List<AiFlashcardDraft> cards)? onCreate,
 }) {
   return Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) =>
-          AiFlashcardsPreviewScreen(initialCards: cards, onCreate: onCreate),
+      builder: (_) => AiFlashcardsPreviewScreen(
+        initialCards: cards,
+        usage: usage,
+        onCreate: onCreate,
+      ),
     ),
   );
 }
@@ -21,10 +27,12 @@ class AiFlashcardsPreviewScreen extends StatefulWidget {
   const AiFlashcardsPreviewScreen({
     super.key,
     required this.initialCards,
+    this.usage,
     this.onCreate,
   });
 
   final List<AiFlashcardDraft> initialCards;
+  final AiTokenUsage? usage;
   final Future<void> Function(List<AiFlashcardDraft> cards)? onCreate;
 
   @override
@@ -64,9 +72,17 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
       appBar: AppBar(title: const Text('Flashcard drafts')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _cards.length,
+        itemCount: _cards.length + (widget.usage?.hasAnyMetric == true ? 1 : 0),
         itemBuilder: (context, index) {
-          final card = _cards[index];
+          if (widget.usage?.hasAnyMetric == true && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AiUsageIndicator(usage: widget.usage!),
+            );
+          }
+          final cardIndex =
+              widget.usage?.hasAnyMetric == true ? index - 1 : index;
+          final card = _cards[cardIndex];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
@@ -78,7 +94,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                     value: card.selected,
                     onChanged: (v) =>
                         setState(() => card.selected = v ?? false),
-                    title: Text('Card ${index + 1}'),
+                    title: Text('Card ${cardIndex + 1}'),
                   ),
                   TextField(
                     controller: card.front,

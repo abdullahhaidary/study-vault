@@ -7,6 +7,7 @@ import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
+import 'widgets/ai_usage_indicator.dart';
 
 Future<void> showAiAnnotationPreview(
   BuildContext context,
@@ -143,6 +144,10 @@ class _AiAnnotationPreviewScreenState
               ),
             ),
           ),
+          if (widget.draft.usage?.hasAnyMetric == true) ...[
+            const SizedBox(height: 8),
+            AiUsageIndicator(usage: widget.draft.usage!),
+          ],
           const SizedBox(height: 24),
           Row(
             children: [

@@ -9,6 +9,7 @@ import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/deepseek_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
@@ -89,7 +90,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     final thinking = await settings.getThinkingMode();
     final preference = await settings.getStudyPreference();
     final messages = _buildMessages(history, preference);
-    final text = await _postChat(
+    final result = await _postChat(
       apiKey: key,
       model: model,
       messages: messages,
@@ -97,11 +98,15 @@ class HttpDeepSeekChatService implements AiChatTransport {
       stream: false,
       timeout: timeout,
     );
-    return AiChatCompletion(text: text, modelId: model);
+    return AiChatCompletion(
+      text: result.text,
+      modelId: model,
+      usage: result.usage,
+    );
   }
 
   @override
-  Stream<String> streamComplete({
+  Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
@@ -151,7 +156,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
 
     final full = StringBuffer();
     var lineBuffer = '';
-    DeepSeekPromptUsage? usage;
+    AiTokenUsage? usage;
     await for (final chunk in response.stream.transform(utf8.decoder)) {
       lineBuffer += chunk;
       while (true) {
@@ -162,20 +167,30 @@ class HttpDeepSeekChatService implements AiChatTransport {
         if (!line.startsWith('data:')) continue;
         final payload = line.substring(5).trim();
         if (payload.isEmpty || payload == '[DONE]') continue;
-        usage =
-            DeepSeekPromptUsage.fromResponse(_tryDecodeJson(payload)) ?? usage;
+        final decoded = _tryDecodeJson(payload);
+        final chunkUsage = AiTokenUsage.fromProviderResponse(
+          decoded,
+          model: model,
+          provider: 'deepseek',
+        );
+        if (chunkUsage != null) usage = chunkUsage;
         final delta = _extractContentDelta(payload);
         if (delta == null || delta.isEmpty) continue;
         full.write(delta);
-        yield delta;
+        yield AiChatStreamEvent(textDelta: delta);
       }
     }
 
-    logDeepSeekUsage(
+    final durationMs = DateTime.now().difference(started).inMilliseconds;
+    final finalUsage = usage?.copyWith(
       model: model,
-      usage: usage,
-      durationMs: DateTime.now().difference(started).inMilliseconds,
+      provider: 'deepseek',
+      durationMs: durationMs,
     );
+    logDeepSeekUsage(model: model, usage: finalUsage, durationMs: durationMs);
+    if (finalUsage != null) {
+      yield AiChatStreamEvent(usage: finalUsage);
+    }
 
     if (full.isEmpty) {
       throw const AiEmptyResultException();
@@ -186,7 +201,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     List<AiChatTurn> history,
     String? studyPreference,
   ) {
-    final trimmed = _trimHistory(history);
+    final trimmed = trimHistoryPreservingDocument(history);
     final messages = <Map<String, String>>[
       {
         'role': 'system',
@@ -209,17 +224,67 @@ class HttpDeepSeekChatService implements AiChatTransport {
     return messages;
   }
 
-  List<AiChatTurn> _trimHistory(List<AiChatTurn> history) {
+  /// Public for tests: keep system/document prefix, drop oldest Q/A first.
+  static List<AiChatTurn> trimHistoryPreservingDocument(
+    List<AiChatTurn> history, {
+    int maxMessages = maxContextMessages,
+    int maxChars = maxContextChars,
+  }) {
     if (history.isEmpty) return history;
-    var slice = history.length > maxContextMessages
-        ? history.sublist(history.length - maxContextMessages)
-        : List<AiChatTurn>.of(history);
-    var total = slice.fold<int>(0, (sum, t) => sum + t.content.length);
-    while (slice.length > 2 && total > maxContextChars) {
-      total -= slice.first.content.length;
-      slice = slice.sublist(1);
+
+    final pinned = <AiChatTurn>[];
+    final rest = <AiChatTurn>[];
+    var seenDocument = false;
+    for (final turn in history) {
+      if (turn.role == AiChatRole.system) {
+        pinned.add(turn);
+        continue;
+      }
+      if (!seenDocument &&
+          turn.role == AiChatRole.user &&
+          (turn.pinForCache || _looksLikeDocumentTurn(turn.content))) {
+        pinned.add(turn);
+        seenDocument = true;
+        continue;
+      }
+      // First user turn is treated as the document/context anchor when no
+      // explicit pin is present (covers pasted study material).
+      if (!seenDocument && turn.role == AiChatRole.user) {
+        pinned.add(turn);
+        seenDocument = true;
+        continue;
+      }
+      rest.add(turn);
     }
-    return slice;
+
+    var conversational = List<AiChatTurn>.of(rest);
+    var total =
+        pinned.fold<int>(0, (s, t) => s + t.content.length) +
+        conversational.fold<int>(0, (s, t) => s + t.content.length);
+
+    // Prefer dropping conversational turns; never drop pinned prefix while
+    // any conversational turn remains.
+    while (conversational.isNotEmpty &&
+        (pinned.length + conversational.length > maxMessages ||
+            total > maxChars)) {
+      final removed = conversational.removeAt(0);
+      total -= removed.content.length;
+      if (removed.role == AiChatRole.user &&
+          conversational.isNotEmpty &&
+          conversational.first.role == AiChatRole.assistant) {
+        total -= conversational.first.content.length;
+        conversational.removeAt(0);
+      }
+    }
+
+    return [...pinned, ...conversational];
+  }
+
+  static bool _looksLikeDocumentTurn(String content) {
+    return content.contains('Attached Study Vault context:') ||
+        content.contains('SELECTED TEXT:') ||
+        content.contains('SOURCE MATERIAL:') ||
+        content.contains('--- Page ');
   }
 
   Map<String, dynamic> _thinkingPayload(AiThinkingMode mode) {
@@ -235,7 +300,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     };
   }
 
-  Future<String> _postChat({
+  Future<({String text, AiTokenUsage? usage})> _postChat({
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
@@ -284,11 +349,14 @@ class HttpDeepSeekChatService implements AiChatTransport {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) throw const AiMalformedOutputException();
-      logDeepSeekUsage(
+      final durationMs = DateTime.now().difference(started).inMilliseconds;
+      final usage = AiTokenUsage.fromProviderResponse(
+        decoded,
         model: model,
-        usage: DeepSeekPromptUsage.fromResponse(decoded),
-        durationMs: DateTime.now().difference(started).inMilliseconds,
+        provider: 'deepseek',
+        durationMs: durationMs,
       );
+      logDeepSeekUsage(model: model, usage: usage, durationMs: durationMs);
       final choices = decoded['choices'];
       if (choices is! List || choices.isEmpty) {
         throw const AiEmptyResultException();
@@ -301,7 +369,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
       if (content is! String || content.trim().isEmpty) {
         throw const AiEmptyResultException();
       }
-      return content.trim();
+      return (text: content.trim(), usage: usage);
     } on AiException {
       rethrow;
     } on Object {
@@ -462,7 +530,7 @@ class RoutingAiChatTransport implements AiChatTransport {
   }
 
   @override
-  Stream<String> streamComplete({
+  Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),

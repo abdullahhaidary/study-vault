@@ -143,11 +143,62 @@ Return concise but educational answers.
     _ => true,
   };
 
+  /// Latest user turn for DeepSeek multi-turn (question / task only).
+  ///
+  /// Document content lives in a separate earlier user message so this can
+  /// change without busting the reusable prefix.
+  static String deepSeekLatestUserContent(AiStudyRequest request) {
+    return switch (request.action) {
+      AiStudyAction.askAi ||
+      AiStudyAction.customPrompt => (request.customPrompt ?? '').trim(),
+      _ => _taskBlock(request),
+    };
+  }
+
+  /// Real multi-turn OpenAI-style messages for DeepSeek prefix caching.
+  ///
+  /// Order: system → stable document → prior Q/A → latest user turn.
+  static List<Map<String, String>> deepSeekMessages(AiStudyRequest request) {
+    final messages = <Map<String, String>>[
+      {
+        'role': 'system',
+        'content': systemPreamble(
+          language: preambleLanguage(request),
+          userPreference: request.userPreference,
+        ),
+      },
+      {'role': 'user', 'content': _sourceBlock(request)},
+    ];
+
+    if (_includeConversation(request.action) &&
+        request.conversation.isNotEmpty) {
+      const maxTurns = 8;
+      final turns = request.conversation.length > maxTurns
+          ? request.conversation.sublist(request.conversation.length - maxTurns)
+          : request.conversation;
+      for (final turn in turns) {
+        final q = turn.userMessage.trim();
+        final a = turn.assistantMarkdown.trim();
+        if (q.isNotEmpty) {
+          messages.add({'role': 'user', 'content': q});
+        }
+        if (a.isNotEmpty) {
+          messages.add({'role': 'assistant', 'content': a});
+        }
+      }
+    }
+
+    final latest = deepSeekLatestUserContent(request);
+    if (latest.isNotEmpty) {
+      messages.add({'role': 'user', 'content': latest});
+    }
+    return messages;
+  }
+
   /// User-message body: document + prior turns + current task/question.
   ///
-  /// DeepSeek context caching matches from token 0 of the concatenated
-  /// messages. Keep reusable PDF text at the front of this body; put the
-  /// changing question last.
+  /// Used by Gemini (single-content) and as a fallback. DeepSeek prefers
+  /// [deepSeekMessages] for follow-ups.
   static String userContentForRequest(AiStudyRequest request) {
     final buffer = StringBuffer()
       ..writeln(_sourceBlock(request))

@@ -10,6 +10,7 @@ import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
+import '../domain/ai_token_usage.dart';
 import '../domain/gemini_model_registry.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
@@ -121,26 +122,34 @@ class GeminiAiService implements AiService {
     };
 
     final started = DateTime.now();
-    final text = await _postGenerate(
+    final completion = await _postGenerate(
       model: model,
       apiKey: key,
       body: body,
       timeout: timeout,
     );
+    final durationMs = DateTime.now().difference(started).inMilliseconds;
+    final usage = (completion.usage ?? const AiTokenUsage()).copyWith(
+      model: model,
+      provider: 'gemini',
+      durationMs: durationMs,
+    );
+    final text = completion.text;
     assert(() {
       // Never log source/PDF content or API keys — action + timing only.
       // ignore: avoid_print
       print(
         'AI ${request.action.name} model=$model ok in '
-        '${DateTime.now().difference(started).inMilliseconds}ms '
+        '${durationMs}ms '
         'chars=${request.effectiveSourceLength} responseChars=${text.length}'
         '${request.hasPageImage ? ' imageBytes=${request.image!.bytes.length}' : ''}',
       );
+      logAiTokenUsage(usage.hasAnyMetric ? usage : null);
       return true;
     }());
 
     try {
-      return switch (request.action) {
+      final parsed = switch (request.action) {
         AiStudyAction.explain ||
         AiStudyAction.simplify ||
         AiStudyAction.rephrase ||
@@ -167,6 +176,13 @@ class GeminiAiService implements AiService {
           expectedCount: request.questionCount,
           requestedType: request.questionType,
         ),
+      };
+      final attached = usage.hasAnyMetric ? usage : null;
+      return switch (parsed) {
+        AiTextResult r => r.withUsage(attached),
+        AiAnnotationDraft r => r.withUsage(attached),
+        AiFlashcardsResult r => r.withUsage(attached),
+        AiQuestionsResult r => r.withUsage(attached),
       };
     } on AiException catch (e) {
       assert(() {
@@ -239,7 +255,7 @@ class GeminiAiService implements AiService {
     }
   }
 
-  Future<String> _postGenerate({
+  Future<({String text, AiTokenUsage? usage})> _postGenerate({
     required String model,
     required String apiKey,
     required Map<String, dynamic> body,
@@ -345,7 +361,12 @@ class GeminiAiService implements AiService {
       }
       final text = buffer.toString().trim();
       if (text.isEmpty) throw const AiEmptyResultException();
-      return text;
+      final usage = AiTokenUsage.fromGeminiResponse(
+        decoded,
+        model: model,
+        provider: 'gemini',
+      );
+      return (text: text, usage: usage);
     } on AiException {
       rethrow;
     } on Object {

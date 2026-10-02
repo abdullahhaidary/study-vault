@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
-import 'package:study_vault/features/ai_assistant/domain/deepseek_usage.dart';
 
 /// Three consecutive DeepSeek requests with a shared PDF-sized prefix.
 ///
@@ -46,6 +46,7 @@ void main() async {
 
   final client = http.Client();
   try {
+    List<Map<String, String>>? previousPrefix;
     for (var i = 0; i < questions.length; i++) {
       final request = AiStudyRequest(
         action: AiStudyAction.askAi,
@@ -54,20 +55,22 @@ void main() async {
         language: AiLanguage.english,
         customPrompt: questions[i],
       );
+      final messages = AiPromptBuilder.deepSeekMessages(request);
+      final prefix = messages.take(2).toList(growable: false);
+      if (previousPrefix != null) {
+        if (previousPrefix[0]['content'] != prefix[0]['content'] ||
+            previousPrefix[1]['content'] != prefix[1]['content']) {
+          stderr.writeln(
+            'ERROR: system+document prefix changed between requests.',
+          );
+          exit(2);
+        }
+      }
+      previousPrefix = prefix;
+
       final body = {
         'model': model,
-        'messages': [
-          {
-            'role': 'system',
-            'content': AiPromptBuilder.systemPreamble(
-              language: request.language,
-            ),
-          },
-          {
-            'role': 'user',
-            'content': AiPromptBuilder.userContentForRequest(request),
-          },
-        ],
+        'messages': messages,
         'max_tokens': 256,
         'stream': false,
         'thinking': {'type': 'disabled'},
@@ -84,19 +87,30 @@ void main() async {
       );
       final ms = DateTime.now().difference(started).inMilliseconds;
 
-      stdout.writeln('--- Request ${i + 1}: ${questions[i]} ---');
+      stdout.writeln('REQUEST ${i + 1}');
+      stdout.writeln('Question: ${questions[i]}');
       stdout.writeln('HTTP ${response.statusCode} (${ms}ms)');
+      stdout.writeln('Roles: ${messages.map((m) => m['role']).join(' → ')}');
       if (response.statusCode < 200 || response.statusCode >= 300) {
         stdout.writeln('Error body omitted (may contain provider details).');
+        stdout.writeln();
         continue;
       }
       final decoded = jsonDecode(response.body);
-      final usage = DeepSeekPromptUsage.fromResponse(decoded);
+      final usage = AiTokenUsage.fromProviderResponse(
+        decoded,
+        model: model,
+        provider: 'deepseek',
+        durationMs: ms,
+      );
+      final ratio = usage?.cacheHitRatio;
+      stdout.writeln('Prompt: ${usage?.promptTokens ?? 'n/a'}');
+      stdout.writeln('Cache hit: ${usage?.cacheHitTokens ?? 'n/a'}');
+      stdout.writeln('Cache miss: ${usage?.cacheMissTokens ?? 'n/a'}');
+      stdout.writeln('Completion: ${usage?.completionTokens ?? 'n/a'}');
+      stdout.writeln('Total: ${usage?.totalTokens ?? 'n/a'}');
       stdout.writeln(
-        (usage ?? const DeepSeekPromptUsage()).formatLog(
-          model: model,
-          durationMs: ms,
-        ),
+        'Hit ratio: ${ratio == null ? 'n/a' : '${ratio.toStringAsFixed(1)}%'}',
       );
       stdout.writeln();
     }

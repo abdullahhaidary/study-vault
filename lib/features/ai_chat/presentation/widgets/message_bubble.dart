@@ -4,6 +4,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../../../core/text/text_direction_utils.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../ai_assistant/domain/ai_token_usage.dart';
+import '../../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import '../../domain/ai_chat_models.dart';
 
 /// User / assistant message bubble with markdown + BiDi.
@@ -16,6 +18,7 @@ class MessageBubble extends StatelessWidget {
     this.attachments = const [],
     this.onRetry,
     this.isStreaming = false,
+    this.usage,
   });
 
   final String role;
@@ -24,6 +27,7 @@ class MessageBubble extends StatelessWidget {
   final List<AiContextItem> attachments;
   final VoidCallback? onRetry;
   final bool isStreaming;
+  final AiTokenUsage? usage;
 
   bool get _isUser => role == AiChatRole.user;
   bool get _isError => status == AiChatMessageStatus.error;
@@ -137,6 +141,14 @@ class MessageBubble extends StatelessWidget {
                         label: const Text('Retry'),
                       ),
                     ),
+                  ],
+                  if (!_isUser &&
+                      !isStreaming &&
+                      !_isError &&
+                      usage != null &&
+                      usage!.hasAnyMetric) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    AiUsageIndicator(usage: usage!),
                   ],
                 ],
               ),
