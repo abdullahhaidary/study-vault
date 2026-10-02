@@ -8,6 +8,8 @@ import '../../../core/widgets/auto_direction_text.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/services/annotation_ai_context_builder.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../notes/data/notes_providers.dart';
@@ -515,6 +517,12 @@ class StudyPinReaderPanel extends ConsumerWidget {
                     fontStyle: FontStyle.italic,
                   ),
                 ),
+              const SizedBox(height: 16),
+              AiDiscussionsSection(
+                kind: AiContextKind.studyPin,
+                id: pin.id,
+                dense: true,
+              ),
             ],
           ),
         ),

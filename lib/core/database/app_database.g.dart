@@ -9681,6 +9681,433 @@ class AiChatMessagesCompanion extends UpdateCompanion<AiChatMessage> {
   }
 }
 
+class $AiMessageContextRefsTable extends AiMessageContextRefs
+    with TableInfo<$AiMessageContextRefsTable, AiMessageContextRef> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AiMessageContextRefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
+  @override
+  late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
+    'message_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES ai_chat_messages (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _chatIdMeta = const VerificationMeta('chatId');
+  @override
+  late final GeneratedColumn<String> chatId = GeneratedColumn<String>(
+    'chat_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES ai_chats (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _contextTypeMeta = const VerificationMeta(
+    'contextType',
+  );
+  @override
+  late final GeneratedColumn<String> contextType = GeneratedColumn<String>(
+    'context_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contextIdMeta = const VerificationMeta(
+    'contextId',
+  );
+  @override
+  late final GeneratedColumn<String> contextId = GeneratedColumn<String>(
+    'context_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    messageId,
+    chatId,
+    contextType,
+    contextId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ai_message_context_refs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AiMessageContextRef> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('message_id')) {
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['message_id']!, _messageIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_messageIdMeta);
+    }
+    if (data.containsKey('chat_id')) {
+      context.handle(
+        _chatIdMeta,
+        chatId.isAcceptableOrUnknown(data['chat_id']!, _chatIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chatIdMeta);
+    }
+    if (data.containsKey('context_type')) {
+      context.handle(
+        _contextTypeMeta,
+        contextType.isAcceptableOrUnknown(
+          data['context_type']!,
+          _contextTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contextTypeMeta);
+    }
+    if (data.containsKey('context_id')) {
+      context.handle(
+        _contextIdMeta,
+        contextId.isAcceptableOrUnknown(data['context_id']!, _contextIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contextIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {messageId, contextType, contextId},
+  ];
+  @override
+  AiMessageContextRef map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AiMessageContextRef(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}message_id'],
+      )!,
+      chatId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chat_id'],
+      )!,
+      contextType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context_type'],
+      )!,
+      contextId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AiMessageContextRefsTable createAlias(String alias) {
+    return $AiMessageContextRefsTable(attachedDatabase, alias);
+  }
+}
+
+class AiMessageContextRef extends DataClass
+    implements Insertable<AiMessageContextRef> {
+  final String id;
+  final String messageId;
+  final String chatId;
+
+  /// [AiContextKind.storageValue]: lesson | material | note | studyPin
+  final String contextType;
+  final String contextId;
+  final DateTime createdAt;
+  const AiMessageContextRef({
+    required this.id,
+    required this.messageId,
+    required this.chatId,
+    required this.contextType,
+    required this.contextId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['message_id'] = Variable<String>(messageId);
+    map['chat_id'] = Variable<String>(chatId);
+    map['context_type'] = Variable<String>(contextType);
+    map['context_id'] = Variable<String>(contextId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AiMessageContextRefsCompanion toCompanion(bool nullToAbsent) {
+    return AiMessageContextRefsCompanion(
+      id: Value(id),
+      messageId: Value(messageId),
+      chatId: Value(chatId),
+      contextType: Value(contextType),
+      contextId: Value(contextId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AiMessageContextRef.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AiMessageContextRef(
+      id: serializer.fromJson<String>(json['id']),
+      messageId: serializer.fromJson<String>(json['messageId']),
+      chatId: serializer.fromJson<String>(json['chatId']),
+      contextType: serializer.fromJson<String>(json['contextType']),
+      contextId: serializer.fromJson<String>(json['contextId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'messageId': serializer.toJson<String>(messageId),
+      'chatId': serializer.toJson<String>(chatId),
+      'contextType': serializer.toJson<String>(contextType),
+      'contextId': serializer.toJson<String>(contextId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AiMessageContextRef copyWith({
+    String? id,
+    String? messageId,
+    String? chatId,
+    String? contextType,
+    String? contextId,
+    DateTime? createdAt,
+  }) => AiMessageContextRef(
+    id: id ?? this.id,
+    messageId: messageId ?? this.messageId,
+    chatId: chatId ?? this.chatId,
+    contextType: contextType ?? this.contextType,
+    contextId: contextId ?? this.contextId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AiMessageContextRef copyWithCompanion(AiMessageContextRefsCompanion data) {
+    return AiMessageContextRef(
+      id: data.id.present ? data.id.value : this.id,
+      messageId: data.messageId.present ? data.messageId.value : this.messageId,
+      chatId: data.chatId.present ? data.chatId.value : this.chatId,
+      contextType: data.contextType.present
+          ? data.contextType.value
+          : this.contextType,
+      contextId: data.contextId.present ? data.contextId.value : this.contextId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiMessageContextRef(')
+          ..write('id: $id, ')
+          ..write('messageId: $messageId, ')
+          ..write('chatId: $chatId, ')
+          ..write('contextType: $contextType, ')
+          ..write('contextId: $contextId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, messageId, chatId, contextType, contextId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AiMessageContextRef &&
+          other.id == this.id &&
+          other.messageId == this.messageId &&
+          other.chatId == this.chatId &&
+          other.contextType == this.contextType &&
+          other.contextId == this.contextId &&
+          other.createdAt == this.createdAt);
+}
+
+class AiMessageContextRefsCompanion
+    extends UpdateCompanion<AiMessageContextRef> {
+  final Value<String> id;
+  final Value<String> messageId;
+  final Value<String> chatId;
+  final Value<String> contextType;
+  final Value<String> contextId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AiMessageContextRefsCompanion({
+    this.id = const Value.absent(),
+    this.messageId = const Value.absent(),
+    this.chatId = const Value.absent(),
+    this.contextType = const Value.absent(),
+    this.contextId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AiMessageContextRefsCompanion.insert({
+    required String id,
+    required String messageId,
+    required String chatId,
+    required String contextType,
+    required String contextId,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       messageId = Value(messageId),
+       chatId = Value(chatId),
+       contextType = Value(contextType),
+       contextId = Value(contextId),
+       createdAt = Value(createdAt);
+  static Insertable<AiMessageContextRef> custom({
+    Expression<String>? id,
+    Expression<String>? messageId,
+    Expression<String>? chatId,
+    Expression<String>? contextType,
+    Expression<String>? contextId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (messageId != null) 'message_id': messageId,
+      if (chatId != null) 'chat_id': chatId,
+      if (contextType != null) 'context_type': contextType,
+      if (contextId != null) 'context_id': contextId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AiMessageContextRefsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? messageId,
+    Value<String>? chatId,
+    Value<String>? contextType,
+    Value<String>? contextId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AiMessageContextRefsCompanion(
+      id: id ?? this.id,
+      messageId: messageId ?? this.messageId,
+      chatId: chatId ?? this.chatId,
+      contextType: contextType ?? this.contextType,
+      contextId: contextId ?? this.contextId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (messageId.present) {
+      map['message_id'] = Variable<String>(messageId.value);
+    }
+    if (chatId.present) {
+      map['chat_id'] = Variable<String>(chatId.value);
+    }
+    if (contextType.present) {
+      map['context_type'] = Variable<String>(contextType.value);
+    }
+    if (contextId.present) {
+      map['context_id'] = Variable<String>(contextId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiMessageContextRefsCompanion(')
+          ..write('id: $id, ')
+          ..write('messageId: $messageId, ')
+          ..write('chatId: $chatId, ')
+          ..write('contextType: $contextType, ')
+          ..write('contextId: $contextId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AnnotationAiGenerationsTable extends AnnotationAiGenerations
     with TableInfo<$AnnotationAiGenerationsTable, AnnotationAiGeneration> {
   @override
@@ -14619,6 +15046,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FlashcardsTable flashcards = $FlashcardsTable(this);
   late final $AiChatsTable aiChats = $AiChatsTable(this);
   late final $AiChatMessagesTable aiChatMessages = $AiChatMessagesTable(this);
+  late final $AiMessageContextRefsTable aiMessageContextRefs =
+      $AiMessageContextRefsTable(this);
   late final $AnnotationAiGenerationsTable annotationAiGenerations =
       $AnnotationAiGenerationsTable(this);
   late final $QuestionSetsTable questionSets = $QuestionSetsTable(this);
@@ -14649,6 +15078,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     flashcards,
     aiChats,
     aiChatMessages,
+    aiMessageContextRefs,
     annotationAiGenerations,
     questionSets,
     quizQuestions,
@@ -14720,6 +15150,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('ai_chat_messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'ai_chat_messages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('ai_message_context_refs', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'ai_chats',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('ai_message_context_refs', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -23246,6 +23690,31 @@ final class $$AiChatsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $AiMessageContextRefsTable,
+    List<AiMessageContextRef>
+  >
+  _aiMessageContextRefsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.aiMessageContextRefs,
+        aliasName: 'ai_chats__id__ai_message_context_refs__chat_id',
+      );
+
+  $$AiMessageContextRefsTableProcessedTableManager
+  get aiMessageContextRefsRefs {
+    final manager = $$AiMessageContextRefsTableTableManager(
+      $_db,
+      $_db.aiMessageContextRefs,
+    ).filter((f) => f.chatId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _aiMessageContextRefsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AiChatsTableFilterComposer
@@ -23313,6 +23782,31 @@ class $$AiChatsTableFilterComposer
           }) => $$AiChatMessagesTableFilterComposer(
             $db: $db,
             $table: $db.aiChatMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> aiMessageContextRefsRefs(
+    Expression<bool> Function($$AiMessageContextRefsTableFilterComposer f) f,
+  ) {
+    final $$AiMessageContextRefsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.aiMessageContextRefs,
+      getReferencedColumn: (t) => t.chatId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiMessageContextRefsTableFilterComposer(
+            $db: $db,
+            $table: $db.aiMessageContextRefs,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -23434,6 +23928,32 @@ class $$AiChatsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> aiMessageContextRefsRefs<T extends Object>(
+    Expression<T> Function($$AiMessageContextRefsTableAnnotationComposer a) f,
+  ) {
+    final $$AiMessageContextRefsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.aiMessageContextRefs,
+          getReferencedColumn: (t) => t.chatId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AiMessageContextRefsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.aiMessageContextRefs,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AiChatsTableTableManager
@@ -23449,7 +23969,10 @@ class $$AiChatsTableTableManager
           $$AiChatsTableUpdateCompanionBuilder,
           (AiChat, $$AiChatsTableReferences),
           AiChat,
-          PrefetchHooks Function({bool aiChatMessagesRefs})
+          PrefetchHooks Function({
+            bool aiChatMessagesRefs,
+            bool aiMessageContextRefsRefs,
+          })
         > {
   $$AiChatsTableTableManager(_$AppDatabase db, $AiChatsTable table)
     : super(
@@ -23514,37 +24037,63 @@ class $$AiChatsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({aiChatMessagesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (aiChatMessagesRefs) db.aiChatMessages,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (aiChatMessagesRefs)
-                    await $_getPrefetchedData<
-                      AiChat,
-                      $AiChatsTable,
-                      AiChatMessage
-                    >(
-                      currentTable: table,
-                      referencedTable: $$AiChatsTableReferences
-                          ._aiChatMessagesRefsTable(db),
-                      managerFromTypedResult: (p0) => $$AiChatsTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).aiChatMessagesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.chatId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({aiChatMessagesRefs = false, aiMessageContextRefsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (aiChatMessagesRefs) db.aiChatMessages,
+                    if (aiMessageContextRefsRefs) db.aiMessageContextRefs,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (aiChatMessagesRefs)
+                        await $_getPrefetchedData<
+                          AiChat,
+                          $AiChatsTable,
+                          AiChatMessage
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AiChatsTableReferences
+                              ._aiChatMessagesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AiChatsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).aiChatMessagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.chatId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (aiMessageContextRefsRefs)
+                        await $_getPrefetchedData<
+                          AiChat,
+                          $AiChatsTable,
+                          AiMessageContextRef
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AiChatsTableReferences
+                              ._aiMessageContextRefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AiChatsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).aiMessageContextRefsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.chatId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -23561,7 +24110,10 @@ typedef $$AiChatsTableProcessedTableManager =
       $$AiChatsTableUpdateCompanionBuilder,
       (AiChat, $$AiChatsTableReferences),
       AiChat,
-      PrefetchHooks Function({bool aiChatMessagesRefs})
+      PrefetchHooks Function({
+        bool aiChatMessagesRefs,
+        bool aiMessageContextRefsRefs,
+      })
     >;
 typedef $$AiChatMessagesTableCreateCompanionBuilder =
     AiChatMessagesCompanion Function({
@@ -23624,6 +24176,31 @@ final class $$AiChatMessagesTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $AiMessageContextRefsTable,
+    List<AiMessageContextRef>
+  >
+  _aiMessageContextRefsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.aiMessageContextRefs,
+        aliasName: 'ai_chat_messages__id__ai_message_context_refs__message_id',
+      );
+
+  $$AiMessageContextRefsTableProcessedTableManager
+  get aiMessageContextRefsRefs {
+    final manager = $$AiMessageContextRefsTableTableManager(
+      $_db,
+      $_db.aiMessageContextRefs,
+    ).filter((f) => f.messageId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _aiMessageContextRefsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -23728,6 +24305,31 @@ class $$AiChatMessagesTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> aiMessageContextRefsRefs(
+    Expression<bool> Function($$AiMessageContextRefsTableFilterComposer f) f,
+  ) {
+    final $$AiMessageContextRefsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.aiMessageContextRefs,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiMessageContextRefsTableFilterComposer(
+            $db: $db,
+            $table: $db.aiMessageContextRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -23923,6 +24525,32 @@ class $$AiChatMessagesTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> aiMessageContextRefsRefs<T extends Object>(
+    Expression<T> Function($$AiMessageContextRefsTableAnnotationComposer a) f,
+  ) {
+    final $$AiMessageContextRefsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.aiMessageContextRefs,
+          getReferencedColumn: (t) => t.messageId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$AiMessageContextRefsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.aiMessageContextRefs,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AiChatMessagesTableTableManager
@@ -23938,7 +24566,7 @@ class $$AiChatMessagesTableTableManager
           $$AiChatMessagesTableUpdateCompanionBuilder,
           (AiChatMessage, $$AiChatMessagesTableReferences),
           AiChatMessage,
-          PrefetchHooks Function({bool chatId})
+          PrefetchHooks Function({bool chatId, bool aiMessageContextRefsRefs})
         > {
   $$AiChatMessagesTableTableManager(
     _$AppDatabase db,
@@ -24033,7 +24661,465 @@ class $$AiChatMessagesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({chatId = false}) {
+          prefetchHooksCallback:
+              ({chatId = false, aiMessageContextRefsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (aiMessageContextRefsRefs) db.aiMessageContextRefs,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (chatId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.chatId,
+                                    referencedTable:
+                                        $$AiChatMessagesTableReferences
+                                            ._chatIdTable(db),
+                                    referencedColumn:
+                                        $$AiChatMessagesTableReferences
+                                            ._chatIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (aiMessageContextRefsRefs)
+                        await $_getPrefetchedData<
+                          AiChatMessage,
+                          $AiChatMessagesTable,
+                          AiMessageContextRef
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AiChatMessagesTableReferences
+                              ._aiMessageContextRefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AiChatMessagesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).aiMessageContextRefsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.messageId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AiChatMessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AiChatMessagesTable,
+      AiChatMessage,
+      $$AiChatMessagesTableFilterComposer,
+      $$AiChatMessagesTableOrderingComposer,
+      $$AiChatMessagesTableAnnotationComposer,
+      $$AiChatMessagesTableCreateCompanionBuilder,
+      $$AiChatMessagesTableUpdateCompanionBuilder,
+      (AiChatMessage, $$AiChatMessagesTableReferences),
+      AiChatMessage,
+      PrefetchHooks Function({bool chatId, bool aiMessageContextRefsRefs})
+    >;
+typedef $$AiMessageContextRefsTableCreateCompanionBuilder =
+    AiMessageContextRefsCompanion Function({
+      required String id,
+      required String messageId,
+      required String chatId,
+      required String contextType,
+      required String contextId,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$AiMessageContextRefsTableUpdateCompanionBuilder =
+    AiMessageContextRefsCompanion Function({
+      Value<String> id,
+      Value<String> messageId,
+      Value<String> chatId,
+      Value<String> contextType,
+      Value<String> contextId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$AiMessageContextRefsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $AiMessageContextRefsTable,
+          AiMessageContextRef
+        > {
+  $$AiMessageContextRefsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AiChatMessagesTable _messageIdTable(_$AppDatabase db) => db
+      .aiChatMessages
+      .createAlias('ai_message_context_refs__message_id__ai_chat_messages__id');
+
+  $$AiChatMessagesTableProcessedTableManager get messageId {
+    final $_column = $_itemColumn<String>('message_id')!;
+
+    final manager = $$AiChatMessagesTableTableManager(
+      $_db,
+      $_db.aiChatMessages,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AiChatsTable _chatIdTable(_$AppDatabase db) =>
+      db.aiChats.createAlias('ai_message_context_refs__chat_id__ai_chats__id');
+
+  $$AiChatsTableProcessedTableManager get chatId {
+    final $_column = $_itemColumn<String>('chat_id')!;
+
+    final manager = $$AiChatsTableTableManager(
+      $_db,
+      $_db.aiChats,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_chatIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AiMessageContextRefsTableFilterComposer
+    extends Composer<_$AppDatabase, $AiMessageContextRefsTable> {
+  $$AiMessageContextRefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contextType => $composableBuilder(
+    column: $table.contextType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contextId => $composableBuilder(
+    column: $table.contextId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AiChatMessagesTableFilterComposer get messageId {
+    final $$AiChatMessagesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.aiChatMessages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatMessagesTableFilterComposer(
+            $db: $db,
+            $table: $db.aiChatMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AiChatsTableFilterComposer get chatId {
+    final $$AiChatsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chatId,
+      referencedTable: $db.aiChats,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatsTableFilterComposer(
+            $db: $db,
+            $table: $db.aiChats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AiMessageContextRefsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AiMessageContextRefsTable> {
+  $$AiMessageContextRefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contextType => $composableBuilder(
+    column: $table.contextType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contextId => $composableBuilder(
+    column: $table.contextId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AiChatMessagesTableOrderingComposer get messageId {
+    final $$AiChatMessagesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.aiChatMessages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatMessagesTableOrderingComposer(
+            $db: $db,
+            $table: $db.aiChatMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AiChatsTableOrderingComposer get chatId {
+    final $$AiChatsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chatId,
+      referencedTable: $db.aiChats,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatsTableOrderingComposer(
+            $db: $db,
+            $table: $db.aiChats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AiMessageContextRefsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AiMessageContextRefsTable> {
+  $$AiMessageContextRefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get contextType => $composableBuilder(
+    column: $table.contextType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contextId =>
+      $composableBuilder(column: $table.contextId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$AiChatMessagesTableAnnotationComposer get messageId {
+    final $$AiChatMessagesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.aiChatMessages,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatMessagesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.aiChatMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AiChatsTableAnnotationComposer get chatId {
+    final $$AiChatsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.chatId,
+      referencedTable: $db.aiChats,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AiChatsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.aiChats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AiMessageContextRefsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AiMessageContextRefsTable,
+          AiMessageContextRef,
+          $$AiMessageContextRefsTableFilterComposer,
+          $$AiMessageContextRefsTableOrderingComposer,
+          $$AiMessageContextRefsTableAnnotationComposer,
+          $$AiMessageContextRefsTableCreateCompanionBuilder,
+          $$AiMessageContextRefsTableUpdateCompanionBuilder,
+          (AiMessageContextRef, $$AiMessageContextRefsTableReferences),
+          AiMessageContextRef,
+          PrefetchHooks Function({bool messageId, bool chatId})
+        > {
+  $$AiMessageContextRefsTableTableManager(
+    _$AppDatabase db,
+    $AiMessageContextRefsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AiMessageContextRefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AiMessageContextRefsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AiMessageContextRefsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> messageId = const Value.absent(),
+                Value<String> chatId = const Value.absent(),
+                Value<String> contextType = const Value.absent(),
+                Value<String> contextId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AiMessageContextRefsCompanion(
+                id: id,
+                messageId: messageId,
+                chatId: chatId,
+                contextType: contextType,
+                contextId: contextId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String messageId,
+                required String chatId,
+                required String contextType,
+                required String contextId,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AiMessageContextRefsCompanion.insert(
+                id: id,
+                messageId: messageId,
+                chatId: chatId,
+                contextType: contextType,
+                contextId: contextId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AiMessageContextRefsTable, AiMessageContextRef>(
+                    table,
+                  ),
+                  $$AiMessageContextRefsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({messageId = false, chatId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -24053,15 +25139,31 @@ class $$AiChatMessagesTableTableManager
                       dynamic
                     >
                   >(state) {
+                    if (messageId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.messageId,
+                                referencedTable:
+                                    $$AiMessageContextRefsTableReferences
+                                        ._messageIdTable(db),
+                                referencedColumn:
+                                    $$AiMessageContextRefsTableReferences
+                                        ._messageIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
                     if (chatId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
                                 currentColumn: table.chatId,
-                                referencedTable: $$AiChatMessagesTableReferences
-                                    ._chatIdTable(db),
+                                referencedTable:
+                                    $$AiMessageContextRefsTableReferences
+                                        ._chatIdTable(db),
                                 referencedColumn:
-                                    $$AiChatMessagesTableReferences
+                                    $$AiMessageContextRefsTableReferences
                                         ._chatIdTable(db)
                                         .id,
                               )
@@ -24079,19 +25181,19 @@ class $$AiChatMessagesTableTableManager
       );
 }
 
-typedef $$AiChatMessagesTableProcessedTableManager =
+typedef $$AiMessageContextRefsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $AiChatMessagesTable,
-      AiChatMessage,
-      $$AiChatMessagesTableFilterComposer,
-      $$AiChatMessagesTableOrderingComposer,
-      $$AiChatMessagesTableAnnotationComposer,
-      $$AiChatMessagesTableCreateCompanionBuilder,
-      $$AiChatMessagesTableUpdateCompanionBuilder,
-      (AiChatMessage, $$AiChatMessagesTableReferences),
-      AiChatMessage,
-      PrefetchHooks Function({bool chatId})
+      $AiMessageContextRefsTable,
+      AiMessageContextRef,
+      $$AiMessageContextRefsTableFilterComposer,
+      $$AiMessageContextRefsTableOrderingComposer,
+      $$AiMessageContextRefsTableAnnotationComposer,
+      $$AiMessageContextRefsTableCreateCompanionBuilder,
+      $$AiMessageContextRefsTableUpdateCompanionBuilder,
+      (AiMessageContextRef, $$AiMessageContextRefsTableReferences),
+      AiMessageContextRef,
+      PrefetchHooks Function({bool messageId, bool chatId})
     >;
 typedef $$AnnotationAiGenerationsTableCreateCompanionBuilder =
     AnnotationAiGenerationsCompanion Function({
@@ -28053,6 +29155,8 @@ class $AppDatabaseManager {
       $$AiChatsTableTableManager(_db, _db.aiChats);
   $$AiChatMessagesTableTableManager get aiChatMessages =>
       $$AiChatMessagesTableTableManager(_db, _db.aiChatMessages);
+  $$AiMessageContextRefsTableTableManager get aiMessageContextRefs =>
+      $$AiMessageContextRefsTableTableManager(_db, _db.aiMessageContextRefs);
   $$AnnotationAiGenerationsTableTableManager get annotationAiGenerations =>
       $$AnnotationAiGenerationsTableTableManager(
         _db,

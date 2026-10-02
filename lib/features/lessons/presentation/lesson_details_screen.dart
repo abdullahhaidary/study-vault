@@ -9,6 +9,8 @@ import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../ai_questions/presentation/question_sets_screen.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
@@ -257,6 +259,15 @@ class LessonDetailsScreen extends ConsumerWidget {
                     id: lessonId,
                     title: lesson.name,
                   ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: AppSpacing.md,
+                child: AiDiscussionsSection(
+                  kind: AiContextKind.lesson,
+                  id: lessonId,
                 ),
               ),
             ),

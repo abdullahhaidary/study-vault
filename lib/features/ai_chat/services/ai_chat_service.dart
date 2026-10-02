@@ -366,15 +366,14 @@ class AiChatService {
     }
   }
 
-  /// Retries after an error without duplicating the last user message.
+  /// Retries or regenerates the last turn without duplicating either side.
   Future<AiChatMessage> retryLast({required String chatId}) async {
     final messages = await db.getAiChatMessages(chatId);
     if (messages.isEmpty) {
       throw const AiServerException('Nothing to retry.');
     }
     final last = messages.last;
-    if (last.role == AiChatRole.assistant &&
-        last.status == AiChatMessageStatus.error) {
+    if (last.role == AiChatRole.assistant) {
       await db.deleteAiChatMessage(last.id);
     }
     final remaining = await db.getAiChatMessages(chatId);
@@ -394,6 +393,41 @@ class AiChatService {
       attachments: [
         for (final a in attachments)
           a.copyWith(clearPackedText: true, clearEmptyReason: true),
+      ],
+    );
+  }
+
+  /// Replaces a selected user turn and removes the now-invalid later branch.
+  Future<AiChatMessage> editAndResend({
+    required String chatId,
+    required String messageId,
+    required String userText,
+  }) async {
+    final text = userText.trim();
+    if (text.isEmpty) {
+      throw const AiServerException('Message is empty.');
+    }
+
+    final messages = await db.getAiChatMessages(chatId);
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index < 0 || messages[index].role != AiChatRole.user) {
+      throw const AiServerException('That message can no longer be edited.');
+    }
+
+    final original = messages[index];
+    final attachments = AiContextItem.decodeList(original.contextJson);
+    await db.transaction(() async {
+      for (final message in messages.skip(index).toList().reversed) {
+        await db.deleteAiChatMessage(message.id);
+      }
+    });
+
+    return sendMessage(
+      chatId: chatId,
+      userText: text,
+      attachments: [
+        for (final attachment in attachments)
+          attachment.copyWith(clearPackedText: true, clearEmptyReason: true),
       ],
     );
   }

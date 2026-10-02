@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/lesson_progress_providers.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -205,6 +207,40 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
+          ),
+          IconButton(
+            tooltip: 'AI Discussions',
+            onPressed: () async {
+              await showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                showDragHandle: true,
+                builder: (context) => DraggableScrollableSheet(
+                  expand: false,
+                  initialChildSize: 0.55,
+                  minChildSize: 0.35,
+                  maxChildSize: 0.9,
+                  builder: (context, controller) => Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: ListView(
+                      controller: controller,
+                      children: [
+                        Text(
+                          'AI Discussions',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        AiDiscussionsList(
+                          kind: AiContextKind.material,
+                          id: widget.resourceId,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.auto_awesome_outlined),
           ),
           IconButton(
             tooltip: 'Review Pins',

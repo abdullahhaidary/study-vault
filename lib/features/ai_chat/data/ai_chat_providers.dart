@@ -4,9 +4,13 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../domain/ai_chat_models.dart';
+import '../domain/referenced_ai_message.dart';
 import '../services/ai_chat_service.dart';
 import '../services/deepseek_chat_service.dart';
 import '../services/gemini_chat_service.dart';
+import '../services/chat_speech_service.dart';
+
+export '../services/ai_chat_navigation.dart';
 
 final geminiChatServiceProvider = Provider<AiChatTransport>((ref) {
   return HttpGeminiChatService(
@@ -30,6 +34,12 @@ final aiChatTransportProvider = Provider<AiChatTransport>((ref) {
   );
 });
 
+final chatSpeechServiceProvider = ChangeNotifierProvider<ChatSpeechService>((
+  ref,
+) {
+  return ChatSpeechService();
+});
+
 final aiChatServiceProvider = Provider<AiChatService>((ref) {
   return AiChatService(
     db: ref.watch(databaseProvider),
@@ -40,6 +50,9 @@ final aiChatServiceProvider = Provider<AiChatService>((ref) {
 
 /// Currently open conversation in the AI Chat tab (`null` = blank new chat).
 final activeAiChatIdProvider = StateProvider<String?>((ref) => null);
+
+/// Pending scroll/highlight target when opening Study AI from a reverse link.
+final aiChatFocusMessageIdProvider = StateProvider<String?>((ref) => null);
 
 final aiChatsProvider = StreamProvider<List<AiChat>>((ref) {
   return ref.watch(aiChatServiceProvider).watchChats();
@@ -68,3 +81,29 @@ final availableChatModelsProvider = FutureProvider<List<AiSelectableModel>>((
 ) async {
   return ref.watch(aiChatTransportProvider).listAvailableChatModels();
 });
+
+final referencedAiMessageRepositoryProvider =
+    Provider<ReferencedAiMessageRepository>((ref) {
+      return ReferencedAiMessageRepository(db: ref.watch(databaseProvider));
+    });
+
+typedef AiContextRefKey = ({AiContextKind kind, String id});
+
+final aiDiscussionsCountProvider = StreamProvider.family<int, AiContextRefKey>((
+  ref,
+  key,
+) {
+  return ref
+      .watch(referencedAiMessageRepositoryProvider)
+      .watchCount(kind: key.kind, id: key.id);
+});
+
+final aiDiscussionsGroupedProvider =
+    StreamProvider.family<List<ReferencedAiChatGroup>, AiContextRefKey>((
+      ref,
+      key,
+    ) {
+      return ref
+          .watch(referencedAiMessageRepositoryProvider)
+          .watchGrouped(kind: key.kind, id: key.id);
+    });

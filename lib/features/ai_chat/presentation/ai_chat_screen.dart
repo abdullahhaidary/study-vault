@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +15,15 @@ import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/presentation/ai_missing_key_dialog.dart';
+import '../../ai_assistant/presentation/widgets/voice_input_button.dart';
+import '../data/chat_appearance_providers.dart';
 import '../data/ai_chat_providers.dart';
+import '../domain/chat_appearance.dart';
 import '../domain/ai_chat_models.dart';
 import '../services/ai_chat_service.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import 'ai_chat_history_screen.dart';
+import 'chat_appearance_sheet.dart';
 import 'gemini_model_selector.dart';
 import 'widgets/chat_composer.dart';
 import 'widgets/chat_mention_picker.dart';
@@ -35,6 +41,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _composer = TextEditingController();
   final _composerKey = GlobalKey<ChatComposerState>();
   final _scrollController = ScrollController();
+  final Map<String, GlobalKey> _messageKeys = {};
   bool _sending = false;
   String? _streamingText;
   String? _errorBanner;
@@ -42,6 +49,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   bool _draftHydrated = false;
   List<AiContextItem> _attachments = [];
   bool _mentionPickerOpen = false;
+  String? _highlightMessageId;
+  Timer? _highlightTimer;
 
   @override
   void initState() {
@@ -52,10 +61,51 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   void dispose() {
     _draftTimer?.cancel();
+    _highlightTimer?.cancel();
     _composer.removeListener(_onComposerChanged);
     _composer.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scheduleFocusMessage(String messageId, List<AiChatMessage> messages) {
+    final index = messages.indexWhere((m) => m.id == messageId);
+    if (index < 0) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      // Rough jump so ListView.builder materializes the target item.
+      if (_scrollController.hasClients) {
+        final extent = _scrollController.position.maxScrollExtent;
+        final estimated = (index * 140.0).clamp(0.0, extent);
+        await _scrollController.animateTo(
+          estimated,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+
+      if (!mounted) return;
+      final key = _messageKeys[messageId];
+      final targetContext = key?.currentContext;
+      if (targetContext != null && targetContext.mounted) {
+        await Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: 0.18,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _highlightMessageId = messageId);
+      _highlightTimer?.cancel();
+      _highlightTimer = Timer(const Duration(milliseconds: 1800), () {
+        if (!mounted) return;
+        setState(() => _highlightMessageId = null);
+      });
+    });
   }
 
   void _onComposerChanged() {
@@ -259,6 +309,56 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
   }
 
+  Future<void> _editAndResend(AiChatMessage message) async {
+    if (_sending) return;
+    final edited = await showAiPromptDialog(
+      context,
+      title: 'Edit and resend',
+      hint: 'Update your message',
+      confirmLabel: 'Resend',
+      initialText: message.content,
+      minLines: 3,
+      maxLines: 8,
+    );
+    if (edited == null || !mounted) return;
+
+    setState(() {
+      _sending = true;
+      _errorBanner = null;
+    });
+    try {
+      await ref
+          .read(aiChatServiceProvider)
+          .editAndResend(
+            chatId: message.chatId,
+            messageId: message.id,
+            userText: edited,
+          );
+      _scrollToBottom();
+    } on AiException catch (error) {
+      if (mounted) setState(() => _errorBanner = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _errorBanner = 'Could not edit and resend that message.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _toggleReadAloud(String content) async {
+    try {
+      await ref.read(chatSpeechServiceProvider).toggle(content);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Text-to-speech is not available.')),
+      );
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
@@ -293,6 +393,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatId = ref.watch(activeAiChatIdProvider);
+    final appearance =
+        ref.watch(chatAppearanceProvider).valueOrNull ??
+        ChatAppearance.defaults;
+    final speech = ref.watch(chatSpeechServiceProvider);
     final settingsAsync = ref.watch(aiSettingsStateProvider);
     final chatAsync = chatId == null
         ? null
@@ -324,8 +428,36 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       if (previous == next) return;
       _draftHydrated = false;
       _composer.clear();
-      setState(() => _attachments = []);
+      setState(() {
+        _attachments = [];
+        _highlightMessageId = null;
+      });
+      _messageKeys.clear();
     });
+
+    ref.listen<String?>(aiChatFocusMessageIdProvider, (previous, next) {
+      if (next == null || next == previous) return;
+      final chatId = ref.read(activeAiChatIdProvider);
+      if (chatId == null) return;
+      final messages = ref.read(aiChatMessagesProvider(chatId)).valueOrNull;
+      if (messages == null) return;
+      ref.read(aiChatFocusMessageIdProvider.notifier).state = null;
+      _scheduleFocusMessage(next, messages);
+    });
+
+    // Apply pending focus once messages finish loading for the active chat.
+    final pendingFocus = ref.watch(aiChatFocusMessageIdProvider);
+    if (pendingFocus != null &&
+        chatId != null &&
+        messagesAsync?.hasValue == true) {
+      final messages = messagesAsync!.value!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (ref.read(aiChatFocusMessageIdProvider) != pendingFocus) return;
+        ref.read(aiChatFocusMessageIdProvider.notifier).state = null;
+        _scheduleFocusMessage(pendingFocus, messages);
+      });
+    }
 
     return Scaffold(
       drawerEdgeDragWidth: 72,
@@ -380,117 +512,234 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Customize chat',
+            onPressed: () => showChatAppearanceSheet(context),
+            icon: const Icon(Icons.palette_outlined),
+          ),
+          IconButton(
             tooltip: 'New chat',
             onPressed: _sending ? null : _newChat,
             icon: const Icon(Icons.edit_square),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (_errorBanner != null)
-            Material(
-              color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
-              child: ListTile(
-                dense: true,
-                title: Text(
-                  _errorBanner!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onErrorContainer,
+      body: _ChatBackground(
+        appearance: appearance,
+        child: Column(
+          children: [
+            if (_errorBanner != null)
+              Material(
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+                child: ListTile(
+                  dense: true,
+                  title: Text(
+                    _errorBanner!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _errorBanner = null),
                   ),
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _errorBanner = null),
-                ),
               ),
-            ),
-          Expanded(
-            child: chatId == null
-                ? _EmptyChat(onPrompt: _send)
-                : messagesAsync!.when(
-                    loading: () => const AppLoading(),
-                    error: (_, _) => const AppErrorState(
-                      message: 'Could not load messages.',
-                    ),
-                    data: (messages) {
-                      if (messages.isEmpty && _streamingText == null) {
-                        return _EmptyChat(onPrompt: _send);
-                      }
-                      final showStream =
-                          _streamingText != null &&
-                          (_streamingText!.isNotEmpty || _sending);
-                      return ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.md,
-                          AppSpacing.sm,
-                          AppSpacing.md,
-                          AppSpacing.md,
-                        ),
-                        itemCount: messages.length + (showStream ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (showStream && index == messages.length) {
+            Expanded(
+              child: chatId == null
+                  ? _EmptyChat(onPrompt: _send)
+                  : messagesAsync!.when(
+                      loading: () => const AppLoading(),
+                      error: (_, _) => const AppErrorState(
+                        message: 'Could not load messages.',
+                      ),
+                      data: (messages) {
+                        if (messages.isEmpty && _streamingText == null) {
+                          return _EmptyChat(onPrompt: _send);
+                        }
+                        final showStream =
+                            _streamingText != null &&
+                            (_streamingText!.isNotEmpty || _sending);
+                        final fullWidth =
+                            appearance.layout == ChatMessageLayout.fullWidth;
+                        return ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            fullWidth ? 0 : AppSpacing.md,
+                            AppSpacing.sm,
+                            fullWidth ? 0 : AppSpacing.md,
+                            AppSpacing.md,
+                          ),
+                          itemCount: messages.length + (showStream ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (showStream && index == messages.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm,
+                                ),
+                                child: MessageBubble(
+                                  role: AiChatRole.assistant,
+                                  content: _streamingText!,
+                                  isStreaming: true,
+                                  appearance: appearance,
+                                ),
+                              );
+                            }
+                            final message = messages[index];
+                            final isLastError =
+                                index == messages.length - 1 &&
+                                message.status == AiChatMessageStatus.error;
+                            final attachments = message.role == AiChatRole.user
+                                ? AiContextItem.decodeList(message.contextJson)
+                                : const <AiContextItem>[];
+                            final key = _messageKeys.putIfAbsent(
+                              message.id,
+                              GlobalKey.new,
+                            );
                             return Padding(
+                              key: key,
                               padding: const EdgeInsets.only(
                                 bottom: AppSpacing.sm,
                               ),
                               child: MessageBubble(
-                                role: AiChatRole.assistant,
-                                content: _streamingText!,
-                                isStreaming: true,
+                                role: message.role,
+                                content: message.content,
+                                status: message.status,
+                                attachments: attachments,
+                                onRetry: isLastError ? _retry : null,
+                                highlighted: message.id == _highlightMessageId,
+                                appearance: appearance,
+                                onEditAndResend:
+                                    message.role == AiChatRole.user && !_sending
+                                    ? () => _editAndResend(message)
+                                    : null,
+                                onRegenerate:
+                                    message.role == AiChatRole.assistant &&
+                                        index == messages.length - 1 &&
+                                        message.status !=
+                                            AiChatMessageStatus.error &&
+                                        !_sending
+                                    ? _retry
+                                    : null,
+                                onToggleReadAloud:
+                                    message.role == AiChatRole.assistant
+                                    ? () => _toggleReadAloud(message.content)
+                                    : null,
+                                isSpeaking: speech.isSpeaking(message.content),
+                                usage: message.role == AiChatRole.assistant
+                                    ? aiTokenUsageFromColumns(
+                                        promptTokens: message.promptTokens,
+                                        completionTokens:
+                                            message.completionTokens,
+                                        totalTokens: message.totalTokens,
+                                        cacheHitTokens: message.cacheHitTokens,
+                                        cacheMissTokens:
+                                            message.cacheMissTokens,
+                                        model: message.aiModel,
+                                        provider: message.aiProvider,
+                                        durationMs: message.requestDurationMs,
+                                      )
+                                    : null,
                               ),
                             );
-                          }
-                          final message = messages[index];
-                          final isLastError =
-                              index == messages.length - 1 &&
-                              message.status == AiChatMessageStatus.error;
-                          final attachments = message.role == AiChatRole.user
-                              ? AiContextItem.decodeList(message.contextJson)
-                              : const <AiContextItem>[];
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.sm,
-                            ),
-                            child: MessageBubble(
-                              role: message.role,
-                              content: message.content,
-                              status: message.status,
-                              attachments: attachments,
-                              onRetry: isLastError ? _retry : null,
-                              usage: message.role == AiChatRole.assistant
-                                  ? aiTokenUsageFromColumns(
-                                      promptTokens: message.promptTokens,
-                                      completionTokens:
-                                          message.completionTokens,
-                                      totalTokens: message.totalTokens,
-                                      cacheHitTokens: message.cacheHitTokens,
-                                      cacheMissTokens: message.cacheMissTokens,
-                                      model: message.aiModel,
-                                      provider: message.aiProvider,
-                                      durationMs: message.requestDurationMs,
-                                    )
-                                  : null,
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          },
+                        );
+                      },
+                    ),
+            ),
+            const Divider(height: 1),
+            ChatComposer(
+              key: _composerKey,
+              controller: _composer,
+              sending: _sending,
+              attachments: _attachments,
+              onSend: _send,
+              onAttach: () => _pickAttachment(),
+              onMentionQuery: _onMentionQuery,
+              onRemoveAttachment: _removeAttachment,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatBackground extends StatelessWidget {
+  const _ChatBackground({required this.appearance, required this.child});
+
+  final ChatAppearance appearance;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final background = switch (appearance.backgroundKind) {
+      ChatBackgroundKind.theme => ColoredBox(
+        color: theme.scaffoldBackgroundColor,
+      ),
+      ChatBackgroundKind.solid => ColoredBox(
+        color: Color(
+          appearance.backgroundColorValue ??
+              theme.scaffoldBackgroundColor.toARGB32(),
+        ),
+      ),
+      ChatBackgroundKind.gradient => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(appearance.gradientStartValue ?? 0xffeef3ff),
+              Color(appearance.gradientEndValue ?? 0xfffff1f5),
+            ],
           ),
-          const Divider(height: 1),
-          ChatComposer(
-            key: _composerKey,
-            controller: _composer,
-            sending: _sending,
-            attachments: _attachments,
-            onSend: _send,
-            onAttach: () => _pickAttachment(),
-            onMentionQuery: _onMentionQuery,
-            onRemoveAttachment: _removeAttachment,
+        ),
+      ),
+      ChatBackgroundKind.image => _BackgroundImage(
+        path: appearance.backgroundImagePath,
+        opacity: appearance.backgroundImageOpacity,
+        blur: appearance.backgroundImageBlur,
+      ),
+    };
+
+    return Stack(fit: StackFit.expand, children: [background, child]);
+  }
+}
+
+class _BackgroundImage extends StatelessWidget {
+  const _BackgroundImage({
+    required this.path,
+    required this.opacity,
+    required this.blur,
+  });
+
+  final String? path;
+  final double opacity;
+  final double blur;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final file = path == null ? null : File(path!);
+    if (file == null || !file.existsSync()) {
+      return ColoredBox(color: theme.scaffoldBackgroundColor);
+    }
+
+    return ColoredBox(
+      color: theme.scaffoldBackgroundColor,
+      child: ClipRect(
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Opacity(
+            opacity: opacity,
+            child: Image.file(
+              file,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  ColoredBox(color: theme.scaffoldBackgroundColor),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

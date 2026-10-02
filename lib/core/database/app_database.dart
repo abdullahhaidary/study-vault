@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
@@ -376,6 +378,31 @@ class AiChatMessages extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Normalized index of study-item references attached to sent AI chat messages.
+///
+/// [contextJson] on [AiChatMessages] remains the source of truth for chips /
+/// packed text; this table enables reverse lookup by study entity ID.
+class AiMessageContextRefs extends Table {
+  TextColumn get id => text()();
+  TextColumn get messageId =>
+      text().references(AiChatMessages, #id, onDelete: KeyAction.cascade)();
+  TextColumn get chatId =>
+      text().references(AiChats, #id, onDelete: KeyAction.cascade)();
+
+  /// [AiContextKind.storageValue]: lesson | material | note | studyPin
+  TextColumn get contextType => text()();
+  TextColumn get contextId => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {messageId, contextType, contextId},
+  ];
+}
+
 /// Versioned AI generations for annotation / PDF-selection study actions.
 ///
 /// Each regenerate creates a new row; completed [responseText] is immutable.
@@ -582,6 +609,7 @@ class QuizAnswers extends Table {
     Flashcards,
     AiChats,
     AiChatMessages,
+    AiMessageContextRefs,
     AnnotationAiGenerations,
     QuestionSets,
     QuizQuestions,
@@ -597,7 +625,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -608,6 +636,7 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await seedBuiltInCategories();
       await _createAiChatIndexes();
+      await _createAiMessageContextRefIndexes();
       await _createQuizIndexes();
       await _createAnnotationAiGenerationIndexes();
     },
@@ -721,6 +750,11 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(questionSets, questionSets.cacheMissTokens);
         await m.addColumn(questionSets, questionSets.requestDurationMs);
       }
+      if (from < 15) {
+        await m.createTable(aiMessageContextRefs);
+        await _createAiMessageContextRefIndexes();
+        await backfillAiMessageContextRefs();
+      }
     },
   );
 
@@ -775,6 +809,21 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_created_at '
       'ON ai_chat_messages (created_at)',
+    );
+  }
+
+  Future<void> _createAiMessageContextRefIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_msg_ctx_refs_type_id '
+      'ON ai_message_context_refs (context_type, context_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_msg_ctx_refs_message_id '
+      'ON ai_message_context_refs (message_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_ai_msg_ctx_refs_chat_id '
+      'ON ai_message_context_refs (chat_id)',
     );
   }
 
@@ -1698,8 +1747,21 @@ class AppDatabase extends _$AppDatabase {
         .getSingleOrNull();
   }
 
-  Future<void> insertAiChatMessage(AiChatMessagesCompanion entry) {
-    return into(aiChatMessages).insert(entry);
+  Future<void> insertAiChatMessage(AiChatMessagesCompanion entry) async {
+    await into(aiChatMessages).insert(entry);
+    final messageId = entry.id.value;
+    final chatId = entry.chatId.value;
+    final role = entry.role.value;
+    final contextJson = entry.contextJson.present ? entry.contextJson.value : null;
+    final createdAt = entry.createdAt.value;
+    if (role == 'user' && contextJson != null && contextJson.trim().isNotEmpty) {
+      await replaceAiMessageContextRefs(
+        messageId: messageId,
+        chatId: chatId,
+        contextJson: contextJson,
+        createdAt: createdAt,
+      );
+    }
   }
 
   Future<void> updateAiChatMessage(AiChatMessage message) {
@@ -1707,7 +1769,192 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteAiChatMessage(String id) async {
+    // Context refs cascade via FK.
     await (delete(aiChatMessages)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Replaces indexed context refs for a sent user message from [contextJson].
+  ///
+  /// Malformed JSON is ignored (no throw). Duplicate kind+id pairs collapse.
+  Future<void> replaceAiMessageContextRefs({
+    required String messageId,
+    required String chatId,
+    required String? contextJson,
+    required DateTime createdAt,
+  }) async {
+    await (delete(
+      aiMessageContextRefs,
+    )..where((t) => t.messageId.equals(messageId))).go();
+
+    final pairs = _parseContextRefPairs(contextJson);
+    if (pairs.isEmpty) return;
+
+    await batch((b) {
+      for (final pair in pairs) {
+        b.insert(
+          aiMessageContextRefs,
+          AiMessageContextRefsCompanion.insert(
+            id: '${messageId}_${pair.$1}_${pair.$2}',
+            messageId: messageId,
+            chatId: chatId,
+            contextType: pair.$1,
+            contextId: pair.$2,
+            createdAt: createdAt,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
+  /// Indexes historical [AiChatMessages.contextJson] into [aiMessageContextRefs].
+  Future<void> backfillAiMessageContextRefs() async {
+    final messages =
+        await (select(aiChatMessages)..where(
+              (t) => t.role.equals('user') & t.contextJson.isNotNull(),
+            ))
+            .get();
+    for (final message in messages) {
+      try {
+        await replaceAiMessageContextRefs(
+          messageId: message.id,
+          chatId: message.chatId,
+          contextJson: message.contextJson,
+          createdAt: message.createdAt,
+        );
+      } on Object {
+        // Skip malformed historical rows.
+      }
+    }
+  }
+
+  Stream<int> watchAiMessageContextRefCount({
+    required String contextType,
+    required String contextId,
+  }) {
+    final countExp = aiMessageContextRefs.id.count();
+    final query = selectOnly(aiMessageContextRefs)
+      ..addColumns([countExp])
+      ..where(
+        aiMessageContextRefs.contextType.equals(contextType) &
+            aiMessageContextRefs.contextId.equals(contextId),
+      );
+    return query.watch().map((rows) {
+      if (rows.isEmpty) return 0;
+      return rows.first.read(countExp) ?? 0;
+    });
+  }
+
+  Future<int> countAiMessageContextRefs({
+    required String contextType,
+    required String contextId,
+  }) async {
+    final countExp = aiMessageContextRefs.id.count();
+    final query = selectOnly(aiMessageContextRefs)
+      ..addColumns([countExp])
+      ..where(
+        aiMessageContextRefs.contextType.equals(contextType) &
+            aiMessageContextRefs.contextId.equals(contextId),
+      );
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
+  /// Returns user messages that referenced [contextType]/[contextId], newest chat first.
+  Future<List<AiChatMessage>> getAiMessagesReferencing({
+    required String contextType,
+    required String contextId,
+  }) async {
+    final query =
+        select(aiChatMessages).join([
+            innerJoin(
+              aiMessageContextRefs,
+              aiMessageContextRefs.messageId.equalsExp(aiChatMessages.id),
+            ),
+            innerJoin(
+              aiChats,
+              aiChats.id.equalsExp(aiChatMessages.chatId),
+            ),
+          ])
+          ..where(
+            aiMessageContextRefs.contextType.equals(contextType) &
+                aiMessageContextRefs.contextId.equals(contextId) &
+                aiChatMessages.role.equals('user'),
+          )
+          ..orderBy([
+            OrderingTerm.desc(aiChats.lastMessageAt),
+            OrderingTerm.desc(aiChats.updatedAt),
+            OrderingTerm.asc(aiChatMessages.createdAt),
+          ]);
+
+    final rows = await query.get();
+    // Deduplicate if a message somehow has duplicate ref rows.
+    final seen = <String>{};
+    final result = <AiChatMessage>[];
+    for (final row in rows) {
+      final message = row.readTable(aiChatMessages);
+      if (seen.add(message.id)) result.add(message);
+    }
+    return result;
+  }
+
+  Stream<List<AiChatMessage>> watchAiMessagesReferencing({
+    required String contextType,
+    required String contextId,
+  }) {
+    final query =
+        select(aiChatMessages).join([
+            innerJoin(
+              aiMessageContextRefs,
+              aiMessageContextRefs.messageId.equalsExp(aiChatMessages.id),
+            ),
+            innerJoin(
+              aiChats,
+              aiChats.id.equalsExp(aiChatMessages.chatId),
+            ),
+          ])
+          ..where(
+            aiMessageContextRefs.contextType.equals(contextType) &
+                aiMessageContextRefs.contextId.equals(contextId) &
+                aiChatMessages.role.equals('user'),
+          )
+          ..orderBy([
+            OrderingTerm.desc(aiChats.lastMessageAt),
+            OrderingTerm.desc(aiChats.updatedAt),
+            OrderingTerm.asc(aiChatMessages.createdAt),
+          ]);
+
+    return query.watch().map((rows) {
+      final seen = <String>{};
+      final result = <AiChatMessage>[];
+      for (final row in rows) {
+        final message = row.readTable(aiChatMessages);
+        if (seen.add(message.id)) result.add(message);
+      }
+      return result;
+    });
+  }
+
+  static List<(String, String)> _parseContextRefPairs(String? contextJson) {
+    if (contextJson == null || contextJson.trim().isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(contextJson);
+      if (decoded is! List) return const [];
+      final seen = <String>{};
+      final pairs = <(String, String)>[];
+      for (final item in decoded) {
+        if (item is! Map) continue;
+        final kind = (item['kind'] as String?)?.trim();
+        final id = (item['id'] as String?)?.trim();
+        if (kind == null || kind.isEmpty || id == null || id.isEmpty) continue;
+        final key = '$kind|$id';
+        if (!seen.add(key)) continue;
+        pairs.add((kind, id));
+      }
+      return pairs;
+    } on Object {
+      return const [];
+    }
   }
 
   // ── AI Questions / Quiz ──────────────────────────────────

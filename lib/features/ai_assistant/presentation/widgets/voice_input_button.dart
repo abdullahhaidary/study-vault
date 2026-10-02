@@ -182,10 +182,11 @@ Future<String?> showAiPromptDialog(
   required String title,
   required String hint,
   String confirmLabel = 'Run',
+  String initialText = '',
   int minLines = 2,
   int maxLines = 5,
 }) async {
-  final controller = TextEditingController();
+  final controller = TextEditingController(text: initialText);
   final focus = FocusNode();
   final result = await showDialog<String>(
     context: context,

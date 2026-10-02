@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../data/notes_providers.dart';
@@ -37,9 +39,16 @@ class NoteReaderScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: Padding(
+          body: ListView(
             padding: const EdgeInsets.all(20),
-            child: StudyRichTextViewer(storedValue: item.content),
+            children: [
+              StudyRichTextViewer(storedValue: item.content),
+              const SizedBox(height: 20),
+              AiDiscussionsSection(
+                kind: AiContextKind.note,
+                id: item.id,
+              ),
+            ],
           ),
         );
       },

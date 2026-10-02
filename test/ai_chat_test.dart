@@ -91,8 +91,8 @@ void main() {
       await db.close();
     });
 
-    test('schema version is 14', () {
-      expect(db.schemaVersion, 14);
+    test('schema version is 15', () {
+      expect(db.schemaVersion, 15);
     });
 
     test('create chat, send message, persist history and continue', () async {
@@ -192,5 +192,51 @@ void main() {
         expect(messages.last.status, AiChatMessageStatus.ok);
       },
     );
+
+    test('regenerate replaces the successful assistant response', () async {
+      final chat = await service.createChat();
+      await service.sendMessage(chatId: chat.id, userText: 'Explain hashing');
+
+      gemini = FakeGeminiChatService(
+        credentials: credentials,
+        settings: settings,
+        reply: 'A different explanation',
+      );
+      service = AiChatService(db: db, gemini: gemini, settings: settings);
+      await service.retryLast(chatId: chat.id);
+
+      final messages = await db.getAiChatMessages(chat.id);
+      expect(messages, hasLength(2));
+      expect(messages.first.content, 'Explain hashing');
+      expect(messages.last.content, 'A different explanation');
+    });
+
+    test('edit and resend removes the later conversation branch', () async {
+      final chat = await service.createChat();
+      await service.sendMessage(chatId: chat.id, userText: 'Original question');
+      await service.sendMessage(chatId: chat.id, userText: 'Old follow-up');
+      final original = (await db.getAiChatMessages(chat.id)).first;
+
+      gemini = FakeGeminiChatService(
+        credentials: credentials,
+        settings: settings,
+        reply: 'Answer to edited question',
+      );
+      service = AiChatService(db: db, gemini: gemini, settings: settings);
+      await service.editAndResend(
+        chatId: chat.id,
+        messageId: original.id,
+        userText: 'Edited question',
+      );
+
+      final messages = await db.getAiChatMessages(chat.id);
+      expect(messages, hasLength(2));
+      expect(messages.first.content, 'Edited question');
+      expect(messages.last.content, 'Answer to edited question');
+      expect(
+        messages.any((message) => message.content == 'Old follow-up'),
+        isFalse,
+      );
+    });
   });
 }

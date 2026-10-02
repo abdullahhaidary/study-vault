@@ -13,6 +13,8 @@ import '../../ai_assistant/presentation/inline_ai_panel.dart';
 import '../../ai_assistant/services/annotation_ai_context_builder.dart';
 import '../../ai_assistant/services/inline_ai_annotation_saver.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../ai_questions/presentation/question_sets_screen.dart';
@@ -709,6 +711,36 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                     ),
                   ),
                 );
+              } else if (value == 'ai_discussions') {
+                if (!mounted) return;
+                await showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  showDragHandle: true,
+                  builder: (context) => DraggableScrollableSheet(
+                    expand: false,
+                    initialChildSize: 0.55,
+                    minChildSize: 0.35,
+                    maxChildSize: 0.9,
+                    builder: (context, controller) => Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: ListView(
+                        controller: controller,
+                        children: [
+                          Text(
+                            'AI Discussions',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          AiDiscussionsList(
+                            kind: AiContextKind.material,
+                            id: widget.resourceId,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               }
             },
             itemBuilder: (_) => const [
@@ -723,6 +755,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               PopupMenuItem(
                 value: 'question_sets',
                 child: Text('AI Questions'),
+              ),
+              PopupMenuItem(
+                value: 'ai_discussions',
+                child: Text('AI Discussions'),
               ),
             ],
           ),
