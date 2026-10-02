@@ -89,11 +89,21 @@ final referencedAiMessageRepositoryProvider =
 
 typedef AiContextRefKey = ({AiContextKind kind, String id});
 
+/// Repairs the normalized reverse-reference index for historical messages.
+///
+/// Normally migration 15 performs this backfill. Running it once per app
+/// session also covers development databases that had already reached that
+/// schema version before the indexer was introduced.
+final aiMessageContextRefsReadyProvider = FutureProvider<void>((ref) async {
+  await ref.watch(databaseProvider).backfillAiMessageContextRefs();
+});
+
 final aiDiscussionsCountProvider = StreamProvider.family<int, AiContextRefKey>((
   ref,
   key,
-) {
-  return ref
+) async* {
+  await ref.watch(aiMessageContextRefsReadyProvider.future);
+  yield* ref
       .watch(referencedAiMessageRepositoryProvider)
       .watchCount(kind: key.kind, id: key.id);
 });
@@ -102,8 +112,9 @@ final aiDiscussionsGroupedProvider =
     StreamProvider.family<List<ReferencedAiChatGroup>, AiContextRefKey>((
       ref,
       key,
-    ) {
-      return ref
+    ) async* {
+      await ref.watch(aiMessageContextRefsReadyProvider.future);
+      yield* ref
           .watch(referencedAiMessageRepositoryProvider)
           .watchGrouped(kind: key.kind, id: key.id);
     });
