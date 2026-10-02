@@ -3,23 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes.dart';
 
-/// Top-level destinations in the application shell.
-enum ShellTab { home, aiChat, favorites, settings }
+/// Surfaces hosted inside [AppShell] (Home + AI Chat).
+enum ShellTab { home, aiChat }
 
 final shellTabProvider = StateProvider<ShellTab>((ref) => ShellTab.home);
 
-/// Optional Settings deep-link (e.g. AI section).
-final settingsSectionProvider = StateProvider<String?>((ref) => null);
-
-/// Navigate to a shell tab, popping detail routes so the shell is visible.
+/// Navigate to a shell surface, popping detail routes so the shell is visible.
 abstract final class ShellNavigation {
   static void go(
     BuildContext context,
     WidgetRef ref,
-    ShellTab tab, {
-    String? settingsSection,
-  }) {
-    ref.read(settingsSectionProvider.notifier).state = settingsSection;
+    ShellTab tab,
+  ) {
     ref.read(shellTabProvider.notifier).state = tab;
     final nav = Navigator.of(context);
     if (nav.canPop()) {
@@ -27,20 +22,24 @@ abstract final class ShellNavigation {
     }
   }
 
-  /// Open Settings, optionally focusing a section. Uses the shell when possible.
+  /// Open Settings as a pushed route, optionally focusing a section.
   static void openSettings(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     String? section,
   }) {
-    go(context, ref, ShellTab.settings, settingsSection: section);
+    Navigator.of(context).pushNamed(
+      AppRoutes.settings,
+      arguments: section == null ? null : {'section': section},
+    );
+  }
+
+  static void openFavorites(BuildContext context) {
+    Navigator.of(context).pushNamed(AppRoutes.favorites);
   }
 
   static ShellTab? tabForRoute(String? routeName) => switch (routeName) {
     AppRoutes.home => ShellTab.home,
     AppRoutes.aiChat => ShellTab.aiChat,
-    AppRoutes.favorites => ShellTab.favorites,
-    AppRoutes.settings => ShellTab.settings,
     _ => null,
   };
 }

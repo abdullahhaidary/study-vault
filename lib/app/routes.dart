@@ -7,6 +7,7 @@ import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/ai_questions/presentation/question_sets_screen.dart';
+import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/flashcards/presentation/flashcard_study_screen.dart';
 import '../features/flashcards/presentation/flashcards_list_screen.dart';
 import '../features/notes/presentation/note_editor_screen.dart';
@@ -59,7 +60,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     case AppRoutes.favorites:
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const AppShell(initialTab: ShellTab.favorites),
+        builder: (_) => const FavoritesScreen(),
       );
 
     case AppRoutes.settings:
@@ -68,17 +69,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       if (args is Map) {
         section = args['section'] as String?;
       }
-      // Deep-link with a section keeps a dedicated page so callers can push
-      // Settings from dialogs without replacing the whole shell stack.
-      if (section != null) {
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => SettingsScreen(initialSection: section),
-        );
-      }
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const AppShell(initialTab: ShellTab.settings),
+        builder: (_) => SettingsScreen(initialSection: section),
       );
 
     case AppRoutes.noteReader:

@@ -51,6 +51,10 @@ class HomeScreen extends ConsumerWidget {
                       CreateClassDialog.show(context);
                     case 'reviews':
                       RecentReviewsScreen.open(context);
+                    case 'favorites':
+                      ShellNavigation.openFavorites(context);
+                    case 'settings':
+                      ShellNavigation.openSettings(context);
                   }
                 },
                 itemBuilder: (context) => const [
@@ -61,6 +65,14 @@ class HomeScreen extends ConsumerWidget {
                   PopupMenuItem(
                     value: 'reviews',
                     child: Text('Recent Reviews'),
+                  ),
+                  PopupMenuItem(
+                    value: 'favorites',
+                    child: Text('Favorites'),
+                  ),
+                  PopupMenuItem(
+                    value: 'settings',
+                    child: Text('Settings'),
                   ),
                 ],
               ),
