@@ -337,45 +337,6 @@ class LessonDetailsScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    DetailContent(
-                      bottom: AppSpacing.xs,
-                      child: SectionHeader(
-                        title: 'Images',
-                        trailing: IconButton(
-                          tooltip: 'Add image from gallery',
-                          onPressed: () => _attachImage(context, ref),
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                        ),
-                      ),
-                    ),
-                    if (images.isEmpty)
-                      DetailContent(
-                        bottom: AppSpacing.md,
-                        child: _EmptyImagesCard(
-                          onAdd: () => _attachImage(context, ref),
-                        ),
-                      )
-                    else
-                      DetailContent(
-                        bottom: AppSpacing.md,
-                        child: Column(
-                          children: [
-                            for (final material in images)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: _LessonImageCard(
-                                  material: material,
-                                  onOpen: () =>
-                                      _openMaterial(context, material),
-                                  onDelete: () =>
-                                      _confirmDelete(context, ref, material),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
                   ],
                 );
               },
@@ -402,6 +363,33 @@ class LessonDetailsScreen extends ConsumerWidget {
                           AppRoutes.flashcardsList,
                           arguments: FlashcardsListScope.lesson(
                             id: lessonId,
+                            title: lesson.name,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      _StudyToolTile(
+                        icon: Icons.image_outlined,
+                        title: 'Images',
+                        subtitle: () {
+                          final materials =
+                              materialsAsync.valueOrNull ?? const [];
+                          final count = materials
+                              .where((m) => isImageMimeType(m.mimeType))
+                              .length;
+                          if (materialsAsync.isLoading) {
+                            return 'Open images';
+                          }
+                          return count == 0
+                              ? 'No images yet'
+                              : count == 1
+                              ? '1 image'
+                              : '$count images';
+                        }(),
+                        onTap: () => Navigator.of(context).pushNamed(
+                          AppRoutes.lessonImages,
+                          arguments: LessonImagesScope(
+                            lessonId: lessonId,
                             title: lesson.name,
                           ),
                         ),
@@ -448,7 +436,7 @@ class LessonDetailsScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 72)),
+            const SpiverToBoxAdapter(child: SizedBox(height: 72)),
           ],
         );
       },
