@@ -51,6 +51,7 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
     this.pinType = StudyPinType.point,
     this.isEditing = false,
     this.allowDelete = false,
+    this.scrollController,
   });
 
   final String initialShortText;
@@ -60,6 +61,7 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
   final StudyPinType pinType;
   final bool isEditing;
   final bool allowDelete;
+  final ScrollController? scrollController;
 
   static Future<StudyPinEditorResult?> show(
     BuildContext context, {
@@ -72,15 +74,18 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
     bool allowDelete = false,
   }) {
     final isWide = MediaQuery.sizeOf(context).width >= 720;
-    final child = AddEditStudyPinSheet(
-      initialShortText: initialShortText,
-      initialFullExplanation: initialFullExplanation,
-      initialCategoryId: initialCategoryId,
-      selectedText: selectedText,
-      pinType: pinType,
-      isEditing: isEditing,
-      allowDelete: allowDelete,
-    );
+    AddEditStudyPinSheet buildEditor([ScrollController? scrollController]) {
+      return AddEditStudyPinSheet(
+        initialShortText: initialShortText,
+        initialFullExplanation: initialFullExplanation,
+        initialCategoryId: initialCategoryId,
+        selectedText: selectedText,
+        pinType: pinType,
+        isEditing: isEditing,
+        allowDelete: allowDelete,
+        scrollController: scrollController,
+      );
+    }
 
     if (isWide) {
       return showDialog<StudyPinEditorResult>(
@@ -88,7 +93,10 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
         builder: (context) => Dialog(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 780),
-            child: Padding(padding: const EdgeInsets.all(8), child: child),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: buildEditor(),
+            ),
           ),
         ),
       );
@@ -100,7 +108,15 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
       showDragHandle: true,
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: SystemBottomInset.of(context)),
-        child: child,
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          minChildSize: 0.42,
+          maxChildSize: 0.94,
+          snap: true,
+          snapSizes: const [0.6, 0.94],
+          builder: (context, scrollController) => buildEditor(scrollController),
+        ),
       ),
     );
   }
@@ -380,6 +396,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
             children: [
               Expanded(
                 child: ListView(
+                  controller: widget.scrollController,
                   children: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -472,7 +489,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
                     const SizedBox(height: AppSpacing.md),
                     AutoDirectionTextField(
                       controller: _shortController,
-                      autofocus: true,
+                      autofocus: false,
                       textCapitalization: TextCapitalization.sentences,
                       maxLength: 500,
                       decoration: const InputDecoration(
