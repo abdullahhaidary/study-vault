@@ -55,6 +55,15 @@ class FakeAiService implements AiService {
       AiStudyAction.summarize => AiTextResult(
         markdown: '- Key point from source text',
       ),
+      AiStudyAction.keyConcepts => AiTextResult(
+        markdown: '- **Concept** — short definition from the source',
+      ),
+      AiStudyAction.examPoints => AiTextResult(
+        markdown:
+            '### Important concept\n\nFrom the source.\n\n'
+            '### Common confusion\n\nStudents may mix related terms.\n\n'
+            '### Practice question\n\nWhat is the main idea?',
+      ),
       AiStudyAction.define ||
       AiStudyAction.giveExample ||
       AiStudyAction.translate ||

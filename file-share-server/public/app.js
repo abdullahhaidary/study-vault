@@ -15,9 +15,17 @@
   const progressFill = document.getElementById('progress-fill');
   const progressLabel = document.getElementById('progress-label');
   const toastEl = document.getElementById('toast');
+  const textForm = document.getElementById('text-form');
+  const textTitle = document.getElementById('text-title');
+  const textBody = document.getElementById('text-body');
+  const textShareBtn = document.getElementById('text-share-btn');
+  const textListEl = document.getElementById('text-list');
+  const textSub = document.getElementById('text-sub');
 
   /** @type {{ name: string, size: number, mtime: number }[]} */
   let files = [];
+  /** @type {{ id: string, title: string, text: string, createdAt: number }[]} */
+  let texts = [];
   let toastTimer = 0;
 
   function showToast(message) {
@@ -310,7 +318,116 @@
 
   refreshBtn.addEventListener('click', () => {
     loadFiles();
+    loadTexts();
+  });
+
+  function previewText(value) {
+    const compact = value.replace(/\s+/g, ' ').trim();
+    return compact.length > 160 ? `${compact.slice(0, 157)}…` : compact;
+  }
+
+  function renderTexts() {
+    textListEl.innerHTML = '';
+
+    if (!texts.length) {
+      textSub.textContent = 'No shared text yet';
+      return;
+    }
+
+    textSub.textContent = `${texts.length} snippet${texts.length === 1 ? '' : 's'}`;
+
+    texts.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.className = 'text-row';
+      li.style.animationDelay = `${Math.min(index, 12) * 30}ms`;
+      li.innerHTML = `
+        <div class="text-row-top">
+          <div>
+            <p class="text-row-title"></p>
+            <p class="text-row-meta"></p>
+          </div>
+          <div class="text-row-actions">
+            <button type="button" class="row-btn" data-action="copy">Copy</button>
+            <button type="button" class="row-btn danger" data-action="delete">Delete</button>
+          </div>
+        </div>
+        <p class="text-row-preview"></p>
+      `;
+      li.querySelector('.text-row-title').textContent = item.title || 'Untitled';
+      li.querySelector('.text-row-meta').textContent =
+        `${item.text.length.toLocaleString()} chars · ${formatWhen(item.createdAt)}`;
+      li.querySelector('.text-row-preview').textContent = previewText(item.text);
+
+      li.querySelector('[data-action="copy"]').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(item.text);
+          showToast('Copied to clipboard');
+        } catch {
+          showToast('Could not copy — select the text manually');
+        }
+      });
+
+      li.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+        try {
+          const res = await fetch(`/api/texts/${encodeURIComponent(item.id)}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error('Delete failed');
+          showToast('Text removed');
+          await loadTexts();
+        } catch (err) {
+          showToast(err.message || 'Delete failed');
+        }
+      });
+
+      textListEl.appendChild(li);
+    });
+  }
+
+  async function loadTexts() {
+    try {
+      const res = await fetch('/api/texts', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Could not load text');
+      const data = await res.json();
+      texts = Array.isArray(data.texts) ? data.texts : [];
+      renderTexts();
+    } catch (err) {
+      textSub.textContent = 'Could not load text';
+      showToast(err.message || 'Failed to load text');
+    }
+  }
+
+  textForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = textBody.value;
+    if (!text.trim()) {
+      showToast('Enter some text first');
+      return;
+    }
+
+    textShareBtn.disabled = true;
+    try {
+      const res = await fetch('/api/texts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          title: textTitle.value.trim(),
+          text,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Share failed');
+      textBody.value = '';
+      textTitle.value = '';
+      showToast('Text shared');
+      await loadTexts();
+    } catch (err) {
+      showToast(err.message || 'Share failed');
+    } finally {
+      textShareBtn.disabled = false;
+    }
   });
 
   loadFiles();
+  loadTexts();
 })();

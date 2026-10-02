@@ -79,6 +79,9 @@ class AppTheme {
         ),
         systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
+          systemNavigationBarColor: AppColors.surface,
+          systemNavigationBarIconBrightness: Brightness.dark,
+          systemNavigationBarDividerColor: Colors.transparent,
         ),
         iconTheme: IconThemeData(color: colorScheme.onSurface, size: 22),
         actionsIconTheme: IconThemeData(

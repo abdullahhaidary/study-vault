@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
 
@@ -101,7 +102,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
           );
         },
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

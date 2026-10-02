@@ -6,7 +6,6 @@ import 'package:study_vault/core/backup/backup_service.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
-import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/annotation_ai_context.dart';
 import 'package:study_vault/features/ai_assistant/domain/annotation_ai_history.dart';
 import 'package:study_vault/features/ai_assistant/services/annotation_ai_history_service.dart';
@@ -18,12 +17,77 @@ void main() {
   late FakeAiService fakeAi;
   late AnnotationAiHistoryService history;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     fakeAi = FakeAiService();
     history = AnnotationAiHistoryService(
       db: db,
       aiService: AnnotationAiService(aiService: fakeAi),
+    );
+
+    final now = DateTime(2026);
+    await db.insertClass(
+      ClassesCompanion.insert(
+        id: 'c',
+        name: 'Class',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertSubject(
+      SubjectsCompanion.insert(
+        id: 's',
+        classId: 'c',
+        name: 'Subject',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLesson(
+      LessonsCompanion.insert(
+        id: 'l',
+        subjectId: 's',
+        name: 'Lesson',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLessonMaterial(
+      LessonMaterialsCompanion.insert(
+        id: 'mat-1',
+        lessonId: 'l',
+        title: 'Material',
+        originalFileName: 'a.pdf',
+        storedFileName: 'a.pdf',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertStudyPin(
+      StudyPinsCompanion.insert(
+        id: 'ann-84',
+        resourceId: 'mat-1',
+        pinType: const Value('point'),
+        pageNumber: const Value(18),
+        xRatio: 0.5,
+        yRatio: 0.5,
+        shortText: 'GD',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertStudyPin(
+      StudyPinsCompanion.insert(
+        id: 'ann-99',
+        resourceId: 'mat-1',
+        pinType: const Value('point'),
+        pageNumber: const Value(20),
+        xRatio: 0.4,
+        yRatio: 0.4,
+        shortText: 'BP',
+        createdAt: now,
+        updatedAt: now,
+      ),
     );
   });
 
@@ -191,6 +255,27 @@ void main() {
     expect(gen.responseKind, 'text');
   });
 
+  test('persists DeepSeek provider metadata without overwriting Gemini versions', () async {
+    final v1 = await history.generate(
+      context: contextA,
+      action: AiStudyAction.explain,
+      modelName: 'gemini-3.8-flash',
+      provider: 'gemini',
+    );
+    final v2 = await history.generate(
+      context: contextA,
+      action: AiStudyAction.explain,
+      modelName: 'deepseek-flash',
+      provider: 'deepseek',
+      parentGenerationId: v1.id,
+    );
+    expect(v1.provider, 'gemini');
+    expect(v2.provider, 'deepseek');
+    expect(v2.modelName, 'deepseek-flash');
+    expect(v2.generationNumber, 2);
+    expect(v1.id, isNot(equals(v2.id)));
+  });
+
   test('delete all for action clears only that action', () async {
     await history.generate(context: contextA, action: AiStudyAction.summarize);
     await history.generate(context: contextA, action: AiStudyAction.explain);
@@ -220,59 +305,6 @@ void main() {
   test(
     'pin delete detaches annotation id but keeps generation snapshots',
     () async {
-      final now = DateTime(2026);
-      await db.insertClass(
-        ClassesCompanion.insert(
-          id: 'c',
-          name: 'Class',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await db.insertSubject(
-        SubjectsCompanion.insert(
-          id: 's',
-          classId: 'c',
-          name: 'Subject',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await db.insertLesson(
-        LessonsCompanion.insert(
-          id: 'l',
-          subjectId: 's',
-          name: 'Lesson',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await db.insertLessonMaterial(
-        LessonMaterialsCompanion.insert(
-          id: 'mat-1',
-          lessonId: 'l',
-          title: 'Material',
-          originalFileName: 'a.pdf',
-          storedFileName: 'a.pdf',
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await db.insertStudyPin(
-        StudyPinsCompanion.insert(
-          id: 'ann-84',
-          resourceId: 'mat-1',
-          pinType: const Value('point'),
-          pageNumber: const Value(18),
-          xRatio: 0.5,
-          yRatio: 0.5,
-          shortText: 'GD',
-          fullExplanation: const Value('[]'),
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-
       final gen = await history.generate(
         context: contextA,
         action: AiStudyAction.summarize,

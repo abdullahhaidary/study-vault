@@ -42,8 +42,7 @@ class AnnotationAiHistoryService {
   }) async {
     final raw = await _db.countAiGenerationsByAction(sourceFingerprint);
     return {
-      for (final entry in raw.entries)
-        if (_tryParseAction(entry.key) case final action?) action: entry.value,
+      for (final entry in raw.entries) ?_tryParseAction(entry.key): entry.value,
     };
   }
 
@@ -67,7 +66,8 @@ class AnnotationAiHistoryService {
     return _db.getAiGenerationById(id);
   }
 
-  /// Runs Gemini and persists a new immutable generation (never overwrites).
+  /// Runs the active AI provider and persists a new immutable generation
+  /// (never overwrites).
   Future<AnnotationAiGeneration> generate({
     required AnnotationAiContext context,
     required AiStudyAction action,
@@ -82,6 +82,7 @@ class AnnotationAiHistoryService {
     Map<String, String> categoryNameToId = const {},
     String? parentGenerationId,
     String? modelName,
+    String? provider,
     bool useCache = false,
   }) async {
     final result = await _ai.run(
@@ -116,6 +117,7 @@ class AnnotationAiHistoryService {
       customPrompt: customPrompt,
       parentGenerationId: parentGenerationId,
       modelName: modelName,
+      provider: provider,
       linkedQuestionSetId: persisted.linkedQuestionSetId,
     );
   }
@@ -133,6 +135,7 @@ class AnnotationAiHistoryService {
     String? customPrompt,
     String? parentGenerationId,
     String? modelName,
+    String? provider,
     String? linkedQuestionSetId,
     String? linkedFlashcardBatchId,
   }) {
@@ -167,7 +170,7 @@ class AnnotationAiHistoryService {
         responseKind: Value(responseKind),
         language: Value(context.language.name),
         modelName: Value(modelName),
-        provider: const Value('gemini'),
+        provider: Value(provider ?? 'gemini'),
         promptVersion: Value(AnnotationAiPromptVersions.forAction(action)),
         parentGenerationId: Value(parentGenerationId),
         generationNumber: generationNumber,
@@ -191,6 +194,7 @@ class AnnotationAiHistoryService {
     String? regenerateInstruction,
     Map<String, String> categoryNameToId = const {},
     String? modelName,
+    String? provider,
   }) {
     final instruction = regenerateInstruction?.trim();
     final existing = customPrompt?.trim();
@@ -203,8 +207,7 @@ class AnnotationAiHistoryService {
 
     // Prefer modes stored on the parent generation when regenerating.
     final parentMode = parent?.actionMode;
-    final resolvedSummarize =
-        summarizeMode ?? _parseSummarizeMode(parentMode);
+    final resolvedSummarize = summarizeMode ?? _parseSummarizeMode(parentMode);
     final resolvedRephrase = rephraseMode ?? _parseRephraseMode(parentMode);
     final resolvedOrganize = organizeMode ?? _parseOrganizeMode(parentMode);
     final resolvedTranslate =
@@ -221,6 +224,7 @@ class AnnotationAiHistoryService {
       parentGenerationId: parent?.id,
       categoryNameToId: categoryNameToId,
       modelName: modelName,
+      provider: provider,
       useCache: false,
     );
   }
@@ -269,7 +273,7 @@ class AnnotationAiHistoryService {
           text: suggestedCategory == null
               ? '## $shortDescription\n\n$fullNoteMarkdown'
               : '## $shortDescription\n\n$fullNoteMarkdown\n\n'
-                  'Category: $suggestedCategory',
+                    'Category: $suggestedCategory',
           kind: 'annotation',
           linkedQuestionSetId: null,
         ),

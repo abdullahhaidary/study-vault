@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../data/ai_chat_providers.dart';
+import '../domain/ai_chat_models.dart';
 
 Future<String?> showGeminiModelSelector(
   BuildContext context, {
@@ -14,12 +16,12 @@ Future<String?> showGeminiModelSelector(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (context) =>
-        _GeminiModelSelectorSheet(selectedModelId: selectedModelId),
+        _AiModelSelectorSheet(selectedModelId: selectedModelId),
   );
 }
 
-class _GeminiModelSelectorSheet extends ConsumerWidget {
-  const _GeminiModelSelectorSheet({required this.selectedModelId});
+class _AiModelSelectorSheet extends ConsumerWidget {
+  const _AiModelSelectorSheet({required this.selectedModelId});
 
   final String selectedModelId;
 
@@ -42,7 +44,14 @@ class _GeminiModelSelectorSheet extends ConsumerWidget {
             child: Center(child: CircularProgressIndicator()),
           ),
           error: (_, _) => _ModelList(
-            models: GeminiModelRegistry.fallbackChatModels(),
+            models: [
+              ...GeminiModelRegistry.fallbackChatModels().map(
+                AiSelectableModel.fromGemini,
+              ),
+              ...DeepSeekModelRegistry.selectableModels().map(
+                AiSelectableModel.fromDeepSeek,
+              ),
+            ],
             selectedModelId: selectedModelId,
           ),
           data: (models) => Column(
@@ -68,27 +77,16 @@ class _GeminiModelSelectorSheet extends ConsumerWidget {
 class _ModelList extends StatelessWidget {
   const _ModelList({required this.models, required this.selectedModelId});
 
-  final List<GeminiModelDefinition> models;
+  final List<AiSelectableModel> models;
   final String selectedModelId;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final groups = <String, List<GeminiModelDefinition>>{
-      'Recommended': models.where((m) => m.recommended).toList(),
-      'Fast': models.where((m) => m.tier == GeminiModelTier.fast).toList(),
-      'Other': models
-          .where(
-            (m) =>
-                !m.recommended &&
-                m.tier != GeminiModelTier.fast &&
-                m.tier != GeminiModelTier.compatibility,
-          )
-          .toList(),
-      'Compatibility': models
-          .where((m) => m.tier == GeminiModelTier.compatibility)
-          .toList(),
-    };
+    final groups = <String, List<AiSelectableModel>>{};
+    for (final model in models) {
+      groups.putIfAbsent(model.group, () => []).add(model);
+    }
 
     return ListView(
       shrinkWrap: true,

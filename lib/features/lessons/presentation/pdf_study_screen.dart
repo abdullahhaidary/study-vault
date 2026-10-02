@@ -7,8 +7,11 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
-import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/domain/annotation_ai_context.dart';
+import '../../ai_assistant/domain/inline_ai_models.dart';
+import '../../ai_assistant/presentation/inline_ai_panel.dart';
 import '../../ai_assistant/services/annotation_ai_context_builder.dart';
+import '../../ai_assistant/services/inline_ai_annotation_saver.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
@@ -24,6 +27,7 @@ import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
 import '../../study_pins/domain/pin_type.dart';
+import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/add_edit_study_pin_sheet.dart';
 import '../../study_pins/presentation/study_pin_reader.dart';
 import '../../study_pins/presentation/widgets/pdf_pin_overlay.dart';
@@ -61,6 +65,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   String? _focusedPinId;
   bool _didApplyInitialFocus = false;
   bool _showOutline = true;
+
+  /// Active inline AI session over the PDF (selection or page).
+  _InlineAiSession? _inlineAi;
 
   @override
   void initState() {
@@ -409,7 +416,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     await showGenerateQuestionsSheet(context, ref, launch: wrapped);
   }
 
-  Future<void> _openPdfAiActions(PdfTextSelectionDelegate selection) async {
+  Future<void> _openPdfInlineAi(PdfTextSelectionDelegate selection) async {
     final selectedText = (await selection.getSelectedText()).trim();
     final ranges = await _textRangeInputs(selection);
     if (selectedText.isEmpty || ranges.isEmpty || !mounted) return;
@@ -428,34 +435,135 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         );
     if (!mounted) return;
 
-    await showAiActionsSheet(
-      context,
-      ref,
-      sourceText: aiContext.primaryText,
+    final pins =
+        ref.read(studyPinsForResourceProvider(widget.resourceId)).valueOrNull ??
+        const <StudyPin>[];
+    final existing = InlineAiAnnotationSaver.findMatchingTextPin(
+      pins: pins,
       selectedText: selectedText,
-      annotationContext: aiContext,
-      actionContext: AiActionContext.pdfSelection,
-      questionsLaunch: QuestionSourceLaunches.forPdfSelection(
-        ref: ref,
-        selectedText: selectedText,
-        materialId: widget.resourceId,
-        filePath: widget.filePath,
-        currentPage: _currentPage,
-        pageNumber: pageNumber,
+      pageNumber: pageNumber,
+    );
+
+    AnnotationAiContext context = aiContext;
+    if (existing != null) {
+      final fullPlain = StudyNoteCodec.plainTextPreview(
+        existing.fullExplanation,
+      ).trim();
+      context = AnnotationAiContext(
+        selectedText: aiContext.selectedText,
+        materialId: aiContext.materialId,
+        lessonId: aiContext.lessonId,
+        pageNumber: aiContext.pageNumber,
+        annotationText: [
+          existing.shortText.trim(),
+          if (fullPlain.isNotEmpty) fullPlain,
+        ].where((s) => s.isNotEmpty).join('\n\n'),
         surroundingText: aiContext.surroundingText,
-      ),
-      onGoToSource: () {
-        _controller.goToPage(pageNumber: pageNumber);
+        annotationId: existing.id,
+        shortDescription: existing.shortText,
+        language: aiContext.language,
+        direction: aiContext.direction,
+        filePath: aiContext.filePath,
+      );
+    }
+
+    setState(() {
+      _inlineAi = _InlineAiSession(
+        mode: InlineAiSourceMode.selection,
+        context: context,
+        ranges: ranges,
+        existingPin: existing,
+        materialLessonId: material?.lessonId,
+        selectedText: selectedText,
+      );
+    });
+  }
+
+  Future<void> _openPageInlineAi() async {
+    final page = _currentPage;
+    if (page == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Wait for the PDF page to load.')),
+      );
+      return;
+    }
+
+    final material = await ref
+        .read(databaseProvider)
+        .getMaterialById(widget.resourceId);
+    final aiContext = await AnnotationAiContextBuilder.fromPdfPage(
+      filePath: widget.filePath,
+      pageNumber: page,
+      materialId: widget.resourceId,
+      lessonId: material?.lessonId,
+    );
+    if (!mounted) return;
+
+    if (!aiContext.hasUsableText) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This page has no extractable text.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _inlineAi = _InlineAiSession(
+        mode: InlineAiSourceMode.page,
+        context: aiContext,
+        ranges: const [],
+        existingPin: null,
+        materialLessonId: material?.lessonId,
+        selectedText: aiContext.primaryText,
+      );
+    });
+  }
+
+  void _closeInlineAi() {
+    if (_inlineAi == null) return;
+    setState(() => _inlineAi = null);
+  }
+
+  InlineAiHostCallbacks _inlineAiCallbacks(_InlineAiSession session) {
+    final lessonId = session.materialLessonId;
+    return InlineAiHostCallbacks(
+      onDismiss: _closeInlineAi,
+      resourceId: widget.resourceId,
+      rangeInputs: session.ranges,
+      onGoToSource: session.context.pageNumber == null
+          ? null
+          : () {
+              _controller.goToPage(pageNumber: session.context.pageNumber!);
+            },
+      onAnnotationSaved: (pin) async {
+        await _controller.textSelectionDelegate.clearTextSelection();
       },
-      onCreateNote: material == null
+      questionsLaunch: session.mode == InlineAiSourceMode.selection
+          ? QuestionSourceLaunches.forPdfSelection(
+              ref: ref,
+              selectedText: session.selectedText,
+              materialId: widget.resourceId,
+              filePath: widget.filePath,
+              currentPage: _currentPage,
+              pageNumber: session.context.pageNumber,
+              surroundingText: session.context.surroundingText,
+            )
+          : QuestionSourceLaunches.forPdfMaterial(
+              ref: ref,
+              materialId: widget.resourceId,
+              filePath: widget.filePath,
+              currentPage: _currentPage,
+              selectedPages: session.context.pageNumber == null
+                  ? null
+                  : {session.context.pageNumber!},
+            ),
+      onCreateNote: lessonId == null
           ? null
           : (markdown) async {
-              final title = selectedText.length > 48
-                  ? '${selectedText.substring(0, 48)}…'
-                  : selectedText;
+              final raw = session.selectedText;
+              final title = raw.length > 48 ? '${raw.substring(0, 48)}…' : raw;
               await createStudyNote(
                 ref,
-                lessonId: material.lessonId,
+                lessonId: lessonId,
                 title: title.isEmpty ? 'AI note' : title,
                 content: MarkdownToQuill.toDeltaJson(markdown),
               );
@@ -465,31 +573,18 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                 ).showSnackBar(const SnackBar(content: Text('Note created')));
               }
             },
-      onAnnotationSave: (draft) async {
-        await createTextStudyPin(
-          ref,
-          CreateTextStudyPinInput(
-            resourceId: widget.resourceId,
-            selectedText: selectedText,
-            ranges: ranges,
-            shortText: draft.shortDescription,
-            fullExplanation: draft.fullNoteMarkdown,
-            categoryId: draft.suggestedCategory,
-          ),
-        );
-        await selection.clearTextSelection();
-      },
-      onFlashcardsCreate: (cards) async {
-        if (material == null) return;
-        for (final card in cards) {
-          await createFlashcard(
-            ref,
-            lessonId: material.lessonId,
-            front: card.front,
-            back: MarkdownToQuill.toDeltaJson(card.back),
-          );
-        }
-      },
+      onFlashcardsCreate: lessonId == null
+          ? null
+          : (cards) async {
+              for (final card in cards) {
+                await createFlashcard(
+                  ref,
+                  lessonId: lessonId,
+                  front: card.front,
+                  back: MarkdownToQuill.toDeltaJson(card.back),
+                );
+              }
+            },
     );
   }
 
@@ -588,11 +683,18 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             ),
             icon: const Icon(Icons.school_outlined),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'AI',
+          IconButton(
+            tooltip: 'Page AI',
+            onPressed: _currentPage == null ? null : _openPageInlineAi,
             icon: const Icon(Icons.auto_awesome),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'AI tools',
+            icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
-              if (value == 'generate_questions') {
+              if (value == 'page_ai') {
+                await _openPageInlineAi();
+              } else if (value == 'generate_questions') {
                 await _openGenerateQuestions();
               } else if (value == 'question_sets') {
                 if (!mounted) return;
@@ -609,6 +711,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'page_ai',
+                child: Text('Ask about this page'),
+              ),
               PopupMenuItem(
                 value: 'generate_questions',
                 child: Text('Generate Questions'),
@@ -671,7 +777,6 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                                 enabled: true,
                               ),
                               customizeContextMenuItems: (params, items) {
-                                if (!annotate) return;
                                 if (!params
                                     .textSelectionDelegate
                                     .hasSelectedText) {
@@ -680,24 +785,25 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                                 items.insert(
                                   0,
                                   ContextMenuButtonItem(
-                                    label: 'Add Description',
+                                    label: 'AI',
                                     type: ContextMenuButtonType.custom,
                                     onPressed: () {
                                       params.dismissContextMenu();
-                                      _handleAddTextDescription(
+                                      _openPdfInlineAi(
                                         params.textSelectionDelegate,
                                       );
                                     },
                                   ),
                                 );
+                                if (!annotate) return;
                                 items.insert(
                                   1,
                                   ContextMenuButtonItem(
-                                    label: 'AI Actions',
+                                    label: 'Add Description',
                                     type: ContextMenuButtonType.custom,
                                     onPressed: () {
                                       params.dismissContextMenu();
-                                      _openPdfAiActions(
+                                      _handleAddTextDescription(
                                         params.textSelectionDelegate,
                                       );
                                     },
@@ -762,6 +868,14 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                               pin: _readerPin!,
                               onClose: () => setState(() => _readerPin = null),
                             ),
+                          if (_inlineAi != null)
+                            InlineAiOverlay(
+                              mode: _inlineAi!.mode,
+                              aiContext: _inlineAi!.context,
+                              existingPin: _inlineAi!.existingPin,
+                              useBottomSheetLayout: !_isWide,
+                              callbacks: _inlineAiCallbacks(_inlineAi!),
+                            ),
                         ],
                       ),
                     ),
@@ -779,4 +893,22 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       ),
     );
   }
+}
+
+class _InlineAiSession {
+  const _InlineAiSession({
+    required this.mode,
+    required this.context,
+    required this.ranges,
+    required this.existingPin,
+    required this.materialLessonId,
+    required this.selectedText,
+  });
+
+  final InlineAiSourceMode mode;
+  final AnnotationAiContext context;
+  final List<TextRangeInput> ranges;
+  final StudyPin? existingPin;
+  final String? materialLessonId;
+  final String selectedText;
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/auto_direction_text_field.dart';
+import '../../../../core/widgets/system_bottom_inset.dart';
 
 /// Multiline chat input with optional attach affordance and send.
 class ChatComposer extends StatelessWidget {
@@ -28,8 +29,7 @@ class ChatComposer extends StatelessWidget {
 
     return Material(
       color: theme.colorScheme.surface,
-      child: SafeArea(
-        top: false,
+      child: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.sm,

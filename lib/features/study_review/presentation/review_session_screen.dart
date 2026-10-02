@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/study_navigator.dart';
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../../search/domain/study_search_result.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
@@ -295,7 +296,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                       ],
                     ),
                   ),
-                  SafeArea(
+                  SystemBottomSafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       child: Row(

@@ -1,6 +1,6 @@
 import '../domain/ai_models.dart';
 
-/// Abstraction so UI never calls Gemini directly and tests stay offline.
+/// Abstraction so UI never calls a provider directly and tests stay offline.
 abstract class AiService {
   Future<bool> get isConfigured;
 
@@ -13,7 +13,7 @@ abstract class AiService {
     Duration timeout = const Duration(seconds: 60),
   });
 
-  /// First-class quiz generation — Gemini returns structured question JSON only.
+  /// First-class quiz generation — provider returns structured question JSON.
   Future<AiQuestionsResult> generateQuestions(
     AiQuestionGenerationRequest request, {
     Duration timeout = const Duration(seconds: 90),

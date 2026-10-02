@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/storage/material_storage.dart';
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../lessons/data/materials_providers.dart';
@@ -328,7 +329,7 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
           ],
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

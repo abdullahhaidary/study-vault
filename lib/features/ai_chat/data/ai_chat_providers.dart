@@ -3,21 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
+import '../domain/ai_chat_models.dart';
 import '../services/ai_chat_service.dart';
+import '../services/deepseek_chat_service.dart';
 import '../services/gemini_chat_service.dart';
 
-final geminiChatServiceProvider = Provider<GeminiChatService>((ref) {
+final geminiChatServiceProvider = Provider<AiChatTransport>((ref) {
   return HttpGeminiChatService(
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),
   );
 });
 
+final deepseekChatServiceProvider = Provider<AiChatTransport>((ref) {
+  return HttpDeepSeekChatService(
+    credentials: ref.watch(aiCredentialStoreProvider),
+    settings: ref.watch(aiSettingsStoreProvider),
+  );
+});
+
+final aiChatTransportProvider = Provider<AiChatTransport>((ref) {
+  return RoutingAiChatTransport(
+    settings: ref.watch(aiSettingsStoreProvider),
+    gemini: ref.watch(geminiChatServiceProvider),
+    deepseek: ref.watch(deepseekChatServiceProvider),
+  );
+});
+
 final aiChatServiceProvider = Provider<AiChatService>((ref) {
   return AiChatService(
     db: ref.watch(databaseProvider),
-    gemini: ref.watch(geminiChatServiceProvider),
+    transport: ref.watch(aiChatTransportProvider),
     settings: ref.watch(aiSettingsStoreProvider),
   );
 });
@@ -47,12 +66,22 @@ final aiChatLastMessageProvider = StreamProvider.family<AiChatMessage?, String>(
   },
 );
 
-final availableChatModelsProvider = FutureProvider<List<GeminiModelDefinition>>(
-  (ref) async {
-    final configured = await ref.watch(aiConfiguredProvider.future);
-    if (!configured) {
-      return GeminiModelRegistry.fallbackChatModels();
-    }
-    return ref.watch(geminiChatServiceProvider).listAvailableChatModels();
-  },
-);
+final availableChatModelsProvider = FutureProvider<List<AiSelectableModel>>((
+  ref,
+) async {
+  final configured = await ref.watch(aiConfiguredProvider.future);
+  final provider = await ref.watch(aiSettingsStoreProvider).getProvider();
+  if (!configured) {
+    return switch (provider) {
+      AiProviderId.gemini =>
+        GeminiModelRegistry.fallbackChatModels()
+            .map(AiSelectableModel.fromGemini)
+            .toList(growable: false),
+      AiProviderId.deepseek =>
+        DeepSeekModelRegistry.selectableModels()
+            .map(AiSelectableModel.fromDeepSeek)
+            .toList(growable: false),
+    };
+  }
+  return ref.watch(aiChatTransportProvider).listAvailableChatModels();
+});

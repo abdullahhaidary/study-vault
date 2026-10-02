@@ -28,9 +28,33 @@
         </div>
       </div>
       <p class="lede">
-        Drop study materials here. Pull them onto any phone or laptop on this Wi‑Fi.
+        Drop study materials or paste text here. Pull them onto any phone or laptop on this Wi‑Fi.
       </p>
     </header>
+
+    <section class="text-section" aria-labelledby="text-heading">
+      <div class="text-card">
+        <div class="text-card-head">
+          <h2 id="text-heading">Share text</h2>
+          <p class="text-card-sub">Paste notes, links, or clipboard text for devices on this network.</p>
+        </div>
+        <form id="text-form" class="text-form">
+          <label class="field-label" for="text-title">Title <span class="optional">(optional)</span></label>
+          <input type="text" id="text-title" name="title" maxlength="120" placeholder="e.g. Exam dates" autocomplete="off" />
+          <label class="field-label" for="text-body">Text</label>
+          <textarea id="text-body" name="text" rows="5" required placeholder="Paste or type text to share…"></textarea>
+          <div class="text-form-actions">
+            <button type="submit" class="primary-btn" id="text-share-btn">Share text</button>
+          </div>
+        </form>
+        <div class="text-list-wrap">
+          <div class="text-list-head">
+            <p class="library-sub" id="text-sub">No shared text yet</p>
+          </div>
+          <ul class="text-list" id="text-list"></ul>
+        </div>
+      </div>
+    </section>
 
     <section class="drop-section" aria-labelledby="upload-heading">
       <h2 id="upload-heading" class="visually-hidden">Upload files</h2>

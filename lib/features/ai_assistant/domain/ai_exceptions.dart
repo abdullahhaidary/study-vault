@@ -8,7 +8,9 @@ sealed class AiException implements Exception {
 }
 
 class AiNotConfiguredException extends AiException {
-  const AiNotConfiguredException() : super('Gemini is not configured yet.');
+  const AiNotConfiguredException([
+    super.message = 'AI is not configured yet. Add an API key in Settings.',
+  ]);
 }
 
 class AiPrivacyNotAcceptedException extends AiException {
@@ -22,12 +24,15 @@ class AiOfflineException extends AiException {
 }
 
 class AiInvalidKeyException extends AiException {
-  const AiInvalidKeyException()
-    : super('The Gemini API key appears to be invalid.');
+  const AiInvalidKeyException([
+    super.message = 'The AI API key appears to be invalid.',
+  ]);
 }
 
 class AiQuotaException extends AiException {
-  const AiQuotaException() : super('Gemini quota exceeded. Try again later.');
+  const AiQuotaException([
+    super.message = 'AI quota or balance exceeded. Try again later.',
+  ]);
 }
 
 class AiRateLimitException extends AiException {
@@ -42,19 +47,20 @@ class AiTimeoutException extends AiException {
 
 class AiUnsupportedModelException extends AiException {
   const AiUnsupportedModelException([
-    super.message =
-        'The selected Gemini model is not available for this API key.',
+    super.message = 'The selected AI model is not available for this API key.',
   ]);
 }
 
 class AiServerException extends AiException {
   const AiServerException([
-    super.message = 'Gemini service error. Please try again.',
+    super.message = 'AI service error. Please try again.',
   ]);
 }
 
 class AiEmptyResultException extends AiException {
-  const AiEmptyResultException() : super('Gemini returned an empty result.');
+  const AiEmptyResultException([
+    super.message = 'The AI returned an empty result.',
+  ]);
 }
 
 class AiMalformedOutputException extends AiException {

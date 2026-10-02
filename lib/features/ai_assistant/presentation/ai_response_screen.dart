@@ -9,6 +9,7 @@ import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../data/ai_providers.dart';
+import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
@@ -140,6 +141,10 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (incoming != null && incoming.isNotEmpty) {
       final already = gens.any((g) => g.responseText.trim() == incoming);
       if (!already) {
+        final meta = await readAiGenerationMeta(
+          ref.read(aiSettingsStoreProvider),
+          action: widget.action,
+        );
         final saved = await history.persistCompleted(
           context: _context,
           action: widget.action,
@@ -149,7 +154,8 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
           summarizeMode: widget.request.summarizeMode,
           translateTarget: widget.request.translateTarget,
           customPrompt: widget.request.customPrompt,
-          modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+          modelName: meta.modelId,
+          provider: meta.providerStorage,
         );
         gens = [...gens, saved];
       }
@@ -187,7 +193,10 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     });
 
     final history = ref.read(annotationAiHistoryServiceProvider);
-    final modelName = await ref.read(aiSettingsStoreProvider).getModelId();
+    final meta = await readAiGenerationMeta(
+      ref.read(aiSettingsStoreProvider),
+      action: widget.action,
+    );
 
     try {
       if (!mounted) return;
@@ -212,7 +221,8 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
         translateTarget: widget.request.translateTarget,
         customPrompt: widget.request.customPrompt,
         regenerateInstruction: regenerateInstruction,
-        modelName: modelName,
+        modelName: meta.modelId,
+        provider: meta.providerStorage,
       );
 
       if (!mounted) return;
@@ -394,13 +404,18 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     setState(() => _busy = false);
     if (result is AiTextResult) {
       final history = ref.read(annotationAiHistoryServiceProvider);
+      final meta = await readAiGenerationMeta(
+        ref.read(aiSettingsStoreProvider),
+        action: AiStudyAction.askAi,
+      );
       await history.persistCompleted(
         context: ctx,
         action: AiStudyAction.askAi,
         responseText: result.markdown,
         customPrompt: question,
         parentGenerationId: _selected?.id,
-        modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+        modelName: meta.modelId,
+        provider: meta.providerStorage,
       );
       ref.invalidate(
         annotationAiGenerationCountsProvider(
@@ -456,6 +471,10 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     if (result is! AiFlashcardsResult || !mounted) return;
 
     final history = ref.read(annotationAiHistoryServiceProvider);
+    final meta = await readAiGenerationMeta(
+      ref.read(aiSettingsStoreProvider),
+      action: AiStudyAction.generateFlashcards,
+    );
     await history.persistCompleted(
       context: localCtx,
       action: AiStudyAction.generateFlashcards,
@@ -464,7 +483,8 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
           .join('\n\n---\n\n'),
       responseKind: 'flashcards',
       parentGenerationId: _selected?.id,
-      modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+      modelName: meta.modelId,
+      provider: meta.providerStorage,
     );
     ref.invalidate(
       annotationAiGenerationCountsProvider(
@@ -611,7 +631,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        'Model: ${selected!.modelName}',
+                        'Model: ${AiModels.displayBadge(provider: selected!.provider, modelName: selected.modelName)}',
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ),

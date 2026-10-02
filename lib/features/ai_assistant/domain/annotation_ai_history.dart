@@ -22,6 +22,8 @@ abstract final class AnnotationAiPromptVersions {
   static const createAnnotation = 'annotation_create_v1';
   static const generateFlashcards = 'annotation_flashcards_v1';
   static const generateQuestions = 'annotation_questions_v1';
+  static const keyConcepts = 'annotation_key_concepts_v1';
+  static const examPoints = 'annotation_exam_points_v1';
 
   static String forAction(AiStudyAction action) => switch (action) {
     AiStudyAction.explain => explain,
@@ -38,6 +40,8 @@ abstract final class AnnotationAiPromptVersions {
     AiStudyAction.createAnnotation => createAnnotation,
     AiStudyAction.generateFlashcards => generateFlashcards,
     AiStudyAction.generateQuestions => generateQuestions,
+    AiStudyAction.keyConcepts => keyConcepts,
+    AiStudyAction.examPoints => examPoints,
   };
 }
 

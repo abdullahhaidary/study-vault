@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/backup/backup_providers.dart';
 import 'package:study_vault/core/backup/backup_service.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_output_validator.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
-import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
 import 'package:study_vault/features/ai_questions/domain/question_source.dart';
 import 'package:study_vault/features/ai_questions/domain/quiz_models.dart';
 import 'package:study_vault/features/ai_questions/services/quiz_generation_service.dart';
@@ -17,11 +18,11 @@ import 'package:study_vault/features/ai_questions/services/quiz_session_service.
 
 void main() {
   group('schema / backup version alignment', () {
-    test('schema version is 10 everywhere', () {
+    test('schema version is 11 everywhere', () {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       expect(db.schemaVersion, 11);
-      expect(kStudyVaultSchemaVersion, 10);
-      expect(BackupService().currentSchemaVersion, 10);
+      expect(kStudyVaultSchemaVersion, 11);
+      expect(BackupService().currentSchemaVersion, 11);
       return db.close();
     });
   });
@@ -352,16 +353,48 @@ void main() {
 
 /// Minimal in-memory settings for generation tests.
 class MemoryAiSettingsStore implements AiSettingsStore {
+  AiProviderId _provider = AiProviderId.gemini;
   String _model = AiModelIds.recommended;
+  String _deepseekModel = 'deepseek-flash';
+  AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   String? _preference;
   bool _privacy = true;
 
   @override
-  Future<String> getModelId() async => _model;
+  Future<AiProviderId> getProvider() async => _provider;
 
   @override
-  Future<void> setModelId(String id) async => _model = id;
+  Future<void> setProvider(AiProviderId provider) async => _provider = provider;
+
+  @override
+  Future<String> getModelId() async => getModelIdFor(_provider);
+
+  @override
+  Future<void> setModelId(String id) async => setModelIdFor(_provider, id);
+
+  @override
+  Future<String> getModelIdFor(AiProviderId provider) async =>
+      switch (provider) {
+        AiProviderId.gemini => _model,
+        AiProviderId.deepseek => _deepseekModel,
+      };
+
+  @override
+  Future<void> setModelIdFor(AiProviderId provider, String modelId) async {
+    switch (provider) {
+      case AiProviderId.gemini:
+        _model = modelId;
+      case AiProviderId.deepseek:
+        _deepseekModel = modelId;
+    }
+  }
+
+  @override
+  Future<AiThinkingMode> getThinkingMode() async => _thinking;
+
+  @override
+  Future<void> setThinkingMode(AiThinkingMode mode) async => _thinking = mode;
 
   @override
   Future<AiLanguage> getLanguage() async => _language;

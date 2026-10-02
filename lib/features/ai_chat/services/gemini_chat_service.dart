@@ -7,14 +7,15 @@ import 'package:http/http.dart' as http;
 import '../../ai_assistant/data/ai_credential_store.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 
-/// Multi-turn Gemini chat networking.
-abstract class GeminiChatService {
+/// Multi-turn chat networking (provider-agnostic transport).
+abstract class AiChatTransport {
   Future<bool> get isConfigured;
 
-  Future<List<GeminiModelDefinition>> listAvailableChatModels({
+  Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   });
 
@@ -31,8 +32,11 @@ abstract class GeminiChatService {
   });
 }
 
+/// Backward-compatible alias used by existing chat code / tests.
+typedef GeminiChatService = AiChatTransport;
+
 /// Gemini REST client using generateContent / streamGenerateContent.
-class HttpGeminiChatService implements GeminiChatService {
+class HttpGeminiChatService implements AiChatTransport {
   HttpGeminiChatService({
     required this.credentials,
     required this.settings,
@@ -47,12 +51,13 @@ class HttpGeminiChatService implements GeminiChatService {
 
   static const maxContextChars = 80000;
   static const maxContextMessages = 40;
+  static const _provider = AiProviderId.gemini;
 
   @override
-  Future<bool> get isConfigured => credentials.hasApiKey;
+  Future<bool> get isConfigured => credentials.hasApiKeyFor(_provider);
 
   @override
-  Future<List<GeminiModelDefinition>> listAvailableChatModels({
+  Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
     final key = await _requireKey();
@@ -63,16 +68,16 @@ class HttpGeminiChatService implements GeminiChatService {
           .timeout(timeout);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return GeminiModelRegistry.fallbackChatModels();
+        return _fallbackModels();
       }
 
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) {
-        return GeminiModelRegistry.fallbackChatModels();
+        return _fallbackModels();
       }
       final models = decoded['models'];
       if (models is! List) {
-        return GeminiModelRegistry.fallbackChatModels();
+        return _fallbackModels();
       }
 
       final ids = <String>{};
@@ -88,17 +93,24 @@ class HttpGeminiChatService implements GeminiChatService {
         }
         ids.add(name.contains('/') ? name.split('/').last : name);
       }
-      return GeminiModelRegistry.resolveAvailable(serverModelIds: ids);
+      return GeminiModelRegistry.resolveAvailable(
+        serverModelIds: ids,
+      ).map(AiSelectableModel.fromGemini).toList(growable: false);
     } on TimeoutException {
-      return GeminiModelRegistry.fallbackChatModels();
+      return _fallbackModels();
     } on SocketException {
-      return GeminiModelRegistry.fallbackChatModels();
+      return _fallbackModels();
     } on http.ClientException {
-      return GeminiModelRegistry.fallbackChatModels();
+      return _fallbackModels();
     } on Object {
-      return GeminiModelRegistry.fallbackChatModels();
+      return _fallbackModels();
     }
   }
+
+  List<AiSelectableModel> _fallbackModels() =>
+      GeminiModelRegistry.fallbackChatModels()
+          .map(AiSelectableModel.fromGemini)
+          .toList(growable: false);
 
   @override
   Future<AiChatCompletion> complete({
@@ -260,9 +272,11 @@ class HttpGeminiChatService implements GeminiChatService {
   }
 
   Future<String> _requireKey() async {
-    final key = await credentials.readApiKey();
+    final key = await credentials.readApiKeyFor(_provider);
     if (key == null || key.isEmpty) {
-      throw const AiNotConfiguredException();
+      throw const AiNotConfiguredException(
+        'Gemini is not configured yet. Add an API key in Settings.',
+      );
     }
     return key;
   }
@@ -422,7 +436,7 @@ class HttpGeminiChatService implements GeminiChatService {
 }
 
 /// Deterministic chat networking for tests.
-class FakeGeminiChatService implements GeminiChatService {
+class FakeGeminiChatService implements AiChatTransport {
   FakeGeminiChatService({
     required this.credentials,
     required this.settings,
@@ -434,18 +448,22 @@ class FakeGeminiChatService implements GeminiChatService {
   final AiCredentialStore credentials;
   final AiSettingsStore settings;
   final String reply;
-  final List<GeminiModelDefinition>? availableModels;
+  final List<AiSelectableModel>? availableModels;
   final AiException? failWith;
   final List<List<AiChatTurn>> sentHistories = [];
 
   @override
-  Future<bool> get isConfigured => credentials.hasApiKey;
+  Future<bool> get isConfigured =>
+      credentials.hasApiKeyFor(AiProviderId.gemini);
 
   @override
-  Future<List<GeminiModelDefinition>> listAvailableChatModels({
+  Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    return availableModels ?? GeminiModelRegistry.fallbackChatModels();
+    return availableModels ??
+        GeminiModelRegistry.fallbackChatModels()
+            .map(AiSelectableModel.fromGemini)
+            .toList(growable: false);
   }
 
   @override
@@ -454,7 +472,7 @@ class FakeGeminiChatService implements GeminiChatService {
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 90),
   }) async {
-    if (!await credentials.hasApiKey) {
+    if (!await credentials.hasApiKeyFor(AiProviderId.gemini)) {
       throw const AiNotConfiguredException();
     }
     if (!await settings.getPrivacyConsentAccepted()) {

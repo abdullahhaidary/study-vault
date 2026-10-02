@@ -5,8 +5,10 @@ import '../../ai_chat/data/ai_chat_providers.dart';
 import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
+import '../domain/ai_provider.dart';
+import '../domain/deepseek_model_registry.dart';
 
-/// Settings → AI Assistant section.
+/// Settings → AI Assistant section (multi-provider).
 class AiSettingsSection extends ConsumerStatefulWidget {
   const AiSettingsSection({super.key});
 
@@ -30,17 +32,22 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   Future<void> _refresh() async {
     ref.invalidate(aiSettingsStateProvider);
     ref.invalidate(aiConfiguredProvider);
+    ref.invalidate(availableChatModelsProvider);
   }
 
-  Future<void> _saveKey() async {
+  Future<void> _saveKey(AiProviderId provider) async {
     setState(() => _saving = true);
     try {
-      await ref.read(aiCredentialStoreProvider).saveApiKey(_keyController.text);
+      await ref
+          .read(aiCredentialStoreProvider)
+          .saveApiKeyFor(provider, _keyController.text);
       _keyController.clear();
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gemini API key saved securely.')),
+          SnackBar(
+            content: Text('${provider.displayName} API key saved securely.'),
+          ),
         );
       }
     } finally {
@@ -48,14 +55,14 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     }
   }
 
-  Future<void> _removeKey() async {
+  Future<void> _removeKey(AiProviderId provider) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Gemini API key?'),
-        content: const Text(
-          'AI features will stop working until you add a key again. '
-          'Your notes, pins, and flashcards are not deleted.',
+        title: Text('Remove ${provider.displayName} API key?'),
+        content: Text(
+          'AI features using ${provider.displayName} will stop until you add '
+          'a key again. Your notes, pins, and flashcards are not deleted.',
         ),
         actions: [
           TextButton(
@@ -70,7 +77,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
       ),
     );
     if (ok != true) return;
-    await ref.read(aiCredentialStoreProvider).removeApiKey();
+    await ref.read(aiCredentialStoreProvider).removeApiKeyFor(provider);
     await _refresh();
   }
 
@@ -81,9 +88,10 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     });
     try {
       await ref.read(aiServiceProvider).testConnection();
+      final provider = await ref.read(aiSettingsStoreProvider).getProvider();
       setState(() {
         _testOk = true;
-        _testMessage = 'Gemini connection successful.';
+        _testMessage = '✓ Connected to ${provider.displayName}';
       });
     } on AiException catch (e) {
       setState(() {
@@ -98,6 +106,36 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     } finally {
       if (mounted) setState(() => _testing = false);
     }
+  }
+
+  Future<void> _showReplaceKeyDialog(AiProviderId provider) async {
+    _keyController.clear();
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Replace ${provider.displayName} Key'),
+        content: TextField(
+          controller: _keyController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'New ${provider.displayName} API key',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _saveKey(provider);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -115,6 +153,10 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
       error: (e, _) =>
           Card(child: ListTile(title: Text('AI settings error: $e'))),
       data: (state) {
+        final provider = state.provider;
+        final configured = state.configured;
+        final modelItems = AiModels.selectableIds(provider);
+
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -124,20 +166,44 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 Text('AI Assistant', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 4),
                 Text(
-                  'Gemini helps only when you ask. Study data stays local unless '
+                  'AI helps only when you ask. Study data stays local unless '
                   'you run an AI action.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Provider', style: theme.textTheme.titleSmall),
+                Text('Default Provider', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
-                const Text('Gemini'),
-                const SizedBox(height: 16),
-                Text('Gemini API Key', style: theme.textTheme.titleSmall),
+                DropdownButtonFormField<AiProviderId>(
+                  initialValue: provider,
+                  items: [
+                    for (final p in AiProviderId.values)
+                      DropdownMenuItem(value: p, child: Text(p.displayName)),
+                  ],
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await ref.read(aiSettingsStoreProvider).setProvider(value);
+                    setState(() {
+                      _testMessage = null;
+                    });
+                    await _refresh();
+                  },
+                ),
                 const SizedBox(height: 8),
-                if (state.configured) ...[
+                Text(
+                  provider.privacyLine,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${provider.displayName} API Key',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                if (configured) ...[
                   Text('••••••••••••••••', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Row(
@@ -169,44 +235,23 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                             : const Text('Test Connection'),
                       ),
                       OutlinedButton(
-                        onPressed: () {
-                          _keyController.clear();
-                          showDialog<void>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Replace Key'),
-                              content: TextField(
-                                controller: _keyController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'New Gemini API key',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                FilledButton(
-                                  onPressed: () async {
-                                    Navigator.pop(context);
-                                    await _saveKey();
-                                  },
-                                  child: const Text('Save'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                        onPressed: () => _showReplaceKeyDialog(provider),
                         child: const Text('Replace Key'),
                       ),
                       TextButton(
-                        onPressed: _removeKey,
+                        onPressed: () => _removeKey(provider),
                         child: const Text('Remove Key'),
                       ),
                     ],
                   ),
                 ] else ...[
+                  Text(
+                    '${provider.displayName} API key required',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: _keyController,
                     obscureText: true,
@@ -217,14 +262,14 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: _saving ? null : _saveKey,
+                    onPressed: _saving ? null : () => _saveKey(provider),
                     child: _saving
                         ? const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Save Key'),
+                        : const Text('Add API Key'),
                   ),
                 ],
                 if (_testMessage != null) ...[
@@ -239,23 +284,58 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                Text('Model', style: theme.textTheme.titleSmall),
+                Text('Default Model', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  initialValue: AiModelIds.normalize(state.modelId),
+                  key: ValueKey('model-${provider.name}-${state.modelId}'),
+                  initialValue: modelItems.contains(state.modelId)
+                      ? state.modelId
+                      : modelItems.first,
                   items: [
-                    for (final id in AiModelIds.all)
+                    for (final id in modelItems)
                       DropdownMenuItem(
                         value: id,
-                        child: Text(AiModelIds.label(id)),
+                        child: Text(AiModels.label(provider, id)),
                       ),
                   ],
                   onChanged: (value) async {
                     if (value == null) return;
-                    await ref.read(aiSettingsStoreProvider).setModelId(value);
+                    await ref
+                        .read(aiSettingsStoreProvider)
+                        .setModelIdFor(provider, value);
                     await _refresh();
                   },
                 ),
+                if (provider == AiProviderId.deepseek) ...[
+                  const SizedBox(height: 16),
+                  Text('Thinking', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<AiThinkingMode>(
+                    initialValue: state.thinkingMode,
+                    items: [
+                      for (final mode in AiThinkingMode.values)
+                        DropdownMenuItem(value: mode, child: Text(mode.label)),
+                    ],
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      await ref
+                          .read(aiSettingsStoreProvider)
+                          .setThinkingMode(value);
+                      await _refresh();
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Thinking improves difficult answers. Reasoning traces '
+                    'are never shown. Auto uses Low for quick study actions '
+                    'and High for quizzes / hard tasks. '
+                    'Flash default: ${DeepSeekModelRegistry.byId(DeepSeekModelRegistry.flash)?.displayName}; '
+                    'Pro for harder work when Model is Auto.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text('Default Language', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
@@ -289,9 +369,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                         .setStudyPreference(value);
                     await _refresh();
                   },
-                  onChanged: (value) async {
-                    // Debounce lightly via save on change end — use submit + unfocus.
-                  },
+                  onChanged: (_) {},
                   onSaved: (value) async {
                     await ref
                         .read(aiSettingsStoreProvider)
@@ -302,8 +380,6 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () async {
-                      // Save current field by reading from a focus-lost pattern:
-                      // Use a small dialog for reliability.
                       final controller = TextEditingController(
                         text: state.studyPreference ?? '',
                       );
@@ -359,6 +435,16 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     await _refresh();
                   },
                 ),
+                if (state.geminiConfigured || state.deepseekConfigured) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Configured keys: '
+                    '${[if (state.geminiConfigured) 'Gemini', if (state.deepseekConfigured) 'DeepSeek'].join(', ')}. Switching provider keeps each key.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: () async {

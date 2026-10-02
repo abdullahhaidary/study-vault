@@ -1,3 +1,5 @@
+import 'ai_provider.dart';
+import 'deepseek_model_registry.dart';
 import 'gemini_model_registry.dart';
 
 /// Study-focused AI actions (user-initiated only).
@@ -16,6 +18,8 @@ enum AiStudyAction {
   createAnnotation,
   generateFlashcards,
   generateQuestions,
+  keyConcepts,
+  examPoints,
 }
 
 enum AiLanguage { auto, english, persianDari }
@@ -83,6 +87,8 @@ extension AiQuestionDifficultyX on AiQuestionDifficulty {
 }
 
 /// Centralized Gemini model IDs — delegates to [GeminiModelRegistry].
+///
+/// Prefer [AiModels] when the active provider may not be Gemini.
 abstract final class AiModelIds {
   static const recommended = GeminiModelRegistry.defaultModelId;
 
@@ -90,7 +96,7 @@ abstract final class AiModelIds {
   static const flash25 = 'gemini-2.5-flash';
   static const flashLite = 'gemini-2.5-flash-lite';
 
-  /// Models offered in the study-action settings dropdown.
+  /// Models offered in the study-action settings dropdown (Gemini).
   static List<String> get all => GeminiModelRegistry.fallbackChatModels()
       .map((m) => m.id)
       .toList(growable: false);
@@ -105,6 +111,57 @@ abstract final class AiModelIds {
 
   /// Falls back when a stored preference is obsolete / unavailable.
   static String normalize(String? id) => GeminiModelRegistry.normalize(id);
+}
+
+/// Provider-aware model helpers for Settings / persistence.
+abstract final class AiModels {
+  static List<String> selectableIds(AiProviderId provider) =>
+      switch (provider) {
+        AiProviderId.gemini => AiModelIds.all,
+        AiProviderId.deepseek => [
+          DeepSeekModelIds.auto,
+          ...DeepSeekModelRegistry.selectableModels().map((m) => m.id),
+        ],
+      };
+
+  static String label(AiProviderId provider, String id) => switch (provider) {
+    AiProviderId.gemini => AiModelIds.label(id),
+    AiProviderId.deepseek =>
+      DeepSeekModelIds.isAuto(id)
+          ? 'Auto'
+          : (() {
+              final def = DeepSeekModelRegistry.byId(id);
+              if (def == null) return id;
+              return def.recommended
+                  ? 'Recommended (${def.displayName})'
+                  : def.displayName;
+            })(),
+  };
+
+  static String normalize(AiProviderId provider, String? id) =>
+      switch (provider) {
+        AiProviderId.gemini => GeminiModelRegistry.normalize(id),
+        AiProviderId.deepseek =>
+          DeepSeekModelIds.isAuto(id)
+              ? DeepSeekModelIds.auto
+              : DeepSeekModelRegistry.normalize(id),
+      };
+
+  static String displayBadge({
+    required String? provider,
+    required String? modelName,
+  }) {
+    final p = AiProviderIdX.fromStorage(provider);
+    final model = modelName?.trim();
+    if (model == null || model.isEmpty) return p.displayName;
+    final modelLabel = switch (p) {
+      AiProviderId.gemini =>
+        GeminiModelRegistry.byId(model)?.displayName ?? model,
+      AiProviderId.deepseek =>
+        DeepSeekModelRegistry.byId(model)?.displayName ?? model,
+    };
+    return modelLabel;
+  }
 }
 
 extension AiStudyActionX on AiStudyAction {
@@ -123,6 +180,8 @@ extension AiStudyActionX on AiStudyAction {
     AiStudyAction.createAnnotation => 'Drafting annotation…',
     AiStudyAction.generateFlashcards => 'Generating flashcards…',
     AiStudyAction.generateQuestions => 'Generating questions…',
+    AiStudyAction.keyConcepts => 'Extracting key concepts…',
+    AiStudyAction.examPoints => 'Finding exam points…',
   };
 
   String get menuLabel => switch (this) {
@@ -140,6 +199,8 @@ extension AiStudyActionX on AiStudyAction {
     AiStudyAction.createAnnotation => 'Create annotation',
     AiStudyAction.generateFlashcards => 'Create flashcards',
     AiStudyAction.generateQuestions => 'Generate questions',
+    AiStudyAction.keyConcepts => 'Key concepts',
+    AiStudyAction.examPoints => 'Exam points',
   };
 
   /// True when the result is free-form markdown (not structured JSON).
@@ -154,7 +215,9 @@ extension AiStudyActionX on AiStudyAction {
     AiStudyAction.giveExample ||
     AiStudyAction.translate ||
     AiStudyAction.askAi ||
-    AiStudyAction.customPrompt => true,
+    AiStudyAction.customPrompt ||
+    AiStudyAction.keyConcepts ||
+    AiStudyAction.examPoints => true,
     AiStudyAction.createAnnotation ||
     AiStudyAction.generateFlashcards ||
     AiStudyAction.generateQuestions => false,

@@ -6,7 +6,9 @@ import '../../features/classes/presentation/home_screen.dart';
 import '../../features/favorites/presentation/favorites_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../navigation/shell_tab.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'system_bottom_inset.dart';
 
 /// Responsive application chrome: bottom nav on phones, rail on wide screens.
 class AppShell extends ConsumerStatefulWidget {
@@ -117,17 +119,25 @@ class _AppShellState extends ConsumerState<AppShell> {
       child: Column(
         children: [
           Expanded(child: body),
-          NavigationBar(
-            selectedIndex: index,
-            onDestinationSelected: (i) => _select(i, destinations),
-            destinations: [
-              for (final d in destinations)
-                NavigationDestination(
-                  icon: Icon(d.icon),
-                  selectedIcon: Icon(d.selectedIcon),
-                  label: d.label,
-                ),
-            ],
+          // Background fills any remaining system inset; interactive nav stays
+          // above the system navigation buttons / home indicator.
+          Material(
+            color: AppColors.surface,
+            elevation: 0,
+            child: SystemBottomSafeArea(
+              child: NavigationBar(
+                selectedIndex: index,
+                onDestinationSelected: (i) => _select(i, destinations),
+                destinations: [
+                  for (final d in destinations)
+                    NavigationDestination(
+                      icon: Icon(d.icon),
+                      selectedIcon: Icon(d.selectedIcon),
+                      label: d.label,
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

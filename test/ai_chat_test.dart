@@ -4,6 +4,7 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/domain/gemini_model_registry.dart';
 import 'package:study_vault/features/ai_chat/domain/ai_chat_models.dart';
 import 'package:study_vault/features/ai_chat/services/ai_chat_service.dart';
@@ -74,7 +75,7 @@ void main() {
     setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       credentials = MemoryAiCredentialStore();
-      await credentials.saveApiKey('test-key');
+      await credentials.saveApiKeyFor(AiProviderId.gemini, 'test-key');
       settings = MemoryAiSettingsStore();
       await settings.setPrivacyConsentAccepted(true);
       await settings.setModelId(GeminiModelRegistry.defaultModelId);
@@ -90,7 +91,7 @@ void main() {
       await db.close();
     });
 
-    test('schema version is 10', () {
+    test('schema version is 11', () {
       expect(db.schemaVersion, 11);
     });
 

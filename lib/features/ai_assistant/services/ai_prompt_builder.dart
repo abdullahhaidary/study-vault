@@ -1,7 +1,7 @@
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 
-/// Builds Gemini prompts for study actions (single source of truth).
+/// Builds study-action prompts (provider-agnostic single source of truth).
 abstract final class AiPromptBuilder {
   static const _preserveRules = '''
 Preserve-meaning rules (mandatory):
@@ -77,8 +77,13 @@ Return concise but educational answers.
 
   static String _conversationBlock(AiStudyRequest request) {
     if (request.conversation.isEmpty) return '';
+    // Bound context growth for all providers.
+    const maxTurns = 8;
+    final turns = request.conversation.length > maxTurns
+        ? request.conversation.sublist(request.conversation.length - maxTurns)
+        : request.conversation;
     final buffer = StringBuffer('\nPRIOR CONVERSATION (same selection):\n');
-    for (final turn in request.conversation) {
+    for (final turn in turns) {
       buffer.writeln('Student: ${turn.userMessage}');
       buffer.writeln('Assistant: ${turn.assistantMarkdown}');
       buffer.writeln();
@@ -188,6 +193,32 @@ Return concise but educational answers.
     return '${systemPreamble(language: request.language, userPreference: request.userPreference)}\n'
         'Task: Provide one or two examples that directly demonstrate the selected concept.\n'
         'Keep examples concrete and tied to the source. Return markdown only.\n\n'
+        '${materialBlock(request)}'
+        '${_conversationBlock(request)}';
+  }
+
+  static String keyConcepts(AiStudyRequest request) {
+    return '${systemPreamble(language: request.language, userPreference: request.userPreference)}\n'
+        'Task: Extract the most important key concepts / terms from the source.\n'
+        'Requirements:\n'
+        '- Return a short markdown list (prefer 3–8 items).\n'
+        '- Each item: **Term** — concise definition grounded in the source.\n'
+        '- Preserve formulas, variable names, and technical English terms.\n'
+        '- Do not invent concepts not supported by the source.\n'
+        'Return markdown only.\n\n'
+        '${materialBlock(request)}'
+        '${_conversationBlock(request)}';
+  }
+
+  static String examPoints(AiStudyRequest request) {
+    return '${systemPreamble(language: request.language, userPreference: request.userPreference)}\n'
+        'Task: Help the student prepare for exams based ONLY on this source.\n'
+        'Return concise markdown with these sections when useful:\n'
+        '- Important definition / concept\n'
+        '- Common confusion\n'
+        '- One short exam-style practice question (do NOT claim this predicts a real exam)\n'
+        'Stay grounded in the source. Preserve formulas and technical terms.\n'
+        'Return markdown only.\n\n'
         '${materialBlock(request)}'
         '${_conversationBlock(request)}';
   }
@@ -325,6 +356,8 @@ Return concise but educational answers.
       AiStudyAction.createAnnotation => buildAnnotationDraft(request),
       AiStudyAction.generateFlashcards => buildFlashcards(request),
       AiStudyAction.generateQuestions => buildQuestions(request),
+      AiStudyAction.keyConcepts => keyConcepts(request),
+      AiStudyAction.examPoints => examPoints(request),
     };
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
 
@@ -77,7 +78,7 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Wrap(

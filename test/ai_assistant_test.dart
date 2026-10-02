@@ -3,6 +3,7 @@ import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart'
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_output_validator.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
@@ -13,21 +14,29 @@ void main() {
     test('saves, replaces, and removes an API key', () async {
       final store = MemoryAiCredentialStore();
 
-      expect(await store.hasApiKey, isFalse);
-      await store.saveApiKey(' first-key ');
-      expect(await store.readApiKey(), 'first-key');
-      expect(await store.hasApiKey, isTrue);
+      expect(await store.hasApiKeyFor(AiProviderId.gemini), isFalse);
+      await store.saveApiKeyFor(AiProviderId.gemini, ' first-key ');
+      expect(await store.readApiKeyFor(AiProviderId.gemini), 'first-key');
+      expect(await store.hasApiKeyFor(AiProviderId.gemini), isTrue);
 
-      await store.replaceApiKey('second-key');
-      expect(await store.readApiKey(), 'second-key');
-      await store.removeApiKey();
-      expect(await store.hasApiKey, isFalse);
+      await store.replaceApiKeyFor(AiProviderId.gemini, 'second-key');
+      expect(await store.readApiKeyFor(AiProviderId.gemini), 'second-key');
+      await store.removeApiKeyFor(AiProviderId.gemini);
+      expect(await store.hasApiKeyFor(AiProviderId.gemini), isFalse);
     });
 
     test('is an in-memory store, independent of Drift persistence', () async {
       final store = MemoryAiCredentialStore();
-      await store.saveApiKey('temporary-key');
-      expect(await store.readApiKey(), 'temporary-key');
+      await store.saveApiKeyFor(AiProviderId.gemini, 'temporary-key');
+      expect(await store.readApiKeyFor(AiProviderId.gemini), 'temporary-key');
+    });
+
+    test('stores DeepSeek and Gemini keys independently', () async {
+      final store = MemoryAiCredentialStore();
+      await store.saveApiKeyFor(AiProviderId.gemini, 'g-key');
+      await store.saveApiKeyFor(AiProviderId.deepseek, 'd-key');
+      expect(await store.readApiKeyFor(AiProviderId.gemini), 'g-key');
+      expect(await store.readApiKeyFor(AiProviderId.deepseek), 'd-key');
     });
   });
 

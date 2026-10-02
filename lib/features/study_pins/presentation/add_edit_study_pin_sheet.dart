@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../data/pin_categories_providers.dart';
@@ -98,9 +99,7 @@ class AddEditStudyPinSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
+        padding: EdgeInsets.only(bottom: SystemBottomInset.of(context)),
         child: child,
       ),
     );

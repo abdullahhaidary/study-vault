@@ -10,18 +10,21 @@ import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
-import '../domain/gemini_model_registry.dart';
+import '../domain/deepseek_model_registry.dart';
 import 'ai_output_validator.dart';
 import 'ai_prompt_builder.dart';
 import 'ai_service.dart';
 
-/// Gemini REST client using generateContent (official Google AI API).
-class GeminiAiService implements AiService {
-  GeminiAiService({
+/// DeepSeek OpenAI-compatible client (`POST /chat/completions`).
+///
+/// Reuses [AiPromptBuilder] + [AiOutputValidator]. Never exposes keys or
+/// reasoning traces to callers — only final `content`.
+class DeepSeekAiService implements AiService {
+  DeepSeekAiService({
     required this.credentials,
     required this.settings,
     http.Client? httpClient,
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta',
+    this.baseUrl = 'https://api.deepseek.com',
   }) : _http = httpClient ?? http.Client();
 
   final AiCredentialStore credentials;
@@ -29,7 +32,7 @@ class GeminiAiService implements AiService {
   final http.Client _http;
   final String baseUrl;
 
-  static const _provider = AiProviderId.gemini;
+  static const _provider = AiProviderId.deepseek;
 
   @override
   Future<bool> get isConfigured => credentials.hasApiKeyFor(_provider);
@@ -39,27 +42,16 @@ class GeminiAiService implements AiService {
     Duration timeout = const Duration(seconds: 20),
   }) async {
     final key = await _requireKey();
-    final model = GeminiModelRegistry.normalize(
-      await settings.getModelIdFor(_provider),
-    );
-    final body = {
-      'contents': [
-        {
-          'parts': [
-            {'text': 'Reply with exactly: OK'},
-          ],
-        },
-      ],
-      'generationConfig': {
-        'maxOutputTokens': 64,
-        // 2.5 Flash thinking can consume a tiny token budget with no visible text.
-        'thinkingConfig': {'thinkingBudget': 0},
-      },
-    };
-    await _postGenerate(
-      model: model,
+    final model = await _resolveModel(action: null);
+    await _chatCompletions(
       apiKey: key,
-      body: body,
+      model: model,
+      messages: const [
+        {'role': 'user', 'content': 'Reply with exactly: OK'},
+      ],
+      maxTokens: 16,
+      jsonMode: false,
+      thinking: AiThinkingMode.low,
       timeout: timeout,
     );
   }
@@ -83,47 +75,37 @@ class GeminiAiService implements AiService {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final model = GeminiModelRegistry.normalize(
-      await settings.getModelIdFor(_provider),
-    );
+
     final preference = await settings.getStudyPreference();
     final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
     );
-
+    final model = await _resolveModel(action: request.action);
+    final thinking = await _resolveThinking(action: request.action);
+    // Shared prompt builder already embeds system rules + conversation.
     final prompt = AiPromptBuilder.forRequest(enriched);
-    final structured = _schemaFor(request.action);
-    final body = <String, dynamic>{
-      'contents': [
-        {
-          'parts': [
-            {'text': prompt},
-          ],
-        },
-      ],
-      'generationConfig': {
-        'maxOutputTokens': 8192,
-        'thinkingConfig': {'thinkingBudget': 0},
-        if (structured != null) ...{
-          'responseMimeType': 'application/json',
-          // Prefer JSON Schema field (responseSchema is deprecated).
-          'responseJsonSchema': structured,
-        },
-      },
-    };
+    final structured = _isStructured(request.action);
+
+    final messages = <Map<String, String>>[
+      {'role': 'user', 'content': prompt},
+    ];
 
     final started = DateTime.now();
-    final text = await _postGenerate(
-      model: model,
+    final text = await _chatCompletions(
       apiKey: key,
-      body: body,
+      model: model,
+      messages: messages,
+      maxTokens: structured ? 8192 : 4096,
+      jsonMode: structured,
+      thinking: thinking,
       timeout: timeout,
     );
+
     assert(() {
       // Never log source/PDF content or API keys — action + timing only.
       // ignore: avoid_print
       print(
-        'AI ${request.action.name} model=$model ok in '
+        'AI ${request.action.name} provider=deepseek model=$model ok in '
         '${DateTime.now().difference(started).inMilliseconds}ms '
         'chars=${request.effectiveSourceLength}',
       );
@@ -168,18 +150,50 @@ class GeminiAiService implements AiService {
     final result = await run(request.toStudyRequest(), timeout: timeout);
     if (result is! AiQuestionsResult) {
       throw const AiMalformedOutputException(
-        'Gemini did not return quiz questions.',
+        'DeepSeek did not return quiz questions.',
       );
     }
     return result;
   }
 
-  Map<String, dynamic>? _schemaFor(AiStudyAction action) {
+  bool _isStructured(AiStudyAction action) => switch (action) {
+    AiStudyAction.createAnnotation ||
+    AiStudyAction.generateFlashcards ||
+    AiStudyAction.generateQuestions => true,
+    _ => false,
+  };
+
+  Future<String> _resolveModel({required AiStudyAction? action}) async {
+    final stored = await settings.getModelIdFor(_provider);
+    return resolveActiveModelId(
+      provider: _provider,
+      storedModelId: stored,
+      action: action,
+    );
+  }
+
+  Future<AiThinkingMode> _resolveThinking({
+    required AiStudyAction action,
+  }) async {
+    final pref = await settings.getThinkingMode();
+    if (pref != AiThinkingMode.auto) return pref;
+
+    // Auto: cheap for inline/quick study; higher for structured/hard work.
     return switch (action) {
-      AiStudyAction.createAnnotation => AiResponseSchemas.annotation,
-      AiStudyAction.generateFlashcards => AiResponseSchemas.flashcards,
-      AiStudyAction.generateQuestions => AiResponseSchemas.questions,
-      _ => null,
+      AiStudyAction.explain ||
+      AiStudyAction.simplify ||
+      AiStudyAction.define ||
+      AiStudyAction.translate ||
+      AiStudyAction.summarize ||
+      AiStudyAction.giveExample ||
+      AiStudyAction.fixGrammar ||
+      AiStudyAction.rephrase => AiThinkingMode.low,
+      AiStudyAction.generateQuestions ||
+      AiStudyAction.generateFlashcards ||
+      AiStudyAction.createAnnotation ||
+      AiStudyAction.customPrompt ||
+      AiStudyAction.examPoints => AiThinkingMode.high,
+      _ => AiThinkingMode.low,
     };
   }
 
@@ -187,7 +201,7 @@ class GeminiAiService implements AiService {
     final key = await credentials.readApiKeyFor(_provider);
     if (key == null || key.isEmpty) {
       throw const AiNotConfiguredException(
-        'Gemini is not configured yet. Add an API key in Settings.',
+        'DeepSeek is not configured yet. Add an API key in Settings.',
       );
     }
     return key;
@@ -202,13 +216,25 @@ class GeminiAiService implements AiService {
     }
   }
 
-  Future<String> _postGenerate({
-    required String model,
+  Future<String> _chatCompletions({
     required String apiKey,
-    required Map<String, dynamic> body,
+    required String model,
+    required List<Map<String, String>> messages,
+    required int maxTokens,
+    required bool jsonMode,
+    required AiThinkingMode thinking,
     required Duration timeout,
   }) async {
-    final uri = Uri.parse('$baseUrl/models/$model:generateContent');
+    final uri = Uri.parse('$baseUrl/chat/completions');
+    final body = <String, dynamic>{
+      'model': DeepSeekModelRegistry.normalize(model),
+      'messages': messages,
+      'max_tokens': maxTokens,
+      'stream': false,
+      ..._thinkingPayload(thinking),
+      if (jsonMode) 'response_format': {'type': 'json_object'},
+    };
+
     late http.Response response;
     try {
       response = await _http
@@ -216,7 +242,7 @@ class GeminiAiService implements AiService {
             uri,
             headers: {
               'Content-Type': 'application/json',
-              'x-goog-api-key': apiKey,
+              'Authorization': 'Bearer $apiKey',
             },
             body: jsonEncode(body),
           )
@@ -229,23 +255,57 @@ class GeminiAiService implements AiService {
       throw const AiOfflineException();
     }
 
+    return _parseCompletionResponse(response: response, model: model);
+  }
+
+  Map<String, dynamic> _thinkingPayload(AiThinkingMode mode) {
+    // Official Chat Completions: thinking.type + reasoning_effort.
+    // Never surface reasoning_content to the user.
+    return switch (mode) {
+      AiThinkingMode.low => {
+        'thinking': {'type': 'enabled'},
+        'reasoning_effort': 'low',
+      },
+      AiThinkingMode.high => {
+        'thinking': {'type': 'enabled'},
+        'reasoning_effort': 'high',
+      },
+      AiThinkingMode.max => {
+        'thinking': {'type': 'enabled'},
+        'reasoning_effort': 'max',
+      },
+      AiThinkingMode.auto => {
+        'thinking': {'type': 'enabled'},
+        'reasoning_effort': 'low',
+      },
+    };
+  }
+
+  String _parseCompletionResponse({
+    required http.Response response,
+    required String model,
+  }) {
     final apiMessage = _errorMessage(response.body);
     final lower = apiMessage.toLowerCase();
 
-    if (response.statusCode == 400 || response.statusCode == 403) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw const AiInvalidKeyException(
+        'The DeepSeek API key appears to be invalid.',
+      );
+    }
+    if (response.statusCode == 400) {
       if (lower.contains('api key') ||
-          lower.contains('api_key') ||
-          lower.contains('permission') ||
-          lower.contains('permission_denied') ||
+          lower.contains('authentication') ||
+          lower.contains('unauthorized') ||
           lower.contains('invalid')) {
-        throw const AiInvalidKeyException();
+        throw const AiInvalidKeyException(
+          'The DeepSeek API key appears to be invalid.',
+        );
       }
-      if (lower.contains('not found') ||
-          lower.contains('is not found') ||
-          lower.contains('model')) {
+      if (lower.contains('model')) {
         throw AiUnsupportedModelException(
-          'Model "$model" is not available for this API key. '
-          'Pick Recommended (Gemini 3.8 Flash) in Settings.',
+          'Model "$model" is not available for this DeepSeek API key. '
+          'Pick DeepSeek Flash in Settings.',
         );
       }
       throw AiServerException(
@@ -254,12 +314,21 @@ class GeminiAiService implements AiService {
     }
     if (response.statusCode == 404) {
       throw AiUnsupportedModelException(
-        'Model "$model" was not found. '
-        'Pick Recommended (Gemini 3.8 Flash) in Settings.',
+        'Model "$model" was not found. Pick DeepSeek Flash in Settings.',
+      );
+    }
+    if (response.statusCode == 402 ||
+        lower.contains('insufficient') ||
+        lower.contains('balance') ||
+        lower.contains('quota')) {
+      throw const AiQuotaException(
+        'DeepSeek balance or quota exceeded. Check your DeepSeek account.',
       );
     }
     if (response.statusCode == 429) {
-      if (lower.contains('quota')) throw const AiQuotaException();
+      if (lower.contains('quota') || lower.contains('balance')) {
+        throw const AiQuotaException();
+      }
       throw const AiRateLimitException();
     }
     if (response.statusCode >= 500) {
@@ -276,37 +345,18 @@ class GeminiAiService implements AiService {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) throw const AiMalformedOutputException();
-      final candidates = decoded['candidates'];
-      if (candidates is! List || candidates.isEmpty) {
-        final block = decoded['promptFeedback'];
-        if (block is Map) {
-          throw const AiServerException(
-            'Gemini blocked this request. Try different text.',
-          );
-        }
+      final choices = decoded['choices'];
+      if (choices is! List || choices.isEmpty) {
         throw const AiEmptyResultException();
       }
-      final candidate = candidates.first;
-      if (candidate is! Map) throw const AiMalformedOutputException();
-      final finish = '${candidate['finishReason'] ?? ''}';
-      final content = candidate['content'];
-      final parts = content is Map ? content['parts'] : null;
-      if (parts is! List || parts.isEmpty) {
-        if (finish == 'MAX_TOKENS') {
-          throw const AiServerException(
-            'Gemini ran out of output tokens before finishing. Try again.',
-          );
-        }
-        throw const AiEmptyResultException();
-      }
-      final buffer = StringBuffer();
-      for (final part in parts) {
-        if (part is! Map) continue;
-        // Skip thought parts if any slip through.
-        if (part['thought'] == true) continue;
-        if (part['text'] is String) buffer.write(part['text']);
-      }
-      final text = buffer.toString().trim();
+      final choice = choices.first;
+      if (choice is! Map) throw const AiMalformedOutputException();
+      final message = choice['message'];
+      if (message is! Map) throw const AiMalformedOutputException();
+      // Ignore reasoning_content — never expose chain-of-thought to UI.
+      final content = message['content'];
+      if (content is! String) throw const AiEmptyResultException();
+      final text = content.trim();
       if (text.isEmpty) throw const AiEmptyResultException();
       return text;
     } on AiException {
@@ -319,13 +369,12 @@ class GeminiAiService implements AiService {
   String _friendlyApiFailure({required int status, required String message}) {
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
-      return 'Gemini request failed (HTTP $status). Check model and API key.';
+      return 'DeepSeek request failed (HTTP $status). Check model and API key.';
     }
-    // Never include secrets; API messages do not contain the key value.
     final short = trimmed.length > 180
         ? '${trimmed.substring(0, 180)}…'
         : trimmed;
-    return 'Gemini error ($status): $short';
+    return 'DeepSeek error ($status): $short';
   }
 
   String _errorMessage(String body) {
@@ -336,6 +385,7 @@ class GeminiAiService implements AiService {
         if (err is Map && err['message'] is String) {
           return err['message'] as String;
         }
+        if (err is String) return err;
       }
     } on Object {
       // ignore

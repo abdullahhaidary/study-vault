@@ -1,30 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../data/ai_providers.dart';
+import '../domain/ai_provider.dart';
 
-Future<void> showAiMissingKeyDialog(BuildContext context) {
+Future<void> showAiMissingKeyDialog(BuildContext context, {WidgetRef? ref}) {
   return showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Gemini is not configured yet'),
-      content: const Text(
-        'Add your Gemini API key in Settings to use AI features.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            Navigator.of(
-              context,
-            ).pushNamed(AppRoutes.settings, arguments: {'section': 'ai'});
-          },
-          child: const Text('Open AI Settings'),
-        ),
-      ],
-    ),
+    builder: (dialogContext) {
+      return Consumer(
+        builder: (context, consumerRef, _) {
+          final state = consumerRef.watch(aiSettingsStateProvider);
+          final name = state.maybeWhen(
+            data: (s) => s.provider.displayName,
+            orElse: () => 'AI',
+          );
+          return AlertDialog(
+            title: Text('$name API key required'),
+            content: Text(
+              'Add your $name API key in Settings to use AI features.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.settings, arguments: {'section': 'ai'});
+                },
+                child: const Text('Add API Key'),
+              ),
+            ],
+          );
+        },
+      );
+    },
   );
 }

@@ -117,6 +117,42 @@ abstract final class AnnotationAiContextBuilder {
     );
   }
 
+  /// Page / slide AI: primary source is the current page text (bounded).
+  static Future<AnnotationAiContext> fromPdfPage({
+    required String filePath,
+    required int pageNumber,
+    String? materialId,
+    String? lessonId,
+    AiLanguage language = AiLanguage.auto,
+    int maxPageChars = 12000,
+  }) async {
+    String pageText = '';
+    try {
+      final pages = await PdfTextExtractor.extractPages(
+        filePath: filePath,
+        pageNumbers: {pageNumber},
+      );
+      if (pages.isNotEmpty) pageText = pages.first.text.trim();
+    } on Object {
+      pageText = '';
+    }
+
+    if (pageText.length > maxPageChars) {
+      pageText = '${pageText.substring(0, maxPageChars)}…';
+    }
+
+    return AnnotationAiContext(
+      selectedText: pageText,
+      materialId: materialId,
+      lessonId: lessonId,
+      pageNumber: pageNumber,
+      surroundingText: null,
+      language: language,
+      direction: _directionFor(pageText),
+      filePath: filePath,
+    );
+  }
+
   static String? _clampSurrounding(String? surrounding) {
     if (surrounding == null) return null;
     final trimmed = surrounding.trim();

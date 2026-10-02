@@ -1,3 +1,6 @@
+import '../../ai_assistant/domain/deepseek_model_registry.dart';
+import '../../ai_assistant/domain/gemini_model_registry.dart';
+
 /// Message roles persisted in [AiChatMessages.role].
 abstract final class AiChatRole {
   static const user = 'user';
@@ -26,7 +29,7 @@ class AiContextItem {
   final String? textContent;
 }
 
-/// One turn sent to Gemini (already persisted or in-flight).
+/// One turn sent to the chat transport (already persisted or in-flight).
 class AiChatTurn {
   const AiChatTurn({required this.role, required this.content});
 
@@ -40,6 +43,50 @@ class AiChatCompletion {
 
   final String text;
   final String? modelId;
+}
+
+/// Provider-agnostic model row for chat model pickers.
+class AiSelectableModel {
+  const AiSelectableModel({
+    required this.id,
+    required this.displayName,
+    required this.description,
+    required this.recommended,
+    required this.group,
+  });
+
+  final String id;
+  final String displayName;
+  final String description;
+  final bool recommended;
+
+  /// UI group: Recommended / Fast / Other.
+  final String group;
+
+  factory AiSelectableModel.fromGemini(GeminiModelDefinition m) {
+    final group = switch (m.tier) {
+      GeminiModelTier.recommended => 'Recommended',
+      GeminiModelTier.fast => 'Fast',
+      _ => m.recommended ? 'Recommended' : 'Other',
+    };
+    return AiSelectableModel(
+      id: m.id,
+      displayName: m.displayName,
+      description: m.description,
+      recommended: m.recommended,
+      group: group,
+    );
+  }
+
+  factory AiSelectableModel.fromDeepSeek(DeepSeekModelDefinition m) {
+    return AiSelectableModel(
+      id: m.id,
+      displayName: m.displayName,
+      description: m.description,
+      recommended: m.recommended,
+      group: m.recommended ? 'Recommended' : 'Other',
+    );
+  }
 }
 
 /// Builds a short deterministic title from the first user message.

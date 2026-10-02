@@ -6,16 +6,17 @@ import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_models.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/services/ai_service.dart';
 import '../domain/question_source.dart';
 import '../domain/quiz_models.dart';
 
 const _uuid = Uuid();
 
-/// Orchestrates source preparation → Gemini → strict validation → persistence.
+/// Orchestrates source preparation → AI → strict validation → persistence.
 ///
-/// Gemini only produces structured question data; this service owns chunking,
-/// count enforcement, and transactional save (no partial quizzes).
+/// The active AI provider only produces structured question data; this service
+/// owns chunking, count enforcement, and transactional save (no partial quizzes).
 class QuizGenerationService {
   QuizGenerationService({
     required this.db,
@@ -58,7 +59,12 @@ class QuizGenerationService {
       );
     }
 
-    final modelId = AiModelIds.normalize(await settings.getModelId());
+    final modelId = resolveActiveModelId(
+      provider: await settings.getProvider(),
+      storedModelId: await settings.getModelId(),
+      action: AiStudyAction.generateQuestions,
+    );
+    final provider = await settings.getProvider();
     return _persist(
       source: source,
       count: count,
@@ -66,6 +72,7 @@ class QuizGenerationService {
       difficulty: difficulty,
       quiz: generated,
       modelId: modelId,
+      provider: provider.storageValue,
     );
   }
 
@@ -79,7 +86,7 @@ class QuizGenerationService {
     final preference = await settings.getStudyPreference();
 
     if (source.characterCount <= kAiHardSourceLimit) {
-      return _callGemini(
+      return _callAi(
         text: source.text,
         count: count,
         type: type,
@@ -101,7 +108,7 @@ class QuizGenerationService {
     for (var i = 0; i < chunks.length; i++) {
       final n = perChunk[i];
       if (n <= 0) continue;
-      final part = await _callGemini(
+      final part = await _callAi(
         text: chunks[i],
         count: n,
         type: type,
@@ -123,7 +130,7 @@ class QuizGenerationService {
     return GeneratedQuiz(title: title, questions: merged.take(count).toList());
   }
 
-  Future<GeneratedQuiz> _callGemini({
+  Future<GeneratedQuiz> _callAi({
     required String text,
     required int count,
     required QuizQuestionType type,
@@ -144,7 +151,7 @@ class QuizGenerationService {
     final generated = result.generated;
     if (generated == null || generated.questions.length != count) {
       throw AiMalformedOutputException(
-        'Expected exactly $count validated questions from Gemini.',
+        'Expected exactly $count validated questions from AI.',
       );
     }
     return generated;
@@ -203,6 +210,7 @@ class QuizGenerationService {
     required QuizDifficulty difficulty,
     required GeneratedQuiz quiz,
     required String modelId,
+    required String provider,
   }) async {
     final now = DateTime.now();
     final setId = _uuid.v4();
@@ -217,7 +225,7 @@ class QuizGenerationService {
       questionCount: count,
       questionType: type.storageValue,
       difficulty: difficulty.storageValue,
-      aiProvider: const Value('gemini'),
+      aiProvider: Value(provider),
       aiModel: Value(modelId),
       createdAt: now,
       updatedAt: now,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
+import 'system_bottom_inset.dart';
 
 /// Shared collapsing detail page chrome for Class / Subject / Lesson screens.
 class DetailScaffold extends StatelessWidget {
@@ -24,6 +25,7 @@ class DetailScaffold extends StatelessWidget {
     final theme = Theme.of(context);
     final hasDescription =
         description != null && description!.trim().isNotEmpty;
+    final bottomInset = SystemBottomInset.of(context, includeKeyboard: false);
 
     return Scaffold(
       body: CustomScrollView(
@@ -58,6 +60,8 @@ class DetailScaffold extends StatelessWidget {
               ),
             ),
           ...bodySlivers,
+          if (bottomInset > 0)
+            SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
         ],
       ),
       floatingActionButton: floatingActionButton,

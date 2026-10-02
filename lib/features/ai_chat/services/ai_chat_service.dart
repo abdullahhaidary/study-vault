@@ -4,21 +4,27 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/domain/deepseek_model_registry.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
 
-/// Orchestrates local chat persistence + Gemini completions.
+/// Orchestrates local chat persistence + provider completions.
 class AiChatService {
   AiChatService({
     required this.db,
-    required this.gemini,
     required this.settings,
+    AiChatTransport? transport,
+
+    /// Backward-compatible alias for older call sites / tests.
+    AiChatTransport? gemini,
     Uuid? uuid,
-  }) : _uuid = uuid ?? const Uuid();
+  }) : transport = transport ?? gemini!,
+       _uuid = uuid ?? const Uuid();
 
   final AppDatabase db;
-  final GeminiChatService gemini;
+  final AiChatTransport transport;
   final AiSettingsStore settings;
   final Uuid _uuid;
 
@@ -35,7 +41,7 @@ class AiChatService {
     final chat = AiChatsCompanion.insert(
       id: _uuid.v4(),
       title: 'New chat',
-      modelId: GeminiModelRegistry.normalize(preferred),
+      modelId: _normalizeModel(preferred, await settings.getProvider()),
       createdAt: now,
       updatedAt: now,
       lastMessageAt: Value(now),
@@ -58,13 +64,23 @@ class AiChatService {
   Future<void> setChatModel(String chatId, String modelId) async {
     final chat = await db.getAiChatById(chatId);
     if (chat == null) return;
+    final provider = AiProviderIdX.fromModelId(modelId);
+    final normalized = _normalizeModel(modelId, provider);
     await db.updateAiChat(
-      chat.copyWith(
-        modelId: GeminiModelRegistry.normalize(modelId),
-        updatedAt: DateTime.now(),
-      ),
+      chat.copyWith(modelId: normalized, updatedAt: DateTime.now()),
     );
-    await settings.setModelId(GeminiModelRegistry.normalize(modelId));
+    await settings.setProvider(provider);
+    await settings.setModelIdFor(provider, normalized);
+  }
+
+  String _normalizeModel(String modelId, AiProviderId provider) {
+    return switch (provider) {
+      AiProviderId.gemini => GeminiModelRegistry.normalize(modelId),
+      AiProviderId.deepseek =>
+        DeepSeekModelIds.isAuto(modelId)
+            ? DeepSeekModelRegistry.defaultModelId
+            : DeepSeekModelRegistry.normalize(modelId),
+    };
   }
 
   Future<void> saveDraft(String chatId, String? draft) async {
@@ -133,7 +149,7 @@ class AiChatService {
         .toList();
 
     try {
-      final completion = await gemini.complete(
+      final completion = await transport.complete(
         modelId: chat.modelId,
         history: history,
       );
@@ -223,7 +239,7 @@ class AiChatService {
 
     final buffer = StringBuffer();
     try {
-      await for (final delta in gemini.streamComplete(
+      await for (final delta in transport.streamComplete(
         modelId: chat.modelId,
         history: history,
       )) {

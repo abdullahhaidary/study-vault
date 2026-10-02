@@ -6,6 +6,7 @@ import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/ai_providers.dart';
+import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/annotation_ai_context.dart';
@@ -258,6 +259,10 @@ Future<void> showAiActionsSheet(
     }
   } else if (result is AiAnnotationDraft) {
     if (annotationContext != null) {
+      final meta = await readAiGenerationMeta(
+        ref.read(aiSettingsStoreProvider),
+        action: chosen,
+      );
       await ref
           .read(annotationAiHistoryServiceProvider)
           .persistCompleted(
@@ -266,7 +271,8 @@ Future<void> showAiActionsSheet(
             responseText:
                 '## ${result.shortDescription}\n\n${result.fullNoteMarkdown}',
             responseKind: 'annotation',
-            modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+            modelName: meta.modelId,
+            provider: meta.providerStorage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
     }
@@ -280,6 +286,10 @@ Future<void> showAiActionsSheet(
     );
   } else if (result is AiFlashcardsResult) {
     if (annotationContext != null) {
+      final meta = await readAiGenerationMeta(
+        ref.read(aiSettingsStoreProvider),
+        action: AiStudyAction.generateFlashcards,
+      );
       await ref
           .read(annotationAiHistoryServiceProvider)
           .persistCompleted(
@@ -289,7 +299,8 @@ Future<void> showAiActionsSheet(
                 .map((c) => 'Q: ${c.front}\nA: ${c.back}')
                 .join('\n\n---\n\n'),
             responseKind: 'flashcards',
-            modelName: await ref.read(aiSettingsStoreProvider).getModelId(),
+            modelName: meta.modelId,
+            provider: meta.providerStorage,
           );
       ref.invalidate(annotationAiGenerationCountsProvider(fingerprint));
     }

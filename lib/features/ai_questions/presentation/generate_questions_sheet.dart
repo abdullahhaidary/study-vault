@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../data/quiz_providers.dart';
@@ -152,10 +153,11 @@ class _GenerateQuestionsSheetState extends State<_GenerateQuestionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = SystemBottomInset.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Column(
