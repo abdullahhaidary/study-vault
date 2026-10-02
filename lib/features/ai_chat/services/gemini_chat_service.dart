@@ -529,6 +529,13 @@ class FakeGeminiChatService implements AiChatTransport {
     return AiChatCompletion(
       text: reply,
       modelId: GeminiModelRegistry.normalize(modelId),
+      usage: AiTokenUsage(
+        promptTokens: 80,
+        completionTokens: 40,
+        totalTokens: 120,
+        provider: 'gemini',
+        model: GeminiModelRegistry.normalize(modelId),
+      ),
     );
   }
 
@@ -550,6 +557,9 @@ class FakeGeminiChatService implements AiChatTransport {
       yield AiChatStreamEvent(textDelta: result.text.substring(mid));
     } else {
       yield AiChatStreamEvent(textDelta: result.text);
+    }
+    if (result.usage != null) {
+      yield AiChatStreamEvent(usage: result.usage);
     }
   }
 }

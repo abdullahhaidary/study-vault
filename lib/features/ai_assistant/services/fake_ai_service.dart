@@ -2,6 +2,7 @@ import '../../ai_questions/domain/quiz_models.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_token_usage.dart';
 import 'ai_service.dart';
 
 /// Deterministic offline fake for unit/widget tests.
@@ -10,11 +11,19 @@ class FakeAiService implements AiService {
     this.configured = true,
     this.testConnectionSucceeds = true,
     this.handler,
+    this.fakeUsage = const AiTokenUsage(
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+    ),
   });
 
   bool configured;
   bool testConnectionSucceeds;
   Future<AiStudyResult> Function(AiStudyRequest request)? handler;
+
+  /// Attached to default (non-handler) responses so UI/persistence can be tested.
+  final AiTokenUsage? fakeUsage;
 
   @override
   Future<bool> get isConfigured async => configured;
@@ -36,33 +45,40 @@ class FakeAiService implements AiService {
     if (!configured) throw const AiNotConfiguredException();
     if (handler != null) return handler!(request);
 
+    final usage = fakeUsage;
     return switch (request.action) {
       AiStudyAction.explain => AiTextResult(
         markdown:
             '## Explanation\n\n${request.sourceText}\n\n'
             'This is a clear study explanation.',
+        usage: usage,
       ),
       AiStudyAction.simplify ||
       AiStudyAction.rephrase ||
       AiStudyAction.fixGrammar => AiTextResult(
         markdown: 'Simplified: ${request.sourceText}',
+        usage: usage,
       ),
       AiStudyAction.organize => AiTextResult(
         markdown:
             '# Organized Notes\n\n## Summary\n\n'
             '- ${request.sourceText.split('\n').first}\n',
+        usage: usage,
       ),
       AiStudyAction.summarize => AiTextResult(
         markdown: '- Key point from source text',
+        usage: usage,
       ),
       AiStudyAction.keyConcepts => AiTextResult(
         markdown: '- **Concept** — short definition from the source',
+        usage: usage,
       ),
       AiStudyAction.examPoints => AiTextResult(
         markdown:
             '### Important concept\n\nFrom the source.\n\n'
             '### Common confusion\n\nStudents may mix related terms.\n\n'
             '### Practice question\n\nWhat is the main idea?',
+        usage: usage,
       ),
       AiStudyAction.define ||
       AiStudyAction.giveExample ||
@@ -71,11 +87,13 @@ class FakeAiService implements AiService {
       AiStudyAction.customPrompt => AiTextResult(
         markdown:
             'AI response for ${request.action.name}:\n\n${request.sourceText}',
+        usage: usage,
       ),
       AiStudyAction.createAnnotation => AiAnnotationDraft(
         shortDescription: 'AI Draft',
         fullNoteMarkdown: '## Note\n\n${request.sourceText}',
         suggestedCategory: categoryNameToId['Definition'],
+        usage: usage,
       ),
       AiStudyAction.generateFlashcards => AiFlashcardsResult(
         cards: List.generate(
@@ -85,6 +103,7 @@ class FakeAiService implements AiService {
             back: 'A${i + 1}',
           ),
         ),
+        usage: usage,
       ),
       AiStudyAction.generateQuestions => await generateQuestions(
         request.toQuestionGenerationRequest(),
@@ -135,6 +154,7 @@ class FakeAiService implements AiService {
           ),
       ],
       generated: generated,
+      usage: fakeUsage,
     );
   }
 

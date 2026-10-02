@@ -144,6 +144,10 @@ void main() {
     expect(v2.generationNumber, 2);
     expect(v1.responseText, isNotEmpty);
     expect(v2.responseText, isNotEmpty);
+    expect(v1.totalTokens, 120);
+    expect(v1.promptTokens, 100);
+    expect(v1.completionTokens, 20);
+    expect(v2.totalTokens, 120);
 
     final listed = await history.getGenerations(
       sourceFingerprint: AnnotationAiSourceFingerprint.fromContext(contextA),

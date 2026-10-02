@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
+import 'package:study_vault/features/ai_assistant/presentation/ai_annotation_preview.dart';
+import 'package:study_vault/features/ai_assistant/presentation/ai_preview_screen.dart';
 import 'package:study_vault/features/ai_assistant/presentation/widgets/ai_usage_indicator.dart';
-import 'package:study_vault/features/ai_chat/presentation/widgets/message_bubble.dart';
 import 'package:study_vault/features/ai_chat/domain/ai_chat_models.dart';
+import 'package:study_vault/features/ai_chat/presentation/widgets/message_bubble.dart';
 
 void main() {
   group('AiTokenUsage.compactLabel', () {
@@ -163,6 +167,53 @@ void main() {
       expect(usage, isNotNull);
       expect(usage!.totalTokens, 12);
       expect(usage.compactLabel, '12 tokens');
+    });
+
+    testWidgets('text preview shows usage under AI version', (tester) async {
+      const result = AiTextResult(
+        markdown: 'Summary of the selection.',
+        usage: AiTokenUsage(
+          totalTokens: 4200,
+          cacheHitTokens: 3700,
+        ),
+      );
+
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AiTextPreviewScreen(
+            originalText: 'Original selection text',
+            result: result,
+          ),
+        ),
+      );
+
+      expect(find.text('4.2K tokens · 3.7K cached'), findsOneWidget);
+    });
+
+    testWidgets('annotation draft preview shows usage', (tester) async {
+      const draft = AiAnnotationDraft(
+        shortDescription: 'GD',
+        fullNoteMarkdown: '## Note\n\nGradient descent explanation.',
+        usage: AiTokenUsage(totalTokens: 8400, cacheHitTokens: 7900),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: AiAnnotationPreviewScreen(
+              draft: draft,
+              selectedText: 'gradient descent',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('8.4K tokens · 7.9K cached'), findsOneWidget);
     });
   });
 }

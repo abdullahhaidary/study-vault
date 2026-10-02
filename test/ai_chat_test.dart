@@ -110,6 +110,10 @@ void main() {
       expect(messages.first.content, 'Explain gradient descent');
       expect(messages.last.role, AiChatRole.assistant);
       expect(messages.last.content, contains('gradients'));
+      expect(messages.last.totalTokens, 120);
+      expect(messages.last.promptTokens, 80);
+      expect(messages.last.completionTokens, 40);
+      expect(messages.last.aiProvider, 'gemini');
 
       final updated = await db.getAiChatById(chat.id);
       expect(updated!.title, 'Explain gradient descent');

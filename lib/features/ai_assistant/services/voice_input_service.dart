@@ -60,13 +60,19 @@ class VoiceInputService extends ChangeNotifier {
     if (_initialized) return _available;
     _setStatus(VoiceInputStatus.initializing);
     try {
+      debugPrint('[VoiceInput] initialize…');
       _available = await _speech.initialize(
         onError: _onPlatformError,
         onStatus: _onPlatformStatus,
-        debugLogging: false,
+        debugLogging: kDebugMode,
       );
       if (_available) {
         _locales = await _speech.locales();
+        debugPrint(
+          '[VoiceInput] available=true locales=${_locales.length}',
+        );
+      } else {
+        debugPrint('[VoiceInput] available=false after initialize');
       }
       _initialized = true;
       _setStatus(
@@ -81,7 +87,8 @@ class VoiceInputService extends ChangeNotifier {
         notifyListeners();
       }
       return _available;
-    } catch (_) {
+    } catch (error, stack) {
+      debugPrint('[VoiceInput] initialize failed: $error\n$stack');
       _initialized = true;
       _available = false;
       _lastError = const VoiceInputError(
@@ -146,11 +153,22 @@ class VoiceInputService extends ChangeNotifier {
     final session = ++_sessionId;
     _setStatus(VoiceInputStatus.listening);
 
+    // speech_to_text.listen() returns void — do not treat its result as bool.
+    // onDevice:true fails hard on many devices without offline models; use
+    // network+device recognition by default.
     try {
-      final started = await _speech.listen(
+      debugPrint(
+        '[VoiceInput] listen start locale=${localeId ?? 'system'} '
+        'session=$session',
+      );
+      await _speech.listen(
         onResult: (result) {
           if (session != _sessionId) return;
           final words = result.recognizedWords.trim();
+          debugPrint(
+            '[VoiceInput] result final=${result.finalResult} '
+            'words="$words"',
+          );
           _resultHandler?.call(words, result.finalResult);
         },
         listenOptions: SpeechListenOptions(
@@ -158,43 +176,34 @@ class VoiceInputService extends ChangeNotifier {
           cancelOnError: true,
           listenMode: ListenMode.dictation,
           localeId: localeId,
-          // Prefer on-device when the platform supports it; otherwise the
-          // plugin falls back to the normal device recognizer.
-          onDevice: true,
+          onDevice: false,
         ),
       );
-      if (!started) {
-        // Retry without forcing on-device (many devices lack offline models).
-        final retry = await _speech.listen(
-          onResult: (result) {
-            if (session != _sessionId) return;
-            final words = result.recognizedWords.trim();
-            _resultHandler?.call(words, result.finalResult);
-          },
-          listenOptions: SpeechListenOptions(
-            partialResults: true,
-            cancelOnError: true,
-            listenMode: ListenMode.dictation,
-            localeId: localeId,
-            onDevice: false,
-          ),
+      if (!_speech.isListening) {
+        debugPrint('[VoiceInput] listen returned but isListening=false');
+        _resultHandler = null;
+        _lastError = const VoiceInputError(
+          kind: VoiceInputErrorKind.unknown,
+          message: 'Could not start voice input. You can still type.',
         );
-        if (!retry) {
-          _resultHandler = null;
-          _lastError = const VoiceInputError(
-            kind: VoiceInputErrorKind.permissionDenied,
-            message:
-                'Microphone permission is required for voice input. You can still type.',
-          );
-          _setStatus(VoiceInputStatus.idle);
-        }
+        _setStatus(VoiceInputStatus.idle);
+        return;
       }
-    } catch (_) {
+      debugPrint('[VoiceInput] listening');
+    } catch (error, stack) {
+      debugPrint('[VoiceInput] listen failed: $error\n$stack');
       _resultHandler = null;
-      _lastError = const VoiceInputError(
-        kind: VoiceInputErrorKind.unknown,
-        message: 'Could not start voice input. You can still type.',
+      _lastError = VoiceInputError(
+        kind: _mapError(error.toString()),
+        message: _userMessage(error.toString()),
       );
+      // Keep a clear fallback if mapping is too generic.
+      if (_lastError!.kind == VoiceInputErrorKind.unknown) {
+        _lastError = const VoiceInputError(
+          kind: VoiceInputErrorKind.unknown,
+          message: 'Could not start voice input. You can still type.',
+        );
+      }
       _setStatus(VoiceInputStatus.idle);
     }
   }
@@ -225,6 +234,10 @@ class VoiceInputService extends ChangeNotifier {
   }
 
   void _onPlatformError(SpeechRecognitionError error) {
+    debugPrint(
+      '[VoiceInput] platform error: ${error.errorMsg} '
+      'permanent=${error.permanent}',
+    );
     _lastError = VoiceInputError(
       kind: _mapError(error.errorMsg),
       message: _userMessage(error.errorMsg),
@@ -239,6 +252,7 @@ class VoiceInputService extends ChangeNotifier {
   }
 
   void _onPlatformStatus(String status) {
+    debugPrint('[VoiceInput] platform status: $status');
     // speech_to_text emits: listening, notListening, done
     if (status == 'done' || status == 'notListening') {
       if (_status == VoiceInputStatus.listening ||

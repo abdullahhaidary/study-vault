@@ -408,6 +408,26 @@ void main() {
     });
   });
 
+  group('AiTokenUsage Gemini', () {
+    test('parses usageMetadata', () {
+      final usage = AiTokenUsage.fromGeminiResponse({
+        'usageMetadata': {
+          'promptTokenCount': 1000,
+          'candidatesTokenCount': 200,
+          'totalTokenCount': 1200,
+          'cachedContentTokenCount': 800,
+        },
+      }, model: 'gemini-2.5-flash');
+      expect(usage, isNotNull);
+      expect(usage!.promptTokens, 1000);
+      expect(usage.completionTokens, 200);
+      expect(usage.totalTokens, 1200);
+      expect(usage.cacheHitTokens, 800);
+      expect(usage.cacheMissTokens, 200);
+      expect(usage.compactLabel, '1.2K tokens · 800 cached');
+    });
+  });
+
   group('AiTokenUsage', () {
     test('reads official cache hit/miss fields and ratio', () {
       final usage = AiTokenUsage.fromProviderResponse(
