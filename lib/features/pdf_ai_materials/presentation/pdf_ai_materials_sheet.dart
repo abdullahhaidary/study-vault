@@ -48,15 +48,17 @@ class PdfAiMaterialsSheet extends ConsumerStatefulWidget {
 class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
   final Set<PdfAiMaterialType> _generating = {};
 
-  Future<void> _generate(
-    PdfAiMaterialType type, {
-    PdfAiMaterial? current,
-  }) async {
+  Future<void> _onTap(PdfAiMaterialType type, PdfAiMaterial? current) async {
     if (_generating.contains(type)) return;
-    final instruction = current == null
-        ? await _confirmInitialGeneration(type)
-        : await _regenerationInstruction(type);
-    if (instruction == null || !mounted) return;
+    if (current != null) {
+      await _open(type, current.id);
+      return;
+    }
+    await _generate(type);
+  }
+
+  Future<void> _generate(PdfAiMaterialType type) async {
+    if (_generating.contains(type)) return;
 
     setState(() => _generating.add(type));
     try {
@@ -67,7 +69,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
             title: widget.title,
             filePath: widget.filePath,
             type: type,
-            customInstruction: instruction,
+            customInstruction: '',
           );
       if (!mounted) return;
       await _open(type, generated.id);
@@ -84,72 +86,6 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
     } finally {
       if (mounted) setState(() => _generating.remove(type));
     }
-  }
-
-  Future<String?> _confirmInitialGeneration(PdfAiMaterialType type) {
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Generate ${type.displayName}?'),
-        content: const Text(
-          'The complete PDF text will be sent to DeepSeek. This consumes API '
-          'tokens and may take a while for large documents.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, ''),
-            child: const Text('Generate'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<String?> _regenerationInstruction(PdfAiMaterialType type) async {
-    final controller = TextEditingController();
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Generate a new ${type.shortName}?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'The current version will remain in History. Generating consumes '
-              'API tokens.',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: controller,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Optional instructions',
-                hintText: 'Focus more on formulas and examples.',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Regenerate'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    return value;
   }
 
   Future<void> _open(PdfAiMaterialType type, String generationId) {
@@ -235,23 +171,17 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
                             _latestFor(materials, type),
                             fingerprint,
                           ),
-                          onGenerate: () => _generate(
+                          onTap: () => _onTap(
                             type,
-                            current: _latestFor(materials, type),
+                            _latestFor(materials, type),
                           ),
-                          onOpen: _latestFor(materials, type) == null
-                              ? null
-                              : () => _open(
-                                  type,
-                                  _latestFor(materials, type)!.id,
-                                ),
                         ),
                       ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Generated materials are saved locally and can be read '
-                      'offline. Generation uses locally extracted PDF text; '
-                      'the PDF file itself is not uploaded.',
+                      'Tap a type to open it, or to generate it if it does not '
+                      'exist yet. Materials are saved locally; generation uses '
+                      'extracted PDF text (the file itself is not uploaded).',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -289,101 +219,107 @@ class _MaterialTypeCard extends StatelessWidget {
     required this.current,
     required this.generating,
     required this.stale,
-    required this.onGenerate,
-    required this.onOpen,
+    required this.onTap,
   });
 
   final PdfAiMaterialType type;
   final PdfAiMaterial? current;
   final bool generating;
   final bool stale;
-  final VoidCallback onGenerate;
-  final VoidCallback? onOpen;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(_iconFor(type), color: theme.colorScheme.primary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(type.shortName, style: theme.textTheme.titleMedium),
-                      Text(
-                        type.description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (current == null)
-              Text('Not generated', style: theme.textTheme.bodySmall)
-            else
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  Text(
-                    'Generated ${DateFormat.yMMMd().format(current!.generatedAt.toLocal())}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  Text(
-                    'Version ${current!.version}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  if (stale)
+    final generated = current != null;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.mdAll,
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: generating ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(_iconFor(type), color: theme.colorScheme.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(type.shortName, style: theme.textTheme.titleMedium),
                     Text(
-                      'Older PDF version',
+                      type.description,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                ],
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (onOpen != null)
-                  TextButton(onPressed: onOpen, child: const Text('Open')),
-                const SizedBox(width: AppSpacing.xs),
-                FilledButton.tonalIcon(
-                  onPressed: generating ? null : onGenerate,
-                  icon: generating
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          current == null ? Icons.auto_awesome : Icons.refresh,
+                    const SizedBox(height: AppSpacing.xs),
+                    if (generating)
+                      Text(
+                        'Generating…',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
                         ),
-                  label: Text(
-                    generating
-                        ? 'Generating…'
-                        : current == null
-                        ? 'Generate'
-                        : 'Regenerate',
-                  ),
+                      )
+                    else if (!generated)
+                      Text(
+                        'Tap to generate',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          Text(
+                            'Generated ${DateFormat.yMMMd().format(current!.generatedAt.toLocal())}',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          Text(
+                            'Version ${current!.version}',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          if (stale)
+                            Text(
+                              'Older PDF version',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              if (generating)
+                const SizedBox.square(
+                  dimension: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (!generated)
+                Icon(
+                  Icons.auto_awesome,
+                  color: theme.colorScheme.primary,
+                )
+              else
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+            ],
+          ),
         ),
       ),
     );
