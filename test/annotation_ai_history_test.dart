@@ -161,6 +161,33 @@ void main() {
     expect(listed.last.responseText, v2.responseText);
   });
 
+  test(
+    'manual editing keeps original and links a persisted new version',
+    () async {
+      final original = await history.persistCompleted(
+        context: contextA,
+        action: AiStudyAction.explain,
+        responseText: 'AI answer',
+      );
+      final edited = await history.editGeneration(
+        original: original,
+        responseText: '  Corrected answer  ',
+      );
+      final versions = await history.getGenerations(
+        sourceFingerprint: AnnotationAiSourceFingerprint.fromContext(contextA),
+        action: AiStudyAction.explain,
+      );
+
+      expect(versions.map((g) => g.responseText), [
+        'AI answer',
+        'Corrected answer',
+      ]);
+      expect(edited.generationNumber, 2);
+      expect(edited.parentGenerationId, original.id);
+      expect(edited.totalTokens, isNull);
+    },
+  );
+
   test('regenerate of older version creates a new version', () async {
     final v1 = await history.generate(
       context: contextA,

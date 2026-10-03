@@ -304,6 +304,72 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     await _newVersion(regenerateInstruction: instruction, parent: _selected);
   }
 
+  Future<void> _editSelected() async {
+    final current = _selected;
+    if (current == null || _busy) return;
+    final controller = TextEditingController(text: current.responseText);
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit V${current.generationNumber}'),
+        content: SizedBox(
+          width: 650,
+          height: MediaQuery.sizeOf(context).height * 0.6,
+          child: TextField(
+            controller: controller,
+            expands: true,
+            minLines: null,
+            maxLines: null,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => FilledButton(
+              onPressed: value.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(context, value.text.trim()),
+              child: const Text('Save as new version'),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (edited == null || edited == current.responseText.trim() || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final saved = await ref
+          .read(annotationAiHistoryServiceProvider)
+          .editGeneration(original: current, responseText: edited);
+      if (!mounted) return;
+      setState(() {
+        _generations = [..._generations, saved];
+        _selected = saved;
+        _conversation.clear();
+        _followUpOverride = null;
+        _seedAssistantMarkdown = null;
+      });
+      _invalidateCounts();
+    } on Object catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save your changes.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _deleteSelected() async {
     final current = _selected;
     if (current == null || _busy) return;
@@ -768,6 +834,11 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
               runSpacing: 8,
               alignment: WrapAlignment.end,
               children: [
+                OutlinedButton.icon(
+                  onPressed: _busy || _selected == null ? null : _editSelected,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
                 OutlinedButton(
                   onPressed: _busy ? null : () => _newVersion(),
                   child: const Text('New Version'),

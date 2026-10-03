@@ -341,8 +341,8 @@ void main() {
         pageNumber: 1,
       );
       final set = await generation.generateAndPersist(
-      selection: testGeminiSelection(),
-      source: source,
+        selection: testGeminiSelection(),
+        source: source,
         count: 5,
         type: QuizQuestionType.mixed,
         difficulty: QuizDifficulty.mixed,
@@ -393,14 +393,64 @@ void main() {
       expect(mistakes, hasLength(5));
     });
 
+    test(
+      'editing saved questions updates quiz playback and keeps options valid',
+      () async {
+        final set = await generation.generateAndPersist(
+          selection: testGeminiSelection(),
+          source: QuestionSourceBuilder.fromSelectedText(
+            text: 'Gradient descent reduces the cost function.',
+            materialId: 'm1',
+            lessonId: 'l1',
+            subjectId: 's1',
+          ),
+          count: 5,
+          type: QuizQuestionType.mixed,
+          difficulty: QuizDifficulty.mixed,
+        );
+        final original = (await db.getQuizQuestionsForSet(set.id)).first;
+        final options = await db.getOptionsForQuestion(original.id);
+        final chosen = options.isEmpty ? null : options.last;
+        await db.updateQuestionSetTitle(set.id, 'Edited quiz');
+        await db.editQuizQuestion(
+          original: original,
+          question: 'Edited question?',
+          explanation: 'Corrected reasoning',
+          answer: chosen == null
+              ? 'corrected answer'
+              : original.type == 'mcq'
+              ? '${options.length - 1}'
+              : chosen.optionText.toLowerCase(),
+          optionTexts: [for (final o in options) o.optionText],
+          correctOptionId: chosen?.id,
+        );
+        final saved = (await session.loadQuestions(set.id)).first;
+        expect((await db.getQuestionSetById(set.id))!.title, 'Edited quiz');
+        expect(saved.question, 'Edited question?');
+        expect(saved.explanation, 'Corrected reasoning');
+        if (chosen != null) {
+          expect(saved.options.where((o) => o.isCorrect).single.id, chosen.id);
+          expect(
+            QuizGrader.grade(question: saved, selectedOptionId: chosen.id),
+            isTrue,
+          );
+        } else {
+          expect(
+            QuizGrader.grade(question: saved, answerText: 'corrected answer'),
+            isTrue,
+          );
+        }
+      },
+    );
+
     test('does not persist when Gemini returns malformed output', () async {
       ai.handler = (request) async {
         throw const AiMalformedOutputException('bad');
       };
       expect(
         () => generation.generateAndPersist(
-      selection: testGeminiSelection(),
-      source: QuestionSourceBuilder.fromSelectedText(text: 'x' * 20),
+          selection: testGeminiSelection(),
+          source: QuestionSourceBuilder.fromSelectedText(text: 'x' * 20),
           count: 5,
           type: QuizQuestionType.mcq,
           difficulty: QuizDifficulty.easy,

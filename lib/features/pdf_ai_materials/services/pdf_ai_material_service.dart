@@ -306,6 +306,15 @@ class PdfAiMaterialService {
     return digests;
   }
 
+  Future<PdfAiMaterial> editVersion({
+    required PdfAiMaterial original,
+    required String content,
+  }) => _db.editPdfAiMaterial(
+    original: original,
+    id: _uuid.v4(),
+    content: content,
+  );
+
   Future<void> deleteVersion(String id) => _db.deletePdfAiMaterial(id);
 
   static List<String> _splitDeterministically(String text, int maxCharacters) {

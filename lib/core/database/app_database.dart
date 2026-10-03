@@ -2060,12 +2060,63 @@ class AppDatabase extends _$AppDatabase {
     return into(questionSets).insert(entry);
   }
 
+  Future<void> updateQuestionSetTitle(String id, String title) async {
+    final updated = await (update(questionSets)..where((t) => t.id.equals(id)))
+        .write(
+          QuestionSetsCompanion(
+            title: Value(title.trim()),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+    if (updated != 1) throw StateError('Question set not found');
+  }
+
   Future<void> insertQuizQuestion(QuizQuestionsCompanion entry) {
     return into(quizQuestions).insert(entry);
   }
 
   Future<void> insertQuizQuestionOption(QuizQuestionOptionsCompanion entry) {
     return into(quizQuestionOptions).insert(entry);
+  }
+
+  Future<void> editQuizQuestion({
+    required QuizQuestion original,
+    required String question,
+    required String explanation,
+    required String answer,
+    required List<String> optionTexts,
+    String? correctOptionId,
+  }) async {
+    if (question.trim().isEmpty || answer.trim().isEmpty) {
+      throw ArgumentError('Question and answer must not be empty');
+    }
+    await transaction(() async {
+      final options = await getOptionsForQuestion(original.id);
+      if (options.length != optionTexts.length ||
+          (options.isNotEmpty &&
+              !options.any((option) => option.id == correctOptionId)) ||
+          optionTexts.any((text) => text.trim().isEmpty)) {
+        throw ArgumentError('Invalid answer options');
+      }
+      await update(quizQuestions).replace(
+        original.copyWith(
+          question: question.trim(),
+          explanation: Value(
+            explanation.trim().isEmpty ? null : explanation.trim(),
+          ),
+          correctAnswer: answer.trim(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      for (var i = 0; i < options.length; i++) {
+        await update(quizQuestionOptions).replace(
+          options[i].copyWith(
+            optionText: optionTexts[i].trim(),
+            isCorrect: options[i].id == correctOptionId,
+          ),
+        );
+      }
+    });
   }
 
   Future<void> insertQuizAttempt(QuizAttemptsCompanion entry) {
@@ -2278,6 +2329,43 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<AnnotationAiGeneration> editAiGeneration({
+    required AnnotationAiGeneration original,
+    required String id,
+    required String responseText,
+  }) {
+    if (responseText.trim().isEmpty) {
+      throw ArgumentError.value(responseText, 'responseText');
+    }
+    final now = DateTime.now();
+    return insertAiGeneration(
+      sourceFingerprint: original.sourceFingerprint,
+      actionType: original.actionType,
+      builder: (generationNumber) => AnnotationAiGenerationsCompanion.insert(
+        id: id,
+        annotationId: Value(original.annotationId),
+        materialId: Value(original.materialId),
+        lessonId: Value(original.lessonId),
+        pageNumber: Value(original.pageNumber),
+        sourceFingerprint: original.sourceFingerprint,
+        actionType: original.actionType,
+        inputText: original.inputText,
+        contextSnapshot: Value(original.contextSnapshot),
+        customPrompt: Value(original.customPrompt),
+        actionMode: Value(original.actionMode),
+        responseText: responseText.trim(),
+        responseKind: Value(original.responseKind),
+        language: Value(original.language),
+        provider: Value(original.provider),
+        promptVersion: Value(original.promptVersion),
+        parentGenerationId: Value(original.id),
+        generationNumber: generationNumber,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+  }
+
   Future<void> deleteAiGeneration(String id) async {
     await (delete(annotationAiGenerations)..where((t) => t.id.equals(id))).go();
   }
@@ -2351,6 +2439,27 @@ class AppDatabase extends _$AppDatabase {
       await into(pdfAiMaterials).insert(entry);
       return (await getPdfAiMaterialById(entry.id.value))!;
     });
+  }
+
+  Future<PdfAiMaterial> editPdfAiMaterial({
+    required PdfAiMaterial original,
+    required String id,
+    required String content,
+  }) {
+    if (content.trim().isEmpty) throw ArgumentError.value(content, 'content');
+    return insertPdfAiMaterialVersion(
+      materialId: original.materialId,
+      type: original.type,
+      builder: (version) => PdfAiMaterialsCompanion.insert(
+        id: id,
+        materialId: original.materialId,
+        type: original.type,
+        content: content.trim(),
+        version: version,
+        generatedAt: DateTime.now(),
+        sourceFingerprint: original.sourceFingerprint,
+      ),
+    );
   }
 
   Future<void> deletePdfAiMaterial(String id) async {

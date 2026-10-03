@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
+import '../../study_pins/domain/study_note_codec.dart';
+import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../data/flashcards_providers.dart';
 
 enum FlashcardsScopeType { all, subject, lesson }
@@ -82,9 +84,22 @@ class FlashcardsListScreen extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                 leading: const Icon(Icons.style_outlined),
-                trailing: FavoriteStarButton(
-                  entityType: 'flashcard',
-                  entityId: card.id,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Edit flashcard',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => _EditFlashcardDialog(card: card),
+                      ),
+                    ),
+                    FavoriteStarButton(
+                      entityType: 'flashcard',
+                      entityId: card.id,
+                    ),
+                  ],
                 ),
                 onTap: () => Navigator.of(context).pushNamed(
                   AppRoutes.flashcardStudy,
@@ -100,4 +115,104 @@ class FlashcardsListScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _EditFlashcardDialog extends ConsumerStatefulWidget {
+  const _EditFlashcardDialog({required this.card});
+
+  final Flashcard card;
+
+  @override
+  ConsumerState<_EditFlashcardDialog> createState() =>
+      _EditFlashcardDialogState();
+}
+
+class _EditFlashcardDialogState extends ConsumerState<_EditFlashcardDialog> {
+  late final TextEditingController _front;
+  late String _back;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _front = TextEditingController(text: widget.card.front);
+    _back = widget.card.back;
+  }
+
+  @override
+  void dispose() {
+    _front.dispose();
+    super.dispose();
+  }
+
+  Future<void> _editBack() async {
+    final edited = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) =>
+            FullExplanationScreen(initialText: _back, title: 'Flashcard back'),
+      ),
+    );
+    if (edited != null && mounted) setState(() => _back = edited);
+  }
+
+  Future<void> _save() async {
+    if (_saving || _front.text.trim().isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      await updateFlashcardContent(
+        ref,
+        card: widget.card,
+        front: _front.text,
+        back: _back,
+      );
+      if (mounted) Navigator.pop(context);
+    } on Object catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save flashcard.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Edit flashcard'),
+    content: SizedBox(
+      width: 440,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _front,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Front'),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Back'),
+            subtitle: Text(
+              StudyNoteCodec.plainTextPreview(_back),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(Icons.edit_outlined),
+            onTap: _saving ? null : _editBack,
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: _saving ? null : () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: const Text('Save'),
+      ),
+    ],
+  );
 }

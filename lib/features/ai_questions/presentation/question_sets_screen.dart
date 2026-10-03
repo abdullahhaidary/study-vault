@@ -90,6 +90,13 @@ class QuestionSetsScreen extends ConsumerWidget {
                 isThreeLine: true,
                 trailing: PopupMenuButton<String>(
                   onSelected: (value) async {
+                    if (value == 'edit') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => _EditQuestionSetScreen(set: set),
+                        ),
+                      );
+                    }
                     if (value == 'delete') {
                       final ok = await showDialog<bool>(
                         context: context,
@@ -118,6 +125,7 @@ class QuestionSetsScreen extends ConsumerWidget {
                     }
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit questions')),
                     PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
@@ -135,4 +143,245 @@ class QuestionSetsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _EditQuestionSetScreen extends ConsumerStatefulWidget {
+  const _EditQuestionSetScreen({required this.set});
+
+  final QuestionSet set;
+
+  @override
+  ConsumerState<_EditQuestionSetScreen> createState() =>
+      _EditQuestionSetScreenState();
+}
+
+class _EditQuestionSetScreenState
+    extends ConsumerState<_EditQuestionSetScreen> {
+  late Future<List<QuizQuestion>> _questions;
+  late String _title;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = widget.set.title;
+    _questions = ref
+        .read(databaseProvider)
+        .getQuizQuestionsForSet(widget.set.id);
+  }
+
+  Future<void> _editTitle() async {
+    final controller = TextEditingController(text: _title);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit quiz title'),
+        content: TextField(controller: controller, maxLength: 300),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title == null || title.isEmpty || !mounted) return;
+    try {
+      await ref
+          .read(databaseProvider)
+          .updateQuestionSetTitle(widget.set.id, title);
+      if (mounted) setState(() => _title = title);
+    } on Object catch (_) {
+      _showSaveError();
+    }
+  }
+
+  Future<void> _editQuestion(QuizQuestion question) async {
+    final db = ref.read(databaseProvider);
+    final options = await db.getOptionsForQuestion(question.id);
+    if (!mounted) return;
+    final questionController = TextEditingController(text: question.question);
+    final explanationController = TextEditingController(
+      text: question.explanation,
+    );
+    final answerController = TextEditingController(
+      text: question.correctAnswer,
+    );
+    final optionControllers = [
+      for (final option in options)
+        TextEditingController(text: option.optionText),
+    ];
+    var correctOptionId = options.where((o) => o.isCorrect).firstOrNull?.id;
+    final edited =
+        await showDialog<
+          ({
+            String question,
+            String explanation,
+            String answer,
+            List<String> options,
+            String? correctId,
+          })
+        >(
+          context: context,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+              title: Text('Edit question ${question.position + 1}'),
+              content: SizedBox(
+                width: 560,
+                height: MediaQuery.sizeOf(context).height * 0.55,
+                child: ListView(
+                  children: [
+                    TextField(
+                      controller: questionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Question'),
+                    ),
+                    if (options.isEmpty)
+                      TextField(
+                        controller: answerController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Correct answer',
+                        ),
+                      )
+                    else
+                      RadioGroup<String>(
+                        groupValue: correctOptionId,
+                        onChanged: (id) =>
+                            setDialogState(() => correctOptionId = id),
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < options.length; i++)
+                              Row(
+                                children: [
+                                  Radio<String>(value: options[i].id),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: optionControllers[i],
+                                      enabled: question.type == 'mcq',
+                                      decoration: InputDecoration(
+                                        labelText: 'Option ${i + 1}',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    TextField(
+                      controller: explanationController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Explanation',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final optionTexts = [
+                      for (final c in optionControllers) c.text.trim(),
+                    ];
+                    if (questionController.text.trim().isEmpty ||
+                        (options.isEmpty &&
+                            answerController.text.trim().isEmpty) ||
+                        optionTexts.any((text) => text.isEmpty) ||
+                        (options.isNotEmpty && correctOptionId == null)) {
+                      return;
+                    }
+                    final correctIndex = options.indexWhere(
+                      (o) => o.id == correctOptionId,
+                    );
+                    Navigator.pop(context, (
+                      question: questionController.text.trim(),
+                      explanation: explanationController.text.trim(),
+                      answer: options.isEmpty
+                          ? answerController.text.trim()
+                          : question.type == 'mcq'
+                          ? '$correctIndex'
+                          : optionTexts[correctIndex].toLowerCase(),
+                      options: optionTexts,
+                      correctId: correctOptionId,
+                    ));
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          ),
+        );
+    questionController.dispose();
+    explanationController.dispose();
+    answerController.dispose();
+    for (final controller in optionControllers) {
+      controller.dispose();
+    }
+    if (edited == null || !mounted) return;
+    try {
+      await db.editQuizQuestion(
+        original: question,
+        question: edited.question,
+        explanation: edited.explanation,
+        answer: edited.answer,
+        optionTexts: edited.options,
+        correctOptionId: edited.correctId,
+      );
+      if (mounted) {
+        setState(() => _questions = db.getQuizQuestionsForSet(widget.set.id));
+      }
+    } on Object catch (_) {
+      _showSaveError();
+    }
+  }
+
+  void _showSaveError() {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save your changes.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Edit quiz')),
+    body: FutureBuilder<List<QuizQuestion>>(
+      future: _questions,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return ListView(
+          children: [
+            ListTile(
+              title: Text(_title),
+              subtitle: const Text('Edit quiz title'),
+              trailing: const Icon(Icons.edit_outlined),
+              onTap: _editTitle,
+            ),
+            for (final question in snapshot.data!)
+              ListTile(
+                title: Text(question.question),
+                subtitle: Text(
+                  'Question ${question.position + 1} · ${question.type}',
+                ),
+                trailing: const Icon(Icons.edit_outlined),
+                onTap: () => _editQuestion(question),
+              ),
+          ],
+        );
+      },
+    ),
+  );
 }

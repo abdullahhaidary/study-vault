@@ -131,6 +131,33 @@ void main() {
       ]);
     });
 
+    test(
+      'manual edits persist as new versions without an AI request',
+      () async {
+        for (final type in PdfAiMaterialType.values) {
+          client.outputs.add('Original ${type.name}');
+          final original = await _generate(service, type: type);
+          final callsBeforeEdit = client.messages.length;
+          final edited = await service.editVersion(
+            original: original,
+            content: '  Corrected ${type.name}  ',
+          );
+          final history = await service.history(
+            materialId: 'pdf-1',
+            type: type,
+          );
+
+          expect(edited.version, 2);
+          expect(history.map((item) => item.content), [
+            'Corrected ${type.name}',
+            'Original ${type.name}',
+          ]);
+          expect(client.messages, hasLength(callsBeforeEdit));
+          expect(edited.provider, isNull);
+        }
+      },
+    );
+
     test('usage and cache metrics persist with every version', () async {
       client.outputs.add('Summary');
       client.usage = const AiTokenUsage(
@@ -279,12 +306,15 @@ void main() {
   });
 }
 
-Future<PdfAiMaterial> _generate(PdfAiMaterialService service) {
+Future<PdfAiMaterial> _generate(
+  PdfAiMaterialService service, {
+  PdfAiMaterialType type = PdfAiMaterialType.summary,
+}) {
   return service.generate(
     materialId: 'pdf-1',
     title: 'PDF',
     filePath: '/fake.pdf',
-    type: PdfAiMaterialType.summary,
+    type: type,
     selection: testDeepSeekSelection(),
   );
 }

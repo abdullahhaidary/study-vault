@@ -122,8 +122,8 @@ class AnnotationAiHistoryService {
       translateTarget: translateTarget,
       customPrompt: customPrompt,
       parentGenerationId: parentGenerationId,
-      modelName: result.usage?.model ?? selection.resolvedModelId,
-      provider: result.usage?.provider ?? selection.providerStorage,
+      modelName: modelName ?? result.usage?.model ?? selection.resolvedModelId,
+      provider: provider ?? result.usage?.provider ?? selection.providerStorage,
       linkedQuestionSetId: persisted.linkedQuestionSetId,
       usage: result.usage,
     );
@@ -246,6 +246,15 @@ class AnnotationAiHistoryService {
       sendMode: sendMode,
     );
   }
+
+  Future<AnnotationAiGeneration> editGeneration({
+    required AnnotationAiGeneration original,
+    required String responseText,
+  }) => _db.editAiGeneration(
+    original: original,
+    id: _uuid.v4(),
+    responseText: responseText,
+  );
 
   Future<void> deleteGeneration(String id) => _db.deleteAiGeneration(id);
 

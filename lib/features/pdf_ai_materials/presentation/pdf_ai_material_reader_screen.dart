@@ -48,6 +48,7 @@ class _PdfAiMaterialReaderScreenState
   final ScrollController _scrollController = ScrollController();
   String? _selectedId;
   bool _generating = false;
+  bool _editing = false;
   bool _deleting = false;
   String? _restoredGenerationId;
   bool _restoringScroll = false;
@@ -248,6 +249,60 @@ class _PdfAiMaterialReaderScreenState
     return instruction;
   }
 
+  Future<void> _edit(PdfAiMaterial selected) async {
+    if (_editing || _generating || _deleting) return;
+    final controller = TextEditingController(text: selected.content);
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit ${widget.type.shortName}'),
+        content: SizedBox(
+          width: 650,
+          height: MediaQuery.sizeOf(context).height * 0.6,
+          child: TextField(
+            controller: controller,
+            expands: true,
+            minLines: null,
+            maxLines: null,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Markdown content',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => FilledButton(
+              onPressed: value.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(context, value.text.trim()),
+              child: const Text('Save as new version'),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (edited == null || edited == selected.content.trim() || !mounted) return;
+    setState(() => _editing = true);
+    try {
+      final saved = await ref
+          .read(pdfAiMaterialServiceProvider)
+          .editVersion(original: selected, content: edited);
+      if (mounted) setState(() => _selectedId = saved.id);
+    } on Object catch (_) {
+      _showError('Could not save your changes. Please try again.');
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
+  }
+
   Future<void> _delete(PdfAiMaterial selected) async {
     if (_deleting) return;
     final confirmed = await showDialog<bool>(
@@ -412,7 +467,7 @@ class _PdfAiMaterialReaderScreenState
                       ),
                     ),
                     PopupMenuButton<String>(
-                      enabled: !_generating && !_deleting,
+                      enabled: !_generating && !_editing && !_deleting,
                       onSelected: (value) {
                         if (value == 'delete') _delete(selected);
                       },
@@ -445,26 +500,37 @@ class _PdfAiMaterialReaderScreenState
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: selected.content.trim().isEmpty
-                                ? null
-                                : () async {
-                                    await Clipboard.setData(
-                                      ClipboardData(text: selected.content),
-                                    );
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(content: Text('Copied')),
+                        Wrap(
+                          spacing: AppSpacing.sm,
+                          children: [
+                            TextButton.icon(
+                              onPressed: _editing || _generating || _deleting
+                                  ? null
+                                  : () => _edit(selected),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Edit'),
+                            ),
+                            TextButton.icon(
+                              onPressed: selected.content.trim().isEmpty
+                                  ? null
+                                  : () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: selected.content),
                                       );
-                                    }
-                                  },
-                            icon: const Icon(Icons.copy_outlined, size: 18),
-                            label: const Text('Copy response'),
-                          ),
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Copied'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              icon: const Icon(Icons.copy_outlined, size: 18),
+                              label: const Text('Copy response'),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: AppSpacing.md),
                         const Divider(height: 1),
