@@ -22,6 +22,8 @@ abstract class AiSettingsStore {
 
   Future<String> getModelIdFor(AiProviderId provider);
   Future<void> setModelIdFor(AiProviderId provider, String modelId);
+  Future<String> getNewApiBaseUrl();
+  Future<void> setNewApiBaseUrl(String url);
 
   Future<AiThinkingMode> getThinkingMode();
   Future<void> setThinkingMode(AiThinkingMode mode);
@@ -45,6 +47,8 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   static const _providerKey = 'ai_provider';
   static const _geminiModelKey = 'ai_gemini_model';
   static const _deepseekModelKey = 'ai_deepseek_model';
+  static const _newApiModelKey = 'ai_newapi_model';
+  static const _newApiBaseUrlKey = 'ai_newapi_base_url';
   static const _thinkingKey = 'ai_deepseek_thinking';
   static const _languageKey = 'ai_default_language';
   static const _preferenceKey = 'ai_study_preference';
@@ -93,6 +97,9 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
       AiProviderId.deepseek => _normalizeDeepSeekStored(
         prefs.getString(_deepseekModelKey),
       ),
+      AiProviderId.newApi => normalizeNewApiModelId(
+        prefs.getString(_newApiModelKey),
+      ),
     };
   }
 
@@ -110,7 +117,19 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
           _deepseekModelKey,
           _normalizeDeepSeekStored(modelId),
         );
+      case AiProviderId.newApi:
+        await prefs.setString(_newApiModelKey, normalizeNewApiModelId(modelId));
     }
+  }
+
+  @override
+  Future<String> getNewApiBaseUrl() async =>
+      (await _prefs()).getString(_newApiBaseUrlKey) ?? '';
+
+  @override
+  Future<void> setNewApiBaseUrl(String url) async {
+    final prefs = await _prefs();
+    await prefs.setString(_newApiBaseUrlKey, normalizeNewApiBaseUrl(url));
   }
 
   String _normalizeDeepSeekStored(String? raw) {
@@ -195,11 +214,37 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   Future<void> resetPrivacyConsent() => setPrivacyConsentAccepted(false);
 }
 
+String normalizeNewApiModelId(String? raw) {
+  final id = raw?.trim() ?? '';
+  return 'newapi:${id.startsWith('newapi:') ? id.substring(7) : id}';
+}
+
+String normalizeNewApiBaseUrl(String raw) {
+  final url = raw.trim().replaceAll(RegExp(r'/+$'), '');
+  if (url.isEmpty) return '';
+  final uri = Uri.tryParse(url);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host.isEmpty ||
+      uri.host == 'docs.newapi.pro' ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      uri.path.endsWith('/messages')) {
+    throw const FormatException(
+      'Enter your HTTPS New API server URL (not docs.newapi.pro, without /messages).',
+    );
+  }
+  return url;
+}
+
 /// In-memory settings for tests.
 class MemoryAiSettingsStore implements AiSettingsStore {
   AiProviderId _provider = AiProviderId.gemini;
   String _geminiModel = GeminiModelRegistry.defaultModelId;
   String _deepseekModel = DeepSeekModelRegistry.defaultModelId;
+  String _newApiModel = 'newapi:';
+  String _newApiBaseUrl = '';
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   String? _preference;
@@ -224,6 +269,7 @@ class MemoryAiSettingsStore implements AiSettingsStore {
       switch (provider) {
         AiProviderId.gemini => _geminiModel,
         AiProviderId.deepseek => _deepseekModel,
+        AiProviderId.newApi => _newApiModel,
       };
 
   @override
@@ -235,8 +281,17 @@ class MemoryAiSettingsStore implements AiSettingsStore {
         _deepseekModel = DeepSeekModelIds.isAuto(modelId)
             ? DeepSeekModelIds.auto
             : DeepSeekModelRegistry.normalize(modelId);
+      case AiProviderId.newApi:
+        _newApiModel = normalizeNewApiModelId(modelId);
     }
   }
+
+  @override
+  Future<String> getNewApiBaseUrl() async => _newApiBaseUrl;
+
+  @override
+  Future<void> setNewApiBaseUrl(String url) async =>
+      _newApiBaseUrl = normalizeNewApiBaseUrl(url);
 
   @override
   Future<AiThinkingMode> getThinkingMode() async => _thinking;
@@ -314,6 +369,8 @@ String resolveActiveModelId({
   required AiStudyAction? action,
 }) {
   switch (provider) {
+    case AiProviderId.newApi:
+      return normalizeNewApiModelId(storedModelId);
     case AiProviderId.gemini:
       return GeminiModelRegistry.normalize(storedModelId);
     case AiProviderId.deepseek:

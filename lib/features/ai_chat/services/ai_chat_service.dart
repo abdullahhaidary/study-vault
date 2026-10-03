@@ -88,6 +88,7 @@ class AiChatService {
   String _normalizeModel(String modelId, AiProviderId provider) {
     return switch (provider) {
       AiProviderId.gemini => GeminiModelRegistry.normalize(modelId),
+      AiProviderId.newApi => normalizeNewApiModelId(modelId),
       AiProviderId.deepseek =>
         DeepSeekModelIds.isAuto(modelId)
             ? DeepSeekModelRegistry.defaultModelId

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai_chat/data/ai_chat_providers.dart';
 import '../data/ai_providers.dart';
+import '../data/ai_model_catalog_providers.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
@@ -22,6 +23,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   final _keyController = TextEditingController();
   bool _saving = false;
   bool _testing = false;
+  bool _loadingModels = false;
   String? _testMessage;
   bool _testOk = false;
 
@@ -35,6 +37,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     ref.invalidate(aiSettingsStateProvider);
     ref.invalidate(aiConfiguredProvider);
     ref.invalidate(availableChatModelsProvider);
+    ref.invalidate(availableAiModelsProvider);
   }
 
   Future<void> _saveKey(AiProviderId provider) async {
@@ -107,6 +110,130 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
       });
     } finally {
       if (mounted) setState(() => _testing = false);
+    }
+  }
+
+  Future<void> _browseNewApiModels() async {
+    setState(() => _loadingModels = true);
+    try {
+      final models = await ref
+          .read(newApiClaudeServiceProvider)
+          .listAvailableModels();
+      if (!mounted) return;
+      if (models.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This key has no available models on the server.'),
+          ),
+        );
+        return;
+      }
+      final selected = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Choose a Claude-compatible model'),
+          content: SizedBox(
+            width: 400,
+            height: 360,
+            child: ListView.builder(
+              itemCount: models.length,
+              itemBuilder: (context, index) => ListTile(
+                title: Text(models[index]),
+                onTap: () => Navigator.pop(context, models[index]),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+      if (selected == null || !mounted) return;
+      await ref
+          .read(aiSettingsStoreProvider)
+          .setModelIdFor(AiProviderId.newApi, selected);
+      await _refresh();
+    } on AiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not load models from the New API server.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingModels = false);
+    }
+  }
+
+  Future<void> _editNewApiConfig(AiSettingsState state) async {
+    final url = TextEditingController(text: state.newApiBaseUrl);
+    final model = TextEditingController(
+      text: state.modelId.replaceFirst(RegExp(r'^newapi:'), ''),
+    );
+    try {
+      final save = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('New API Claude server'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: url,
+                decoration: const InputDecoration(
+                  labelText: 'HTTPS server base URL',
+                  hintText: 'https://your-server.example/v1',
+                ),
+              ),
+              TextField(
+                controller: model,
+                decoration: const InputDecoration(
+                  labelText: 'Claude model ID',
+                  hintText: 'Model ID enabled on your server',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (save != true) return;
+      if (model.text.trim().isEmpty || url.text.trim().isEmpty) {
+        throw const FormatException('Enter a server URL and model ID.');
+      }
+      await ref.read(aiSettingsStoreProvider).setNewApiBaseUrl(url.text);
+      await ref
+          .read(aiSettingsStoreProvider)
+          .setModelIdFor(AiProviderId.newApi, model.text);
+      await _refresh();
+    } on FormatException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      url.dispose();
+      model.dispose();
     }
   }
 
@@ -199,6 +326,35 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (provider == AiProviderId.newApi) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Server: ${state.newApiBaseUrl.isEmpty ? 'Not set' : state.newApiBaseUrl}',
+                  ),
+                  Text(
+                    'Model: ${state.modelId.length <= 7 ? 'Not set' : state.modelId.substring(7)}',
+                  ),
+                  TextButton(
+                    onPressed: () => _editNewApiConfig(state),
+                    child: const Text('Edit server and model'),
+                  ),
+                  TextButton(
+                    onPressed:
+                        _loadingModels ||
+                            !state.newApiConfigured ||
+                            state.newApiBaseUrl.isEmpty
+                        ? null
+                        : _browseNewApiModels,
+                    child: Text(
+                      _loadingModels
+                          ? 'Loading models…'
+                          : 'Browse available models',
+                    ),
+                  ),
+                  const Text(
+                    'Use your own New API server URL, not the documentation URL.',
+                  ),
+                ],
                 if (provider == AiProviderId.deepseek) ...[
                   const SizedBox(height: 12),
                   const _DeepSeekPricingPeriodBanner(),
@@ -229,7 +385,13 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     runSpacing: 8,
                     children: [
                       FilledButton.tonal(
-                        onPressed: _testing ? null : _test,
+                        onPressed:
+                            _testing ||
+                                (provider == AiProviderId.newApi &&
+                                    (state.newApiBaseUrl.isEmpty ||
+                                        state.modelId.length <= 7))
+                            ? null
+                            : _test,
                         child: _testing
                             ? const SizedBox(
                                 width: 18,
@@ -290,28 +452,30 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                Text('Default Model', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('model-${provider.name}-${state.modelId}'),
-                  initialValue: modelItems.contains(state.modelId)
-                      ? state.modelId
-                      : modelItems.first,
-                  items: [
-                    for (final id in modelItems)
-                      DropdownMenuItem(
-                        value: id,
-                        child: Text(AiModels.label(provider, id)),
-                      ),
-                  ],
-                  onChanged: (value) async {
-                    if (value == null) return;
-                    await ref
-                        .read(aiSettingsStoreProvider)
-                        .setModelIdFor(provider, value);
-                    await _refresh();
-                  },
-                ),
+                if (provider != AiProviderId.newApi) ...[
+                  Text('Default Model', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('model-${provider.name}-${state.modelId}'),
+                    initialValue: modelItems.contains(state.modelId)
+                        ? state.modelId
+                        : modelItems.first,
+                    items: [
+                      for (final id in modelItems)
+                        DropdownMenuItem(
+                          value: id,
+                          child: Text(AiModels.label(provider, id)),
+                        ),
+                    ],
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      await ref
+                          .read(aiSettingsStoreProvider)
+                          .setModelIdFor(provider, value);
+                      await _refresh();
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   'Gemini automatic retries',
@@ -482,11 +646,13 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     await _refresh();
                   },
                 ),
-                if (state.geminiConfigured || state.deepseekConfigured) ...[
+                if (state.geminiConfigured ||
+                    state.deepseekConfigured ||
+                    state.newApiConfigured) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Configured keys: '
-                    '${[if (state.geminiConfigured) 'Gemini', if (state.deepseekConfigured) 'DeepSeek'].join(', ')}. Switching provider keeps each key.',
+                    '${[if (state.geminiConfigured) 'Gemini', if (state.deepseekConfigured) 'DeepSeek', if (state.newApiConfigured) 'New API'].join(', ')}. Switching provider keeps each key.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

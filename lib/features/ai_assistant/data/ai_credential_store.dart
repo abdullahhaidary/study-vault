@@ -18,12 +18,14 @@ class SecureAiCredentialStore implements AiCredentialStore {
 
   static const _geminiKeyName = 'study_vault_gemini_api_key';
   static const _deepseekKeyName = 'study_vault_deepseek_api_key';
+  static const _newApiKeyName = 'study_vault_newapi_api_key';
 
   final FlutterSecureStorage _storage;
 
   String _keyName(AiProviderId provider) => switch (provider) {
     AiProviderId.gemini => _geminiKeyName,
     AiProviderId.deepseek => _deepseekKeyName,
+    AiProviderId.newApi => _newApiKeyName,
   };
 
   @override

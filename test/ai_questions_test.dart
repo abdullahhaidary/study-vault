@@ -489,6 +489,8 @@ class MemoryAiSettingsStore implements AiSettingsStore {
   AiProviderId _provider = AiProviderId.gemini;
   String _model = AiModelIds.recommended;
   String _deepseekModel = 'deepseek-flash';
+  String _newApiModel = 'newapi:';
+  String _newApiBaseUrl = '';
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   String? _preference;
@@ -511,6 +513,7 @@ class MemoryAiSettingsStore implements AiSettingsStore {
       switch (provider) {
         AiProviderId.gemini => _model,
         AiProviderId.deepseek => _deepseekModel,
+        AiProviderId.newApi => _newApiModel,
       };
 
   @override
@@ -520,8 +523,16 @@ class MemoryAiSettingsStore implements AiSettingsStore {
         _model = modelId;
       case AiProviderId.deepseek:
         _deepseekModel = modelId;
+      case AiProviderId.newApi:
+        _newApiModel = modelId;
     }
   }
+
+  @override
+  Future<String> getNewApiBaseUrl() async => _newApiBaseUrl;
+
+  @override
+  Future<void> setNewApiBaseUrl(String url) async => _newApiBaseUrl = url;
 
   @override
   Future<AiThinkingMode> getThinkingMode() async => _thinking;

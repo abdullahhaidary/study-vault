@@ -11,6 +11,7 @@ import '../services/annotation_ai_history_service.dart';
 import '../services/annotation_ai_service.dart';
 import '../services/deepseek_ai_service.dart';
 import '../services/gemini_ai_service.dart';
+import '../services/new_api_claude_service.dart';
 import '../services/routing_ai_service.dart';
 
 export 'voice_input_providers.dart' show voiceInputServiceProvider;
@@ -37,12 +38,20 @@ final deepseekAiServiceProvider = Provider<DeepSeekAiService>((ref) {
   );
 });
 
-/// Active study AI — routes to Gemini or DeepSeek from Settings.
+final newApiClaudeServiceProvider = Provider<NewApiClaudeService>((ref) {
+  return NewApiClaudeService(
+    credentials: ref.watch(aiCredentialStoreProvider),
+    settings: ref.watch(aiSettingsStoreProvider),
+  );
+});
+
+/// Active study AI — routes to the selected provider from Settings.
 final aiServiceProvider = Provider<AiService>((ref) {
   return RoutingAiService(
     settings: ref.watch(aiSettingsStoreProvider),
     gemini: ref.watch(geminiAiServiceProvider),
     deepseek: ref.watch(deepseekAiServiceProvider),
+    newApi: ref.watch(newApiClaudeServiceProvider),
   );
 });
 
@@ -92,6 +101,9 @@ final aiConfiguredProvider = FutureProvider<bool>((ref) async {
   final settings = ref.watch(aiSettingsStoreProvider);
   final creds = ref.watch(aiCredentialStoreProvider);
   final provider = await settings.getProvider();
+  if (provider == AiProviderId.newApi) {
+    return ref.watch(newApiClaudeServiceProvider).isConfigured;
+  }
   return creds.hasApiKeyFor(provider);
 });
 
@@ -111,6 +123,8 @@ class AiSettingsState {
     required this.privacyConsent,
     required this.geminiConfigured,
     required this.deepseekConfigured,
+    required this.newApiConfigured,
+    required this.newApiBaseUrl,
   });
 
   final AiProviderId provider;
@@ -123,6 +137,8 @@ class AiSettingsState {
   final bool privacyConsent;
   final bool geminiConfigured;
   final bool deepseekConfigured;
+  final bool newApiConfigured;
+  final String newApiBaseUrl;
 
   AiProviderCapabilities get capabilities =>
       AiProviderCapabilities.forProvider(provider);
@@ -143,5 +159,7 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
     privacyConsent: await settings.getPrivacyConsentAccepted(),
     geminiConfigured: await creds.hasApiKeyFor(AiProviderId.gemini),
     deepseekConfigured: await creds.hasApiKeyFor(AiProviderId.deepseek),
+    newApiConfigured: await creds.hasApiKeyFor(AiProviderId.newApi),
+    newApiBaseUrl: await settings.getNewApiBaseUrl(),
   );
 });

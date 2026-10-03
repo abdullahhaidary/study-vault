@@ -461,17 +461,20 @@ class RoutingAiChatTransport implements AiChatTransport {
     required this.settings,
     required this.gemini,
     required this.deepseek,
+    this.newApi,
   });
 
   final AiSettingsStore settings;
   final AiChatTransport gemini;
   final AiChatTransport deepseek;
+  final AiChatTransport? newApi;
 
   Future<AiChatTransport> _active() async {
     final provider = await settings.getProvider();
     return switch (provider) {
       AiProviderId.gemini => gemini,
       AiProviderId.deepseek => deepseek,
+      AiProviderId.newApi => newApi ?? deepseek,
     };
   }
 
@@ -480,6 +483,7 @@ class RoutingAiChatTransport implements AiChatTransport {
     final inferred = AiProviderIdX.fromModelId(modelId);
     final selected = await settings.getProvider();
     // Historical chats keep their original provider/model.
+    if (inferred == AiProviderId.newApi) return newApi ?? deepseek;
     if (inferred != selected && DeepSeekModelRegistry.isKnown(modelId)) {
       return deepseek;
     }
@@ -504,7 +508,11 @@ class RoutingAiChatTransport implements AiChatTransport {
       }
     }
 
-    final lists = await Future.wait([safeList(gemini), safeList(deepseek)]);
+    final lists = await Future.wait([
+      safeList(gemini),
+      safeList(deepseek),
+      if (newApi != null) safeList(newApi!),
+    ]);
     final geminiModels = lists[0].isEmpty
         ? GeminiModelRegistry.fallbackChatModels()
               .map(AiSelectableModel.fromGemini)
@@ -515,7 +523,11 @@ class RoutingAiChatTransport implements AiChatTransport {
               .map(AiSelectableModel.fromDeepSeek)
               .toList(growable: false)
         : lists[1];
-    return [...geminiModels, ...deepseekModels];
+    return [
+      ...geminiModels,
+      ...deepseekModels,
+      if (lists.length > 2) ...lists[2],
+    ];
   }
 
   @override

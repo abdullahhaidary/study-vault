@@ -149,6 +149,7 @@ class AiExecutionSelection {
       provider: provider,
       requestedModelId: switch (provider) {
         AiProviderId.gemini => GeminiModelRegistry.normalize(requested),
+        AiProviderId.newApi => normalizeNewApiModelId(requested),
         AiProviderId.deepseek =>
           DeepSeekModelIds.isAuto(requested)
               ? DeepSeekModelIds.auto

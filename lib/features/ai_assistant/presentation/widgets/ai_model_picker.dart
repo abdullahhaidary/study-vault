@@ -33,7 +33,7 @@ Future<AiExecutionSelection?> showAiModelSelector(
           subtitle ??
           (constraints.visionOnly
               ? 'Page images require a Gemini vision model.'
-              : 'Pick Gemini or DeepSeek for this request.'),
+              : 'Pick Gemini, DeepSeek, or New API for this request.'),
     ),
   );
 }
@@ -96,6 +96,9 @@ String _displayName(AiExecutionSelection selection) {
   if (selection.provider == AiProviderId.gemini) {
     final def = GeminiModelRegistry.byId(selection.resolvedModelId);
     return def?.displayName ?? selection.resolvedModelId;
+  }
+  if (selection.provider == AiProviderId.newApi) {
+    return selection.resolvedModelId.substring(7);
   }
   final def = DeepSeekModelRegistry.byId(selection.resolvedModelId);
   return def?.displayName ?? selection.resolvedModelId;
@@ -200,6 +203,7 @@ class _ModelList extends StatelessWidget {
     final order = [
       AiProviderId.gemini,
       AiProviderId.deepseek,
+      AiProviderId.newApi,
       ...byProvider.keys.where(
         (id) => id != AiProviderId.gemini && id != AiProviderId.deepseek,
       ),

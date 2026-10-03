@@ -10,6 +10,7 @@ final pdfAiCompletionClientProvider = Provider<PdfAiCompletionClient>((ref) {
   return RoutingPdfAiCompletionClient(
     gemini: ref.watch(geminiAiServiceProvider),
     deepSeek: ref.watch(deepseekAiServiceProvider),
+    newApi: ref.watch(newApiClaudeServiceProvider),
   );
 });
 

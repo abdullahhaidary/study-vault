@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../ai_assistant/services/new_api_claude_service.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
@@ -38,11 +39,14 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
   RoutingPdfAiCompletionClient({
     required GeminiAiService gemini,
     required DeepSeekAiService deepSeek,
+    NewApiClaudeService? newApi,
   }) : _gemini = gemini,
-       _deepSeek = deepSeek;
+       _deepSeek = deepSeek,
+       _newApi = newApi;
 
   final GeminiAiService _gemini;
   final DeepSeekAiService _deepSeek;
+  final NewApiClaudeService? _newApi;
 
   @override
   Future<PdfAiCompletion> complete({
@@ -57,6 +61,11 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
         selection: selection,
       ),
       AiProviderId.deepseek => await _deepSeek.completeDocumentMessages(
+        messages: messages,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+      ),
+      AiProviderId.newApi => await _newApi!.completeDocumentMessages(
         messages: messages,
         maxOutputTokens: maxOutputTokens,
         selection: selection,

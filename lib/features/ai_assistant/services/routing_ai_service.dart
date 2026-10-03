@@ -15,16 +15,23 @@ class RoutingAiService implements AiService {
     required this.settings,
     required this.gemini,
     required this.deepseek,
+    this.newApi,
   });
 
   final AiSettingsStore settings;
   final AiService gemini;
   final AiService deepseek;
+  final AiService? newApi;
 
   Future<AiService> _forProvider(AiProviderId provider) {
     return Future.value(switch (provider) {
       AiProviderId.gemini => gemini,
       AiProviderId.deepseek => deepseek,
+      AiProviderId.newApi =>
+        newApi ??
+            (throw const AiNotConfiguredException(
+              'New API is not configured.',
+            )),
     });
   }
 

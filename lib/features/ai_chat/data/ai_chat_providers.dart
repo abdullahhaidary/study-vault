@@ -8,6 +8,7 @@ import '../domain/referenced_ai_message.dart';
 import '../services/ai_chat_service.dart';
 import '../services/deepseek_chat_service.dart';
 import '../services/gemini_chat_service.dart';
+import '../services/new_api_claude_chat_service.dart';
 import '../services/chat_speech_service.dart';
 
 export '../services/ai_chat_navigation.dart';
@@ -26,11 +27,19 @@ final deepseekChatServiceProvider = Provider<AiChatTransport>((ref) {
   );
 });
 
+final newApiClaudeChatServiceProvider = Provider<AiChatTransport>((ref) {
+  return NewApiClaudeChatService(
+    service: ref.watch(newApiClaudeServiceProvider),
+    settings: ref.watch(aiSettingsStoreProvider),
+  );
+});
+
 final aiChatTransportProvider = Provider<AiChatTransport>((ref) {
   return RoutingAiChatTransport(
     settings: ref.watch(aiSettingsStoreProvider),
     gemini: ref.watch(geminiChatServiceProvider),
     deepseek: ref.watch(deepseekChatServiceProvider),
+    newApi: ref.watch(newApiClaudeChatServiceProvider),
   );
 });
 

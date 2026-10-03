@@ -1,7 +1,7 @@
 name: study_vault
 description: "A local-first study application for organizing classes, subjects, and lessons."
 publish_to: 'none'
-version: 1.0.0+1
+version: 4.0.0+5000
 
 environment:
   sdk: ^3.12.2

@@ -122,10 +122,12 @@ abstract final class AiModels {
           DeepSeekModelIds.auto,
           ...DeepSeekModelRegistry.selectableModels().map((m) => m.id),
         ],
+        AiProviderId.newApi => const ['newapi:'],
       };
 
   static String label(AiProviderId provider, String id) => switch (provider) {
     AiProviderId.gemini => AiModelIds.label(id),
+    AiProviderId.newApi => id.startsWith('newapi:') ? id.substring(7) : id,
     AiProviderId.deepseek =>
       DeepSeekModelIds.isAuto(id)
           ? 'Auto'
@@ -141,6 +143,8 @@ abstract final class AiModels {
   static String normalize(AiProviderId provider, String? id) =>
       switch (provider) {
         AiProviderId.gemini => GeminiModelRegistry.normalize(id),
+        AiProviderId.newApi =>
+          'newapi:${id?.trim().replaceFirst(RegExp(r'^newapi:'), '') ?? ''}',
         AiProviderId.deepseek =>
           DeepSeekModelIds.isAuto(id)
               ? DeepSeekModelIds.auto
@@ -157,6 +161,7 @@ abstract final class AiModels {
     final modelLabel = switch (p) {
       AiProviderId.gemini =>
         GeminiModelRegistry.byId(model)?.displayName ?? model,
+      AiProviderId.newApi => model.replaceFirst(RegExp(r'^newapi:'), ''),
       AiProviderId.deepseek =>
         DeepSeekModelRegistry.byId(model)?.displayName ?? model,
     };
@@ -165,6 +170,7 @@ abstract final class AiModels {
 
   /// True if [id] is a current Gemini or DeepSeek selectable model (or Auto).
   static bool isKnown(String id) {
+    if (id.startsWith('newapi:') && id.length > 7) return true;
     if (DeepSeekModelIds.isAuto(id)) return true;
     if (DeepSeekModelRegistry.isKnown(id)) return true;
     return GeminiModelRegistry.isKnown(id);
@@ -172,6 +178,7 @@ abstract final class AiModels {
 
   /// Chat subtitle / app bar label. Unknown ids stay marked unavailable.
   static String chatDisplayName(String id) {
+    if (id.startsWith('newapi:')) return id.substring(7);
     if (DeepSeekModelIds.isAuto(id)) return 'DeepSeek Auto';
     if (DeepSeekModelRegistry.isKnown(id)) {
       return DeepSeekModelRegistry.displayName(id);

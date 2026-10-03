@@ -1,6 +1,6 @@
 /// Study Vault AI backends. Features must stay provider-agnostic;
 /// provider-specific transport lives in infrastructure services.
-enum AiProviderId { gemini, deepseek }
+enum AiProviderId { gemini, deepseek, newApi }
 
 extension AiProviderIdX on AiProviderId {
   String get storageValue => name;
@@ -8,6 +8,7 @@ extension AiProviderIdX on AiProviderId {
   String get displayName => switch (this) {
     AiProviderId.gemini => 'Gemini',
     AiProviderId.deepseek => 'DeepSeek',
+    AiProviderId.newApi => 'New API (Claude)',
   };
 
   /// Short privacy line for Settings / consent.
@@ -16,12 +17,15 @@ extension AiProviderIdX on AiProviderId {
       'Study content used in AI requests is sent to Gemini.',
     AiProviderId.deepseek =>
       'Study content used in AI requests is sent to DeepSeek.',
+    AiProviderId.newApi =>
+      'Study content used in AI requests is sent to your New API server.',
   };
 
   static AiProviderId fromStorage(String? raw) {
     final value = raw?.trim().toLowerCase();
     return switch (value) {
       'deepseek' => AiProviderId.deepseek,
+      'newapi' => AiProviderId.newApi,
       _ => AiProviderId.gemini,
     };
   }
@@ -30,6 +34,7 @@ extension AiProviderIdX on AiProviderId {
   static AiProviderId fromModelId(String? modelId) {
     final id = modelId?.trim().toLowerCase() ?? '';
     if (id.startsWith('deepseek')) return AiProviderId.deepseek;
+    if (id.startsWith('newapi:')) return AiProviderId.newApi;
     return AiProviderId.gemini;
   }
 }
@@ -94,8 +99,15 @@ class AiProviderCapabilities {
     tools: true,
   );
 
+  static const newApi = AiProviderCapabilities(
+    text: true,
+    structuredJson: true,
+    streaming: true,
+  );
+
   static AiProviderCapabilities forProvider(AiProviderId id) => switch (id) {
     AiProviderId.gemini => gemini,
     AiProviderId.deepseek => deepseek,
+    AiProviderId.newApi => newApi,
   };
 }

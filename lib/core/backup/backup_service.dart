@@ -266,8 +266,8 @@ class BackupService {
   Future<File?> pickBackupFile() async {
     final result = await FilePicker.platform.pickFiles(
       dialogTitle: 'Select Study Vault backup',
-      type: FileType.custom,
-      allowedExtensions: const ['svbackup'],
+      type: Platform.isAndroid ? FileType.any : FileType.custom,
+      allowedExtensions: Platform.isAndroid ? null : const ['svbackup'],
       withData: false,
       allowMultiple: false,
     );
