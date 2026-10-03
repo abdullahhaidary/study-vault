@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/core/database/database_provider.dart';
+import 'package:study_vault/features/favorites/data/favorites_display_providers.dart';
 import 'package:study_vault/core/database/built_in_data.dart';
 import 'package:study_vault/features/search/data/study_search_service.dart';
 import 'package:study_vault/features/search/domain/study_search_result.dart';
@@ -205,6 +208,62 @@ void main() {
     await db.removeFavorite(FavoriteEntityType.subject, 's1');
     expect(await db.isFavorite(FavoriteEntityType.subject, 's1'), isFalse);
   });
+
+  test(
+    'favorite display resolves mixed types in order and skips missing',
+    () async {
+      await seedHierarchy();
+      final now = DateTime.now();
+      await db.insertStudyPin(
+        StudyPinsCompanion.insert(
+          id: 'p1',
+          resourceId: 'm1',
+          categoryId: const Value(BuiltInPinCategories.formula),
+          pageNumber: const Value(3),
+          xRatio: 0.1,
+          yRatio: 0.2,
+          shortText: 'Key formula',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      for (final (id, type, entityId, seconds) in [
+        ('f1', FavoriteEntityType.class_, 'c1', 1),
+        ('f2', FavoriteEntityType.subject, 's1', 2),
+        ('f3', FavoriteEntityType.lesson, 'l1', 3),
+        ('f4', FavoriteEntityType.material, 'm1', 4),
+        ('f5', FavoriteEntityType.studyPin, 'p1', 5),
+        ('f6', FavoriteEntityType.note, 'missing', 6),
+      ]) {
+        await db
+            .into(db.favorites)
+            .insert(
+              FavoritesCompanion.insert(
+                id: id,
+                entityType: type,
+                entityId: entityId,
+                createdAt: now.add(Duration(seconds: seconds)),
+              ),
+            );
+      }
+
+      final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+      final items = await container.read(favoriteDisplayItemsProvider.future);
+      expect(items.map((item) => item.entityId), [
+        'p1',
+        'm1',
+        'l1',
+        's1',
+        'c1',
+      ]);
+      expect(items.first.subtitle, 'Formula');
+      expect(items.first.breadcrumb, 'ML-L4-notes.pdf • page 3');
+      expect(items[2].breadcrumb, 'Machine Learning › ML Fundamentals');
+    },
+  );
 
   test('deleting material cleans pin favorites', () async {
     await seedHierarchy();

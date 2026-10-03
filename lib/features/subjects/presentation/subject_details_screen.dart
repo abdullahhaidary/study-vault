@@ -213,11 +213,13 @@ class SubjectDetailsScreen extends ConsumerWidget {
 
     final children = <Widget>[];
     final theme = Theme.of(context);
+    final lessonsByGroup = <String?, List<Lesson>>{};
+    for (final lesson in lessonList) {
+      lessonsByGroup.putIfAbsent(lesson.lessonGroupId, () => []).add(lesson);
+    }
 
     for (final group in groupList) {
-      final inGroup = lessonList
-          .where((l) => l.lessonGroupId == group.id)
-          .toList();
+      final inGroup = lessonsByGroup[group.id] ?? const <Lesson>[];
       children.add(
         GroupSectionHeader(
           title: group.name,
@@ -269,7 +271,7 @@ class SubjectDetailsScreen extends ConsumerWidget {
       children.add(const SizedBox(height: AppSpacing.xs));
     }
 
-    final ungrouped = lessonList.where((l) => l.lessonGroupId == null).toList();
+    final ungrouped = lessonsByGroup[null] ?? const <Lesson>[];
     if (ungrouped.isNotEmpty || groupList.isNotEmpty) {
       if (groupList.isNotEmpty) {
         children.add(const GroupSectionHeader(title: 'Ungrouped'));
@@ -312,14 +314,10 @@ class SubjectDetailsScreen extends ConsumerWidget {
     }
 
     return [
-      SliverToBoxAdapter(
-        child: DetailContent(
-          bottom: 0,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
-          ),
-        ),
+      SliverList.builder(
+        itemCount: children.length,
+        itemBuilder: (context, index) =>
+            DetailContent(bottom: 0, child: children[index]),
       ),
     ];
   }

@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
@@ -41,10 +42,11 @@ abstract final class PdfPageImageExtractor {
         );
       }
       try {
-        final jpeg = _bgraToJpeg(
-          pixels: rendered.pixels,
-          width: rendered.width,
-          height: rendered.height,
+        final pixels = rendered.pixels;
+        final width = rendered.width;
+        final height = rendered.height;
+        final jpeg = await Isolate.run(
+          () => _bgraToJpeg(pixels: pixels, width: width, height: height),
         );
         return AiStudyImage(
           bytes: jpeg,

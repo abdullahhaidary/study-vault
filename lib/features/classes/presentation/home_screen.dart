@@ -21,6 +21,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classesAsync = ref.watch(classesProvider);
+    final counts =
+        ref.watch(subjectCountsProvider).valueOrNull ?? const <String, int>{};
     final continueAsync = ref.watch(continueStudyingLessonsProvider);
     final theme = Theme.of(context);
 
@@ -165,7 +167,10 @@ class HomeScreen extends ConsumerWidget {
                     minItemWidth: 260,
                     children: [
                       for (final classItem in classList)
-                        _ClassCard(classItem: classItem),
+                        _ClassCard(
+                          classItem: classItem,
+                          subjectCount: counts[classItem.id],
+                        ),
                     ],
                   ),
                 ),
@@ -201,15 +206,15 @@ class ContentHomePadding extends StatelessWidget {
   }
 }
 
-class _ClassCard extends ConsumerWidget {
-  const _ClassCard({required this.classItem});
+class _ClassCard extends StatelessWidget {
+  const _ClassCard({required this.classItem, required this.subjectCount});
 
   final StudyClass classItem;
+  final int? subjectCount;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final countAsync = ref.watch(subjectCountProvider(classItem.id));
 
     return Card(
       child: InkWell(
@@ -261,16 +266,13 @@ class _ClassCard extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: AppSpacing.sm),
-              countAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-                data: (count) => Text(
-                  count == 1 ? '1 subject' : '$count subjects',
+              if (subjectCount != null)
+                Text(
+                  subjectCount == 1 ? '1 subject' : '$subjectCount subjects',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ),
             ],
           ),
         ),

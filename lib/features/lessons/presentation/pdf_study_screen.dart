@@ -709,6 +709,16 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               .where((bookmark) => bookmark.pageNumber == _currentPage)
               .firstOrNull;
     final textRanges = rangesAsync.valueOrNull ?? const [];
+    final pinsByPage = <int, List<StudyPin>>{};
+    for (final pin in pins) {
+      if (pin.pageNumber != null) {
+        pinsByPage.putIfAbsent(pin.pageNumber!, () => []).add(pin);
+      }
+    }
+    final rangesByPage = <int, List<StudyPinTextRange>>{};
+    for (final range in textRanges) {
+      rangesByPage.putIfAbsent(range.pageNumber, () => []).add(range);
+    }
     final categoryMap =
         ref.watch(studyPinCategoryMapProvider).valueOrNull ?? const {};
 
@@ -866,8 +876,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                           return buildPdfPagePinOverlays(
                             pageRect: pageRect,
                             page: page,
-                            pins: pins,
-                            textRanges: textRanges,
+                            pins: pinsByPage[page.pageNumber] ?? const [],
+                            textRanges:
+                                rangesByPage[page.pageNumber] ?? const [],
                             displayMode: displayMode,
                             annotateMode: annotate,
                             categoryMap: categoryMap,

@@ -22,107 +22,93 @@ class StudySearchService {
     if (q.isEmpty) return const [];
 
     final pattern = SearchTextNormalizer.likePattern(q);
-    final results = <StudySearchResult>[];
-
-    final favoriteClassIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.class_,
-    );
-    final favoriteSubjectIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.subject,
-    );
-    final favoriteLessonIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.lesson,
-    );
-    final favoriteMaterialIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.material,
-    );
-    final favoritePinIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.studyPin,
-    );
-    final favoriteNoteIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.note,
-    );
-    final favoriteFlashcardIds = await _db.favoriteIdsOfType(
-      FavoriteEntityType.flashcard,
-    );
-
-    final categories = {for (final c in await _db.getAllCategories()) c.id: c};
-
     final kind = typeFilter.asKind;
+    if (favoritesOnly && kind == StudyEntityKind.bookmark) return const [];
 
+    final favorites = await _db.select(_db.favorites).get();
+    final favoriteIds = <String, Set<String>>{};
+    for (final favorite in favorites) {
+      favoriteIds
+          .putIfAbsent(favorite.entityType, () => <String>{})
+          .add(favorite.entityId);
+    }
+    Set<String> ids(String type) => favoriteIds[type] ?? const <String>{};
+
+    final searches = <Future<List<StudySearchResult>>>[];
     if (kind == null || kind == StudyEntityKind.class_) {
-      results.addAll(
-        await _searchClasses(
+      searches.add(
+        _searchClasses(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteClassIds,
+          favoriteIds: ids(FavoriteEntityType.class_),
         ),
       );
     }
     if (kind == null || kind == StudyEntityKind.subject) {
-      results.addAll(
-        await _searchSubjects(
+      searches.add(
+        _searchSubjects(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteSubjectIds,
+          favoriteIds: ids(FavoriteEntityType.subject),
         ),
       );
     }
     if (kind == null || kind == StudyEntityKind.lesson) {
-      results.addAll(
-        await _searchLessons(
+      searches.add(
+        _searchLessons(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteLessonIds,
+          favoriteIds: ids(FavoriteEntityType.lesson),
         ),
       );
     }
     if (kind == null || kind == StudyEntityKind.material) {
-      results.addAll(
-        await _searchMaterials(
+      searches.add(
+        _searchMaterials(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteMaterialIds,
+          favoriteIds: ids(FavoriteEntityType.material),
         ),
       );
     }
     if (kind == null || kind == StudyEntityKind.studyPin) {
-      results.addAll(
-        await _searchPins(
+      searches.add(() async {
+        final categories = {
+          for (final c in await _db.getAllCategories()) c.id: c,
+        };
+        return _searchPins(
           pattern,
           query: q,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoritePinIds,
+          favoriteIds: ids(FavoriteEntityType.studyPin),
           categoryId: categoryId,
           categories: categories,
-        ),
-      );
+        );
+      }());
     }
     if (kind == null || kind == StudyEntityKind.note) {
-      results.addAll(
-        await _searchNotes(
+      searches.add(
+        _searchNotes(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteNoteIds,
+          favoriteIds: ids(FavoriteEntityType.note),
         ),
       );
     }
     if (kind == null || kind == StudyEntityKind.flashcard) {
-      results.addAll(
-        await _searchFlashcards(
+      searches.add(
+        _searchFlashcards(
           pattern,
           favoritesOnly: favoritesOnly,
-          favoriteIds: favoriteFlashcardIds,
+          favoriteIds: ids(FavoriteEntityType.flashcard),
         ),
       );
     }
-    if (kind == null || kind == StudyEntityKind.bookmark) {
-      results.addAll(
-        await _searchBookmarks(pattern, favoritesOnly: favoritesOnly),
-      );
+    if (!favoritesOnly && (kind == null || kind == StudyEntityKind.bookmark)) {
+      searches.add(_searchBookmarks(pattern, favoritesOnly: false));
     }
 
-    return results;
+    return [for (final results in await Future.wait(searches)) ...results];
   }
 
   Future<List<StudySearchResult>> _searchClasses(

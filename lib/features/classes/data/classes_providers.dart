@@ -31,6 +31,21 @@ final subjectCountProvider = StreamProvider.family<int, String>((ref, classId) {
   });
 });
 
+final subjectCountsProvider = StreamProvider<Map<String, int>>((ref) {
+  final db = ref.watch(databaseProvider);
+  final count = db.subjects.id.count();
+  final query = db.selectOnly(db.subjects)
+    ..addColumns([db.subjects.classId, count])
+    ..groupBy([db.subjects.classId]);
+  return query.watch().map(
+    (rows) => {
+      for (final row in rows)
+        if (row.read(db.subjects.classId) != null)
+          row.read(db.subjects.classId)!: row.read(count) ?? 0,
+    },
+  );
+});
+
 /// Creates a new class and persists it locally.
 Future<void> createClass(
   WidgetRef ref, {

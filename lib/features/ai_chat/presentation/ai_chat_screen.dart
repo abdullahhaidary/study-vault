@@ -275,6 +275,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         _composer.clear();
       }
 
+      var lastPaint = DateTime.fromMillisecondsSinceEpoch(0);
       await for (final partial
           in ref
               .read(aiChatServiceProvider)
@@ -284,6 +285,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 attachments: pendingAttachments,
               )) {
         if (!mounted) return;
+        final now = DateTime.now();
+        if (now.difference(lastPaint).inMilliseconds < 50) continue;
+        lastPaint = now;
         setState(() => _streamingText = partial);
         _scrollToBottom();
       }

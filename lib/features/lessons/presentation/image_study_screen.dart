@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -71,18 +70,33 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
 
   Future<void> _loadImage() async {
     try {
-      final bytes = await File(widget.filePath).readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      if (!mounted) {
-        frame.image.dispose();
-        return;
+      final buffer = await ui.ImmutableBuffer.fromFilePath(widget.filePath);
+      final codec = await ui.instantiateImageCodecWithSize(
+        buffer,
+        getTargetSize: (width, height) {
+          const maxSide = 4096;
+          if (width <= maxSide && height <= maxSide) {
+            return const ui.TargetImageSize();
+          }
+          return width > height
+              ? const ui.TargetImageSize(width: maxSide)
+              : const ui.TargetImageSize(height: maxSide);
+        },
+      );
+      try {
+        final frame = await codec.getNextFrame();
+        if (!mounted) {
+          frame.image.dispose();
+          return;
+        }
+        setState(() {
+          _decoded?.dispose();
+          _decoded = frame.image;
+          _loadError = null;
+        });
+      } finally {
+        codec.dispose();
       }
-      setState(() {
-        _decoded?.dispose();
-        _decoded = frame.image;
-        _loadError = null;
-      });
     } catch (error) {
       if (mounted) {
         setState(() => _loadError = error);

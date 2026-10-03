@@ -24,10 +24,7 @@ class LessonImagesScreen extends ConsumerWidget {
 
   Future<void> _addImage(BuildContext context, WidgetRef ref) async {
     try {
-      final material = await attachImageToLesson(
-        ref,
-        lessonId: scope.lessonId,
-      );
+      final material = await attachImageToLesson(ref, lessonId: scope.lessonId);
       if (material != null && context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -42,10 +39,7 @@ class LessonImagesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _openImage(
-    BuildContext context,
-    LessonMaterial material,
-  ) async {
+  Future<void> _openImage(BuildContext context, LessonMaterial material) async {
     final path = await materialAbsolutePath(material);
     if (!context.mounted) return;
     await Navigator.of(context).pushNamed(
@@ -229,6 +223,10 @@ class _ImageListTileState extends State<_ImageListTile> {
               return Image.file(
                 File(path),
                 fit: BoxFit.cover,
+                cacheWidth: (48 * MediaQuery.devicePixelRatioOf(context))
+                    .round(),
+                cacheHeight: (48 * MediaQuery.devicePixelRatioOf(context))
+                    .round(),
                 errorBuilder: (context, error, stackTrace) {
                   return ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,
