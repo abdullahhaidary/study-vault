@@ -5,25 +5,28 @@ import 'package:crypto/crypto.dart';
 
 import '../../ai_questions/domain/question_source.dart';
 
-enum PdfAiMaterialType { summary, explanation, deepExplanation }
+enum PdfAiMaterialType { summary, explanation, deepExplanation, slideshow }
 
 extension PdfAiMaterialTypeX on PdfAiMaterialType {
   String get storageValue => switch (this) {
     PdfAiMaterialType.summary => 'summary',
     PdfAiMaterialType.explanation => 'explanation',
     PdfAiMaterialType.deepExplanation => 'deep_explanation',
+    PdfAiMaterialType.slideshow => 'slideshow',
   };
 
   String get displayName => switch (this) {
     PdfAiMaterialType.summary => 'AI Summary',
     PdfAiMaterialType.explanation => 'AI Explanation',
     PdfAiMaterialType.deepExplanation => 'AI Deep Explanation',
+    PdfAiMaterialType.slideshow => 'AI Slideshow',
   };
 
   String get shortName => switch (this) {
     PdfAiMaterialType.summary => 'Summary',
     PdfAiMaterialType.explanation => 'Explanation',
     PdfAiMaterialType.deepExplanation => 'Deep Explanation',
+    PdfAiMaterialType.slideshow => 'Slideshow',
   };
 
   String get description => switch (this) {
@@ -31,12 +34,15 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.explanation => 'Full academic explanation',
     PdfAiMaterialType.deepExplanation =>
       'Simple, deep teaching from first principles',
+    PdfAiMaterialType.slideshow =>
+      'A slide-by-slide presentation of the whole PDF',
   };
 
   int get maxOutputTokens => switch (this) {
     PdfAiMaterialType.summary => 8192,
     PdfAiMaterialType.explanation => 16384,
     PdfAiMaterialType.deepExplanation => 32768,
+    PdfAiMaterialType.slideshow => 16384,
   };
 
   String get generationInstruction => switch (this) {
@@ -71,6 +77,18 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
           'memory aids where useful.\n'
           '- Do not be childish; remain technically rigorous.\n'
           '- Use detailed, well-structured Markdown.',
+    PdfAiMaterialType.slideshow =>
+      'Create a presentation for studying the entire document, in source order.\n'
+          '- Use one focused idea per slide, with a short descriptive title, '
+          'concise bullet points, and a formula or example when useful.\n'
+          '- Cover all important concepts, definitions, relationships, and '
+          'likely exam points without inventing content.\n'
+          '- Aim for 8–20 slides, but use more if needed to cover a long PDF.\n'
+          '- Start every slide with a Markdown heading such as '
+          '"# Slide 1: Introduction".\n'
+          '- Put exactly <!-- slide --> on its own line between slides. '
+          'Do not put this marker elsewhere or add text outside the slides.\n'
+          '- Keep each slide readable on a phone; avoid long paragraphs.',
   };
 
   static PdfAiMaterialType? fromStorage(String raw) {
@@ -78,6 +96,40 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
       if (type.storageValue == raw) return type;
     }
     return null;
+  }
+}
+
+abstract final class PdfAiSlideDeck {
+  static List<String> parse(String content) {
+    final markdown = content.trim();
+    if (markdown.isEmpty) return const [];
+    final marker = RegExp(
+      r'^[ \t]*<!--[ \t]*slide[ \t]*-->[ \t]*$',
+      multiLine: true,
+      caseSensitive: false,
+    );
+    final separated = markdown
+        .split(marker)
+        .map((slide) => slide.trim())
+        .where((slide) => slide.isNotEmpty)
+        .toList();
+    if (separated.length > 1) return separated;
+
+    final headings = RegExp(
+      r'^#{1,2}[ \t]+slide[ \t]+[0-9]+(?:[ \t]*[:.\-–])?',
+      multiLine: true,
+      caseSensitive: false,
+    ).allMatches(markdown).toList();
+    if (headings.length < 2) return [markdown];
+    return [
+      for (var i = 0; i < headings.length; i++)
+        markdown
+            .substring(
+              i == 0 ? 0 : headings[i].start,
+              i + 1 < headings.length ? headings[i + 1].start : markdown.length,
+            )
+            .trim(),
+    ];
   }
 }
 

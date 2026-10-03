@@ -13,13 +13,14 @@ import 'package:study_vault/features/pdf_ai_materials/services/pdf_ai_material_s
 
 void main() {
   group('PDF AI prompt structure', () {
-    test('all three generation types have distinct typed instructions', () {
+    test('all four generation types have distinct typed instructions', () {
       final instructions = {
         for (final type in PdfAiMaterialType.values)
           type.storageValue: type.generationInstruction,
       };
 
-      expect(instructions, hasLength(3));
+      expect(instructions, hasLength(4));
+      expect(instructions['slideshow'], contains('<!-- slide -->'));
       expect(instructions['summary'], contains('concise'));
       expect(instructions['explanation'], contains('university student'));
       expect(instructions['deep_explanation'], contains('first principles'));
@@ -30,6 +31,21 @@ void main() {
       expect(
         PdfAiMaterialType.explanation.maxOutputTokens,
         lessThan(PdfAiMaterialType.deepExplanation.maxOutputTokens),
+      );
+    });
+
+    test('slideshow splits slides and accepts heading-only fallbacks', () {
+      expect(
+        PdfAiSlideDeck.parse(
+          '# Slide 1: Start\nIntro\n<!-- slide -->\n# Slide 2: Finish\nDone',
+        ),
+        ['# Slide 1: Start\nIntro', '# Slide 2: Finish\nDone'],
+      );
+      expect(
+        PdfAiSlideDeck.parse(
+          '# Slide 1: Start\nIntro\n# Slide 2: Finish\nDone',
+        ),
+        ['# Slide 1: Start\nIntro', '# Slide 2: Finish\nDone'],
       );
     });
 
@@ -46,7 +62,7 @@ void main() {
       }
       expect(
         prompts.map((prompt) => prompt[2]['content']).toSet(),
-        hasLength(3),
+        hasLength(4),
       );
       final custom = PdfAiPromptBuilder.messages(
         stableDocument: document,

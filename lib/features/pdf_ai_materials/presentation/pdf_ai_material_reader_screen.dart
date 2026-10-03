@@ -12,6 +12,7 @@ import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
@@ -46,6 +47,9 @@ class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
 class _PdfAiMaterialReaderScreenState
     extends ConsumerState<PdfAiMaterialReaderScreen> {
   final ScrollController _scrollController = ScrollController();
+  final PageController _slideController = PageController();
+  String? _slideGenerationId;
+  int _slideIndex = 0;
   String? _selectedId;
   bool _generating = false;
   bool _editing = false;
@@ -70,6 +74,7 @@ class _PdfAiMaterialReaderScreenState
     _persistScrollOffset();
     _scrollController.removeListener(_saveScrollOffset);
     _scrollController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
@@ -406,6 +411,203 @@ class _PdfAiMaterialReaderScreenState
     return 'Could not generate this study material. Please try again.';
   }
 
+  void _syncSlideGeneration(String id) {
+    if (_slideGenerationId == id) return;
+    _slideGenerationId = id;
+    _slideIndex = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _slideGenerationId == id && _slideController.hasClients) {
+        _slideController.jumpToPage(0);
+      }
+    });
+  }
+
+  Future<void> _showSlideOverview(List<String> slides) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView.builder(
+          itemCount: slides.length,
+          itemBuilder: (context, index) {
+            final title = slides[index]
+                .split('\n')
+                .first
+                .replaceFirst(RegExp(r'^#{1,6}\s*'), '')
+                .trim();
+            return ListTile(
+              selected: index == _slideIndex,
+              leading: Text('${index + 1}'),
+              title: Text(
+                title.isEmpty ? 'Slide ${index + 1}' : title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () => Navigator.pop(context, index),
+            );
+          },
+        ),
+      ),
+    );
+    if (picked != null && mounted && _slideController.hasClients) {
+      await _slideController.animateToPage(
+        picked,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  Widget _slideshowBody(
+    PdfAiMaterial selected,
+    List<String> slides,
+    AiTokenUsage? usage,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _slideController,
+            itemCount: slides.length,
+            onPageChanged: (index) => setState(() => _slideIndex = index),
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 850),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: MarkdownBody(
+                        data: slides[index],
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                            .copyWith(
+                              h1: theme.textTheme.headlineMedium,
+                              h2: theme.textTheme.titleLarge,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Previous slide',
+                      onPressed: _slideIndex == 0
+                          ? null
+                          : () => _slideController.previousPage(
+                              duration: const Duration(milliseconds: 280),
+                              curve: Curves.easeInOut,
+                            ),
+                      icon: const Icon(Icons.arrow_back_ios_new),
+                    ),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => _showSlideOverview(slides),
+                        child: Text(
+                          'Slide ${_slideIndex + 1} of ${slides.length} · All slides',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Next slide',
+                      onPressed: _slideIndex + 1 == slides.length
+                          ? null
+                          : () => _slideController.nextPage(
+                              duration: const Duration(milliseconds: 280),
+                              curve: Curves.easeInOut,
+                            ),
+                      icon: const Icon(Icons.arrow_forward_ios),
+                    ),
+                  ],
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _editing || _generating || _deleting
+                            ? null
+                            : () => _edit(selected),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => Clipboard.setData(
+                          ClipboardData(text: slides[_slideIndex]),
+                        ),
+                        icon: const Icon(Icons.copy_outlined),
+                        label: const Text('Copy slide'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => Clipboard.setData(
+                          ClipboardData(text: selected.content),
+                        ),
+                        icon: const Icon(Icons.copy_all_outlined),
+                        label: const Text('Copy all'),
+                      ),
+                      if (widget.embedded)
+                        IconButton(
+                          tooltip: 'Open slideshow full screen',
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => PdfAiMaterialReaderScreen(
+                                materialId: widget.materialId,
+                                pdfTitle: widget.pdfTitle,
+                                filePath: widget.filePath,
+                                type: widget.type,
+                                initialGenerationId: selected.id,
+                              ),
+                            ),
+                          ),
+                          icon: const Icon(Icons.open_in_full),
+                        ),
+                    ],
+                  ),
+                ),
+                if (usage != null) AiUsageIndicator(usage: usage),
+                if (!widget.embedded)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _askAboutThis,
+                          child: const Text('Ask about this'),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _generating ? null : _regenerate,
+                          child: Text(
+                            _generating ? 'Generating…' : 'Regenerate',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final allAsync = ref.watch(pdfAiMaterialsProvider(widget.materialId));
@@ -440,8 +642,18 @@ class _PdfAiMaterialReaderScreenState
           (item) => item.id == _selectedId,
           orElse: () => history.first,
         );
-        _restoreScrollOffset(selected.id);
-        final markdownChunks = _chunksFor(selected);
+        final isSlideshow = widget.type == PdfAiMaterialType.slideshow;
+        if (isSlideshow) {
+          _syncSlideGeneration(selected.id);
+        } else {
+          _restoreScrollOffset(selected.id);
+        }
+        final slides = isSlideshow
+            ? PdfAiSlideDeck.parse(selected.content)
+            : const <String>[];
+        final markdownChunks = isSlideshow
+            ? const <String>[]
+            : _chunksFor(selected);
         final usage = aiTokenUsageFromColumns(
           promptTokens: selected.promptTokens,
           completionTokens: selected.completionTokens,
@@ -480,109 +692,131 @@ class _PdfAiMaterialReaderScreenState
                     ),
                   ],
                 ),
-          body: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  itemCount: markdownChunks.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index < markdownChunks.length) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: MarkdownBody(
-                          data: markdownChunks[index],
-                          selectable: true,
-                        ),
-                      );
-                    }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          children: [
-                            TextButton.icon(
-                              onPressed: _editing || _generating || _deleting
-                                  ? null
-                                  : () => _edit(selected),
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('Edit'),
-                            ),
-                            TextButton.icon(
-                              onPressed: selected.content.trim().isEmpty
-                                  ? null
-                                  : () async {
-                                      await Clipboard.setData(
-                                        ClipboardData(text: selected.content),
-                                      );
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Copied'),
-                                          ),
-                                        );
-                                      }
-                                    },
-                              icon: const Icon(Icons.copy_outlined, size: 18),
-                              label: const Text('Copy response'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        const Divider(height: 1),
-                        const SizedBox(height: AppSpacing.md),
-                        if (usage != null) ...[
-                          AiUsageIndicator(usage: usage),
-                          const SizedBox(height: AppSpacing.xs),
-                        ],
-                        Text(
-                          'Version ${selected.version} · '
-                          '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        if (!widget.embedded) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          Row(
+          body: isSlideshow && slides.isNotEmpty
+              ? _slideshowBody(selected, slides, usage)
+              : Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        itemCount: markdownChunks.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index < markdownChunks.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,
+                              ),
+                              child: MarkdownBody(
+                                data: markdownChunks[index],
+                                selectable: true,
+                              ),
+                            );
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _generating ? null : _askAboutThis,
-                                  icon: const Icon(Icons.chat_bubble_outline),
-                                  label: const Text('Ask about this'),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: FilledButton.icon(
-                                  onPressed: _generating ? null : _regenerate,
-                                  icon: _generating
-                                      ? const SizedBox.square(
-                                          dimension: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(Icons.refresh),
-                                  label: Text(
-                                    _generating ? 'Generating…' : 'Regenerate',
+                              Wrap(
+                                spacing: AppSpacing.sm,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed:
+                                        _editing || _generating || _deleting
+                                        ? null
+                                        : () => _edit(selected),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Edit'),
                                   ),
-                                ),
+                                  TextButton.icon(
+                                    onPressed: selected.content.trim().isEmpty
+                                        ? null
+                                        : () async {
+                                            await Clipboard.setData(
+                                              ClipboardData(
+                                                text: selected.content,
+                                              ),
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Copied'),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                    icon: const Icon(
+                                      Icons.copy_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Copy response'),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: AppSpacing.md),
+                              const Divider(height: 1),
+                              const SizedBox(height: AppSpacing.md),
+                              if (usage != null) ...[
+                                AiUsageIndicator(usage: usage),
+                                const SizedBox(height: AppSpacing.xs),
+                              ],
+                              Text(
+                                'Version ${selected.version} · '
+                                '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              if (!widget.embedded) ...[
+                                const SizedBox(height: AppSpacing.sm),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: _generating
+                                            ? null
+                                            : _askAboutThis,
+                                        icon: const Icon(
+                                          Icons.chat_bubble_outline,
+                                        ),
+                                        label: const Text('Ask about this'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: FilledButton.icon(
+                                        onPressed: _generating
+                                            ? null
+                                            : _regenerate,
+                                        icon: _generating
+                                            ? const SizedBox.square(
+                                                dimension: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Icon(Icons.refresh),
+                                        label: Text(
+                                          _generating
+                                              ? 'Generating…'
+                                              : 'Regenerate',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: AppSpacing.lg),
                             ],
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                    );
-                  },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         );
       },
     );
