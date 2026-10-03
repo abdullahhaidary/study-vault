@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/widgets/system_bottom_inset.dart';
+import '../../study_pins/domain/study_note_codec.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_token_usage.dart';
 import '../services/markdown_to_quill.dart';
@@ -122,13 +124,34 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
       bottomNavigationBar: SystemBottomSafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
             children: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),
               ),
-              const Spacer(),
+              TextButton.icon(
+                onPressed: _cards.isEmpty
+                    ? null
+                    : () async {
+                        final text = [
+                          for (var i = 0; i < _cards.length; i++)
+                            'Q${i + 1}. ${_cards[i].front.text}\nA: '
+                                '${StudyNoteCodec.isRichDeltaJson(_cards[i].back.text) ? StudyNoteCodec.decode(_cards[i].back.text).toPlainText().trimRight() : _cards[i].back.text}',
+                        ].join('\n\n');
+                        await Clipboard.setData(ClipboardData(text: text));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Copied')),
+                          );
+                        }
+                      },
+                icon: const Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copy'),
+              ),
               FilledButton(
                 onPressed: _saving
                     ? null

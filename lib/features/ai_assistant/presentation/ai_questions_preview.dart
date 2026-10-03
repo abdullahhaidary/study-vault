@@ -106,6 +106,21 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
                     final q = questions.questions[i];
                     buffer.writeln('Q${i + 1}. ${q.question}');
                     buffer.writeln('A: ${q.answer}');
+                    if (q.choices != null) {
+                      for (
+                        var choice = 0;
+                        choice < q.choices!.length;
+                        choice++
+                      ) {
+                        buffer.writeln(
+                          '${String.fromCharCode(65 + choice)}. ${q.choices![choice]}'
+                          '${q.correctIndex == choice ? ' ✓' : ''}',
+                        );
+                      }
+                    }
+                    if (q.explanation != null && q.explanation!.isNotEmpty) {
+                      buffer.writeln(q.explanation);
+                    }
                     buffer.writeln();
                   }
                   await Clipboard.setData(

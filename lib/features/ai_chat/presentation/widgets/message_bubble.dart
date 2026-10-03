@@ -211,7 +211,7 @@ class MessageBubble extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 AiUsageIndicator(usage: usage!),
               ],
-              if (!isStreaming && !_isError && content.trim().isNotEmpty)
+              if (!isStreaming && content.trim().isNotEmpty)
                 _MessageActions(
                   isUser: _isUser,
                   content: content,
@@ -297,20 +297,6 @@ class _MessageActions extends StatelessWidget {
       child: Wrap(
         spacing: 0,
         children: [
-          IconButton(
-            tooltip: 'Copy message',
-            visualDensity: VisualDensity.compact,
-            iconSize: 18,
-            color: foreground.withValues(alpha: 0.72),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: content));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Copied')));
-            },
-            icon: const Icon(Icons.copy_outlined),
-          ),
           if (isUser && onEditAndResend != null)
             IconButton(
               tooltip: 'Edit and resend',
@@ -342,6 +328,20 @@ class _MessageActions extends StatelessWidget {
               onPressed: onRegenerate,
               icon: const Icon(Icons.refresh),
             ),
+          IconButton(
+            tooltip: 'Copy message',
+            visualDensity: VisualDensity.compact,
+            iconSize: 18,
+            color: foreground.withValues(alpha: 0.72),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: content));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Copied')));
+            },
+            icon: const Icon(Icons.copy_outlined),
+          ),
         ],
       ),
     );

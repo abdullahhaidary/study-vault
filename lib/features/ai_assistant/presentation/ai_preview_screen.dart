@@ -76,28 +76,31 @@ class AiTextPreviewScreen extends StatelessWidget {
             const SizedBox(height: 8),
             AiUsageIndicator(usage: result.usage!),
           ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: result.markdown.trim().isEmpty
+                  ? null
+                  : () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: result.markdown),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Copied')));
+                      }
+                    },
+              icon: const Icon(Icons.copy_outlined, size: 18),
+              label: const Text('Copy response'),
+            ),
+          ),
         ],
       ),
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Preview'),
-        actions: [
-          IconButton(
-            tooltip: 'Copy',
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: result.markdown));
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Copied')));
-              }
-            },
-            icon: const Icon(Icons.copy_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('AI Preview')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

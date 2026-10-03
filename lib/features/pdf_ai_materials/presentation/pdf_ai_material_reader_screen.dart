@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -444,6 +445,27 @@ class _PdfAiMaterialReaderScreenState
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: selected.content.trim().isEmpty
+                                ? null
+                                : () async {
+                                    await Clipboard.setData(
+                                      ClipboardData(text: selected.content),
+                                    );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(content: Text('Copied')),
+                                      );
+                                    }
+                                  },
+                            icon: const Icon(Icons.copy_outlined, size: 18),
+                            label: const Text('Copy response'),
+                          ),
+                        ),
                         const SizedBox(height: AppSpacing.md),
                         const Divider(height: 1),
                         const SizedBox(height: AppSpacing.md),

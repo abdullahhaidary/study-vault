@@ -568,20 +568,6 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                 ),
               ],
             ),
-          IconButton(
-            tooltip: 'Copy',
-            onPressed: _markdown.isEmpty
-                ? null
-                : () async {
-                    await Clipboard.setData(ClipboardData(text: _markdown));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('Copied')));
-                    }
-                  },
-            icon: const Icon(Icons.copy_outlined),
-          ),
         ],
       ),
       body: Column(
@@ -714,6 +700,28 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                                 const SizedBox(height: 8),
                                 AiUsageIndicator(usage: _usageForDisplay!),
                               ],
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () async {
+                                    await Clipboard.setData(
+                                      ClipboardData(text: _markdown),
+                                    );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(content: Text('Copied')),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.copy_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Copy response'),
+                                ),
+                              ),
                             ],
                           ),
                         ),

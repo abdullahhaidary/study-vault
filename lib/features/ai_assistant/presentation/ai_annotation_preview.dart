@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -148,6 +149,28 @@ class _AiAnnotationPreviewScreenState
             const SizedBox(height: 8),
             AiUsageIndicator(usage: widget.draft.usage!),
           ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () async {
+                final full = StudyNoteCodec.isRichDeltaJson(_fullMarkdown)
+                    ? StudyNoteCodec.decode(
+                        _fullMarkdown,
+                      ).toPlainText().trimRight()
+                    : _fullMarkdown;
+                await Clipboard.setData(
+                  ClipboardData(text: '${_short.text}\n\n$full'.trim()),
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Copied')));
+                }
+              },
+              icon: const Icon(Icons.copy_outlined, size: 18),
+              label: const Text('Copy response'),
+            ),
+          ),
           const SizedBox(height: 24),
           Row(
             children: [

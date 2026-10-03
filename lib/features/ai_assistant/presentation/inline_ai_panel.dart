@@ -846,10 +846,6 @@ class _InlineAiPanelCard extends StatelessWidget {
                         child: const Text('Add to annotation'),
                       ),
                     TextButton(
-                      onPressed: busy || !state.hasResponse ? null : onCopy,
-                      child: const Text('Copy'),
-                    ),
-                    TextButton(
                       onPressed: busy || state.action == null
                           ? null
                           : onRegenerate,
@@ -946,6 +942,14 @@ class _InlineAiPanelCard extends StatelessWidget {
               AiUsageIndicator(usage: usage),
               const SizedBox(height: 4),
             ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onCopy,
+                icon: const Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copy response'),
+              ),
+            ),
           ],
         ),
       ),

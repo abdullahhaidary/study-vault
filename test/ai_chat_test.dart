@@ -1,4 +1,6 @@
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
@@ -9,8 +11,49 @@ import 'package:study_vault/features/ai_assistant/domain/gemini_model_registry.d
 import 'package:study_vault/features/ai_chat/domain/ai_chat_models.dart';
 import 'package:study_vault/features/ai_chat/services/ai_chat_service.dart';
 import 'package:study_vault/features/ai_chat/services/gemini_chat_service.dart';
+import 'package:study_vault/features/ai_chat/presentation/widgets/message_bubble.dart';
 
 void main() {
+  testWidgets('assistant copy action is last and copies the full response', (
+    tester,
+  ) async {
+    String? copied;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MessageBubble(
+            role: AiChatRole.assistant,
+            content: '**Full** response',
+            onRegenerate: () {},
+            onToggleReadAloud: () {},
+          ),
+        ),
+      ),
+    );
+
+    final actions = find.descendant(
+      of: find.byType(MessageBubble),
+      matching: find.byType(IconButton),
+    );
+    expect(tester.widgetList<IconButton>(actions).last.tooltip, 'Copy message');
+    await tester.tap(find.byTooltip('Copy message'));
+    await tester.pump();
+    expect(copied, '**Full** response');
+    expect(find.text('Copied'), findsOneWidget);
+  });
+
   group('GeminiModelRegistry', () {
     test('default model is gemini-3.8-flash', () {
       expect(GeminiModelRegistry.defaultModelId, 'gemini-3.8-flash');
