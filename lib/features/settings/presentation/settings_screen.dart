@@ -7,6 +7,7 @@ import '../../../core/backup/backup_service.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
+import '../../manual_entry/presentation/manual_entry_settings_section.dart';
 
 /// App settings — AI Assistant + Backup & Restore.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -84,6 +85,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
+                  const SizedBox(height: AppSpacing.xl),
+                  const ManualEntrySettingsSection(),
                   const SizedBox(height: AppSpacing.xl),
                   const SectionHeader(title: 'Backup & Restore'),
                   Text(

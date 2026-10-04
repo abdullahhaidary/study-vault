@@ -56,3 +56,4 @@ flutter:
     - assets/logo/study_vault_logo_512.png
     - assets/logo/study_vault_icon_512.png
     - assets/logo/study_vault_icon_1024.png
+    - manual_entry_instruction.md

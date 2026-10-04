@@ -50,7 +50,6 @@ class LessonDetailsScreen extends ConsumerWidget {
     }
   }
 
-
   Future<void> _openMaterial(
     BuildContext context,
     LessonMaterial material,
@@ -236,10 +235,15 @@ class LessonDetailsScreen extends ConsumerWidget {
                     subjectId: lesson.subjectId,
                     existing: lesson,
                   );
+                } else if (value == 'import') {
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.manualEntry, arguments: lessonId);
                 }
               },
               itemBuilder: (context) => const [
                 PopupMenuItem(value: 'edit', child: Text('Edit lesson')),
+                PopupMenuItem(value: 'import', child: Text('Import from JSON')),
               ],
             ),
           ],
