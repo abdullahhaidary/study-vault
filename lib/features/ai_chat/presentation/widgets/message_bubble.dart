@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../../../core/markdown/chart_markdown_builder.dart';
 import '../../../../core/text/text_direction_utils.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../ai_assistant/domain/ai_token_usage.dart';
@@ -75,6 +76,28 @@ class MessageBubble extends StatelessWidget {
       height: 1.45,
     );
     final fullWidth = appearance.layout == ChatMessageLayout.fullWidth;
+    final markdownStyle = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: bodyStyle,
+      h1: _scaledHeading(theme.textTheme.headlineMedium, foreground),
+      h2: _scaledHeading(theme.textTheme.headlineSmall, foreground),
+      h3: _scaledHeading(theme.textTheme.titleLarge, foreground),
+      h4: _scaledHeading(theme.textTheme.titleMedium, foreground),
+      h5: _scaledHeading(theme.textTheme.titleSmall, foreground),
+      h6: bodyStyle?.copyWith(fontWeight: FontWeight.bold),
+      listBullet: bodyStyle,
+      blockquote: bodyStyle,
+      code: theme.textTheme.bodySmall?.copyWith(
+        fontFamily: 'monospace',
+        color: foreground,
+        fontSize:
+            (theme.textTheme.bodySmall?.fontSize ?? 12) * appearance.textScale,
+        backgroundColor: theme.colorScheme.surfaceContainerHigh,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: AppRadii.smAll,
+      ),
+    );
 
     final card = Card(
       margin: EdgeInsets.zero,
@@ -143,53 +166,14 @@ class MessageBubble extends StatelessWidget {
                         style: bodyStyle,
                         textDirection: direction,
                       )
-                    : MarkdownBody(
-                        data: content.isEmpty && isStreaming ? '…' : content,
-                        selectable: true,
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme)
-                            .copyWith(
-                              p: bodyStyle,
-                              h1: _scaledHeading(
-                                theme.textTheme.headlineMedium,
-                                foreground,
-                              ),
-                              h2: _scaledHeading(
-                                theme.textTheme.headlineSmall,
-                                foreground,
-                              ),
-                              h3: _scaledHeading(
-                                theme.textTheme.titleLarge,
-                                foreground,
-                              ),
-                              h4: _scaledHeading(
-                                theme.textTheme.titleMedium,
-                                foreground,
-                              ),
-                              h5: _scaledHeading(
-                                theme.textTheme.titleSmall,
-                                foreground,
-                              ),
-                              h6: bodyStyle?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              listBullet: bodyStyle,
-                              blockquote: bodyStyle,
-                              code: theme.textTheme.bodySmall?.copyWith(
-                                fontFamily: 'monospace',
-                                color: foreground,
-                                fontSize:
-                                    (theme.textTheme.bodySmall?.fontSize ??
-                                        12) *
-                                    appearance.textScale,
-                                backgroundColor:
-                                    theme.colorScheme.surfaceContainerHigh,
-                              ),
-                              codeblockDecoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHigh,
-                                borderRadius: AppRadii.smAll,
-                              ),
-                            ),
-                        onTapLink: (_, _, _) {},
+                    : SelectionArea(
+                        child: MarkdownBody(
+                          data: content.isEmpty && isStreaming ? '…' : content,
+                          selectable: false,
+                          styleSheet: markdownStyle,
+                          builders: chartMarkdownBuilders(markdownStyle),
+                          onTapLink: (_, _, _) {},
+                        ),
                       ),
               ),
               if (_isError && onRetry != null) ...[

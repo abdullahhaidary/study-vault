@@ -76,6 +76,12 @@ Rules:
 - All long text is Markdown: headings (#, ##), bullets, **bold**, `code`,
   formulas written inline. Preserve formulas, symbols, variable names, and
   technical English terms exactly.
+- Charts (only inside "study_materials" texts): when numeric data is clearer
+  as a chart, add a fenced code block tagged `chart` containing only JSON:
+  {"type":"bar"|"line"|"pie","title":"...","labels":["..."],
+   "series":[{"name":"...","data":[numbers]}],"xLabel":"...","yLabel":"..."}.
+  One number per label in every series; pie uses a single series; keep it
+  to <= 20 labels and still describe the data in words.
 - MCQ needs exactly 4 options; "correct" is the 0-based index (0–3) or the
   letter A–D.
 - "page" is the 1-based page / slide number the item comes from.

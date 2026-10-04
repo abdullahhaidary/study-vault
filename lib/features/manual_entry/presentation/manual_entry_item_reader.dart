@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../domain/manual_entry_plan.dart';
 
@@ -19,6 +20,7 @@ class ManualEntryItemReader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final markdownStyle = MarkdownStyleSheet.fromTheme(theme);
     return Scaffold(
       appBar: AppBar(
         title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -52,10 +54,14 @@ class ManualEntryItemReader extends StatelessWidget {
           constraints: const BoxConstraints(
             maxWidth: AppSpacing.contentMaxWidth,
           ),
-          child: Markdown(
-            data: item.markdown,
-            selectable: true,
-            padding: AppSpacing.pageInsets(context),
+          child: SelectionArea(
+            child: Markdown(
+              data: item.markdown,
+              selectable: false,
+              padding: AppSpacing.pageInsets(context),
+              styleSheet: markdownStyle,
+              builders: chartMarkdownBuilders(markdownStyle),
+            ),
           ),
         ),
       ),

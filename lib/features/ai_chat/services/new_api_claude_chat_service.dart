@@ -1,3 +1,4 @@
+import '../../../core/markdown/chart_spec.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
@@ -40,7 +41,8 @@ class NewApiClaudeChatService implements AiChatTransport {
         'role': 'system',
         'content':
             'You are Study Vault AI Assistant for university students. '
-            'Ground answers in shared study material and preserve formulas, code and technical terminology.'
+            'Ground answers in shared study material and preserve formulas, code and technical terminology.\n'
+            '${ChartSpec.promptInstruction}'
             '${preference == null || preference.trim().isEmpty ? '' : '\nUser study preference: ${preference.trim()}'}',
       },
       for (final turn in history)

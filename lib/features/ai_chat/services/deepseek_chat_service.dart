@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../ai_assistant/data/ai_credential_store.dart';
+import '../../../core/markdown/chart_spec.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
@@ -210,6 +211,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
             'Ground answers in any study material the user shares.\n'
             'Preserve formulas, code, variable names, and technical terminology.\n'
             'Keep responses useful for studying.\n'
+            '${ChartSpec.promptInstruction}\n'
             '${(studyPreference == null || studyPreference.trim().isEmpty) ? '' : 'User study preference: ${studyPreference.trim()}\n'}',
       },
     ];

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -465,6 +466,10 @@ class _PdfAiMaterialReaderScreenState
     AiTokenUsage? usage,
   ) {
     final theme = Theme.of(context);
+    final slideStyle = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      h1: theme.textTheme.headlineMedium,
+      h2: theme.textTheme.titleLarge,
+    );
     return Column(
       children: [
         Expanded(
@@ -479,16 +484,15 @@ class _PdfAiMaterialReaderScreenState
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 850),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      child: MarkdownBody(
-                        data: slides[index],
-                        selectable: true,
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme)
-                            .copyWith(
-                              h1: theme.textTheme.headlineMedium,
-                              h2: theme.textTheme.titleLarge,
-                            ),
+                    child: SelectionArea(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: MarkdownBody(
+                          data: slides[index],
+                          selectable: false,
+                          styleSheet: slideStyle,
+                          builders: chartMarkdownBuilders(slideStyle),
+                        ),
                       ),
                     ),
                   ),
@@ -655,6 +659,7 @@ class _PdfAiMaterialReaderScreenState
         final markdownChunks = isSlideshow
             ? const <String>[]
             : _chunksFor(selected);
+        final bodyStyle = MarkdownStyleSheet.fromTheme(Theme.of(context));
         final usage = aiTokenUsageFromColumns(
           promptTokens: selected.promptTokens,
           completionTokens: selected.completionTokens,
@@ -699,122 +704,129 @@ class _PdfAiMaterialReaderScreenState
                   children: [
                     Expanded(
                       child: ScrollEdgeArrows(
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          itemCount: markdownChunks.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index < markdownChunks.length) {
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: MarkdownBody(
-                                  data: markdownChunks[index],
-                                  selectable: true,
-                                ),
-                              );
-                            }
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Wrap(
-                                  spacing: AppSpacing.sm,
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed:
-                                          _editing || _generating || _deleting
-                                          ? null
-                                          : () => _edit(selected),
-                                      icon: const Icon(
-                                        Icons.edit_outlined,
-                                        size: 18,
+                        child: SelectionArea(
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            itemCount: markdownChunks.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index < markdownChunks.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm,
+                                  ),
+                                  child: MarkdownBody(
+                                    data: markdownChunks[index],
+                                    selectable: false,
+                                    styleSheet: bodyStyle,
+                                    builders: chartMarkdownBuilders(bodyStyle),
+                                  ),
+                                );
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Wrap(
+                                    spacing: AppSpacing.sm,
+                                    children: [
+                                      TextButton.icon(
+                                        onPressed:
+                                            _editing || _generating || _deleting
+                                            ? null
+                                            : () => _edit(selected),
+                                        icon: const Icon(
+                                          Icons.edit_outlined,
+                                          size: 18,
+                                        ),
+                                        label: const Text('Edit'),
                                       ),
-                                      label: const Text('Edit'),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: selected.content.trim().isEmpty
-                                          ? null
-                                          : () async {
-                                              await Clipboard.setData(
-                                                ClipboardData(
-                                                  text: selected.content,
-                                                ),
-                                              );
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Copied'),
+                                      TextButton.icon(
+                                        onPressed:
+                                            selected.content.trim().isEmpty
+                                            ? null
+                                            : () async {
+                                                await Clipboard.setData(
+                                                  ClipboardData(
+                                                    text: selected.content,
                                                   ),
                                                 );
-                                              }
-                                            },
-                                      icon: const Icon(
-                                        Icons.copy_outlined,
-                                        size: 18,
-                                      ),
-                                      label: const Text('Copy response'),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                const Divider(height: 1),
-                                const SizedBox(height: AppSpacing.md),
-                                if (usage != null) ...[
-                                  AiUsageIndicator(usage: usage),
-                                  const SizedBox(height: AppSpacing.xs),
-                                ],
-                                Text(
-                                  'Version ${selected.version} · '
-                                  '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                if (!widget.embedded) ...[
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: _generating
-                                              ? null
-                                              : _askAboutThis,
-                                          icon: const Icon(
-                                            Icons.chat_bubble_outline,
-                                          ),
-                                          label: const Text('Ask about this'),
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Copied'),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                        icon: const Icon(
+                                          Icons.copy_outlined,
+                                          size: 18,
                                         ),
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      Expanded(
-                                        child: FilledButton.icon(
-                                          onPressed: _generating
-                                              ? null
-                                              : _regenerate,
-                                          icon: _generating
-                                              ? const SizedBox.square(
-                                                  dimension: 18,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                )
-                                              : const Icon(Icons.refresh),
-                                          label: Text(
-                                            _generating
-                                                ? 'Generating…'
-                                                : 'Regenerate',
-                                          ),
-                                        ),
+                                        label: const Text('Copy response'),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: AppSpacing.md),
+                                  if (usage != null) ...[
+                                    AiUsageIndicator(usage: usage),
+                                    const SizedBox(height: AppSpacing.xs),
+                                  ],
+                                  Text(
+                                    'Version ${selected.version} · '
+                                    '${DateFormat.yMMMd().format(selected.generatedAt.toLocal())}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                  if (!widget.embedded) ...[
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            onPressed: _generating
+                                                ? null
+                                                : _askAboutThis,
+                                            icon: const Icon(
+                                              Icons.chat_bubble_outline,
+                                            ),
+                                            label: const Text('Ask about this'),
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: FilledButton.icon(
+                                            onPressed: _generating
+                                                ? null
+                                                : _regenerate,
+                                            icon: _generating
+                                                ? const SizedBox.square(
+                                                    dimension: 18,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : const Icon(Icons.refresh),
+                                            label: Text(
+                                              _generating
+                                                  ? 'Generating…'
+                                                  : 'Regenerate',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: AppSpacing.lg),
                                 ],
-                                const SizedBox(height: AppSpacing.lg),
-                              ],
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../ai_assistant/data/ai_credential_store.dart';
+import '../../../core/markdown/chart_spec.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
@@ -293,7 +294,8 @@ class HttpGeminiChatService implements AiChatTransport {
                 'You are Study AI, a helpful study assistant inside Study Vault. '
                 'Be clear, accurate, and concise. Prefer structured explanations '
                 'with headings and lists when helpful. Support English and '
-                'Persian/Dari as needed.$preferenceNote',
+                'Persian/Dari as needed. ${ChartSpec.promptInstruction}'
+                '$preferenceNote',
           },
         ],
       },
