@@ -6,6 +6,7 @@ import '../../lessons/data/lesson_progress_providers.dart';
 import '../domain/review_models.dart';
 import '../domain/study_review_item.dart';
 import 'review_session_screen.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 
 /// Summary after a review session finishes.
 class ReviewCompleteScreen extends ConsumerWidget {
@@ -71,84 +72,92 @@ class ReviewCompleteScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Review Complete')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 640 : double.infinity),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-            children: [
-              Text(
-                '${session.latestRatings.length} reviewed',
-                style: theme.textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 20),
-              for (final rating in ReviewRating.values)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(rating.label),
-                  subtitle: Text(rating.hint),
-                  trailing: Text(
-                    '${counts[rating] ?? 0}',
-                    style: theme.textTheme.titleMedium,
-                  ),
+      body: ScrollEdgeArrows(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isWide ? 640 : double.infinity,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+              children: [
+                Text(
+                  '${session.latestRatings.length} reviewed',
+                  style: theme.textTheme.headlineSmall,
                 ),
-              if (needsLookUnique.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('Needs another look', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                for (final item in needsLookUnique.take(12))
+                const SizedBox(height: 20),
+                for (final rating in ReviewRating.values)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      item.isFavorite ? Icons.star : Icons.circle_outlined,
-                      size: 18,
-                    ),
-                    title: Text(item.shortText, maxLines: 2),
-                    subtitle: Text(
-                      [
-                        if (item.categoryName != null) item.categoryName!,
-                        if (item.pageNumber != null) 'page ${item.pageNumber}',
-                      ].join(' • '),
+                    title: Text(rating.label),
+                    subtitle: Text(rating.hint),
+                    trailing: Text(
+                      '${counts[rating] ?? 0}',
+                      style: theme.textTheme.titleMedium,
                     ),
                   ),
-              ],
-              const SizedBox(height: 28),
-              if (againItems.isNotEmpty)
-                FilledButton(
-                  onPressed: () => _reviewSubset(
-                    context,
-                    ref,
-                    items: againItems,
-                    titleSuffix: 'Again',
+                if (needsLookUnique.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Needs another look',
+                    style: theme.textTheme.titleMedium,
                   ),
-                  child: Text('Review Again Items (${againItems.length})'),
-                ),
-              if (hardItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  for (final item in needsLookUnique.take(12))
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        item.isFavorite ? Icons.star : Icons.circle_outlined,
+                        size: 18,
+                      ),
+                      title: Text(item.shortText, maxLines: 2),
+                      subtitle: Text(
+                        [
+                          if (item.categoryName != null) item.categoryName!,
+                          if (item.pageNumber != null)
+                            'page ${item.pageNumber}',
+                        ].join(' • '),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 28),
+                if (againItems.isNotEmpty)
+                  FilledButton(
+                    onPressed: () => _reviewSubset(
+                      context,
+                      ref,
+                      items: againItems,
+                      titleSuffix: 'Again',
+                    ),
+                    child: Text('Review Again Items (${againItems.length})'),
+                  ),
+                if (hardItems.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => _reviewSubset(
+                      context,
+                      ref,
+                      items: [
+                        ...{
+                          for (final i in [...againItems, ...hardItems])
+                            i.studyPinId: i,
+                        }.values,
+                      ],
+                      titleSuffix: 'Difficult',
+                    ),
+                    child: const Text('Review Difficult Items'),
+                  ),
+                ],
                 const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () => _reviewSubset(
-                    context,
-                    ref,
-                    items: [
-                      ...{
-                        for (final i in [...againItems, ...hardItems])
-                          i.studyPinId: i,
-                      }.values,
-                    ],
-                    titleSuffix: 'Difficult',
-                  ),
-                  child: const Text('Review Difficult Items'),
+                TextButton(
+                  onPressed: () {
+                    ref.read(activeReviewSessionProvider.notifier).clear();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Done'),
                 ),
               ],
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  ref.read(activeReviewSessionProvider.notifier).clear();
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Done'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

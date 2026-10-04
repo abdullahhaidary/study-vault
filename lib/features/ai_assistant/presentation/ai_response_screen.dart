@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
@@ -636,269 +637,282 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          if (page != null)
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text('Source: Page $page'),
-              trailing: widget.onGoToSource == null
-                  ? null
-                  : TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        widget.onGoToSource!();
-                      },
-                      child: const Text('Go to Source'),
-                    ),
-            ),
-          if (_historyReady && _generations.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        widget.action.menuLabel,
-                        style: Theme.of(context).textTheme.titleMedium,
+      body: ScrollEdgeArrows(
+        child: Column(
+          children: [
+            if (page != null)
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text('Source: Page $page'),
+                trailing: widget.onGoToSource == null
+                    ? null
+                    : TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          widget.onGoToSource!();
+                        },
+                        child: const Text('Go to Source'),
                       ),
-                      const SizedBox(width: 8),
-                      _CountChip(count: _generations.length),
-                      const Spacer(),
-                      if (selected != null)
+              ),
+            if (_historyReady && _generations.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
                         Text(
-                          'V${selected.generationNumber} · '
-                          '${timeFmt.format(selected.createdAt.toLocal())}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          widget.action.menuLabel,
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Directionality(
-                    // Keep version chronology LTR even in RTL locales.
-                    textDirection: TextDirection.ltr,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final g in _generations)
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(end: 6),
-                              child: ChoiceChip(
-                                label: Text('V${g.generationNumber}'),
-                                selected: selected?.id == g.id,
-                                onSelected: _busy
-                                    ? null
-                                    : (_) {
-                                        setState(() {
-                                          _selected = g;
-                                          _conversation.clear();
-                                          _followUpOverride = null;
-                                          _seedAssistantMarkdown = null;
-                                        });
-                                      },
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (selected?.modelName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Model: ${AiModels.displayBadge(provider: selected!.provider, modelName: selected.modelName)}',
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          if (_busy && _generatingLabel.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(
-                children: [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(_generatingLabel),
-                ],
-              ),
-            ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: !_historyReady
-                      ? const Center(child: CircularProgressIndicator())
-                      : _markdown.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'No generations yet',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              FilledButton(
-                                onPressed: _busy ? null : () => _newVersion(),
-                                child: const Text('Generate'),
-                              ),
-                            ],
+                        const SizedBox(width: 8),
+                        _CountChip(count: _generations.length),
+                        const Spacer(),
+                        if (selected != null)
+                          Text(
+                            'V${selected.generationNumber} · '
+                            '${timeFmt.format(selected.createdAt.toLocal())}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              StudyRichTextViewer(storedValue: stored),
-                              if (_usageForDisplay != null) ...[
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Directionality(
+                      // Keep version chronology LTR even in RTL locales.
+                      textDirection: TextDirection.ltr,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final g in _generations)
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  end: 6,
+                                ),
+                                child: ChoiceChip(
+                                  label: Text('V${g.generationNumber}'),
+                                  selected: selected?.id == g.id,
+                                  onSelected: _busy
+                                      ? null
+                                      : (_) {
+                                          setState(() {
+                                            _selected = g;
+                                            _conversation.clear();
+                                            _followUpOverride = null;
+                                            _seedAssistantMarkdown = null;
+                                          });
+                                        },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (selected?.modelName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Model: ${AiModels.displayBadge(provider: selected!.provider, modelName: selected.modelName)}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            if (_busy && _generatingLabel.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(_generatingLabel),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: !_historyReady
+                        ? const Center(child: CircularProgressIndicator())
+                        : _markdown.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'No generations yet',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
                                 const SizedBox(height: 8),
-                                AiUsageIndicator(usage: _usageForDisplay!),
-                              ],
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  onPressed: () async {
-                                    await Clipboard.setData(
-                                      ClipboardData(text: _markdown),
-                                    );
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(content: Text('Copied')),
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(
-                                    Icons.copy_outlined,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Copy response'),
+                                FilledButton(
+                                  onPressed: _busy ? null : () => _newVersion(),
+                                  child: const Text('Generate'),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                StudyRichTextViewer(storedValue: stored),
+                                if (_usageForDisplay != null) ...[
+                                  const SizedBox(height: 8),
+                                  AiUsageIndicator(usage: _usageForDisplay!),
+                                ],
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: _markdown),
+                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Copied'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.copy_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Copy response'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),
-          ),
-          if (widget.annotationContext != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AutoDirectionTextField(
-                      controller: _followUpController,
-                      decoration: const InputDecoration(
-                        hintText: 'Ask a follow-up…',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+            if (widget.annotationContext != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AutoDirectionTextField(
+                        controller: _followUpController,
+                        decoration: const InputDecoration(
+                          hintText: 'Ask a follow-up…',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        minLines: 1,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendFollowUp(),
                       ),
-                      minLines: 1,
-                      maxLines: 3,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendFollowUp(),
                     ),
+                    VoiceInputButton(
+                      controller: _followUpController,
+                      enabled: !_busy,
+                      compact: true,
+                    ),
+                    IconButton.filled(
+                      onPressed: _busy ? null : _sendFollowUp,
+                      icon: const Icon(Icons.send),
+                      tooltip: 'Ask follow-up',
+                    ),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _busy || _selected == null
+                        ? null
+                        : _editSelected,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit'),
                   ),
-                  VoiceInputButton(
-                    controller: _followUpController,
-                    enabled: !_busy,
-                    compact: true,
+                  OutlinedButton(
+                    onPressed: _busy ? null : () => _newVersion(),
+                    child: const Text('New Version'),
                   ),
-                  IconButton.filled(
-                    onPressed: _busy ? null : _sendFollowUp,
-                    icon: const Icon(Icons.send),
-                    tooltip: 'Ask follow-up',
+                  OutlinedButton(
+                    onPressed: _busy || _selected == null
+                        ? null
+                        : () => _newVersion(parent: _selected),
+                    child: const Text('Regenerate'),
+                  ),
+                  OutlinedButton(
+                    onPressed: _busy || _selected == null
+                        ? null
+                        : _regenerateWithInstruction,
+                    child: const Text('Regenerate with instruction'),
+                  ),
+                  OutlinedButton(
+                    onPressed: _busy || _selected == null
+                        ? null
+                        : _deleteSelected,
+                    child: const Text('Delete'),
+                  ),
+                  if (widget.onCreateNote != null)
+                    OutlinedButton(
+                      onPressed: _busy || _markdown.isEmpty
+                          ? null
+                          : () async {
+                              await widget.onCreateNote!(_markdown);
+                              if (context.mounted) {
+                                Navigator.pop(
+                                  context,
+                                  AiResponseScreenResult(
+                                    markdown: _markdown,
+                                    createNote: true,
+                                  ),
+                                );
+                              }
+                            },
+                      child: const Text('Create Note'),
+                    ),
+                  if (widget.onFlashcardsCreate != null)
+                    OutlinedButton(
+                      onPressed: _busy ? null : _createFlashcards,
+                      child: const Text('Create Flashcards'),
+                    ),
+                  OutlinedButton(
+                    onPressed: _busy ? null : _generateQuestions,
+                    child: const Text('Generate Questions'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(
+                      context,
+                      AiResponseScreenResult(markdown: _markdown),
+                    ),
+                    child: const Text('Done'),
                   ),
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _busy || _selected == null ? null : _editSelected,
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit'),
-                ),
-                OutlinedButton(
-                  onPressed: _busy ? null : () => _newVersion(),
-                  child: const Text('New Version'),
-                ),
-                OutlinedButton(
-                  onPressed: _busy || _selected == null
-                      ? null
-                      : () => _newVersion(parent: _selected),
-                  child: const Text('Regenerate'),
-                ),
-                OutlinedButton(
-                  onPressed: _busy || _selected == null
-                      ? null
-                      : _regenerateWithInstruction,
-                  child: const Text('Regenerate with instruction'),
-                ),
-                OutlinedButton(
-                  onPressed: _busy || _selected == null
-                      ? null
-                      : _deleteSelected,
-                  child: const Text('Delete'),
-                ),
-                if (widget.onCreateNote != null)
-                  OutlinedButton(
-                    onPressed: _busy || _markdown.isEmpty
-                        ? null
-                        : () async {
-                            await widget.onCreateNote!(_markdown);
-                            if (context.mounted) {
-                              Navigator.pop(
-                                context,
-                                AiResponseScreenResult(
-                                  markdown: _markdown,
-                                  createNote: true,
-                                ),
-                              );
-                            }
-                          },
-                    child: const Text('Create Note'),
-                  ),
-                if (widget.onFlashcardsCreate != null)
-                  OutlinedButton(
-                    onPressed: _busy ? null : _createFlashcards,
-                    child: const Text('Create Flashcards'),
-                  ),
-                OutlinedButton(
-                  onPressed: _busy ? null : _generateQuestions,
-                  child: const Text('Generate Questions'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(
-                    context,
-                    AiResponseScreenResult(markdown: _markdown),
-                  ),
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -218,7 +218,7 @@ void main() {
       final first = await service.run(
         context: ctx,
         action: AiStudyAction.explain,
-      selection: testGeminiSelection(),
+        selection: testGeminiSelection(),
       );
       final second = await service.run(
         context: ctx,
@@ -245,7 +245,7 @@ void main() {
       await service.run(
         context: ctx,
         action: AiStudyAction.askAi,
-      selection: testGeminiSelection(),
+        selection: testGeminiSelection(),
         customPrompt: 'What is this?',
       );
       await service.run(
@@ -287,8 +287,8 @@ void main() {
       );
 
       await service.followUp(
-      selection: testGeminiSelection(),
-      context: ctx,
+        selection: testGeminiSelection(),
+        context: ctx,
         conversation: const [
           AiConversationTurn(
             userMessage: 'Explain',

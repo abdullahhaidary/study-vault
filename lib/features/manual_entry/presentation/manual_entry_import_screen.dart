@@ -6,6 +6,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../lessons/data/materials_providers.dart' show isPdfMimeType;
 import '../data/manual_entry_providers.dart';
 import '../domain/manual_entry_models.dart';
@@ -379,47 +380,51 @@ class _ManualEntryImportScreenState
           ),
         ],
       ),
-      body: ListView(
-        padding: AppSpacing.pageInsets(context),
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSpacing.contentMaxWidth,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _pasteCard(theme),
-                  const SizedBox(height: AppSpacing.md),
-                  if (_bundle != null) ...[
-                    _targetCard(theme),
+      body: ScrollEdgeArrows(
+        child: ListView(
+          padding: AppSpacing.pageInsets(context),
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _pasteCard(theme),
                     const SizedBox(height: AppSpacing.md),
-                    if (_building)
-                      const Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (plan != null)
-                      _reviewCard(theme, plan)
-                    else
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.arrow_upward),
-                          title: const Text('Choose a lesson to review items'),
-                          subtitle: Text(
-                            '${_bundle!.itemCount} item(s) ready to import.',
+                    if (_bundle != null) ...[
+                      _targetCard(theme),
+                      const SizedBox(height: AppSpacing.md),
+                      if (_building)
+                        const Padding(
+                          padding: EdgeInsets.all(AppSpacing.xl),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (plan != null)
+                        _reviewCard(theme, plan)
+                      else
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.arrow_upward),
+                            title: const Text(
+                              'Choose a lesson to review items',
+                            ),
+                            subtitle: Text(
+                              '${_bundle!.itemCount} item(s) ready to import.',
+                            ),
                           ),
                         ),
-                      ),
+                    ],
+                    const SizedBox(height: 96),
                   ],
-                  const SizedBox(height: 96),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: plan == null
           ? null

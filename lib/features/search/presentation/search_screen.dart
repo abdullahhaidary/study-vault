@@ -6,6 +6,7 @@ import '../../../core/navigation/study_navigator.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../favorites/data/favorites_display_providers.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/search_providers.dart';
@@ -60,127 +61,131 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         automaticallyImplyLeading: !widget.embeddedInShell,
         title: const Text('Search'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              page.left,
-              AppSpacing.xs,
-              page.right,
-              0,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSpacing.contentMaxWidth,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      autofocus: widget.embeddedInShell,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'Search classes, lessons, notes…',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: queryState.query.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'Clear',
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _controller.clear();
-                                  ref
-                                      .read(searchQueryProvider.notifier)
-                                      .setQuery('');
-                                },
-                              ),
-                      ),
-                      onChanged: (value) {
-                        ref.read(searchQueryProvider.notifier).setQuery(value);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  IconButton.filledTonal(
-                    tooltip: 'Filters',
-                    onPressed: _openFilters,
-                    icon: Badge(
-                      isLabelVisible: activeChips.isNotEmpty,
-                      smallSize: 8,
-                      child: const Icon(Icons.tune),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (activeChips.isNotEmpty)
+      body: ScrollEdgeArrows(
+        child: Column(
+          children: [
             Padding(
               padding: EdgeInsets.fromLTRB(
                 page.left,
-                AppSpacing.sm,
+                AppSpacing.xs,
                 page.right,
                 0,
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: AppSpacing.contentMaxWidth,
-                  ),
-                  child: Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: activeChips,
-                  ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        autofocus: widget.embeddedInShell,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'Search classes, lessons, notes…',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: queryState.query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear',
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _controller.clear();
+                                    ref
+                                        .read(searchQueryProvider.notifier)
+                                        .setQuery('');
+                                  },
+                                ),
+                        ),
+                        onChanged: (value) {
+                          ref
+                              .read(searchQueryProvider.notifier)
+                              .setQuery(value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton.filledTonal(
+                      tooltip: 'Filters',
+                      onPressed: _openFilters,
+                      icon: Badge(
+                        isLabelVisible: activeChips.isNotEmpty,
+                        smallSize: 8,
+                        child: const Icon(Icons.tune),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          const SizedBox(height: AppSpacing.sm),
-          Expanded(
-            child: queryState.query.trim().isEmpty
-                ? _InitialSearchBody(theme: theme)
-                : resultsAsync.when(
-                    loading: () => const AppLoading(),
-                    error: (e, _) =>
-                        const AppErrorState(message: 'Search failed.'),
-                    data: (results) {
-                      if (results.isEmpty) {
-                        return EmptyState(
-                          icon: Icons.search_off,
-                          title: 'No results',
-                          message:
-                              'No results for "${queryState.query.trim()}"',
-                        );
-                      }
-                      return ListView.separated(
-                        padding: EdgeInsets.fromLTRB(
-                          page.left,
-                          0,
-                          page.right,
-                          AppSpacing.xl,
-                        ),
-                        itemCount: results.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.xs),
-                        itemBuilder: (context, index) {
-                          final r = results[index];
-                          return Align(
-                            alignment: Alignment.topCenter,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: AppSpacing.contentMaxWidth,
-                              ),
-                              child: _SearchResultTile(result: r),
-                            ),
-                          );
-                        },
-                      );
-                    },
+            if (activeChips.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  page.left,
+                  AppSpacing.sm,
+                  page.right,
+                  0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppSpacing.contentMaxWidth,
+                    ),
+                    child: Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: activeChips,
+                    ),
                   ),
-          ),
-        ],
+                ),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: queryState.query.trim().isEmpty
+                  ? _InitialSearchBody(theme: theme)
+                  : resultsAsync.when(
+                      loading: () => const AppLoading(),
+                      error: (e, _) =>
+                          const AppErrorState(message: 'Search failed.'),
+                      data: (results) {
+                        if (results.isEmpty) {
+                          return EmptyState(
+                            icon: Icons.search_off,
+                            title: 'No results',
+                            message:
+                                'No results for "${queryState.query.trim()}"',
+                          );
+                        }
+                        return ListView.separated(
+                          padding: EdgeInsets.fromLTRB(
+                            page.left,
+                            0,
+                            page.right,
+                            AppSpacing.xl,
+                          ),
+                          itemCount: results.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppSpacing.xs),
+                          itemBuilder: (context, index) {
+                            final r = results[index];
+                            return Align(
+                              alignment: Alignment.topCenter,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: AppSpacing.contentMaxWidth,
+                                ),
+                                child: _SearchResultTile(result: r),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

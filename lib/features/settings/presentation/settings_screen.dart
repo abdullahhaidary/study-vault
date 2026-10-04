@@ -6,6 +6,7 @@ import '../../../core/backup/backup_providers.dart';
 import '../../../core/backup/backup_service.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
 import '../../manual_entry/presentation/manual_entry_settings_section.dart';
 
@@ -67,42 +68,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         automaticallyImplyLeading: !widget.embeddedInShell,
         title: const Text('Settings'),
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          page.left,
-          AppSpacing.sm,
-          page.right,
-          AppSpacing.xxl,
-        ),
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSpacing.contentMaxWidth,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
-                  const SizedBox(height: AppSpacing.xl),
-                  const ManualEntrySettingsSection(),
-                  const SizedBox(height: AppSpacing.xl),
-                  const SectionHeader(title: 'Backup & Restore'),
-                  Text(
-                    'Backups are not encrypted. Store them somewhere safe. '
-                    'API keys are never included.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+      body: ScrollEdgeArrows(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            page.left,
+            AppSpacing.sm,
+            page.right,
+            AppSpacing.xxl,
+          ),
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
+                    const SizedBox(height: AppSpacing.xl),
+                    const ManualEntrySettingsSection(),
+                    const SizedBox(height: AppSpacing.xl),
+                    const SectionHeader(title: 'Backup & Restore'),
+                    Text(
+                      'Backups are not encrypted. Store them somewhere safe. '
+                      'API keys are never included.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  const _BackupRestoreCard(),
-                ],
+                    const SizedBox(height: AppSpacing.md),
+                    const _BackupRestoreCard(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

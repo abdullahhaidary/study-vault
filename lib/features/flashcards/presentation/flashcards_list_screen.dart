@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
@@ -56,62 +57,64 @@ class FlashcardsListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: cards.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load flashcards: $error')),
-        data: (items) {
-          if (items.isEmpty) {
-            return const Center(child: Text('No flashcards yet.'));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final card = items[index];
-              return ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                tileColor: Theme.of(context).colorScheme.surfaceContainerLow,
-                title: Text(card.front),
-                subtitle: card.backPlainText == null
-                    ? null
-                    : Text(
-                        card.backPlainText!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                leading: const Icon(Icons.style_outlined),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Edit flashcard',
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => _EditFlashcardDialog(card: card),
-                      ),
-                    ),
-                    FavoriteStarButton(
-                      entityType: 'flashcard',
-                      entityId: card.id,
-                    ),
-                  ],
-                ),
-                onTap: () => Navigator.of(context).pushNamed(
-                  AppRoutes.flashcardStudy,
-                  arguments: FlashcardsListScope.lesson(
-                    id: card.lessonId!,
-                    title: scope.title,
+      body: ScrollEdgeArrows(
+        child: cards.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Could not load flashcards: $error')),
+          data: (items) {
+            if (items.isEmpty) {
+              return const Center(child: Text('No flashcards yet.'));
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final card = items[index];
+                return ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                  tileColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                  title: Text(card.front),
+                  subtitle: card.backPlainText == null
+                      ? null
+                      : Text(
+                          card.backPlainText!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  leading: const Icon(Icons.style_outlined),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Edit flashcard',
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => _EditFlashcardDialog(card: card),
+                        ),
+                      ),
+                      FavoriteStarButton(
+                        entityType: 'flashcard',
+                        entityId: card.id,
+                      ),
+                    ],
+                  ),
+                  onTap: () => Navigator.of(context).pushNamed(
+                    AppRoutes.flashcardStudy,
+                    arguments: FlashcardsListScope.lesson(
+                      id: card.lessonId!,
+                      title: scope.title,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

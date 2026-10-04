@@ -7,6 +7,7 @@ import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
 import '../../study_workspace/data/study_workspace_providers.dart';
@@ -28,156 +29,162 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            title: const Text('Study Vault'),
-            actions: [
-              IconButton(
-                tooltip: 'AI Chat',
-                onPressed: () =>
-                    ref.read(studyWorkspaceProvider.notifier).open(),
-                icon: const Icon(Icons.auto_awesome_outlined),
-              ),
-              IconButton(
-                tooltip: 'Search',
-                onPressed: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.search),
-                icon: const Icon(Icons.search),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'More',
-                onSelected: (value) {
-                  switch (value) {
-                    case 'add_class':
-                      CreateClassDialog.show(context);
-                    case 'reviews':
-                      RecentReviewsScreen.open(context);
-                    case 'favorites':
-                      ShellNavigation.openFavorites(context);
-                    case 'settings':
-                      ShellNavigation.openSettings(context);
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'add_class', child: Text('Add Class')),
-                  PopupMenuItem(
-                    value: 'reviews',
-                    child: Text('Recent Reviews'),
-                  ),
-                  PopupMenuItem(value: 'favorites', child: Text('Favorites')),
-                  PopupMenuItem(value: 'settings', child: Text('Settings')),
-                ],
-              ),
-            ],
-          ),
-          continueAsync.when(
-            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-            error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
-            data: (lessons) {
-              if (lessons.isEmpty) {
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              }
-              return SliverToBoxAdapter(
-                child: ContentHomePadding(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionHeader(title: 'Continue Studying'),
-                      ...lessons.take(3).map((lesson) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                          child: ListTile(
-                            tileColor: theme.colorScheme.surface,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppRadii.mdAll,
-                              side: BorderSide(
-                                color: theme.colorScheme.outlineVariant,
+      body: ScrollEdgeArrows(
+        topPadding: MediaQuery.paddingOf(context).top + kToolbarHeight,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              title: const Text('Study Vault'),
+              actions: [
+                IconButton(
+                  tooltip: 'AI Chat',
+                  onPressed: () =>
+                      ref.read(studyWorkspaceProvider.notifier).open(),
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                ),
+                IconButton(
+                  tooltip: 'Search',
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.search),
+                  icon: const Icon(Icons.search),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'More',
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'add_class':
+                        CreateClassDialog.show(context);
+                      case 'reviews':
+                        RecentReviewsScreen.open(context);
+                      case 'favorites':
+                        ShellNavigation.openFavorites(context);
+                      case 'settings':
+                        ShellNavigation.openSettings(context);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'add_class', child: Text('Add Class')),
+                    PopupMenuItem(
+                      value: 'reviews',
+                      child: Text('Recent Reviews'),
+                    ),
+                    PopupMenuItem(value: 'favorites', child: Text('Favorites')),
+                    PopupMenuItem(value: 'settings', child: Text('Settings')),
+                  ],
+                ),
+              ],
+            ),
+            continueAsync.when(
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, _) =>
+                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+              data: (lessons) {
+                if (lessons.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+                return SliverToBoxAdapter(
+                  child: ContentHomePadding(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionHeader(title: 'Continue Studying'),
+                        ...lessons.take(3).map((lesson) {
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.xs,
+                            ),
+                            child: ListTile(
+                              tileColor: theme.colorScheme.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadii.mdAll,
+                                side: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              leading: Icon(
+                                Icons.play_circle_outline,
+                                color: theme.colorScheme.primary,
+                              ),
+                              title: Text(lesson.name),
+                              subtitle: lesson.lastStudiedAt == null
+                                  ? null
+                                  : Text(
+                                      'Last studied ${lesson.lastStudiedAt!.year}/'
+                                      '${lesson.lastStudiedAt!.month.toString().padLeft(2, '0')}/'
+                                      '${lesson.lastStudiedAt!.day.toString().padLeft(2, '0')}',
+                                    ),
+                              trailing: Icon(
+                                Icons.chevron_right,
+                                color: theme.colorScheme.outline,
+                              ),
+                              onTap: () => Navigator.of(context).pushNamed(
+                                AppRoutes.lessonDetails,
+                                arguments: lesson.id,
                               ),
                             ),
-                            leading: Icon(
-                              Icons.play_circle_outline,
-                              color: theme.colorScheme.primary,
-                            ),
-                            title: Text(lesson.name),
-                            subtitle: lesson.lastStudiedAt == null
-                                ? null
-                                : Text(
-                                    'Last studied ${lesson.lastStudiedAt!.year}/'
-                                    '${lesson.lastStudiedAt!.month.toString().padLeft(2, '0')}/'
-                                    '${lesson.lastStudiedAt!.day.toString().padLeft(2, '0')}',
-                                  ),
-                            trailing: Icon(
-                              Icons.chevron_right,
-                              color: theme.colorScheme.outline,
-                            ),
-                            onTap: () => Navigator.of(context).pushNamed(
-                              AppRoutes.lessonDetails,
-                              arguments: lesson.id,
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          SliverToBoxAdapter(
-            child: ContentHomePadding(
-              child: SectionHeader(
-                title: 'My Classes',
-                padding: const EdgeInsets.only(
-                  top: AppSpacing.xs,
-                  bottom: AppSpacing.sm,
-                ),
-              ),
-            ),
-          ),
-          classesAsync.when(
-            loading: () => const SliverFillRemaining(child: AppLoading()),
-            error: (error, _) => SliverFillRemaining(
-              child: AppErrorState(message: 'Could not load classes.'),
-            ),
-            data: (classList) {
-              if (classList.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyState(
-                    icon: Icons.school_outlined,
-                    title: 'No classes yet',
-                    message:
-                        'Create your first class to start organizing your lessons.',
-                    action: FilledButton.icon(
-                      onPressed: () => CreateClassDialog.show(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Class'),
+                          );
+                        }),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
                     ),
                   ),
                 );
-              }
-
-              return SliverToBoxAdapter(
-                child: ContentHomePadding(
-                  bottom: AppSpacing.xl,
-                  child: ResponsiveGrid(
-                    minItemWidth: 260,
-                    children: [
-                      for (final classItem in classList)
-                        _ClassCard(
-                          classItem: classItem,
-                          subjectCount: counts[classItem.id],
-                        ),
-                    ],
+              },
+            ),
+            SliverToBoxAdapter(
+              child: ContentHomePadding(
+                child: SectionHeader(
+                  title: 'My Classes',
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.xs,
+                    bottom: AppSpacing.sm,
                   ),
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ),
+            classesAsync.when(
+              loading: () => const SliverFillRemaining(child: AppLoading()),
+              error: (error, _) => SliverFillRemaining(
+                child: AppErrorState(message: 'Could not load classes.'),
+              ),
+              data: (classList) {
+                if (classList.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyState(
+                      icon: Icons.school_outlined,
+                      title: 'No classes yet',
+                      message:
+                          'Create your first class to start organizing your lessons.',
+                      action: FilledButton.icon(
+                        onPressed: () => CreateClassDialog.show(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Class'),
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverToBoxAdapter(
+                  child: ContentHomePadding(
+                    bottom: AppSpacing.xl,
+                    child: ResponsiveGrid(
+                      minItemWidth: 260,
+                      children: [
+                        for (final classItem in classList)
+                          _ClassCard(
+                            classItem: classItem,
+                            subjectCount: counts[classItem.id],
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

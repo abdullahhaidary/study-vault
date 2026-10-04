@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/domain/annotation_ai_context.dart';
 import '../../ai_assistant/domain/inline_ai_models.dart';
 import '../../ai_assistant/presentation/inline_ai_panel.dart';
@@ -802,94 +803,115 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
               Expanded(
                 child: Stack(
                   children: [
-                    PdfViewer.file(
-                      widget.filePath,
-                      controller: _controller,
-                      params: PdfViewerParams(
-                        margin: 8,
-                        textSelectionParams: const PdfTextSelectionParams(
-                          enabled: true,
+                    ListenableBuilder(
+                      listenable: _controller,
+                      builder: (context, child) {
+                        final ready = _controller.isReady;
+                        final page = _currentPage ?? 1;
+                        final count = _pageCount ?? 1;
+                        return EdgeArrowsOverlay(
+                          revealKey: ready ? _controller.value : null,
+                          canGoStart: ready && page > 1,
+                          canGoEnd: ready && page < count,
+                          startTooltip: 'First page',
+                          endTooltip: 'Last page',
+                          onGoStart: () => _controller.goToPage(pageNumber: 1),
+                          onGoEnd: () =>
+                              _controller.goToPage(pageNumber: count),
+                          child: child!,
+                        );
+                      },
+                      child: PdfViewer.file(
+                        widget.filePath,
+                        controller: _controller,
+                        params: PdfViewerParams(
+                          margin: 8,
+                          textSelectionParams: const PdfTextSelectionParams(
+                            enabled: true,
+                          ),
+                          customizeContextMenuItems: (params, items) {
+                            if (!params.textSelectionDelegate.hasSelectedText) {
+                              return;
+                            }
+                            items.insert(
+                              0,
+                              ContextMenuButtonItem(
+                                label: 'AI',
+                                type: ContextMenuButtonType.custom,
+                                onPressed: () {
+                                  params.dismissContextMenu();
+                                  _openPdfInlineAi(
+                                    params.textSelectionDelegate,
+                                  );
+                                },
+                              ),
+                            );
+                            if (!annotate) return;
+                            items.insert(
+                              1,
+                              ContextMenuButtonItem(
+                                label: 'Add Description',
+                                type: ContextMenuButtonType.custom,
+                                onPressed: () {
+                                  params.dismissContextMenu();
+                                  _handleAddTextDescription(
+                                    params.textSelectionDelegate,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          onPageChanged: (pageNumber) {
+                            setState(() => _currentPage = pageNumber);
+                          },
+                          onViewerReady: (document, controller) {
+                            setState(() {
+                              _pageCount = document.pages.length;
+                              _currentPage = controller.pageNumber;
+                            });
+                            final page = widget.initialPage;
+                            if (page != null &&
+                                page >= 1 &&
+                                page <= document.pages.length) {
+                              controller.goToPage(pageNumber: page);
+                            }
+                          },
+                          onGeneralTap: (context, controller, details) {
+                            if (!annotate) return false;
+                            if (details.type != PdfViewerGeneralTapType.tap) {
+                              return false;
+                            }
+                            // Avoid creating a point pin under a text selection gesture.
+                            if (details.tapOn == PdfViewerPart.selectedText) {
+                              return false;
+                            }
+                            if (controller
+                                .textSelectionDelegate
+                                .hasSelectedText) {
+                              return false;
+                            }
+                            _handleAddPointPinTap(controller, details);
+                            return true;
+                          },
+                          pageOverlaysBuilder: (context, pageRect, page) {
+                            return buildPdfPagePinOverlays(
+                              pageRect: pageRect,
+                              page: page,
+                              pins: pinsByPage[page.pageNumber] ?? const [],
+                              textRanges:
+                                  rangesByPage[page.pageNumber] ?? const [],
+                              displayMode: displayMode,
+                              annotateMode: annotate,
+                              categoryMap: categoryMap,
+                              focusedPinId: _focusedPinId,
+                              onPinTap: (pin) {
+                                setState(() => _focusedPinId = pin.id);
+                                _onAnnotationTap(pin, annotate: annotate);
+                              },
+                              onPointPinMoved: _onPointPinMoved,
+                            );
+                          },
                         ),
-                        customizeContextMenuItems: (params, items) {
-                          if (!params.textSelectionDelegate.hasSelectedText) {
-                            return;
-                          }
-                          items.insert(
-                            0,
-                            ContextMenuButtonItem(
-                              label: 'AI',
-                              type: ContextMenuButtonType.custom,
-                              onPressed: () {
-                                params.dismissContextMenu();
-                                _openPdfInlineAi(params.textSelectionDelegate);
-                              },
-                            ),
-                          );
-                          if (!annotate) return;
-                          items.insert(
-                            1,
-                            ContextMenuButtonItem(
-                              label: 'Add Description',
-                              type: ContextMenuButtonType.custom,
-                              onPressed: () {
-                                params.dismissContextMenu();
-                                _handleAddTextDescription(
-                                  params.textSelectionDelegate,
-                                );
-                              },
-                            ),
-                          );
-                        },
-                        onPageChanged: (pageNumber) {
-                          setState(() => _currentPage = pageNumber);
-                        },
-                        onViewerReady: (document, controller) {
-                          setState(() {
-                            _pageCount = document.pages.length;
-                            _currentPage = controller.pageNumber;
-                          });
-                          final page = widget.initialPage;
-                          if (page != null &&
-                              page >= 1 &&
-                              page <= document.pages.length) {
-                            controller.goToPage(pageNumber: page);
-                          }
-                        },
-                        onGeneralTap: (context, controller, details) {
-                          if (!annotate) return false;
-                          if (details.type != PdfViewerGeneralTapType.tap) {
-                            return false;
-                          }
-                          // Avoid creating a point pin under a text selection gesture.
-                          if (details.tapOn == PdfViewerPart.selectedText) {
-                            return false;
-                          }
-                          if (controller
-                              .textSelectionDelegate
-                              .hasSelectedText) {
-                            return false;
-                          }
-                          _handleAddPointPinTap(controller, details);
-                          return true;
-                        },
-                        pageOverlaysBuilder: (context, pageRect, page) {
-                          return buildPdfPagePinOverlays(
-                            pageRect: pageRect,
-                            page: page,
-                            pins: pinsByPage[page.pageNumber] ?? const [],
-                            textRanges:
-                                rangesByPage[page.pageNumber] ?? const [],
-                            displayMode: displayMode,
-                            annotateMode: annotate,
-                            categoryMap: categoryMap,
-                            focusedPinId: _focusedPinId,
-                            onPinTap: (pin) {
-                              setState(() => _focusedPinId = pin.id);
-                              _onAnnotationTap(pin, annotate: annotate);
-                            },
-                            onPointPinMoved: _onPointPinMoved,
-                          );
-                        },
                       ),
                     ),
                     if (_isWide && _readerPin != null)

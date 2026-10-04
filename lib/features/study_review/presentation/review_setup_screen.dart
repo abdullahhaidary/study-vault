@@ -5,6 +5,7 @@ import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/review_session_providers.dart';
 import '../domain/review_models.dart';
 import 'review_session_screen.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 
 /// Lightweight filters before starting a review queue.
 class ReviewSetupScreen extends ConsumerStatefulWidget {
@@ -99,134 +100,142 @@ class _ReviewSetupScreenState extends ConsumerState<ReviewSetupScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text('Review: ${widget.scope.title}')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 640 : double.infinity),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-            children: [
-              if (_counting)
-                const LinearProgressIndicator()
-              else
-                Text(
-                  '${_availableCount ?? '…'} annotations available',
-                  style: theme.textTheme.titleMedium,
-                ),
-              const SizedBox(height: 24),
-              Text('Categories', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              categoriesAsync.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => const Text('Could not load categories'),
-                data: (cats) => Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilterChip(
-                      label: const Text('General'),
-                      selected: _selectedCategories.contains(null),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedCategories = {
-                              ..._selectedCategories,
-                              null,
-                            };
-                          } else {
-                            _selectedCategories = {..._selectedCategories}
-                              ..remove(null);
-                          }
-                        });
-                        _refreshCount();
-                      },
-                    ),
-                    for (final cat in cats)
+      body: ScrollEdgeArrows(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isWide ? 640 : double.infinity,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+              children: [
+                if (_counting)
+                  const LinearProgressIndicator()
+                else
+                  Text(
+                    '${_availableCount ?? '…'} annotations available',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                const SizedBox(height: 24),
+                Text('Categories', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                categoriesAsync.when(
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, _) => const Text('Could not load categories'),
+                  data: (cats) => Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
                       FilterChip(
-                        label: Text(cat.name),
-                        selected: _selectedCategories.contains(cat.id),
-                        avatar: CircleAvatar(
-                          backgroundColor: Color(cat.colorValue),
-                          radius: 6,
-                        ),
+                        label: const Text('General'),
+                        selected: _selectedCategories.contains(null),
                         onSelected: (selected) {
                           setState(() {
                             if (selected) {
                               _selectedCategories = {
                                 ..._selectedCategories,
-                                cat.id,
+                                null,
                               };
                             } else {
                               _selectedCategories = {..._selectedCategories}
-                                ..remove(cat.id);
+                                ..remove(null);
                             }
                           });
                           _refreshCount();
                         },
                       ),
-                  ],
+                      for (final cat in cats)
+                        FilterChip(
+                          label: Text(cat.name),
+                          selected: _selectedCategories.contains(cat.id),
+                          avatar: CircleAvatar(
+                            backgroundColor: Color(cat.colorValue),
+                            radius: 6,
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedCategories = {
+                                  ..._selectedCategories,
+                                  cat.id,
+                                };
+                              } else {
+                                _selectedCategories = {..._selectedCategories}
+                                  ..remove(cat.id);
+                              }
+                            });
+                            _refreshCount();
+                          },
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text('Include', style: theme.textTheme.titleSmall),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Point annotations'),
-                value: _filters.includePoint,
-                onChanged: (v) {
-                  setState(() => _filters = _filters.copyWith(includePoint: v));
-                  _refreshCount();
-                },
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Text annotations'),
-                value: _filters.includeText,
-                onChanged: (v) {
-                  setState(() => _filters = _filters.copyWith(includeText: v));
-                  _refreshCount();
-                },
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Favorites only'),
-                value: _filters.favoritesOnly,
-                onChanged: (v) {
-                  setState(
-                    () => _filters = _filters.copyWith(favoritesOnly: v),
-                  );
-                  _refreshCount();
-                },
-              ),
-              const SizedBox(height: 16),
-              Text('Order', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(
-                    value: false,
-                    label: Text('Original'),
-                    icon: Icon(Icons.sort),
-                  ),
-                  ButtonSegment(
-                    value: true,
-                    label: Text('Shuffle'),
-                    icon: Icon(Icons.shuffle),
-                  ),
-                ],
-                selected: {_filters.shuffle},
-                onSelectionChanged: (values) {
-                  setState(
-                    () => _filters = _filters.copyWith(shuffle: values.first),
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: _start,
-                icon: const Icon(Icons.school_outlined),
-                label: const Text('Start Review'),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Text('Include', style: theme.textTheme.titleSmall),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Point annotations'),
+                  value: _filters.includePoint,
+                  onChanged: (v) {
+                    setState(
+                      () => _filters = _filters.copyWith(includePoint: v),
+                    );
+                    _refreshCount();
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Text annotations'),
+                  value: _filters.includeText,
+                  onChanged: (v) {
+                    setState(
+                      () => _filters = _filters.copyWith(includeText: v),
+                    );
+                    _refreshCount();
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Favorites only'),
+                  value: _filters.favoritesOnly,
+                  onChanged: (v) {
+                    setState(
+                      () => _filters = _filters.copyWith(favoritesOnly: v),
+                    );
+                    _refreshCount();
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text('Order', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      label: Text('Original'),
+                      icon: Icon(Icons.sort),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text('Shuffle'),
+                      icon: Icon(Icons.shuffle),
+                    ),
+                  ],
+                  selected: {_filters.shuffle},
+                  onSelectionChanged: (values) {
+                    setState(
+                      () => _filters = _filters.copyWith(shuffle: values.first),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: _start,
+                  icon: const Icon(Icons.school_outlined),
+                  label: const Text('Start Review'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

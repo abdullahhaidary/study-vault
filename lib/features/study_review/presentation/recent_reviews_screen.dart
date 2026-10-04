@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../data/review_session_providers.dart';
 import '../domain/review_models.dart';
 
@@ -24,39 +25,41 @@ class RecentReviewsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Recent Reviews')),
-      body: sessionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (sessions) {
-          if (sessions.isEmpty) {
-            return const EmptyState(
-              icon: Icons.school_outlined,
-              title: 'No reviews yet',
-              message:
-                  'Start a review from a lesson or material to see history here.',
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: sessions.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final session = sessions[index];
-              return ListTile(
-                leading: Icon(
-                  session.completedAt != null
-                      ? Icons.check_circle_outline
-                      : Icons.timelapse,
-                  color: theme.colorScheme.primary,
-                ),
-                title: Text(session.title),
-                subtitle: Text(_subtitle(session), maxLines: 2),
-                onTap: () => _showDetail(context, ref, session),
+      body: ScrollEdgeArrows(
+        child: sessionsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (sessions) {
+            if (sessions.isEmpty) {
+              return const EmptyState(
+                icon: Icons.school_outlined,
+                title: 'No reviews yet',
+                message:
+                    'Start a review from a lesson or material to see history here.',
               );
-            },
-          );
-        },
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: sessions.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final session = sessions[index];
+                return ListTile(
+                  leading: Icon(
+                    session.completedAt != null
+                        ? Icons.check_circle_outline
+                        : Icons.timelapse,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(session.title),
+                  subtitle: Text(_subtitle(session), maxLines: 2),
+                  onTap: () => _showDetail(context, ref, session),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

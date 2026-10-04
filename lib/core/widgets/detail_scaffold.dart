@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_spacing.dart';
+import 'scroll_edge_arrows.dart';
 import 'system_bottom_inset.dart';
 
 /// Shared collapsing detail page chrome for Class / Subject / Lesson screens.
@@ -28,41 +29,46 @@ class DetailScaffold extends StatelessWidget {
     final bottomInset = SystemBottomInset.of(context, includeKeyboard: false);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            floating: true,
-            snap: true,
-            title: Text(title),
-            actions: actions,
-          ),
-          if (hasDescription)
-            SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: AppSpacing.contentMaxWidth,
-                  ),
-                  child: Padding(
-                    padding: AppSpacing.pageInsets(
-                      context,
-                    ).copyWith(top: 0, bottom: AppSpacing.md),
-                    child: Text(
-                      description!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+      body: ScrollEdgeArrows(
+        topPadding: MediaQuery.paddingOf(context).top + kToolbarHeight,
+        // Keep the down arrow clear of the FAB.
+        bottomPadding: floatingActionButton == null ? 0 : 72,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              floating: true,
+              snap: true,
+              title: Text(title),
+              actions: actions,
+            ),
+            if (hasDescription)
+              SliverToBoxAdapter(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppSpacing.contentMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: AppSpacing.pageInsets(
+                        context,
+                      ).copyWith(top: 0, bottom: AppSpacing.md),
+                      child: Text(
+                        description!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ...bodySlivers,
-          if (bottomInset > 0)
-            SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
-        ],
+            ...bodySlivers,
+            if (bottomInset > 0)
+              SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+          ],
+        ),
       ),
       floatingActionButton: floatingActionButton,
     );

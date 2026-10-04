@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../../../core/widgets/scroll_edge_arrows.dart';
 import '../../domain/quill_paragraph_direction_sync.dart';
 import 'divider_embed_builder.dart';
 import 'study_note_toolbar.dart';
@@ -92,7 +93,7 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final editor = QuillEditor.basic(
+    final quill = QuillEditor.basic(
       controller: widget.controller,
       focusNode: _focusNode,
       scrollController: _scrollController,
@@ -177,6 +178,7 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
         ),
       ),
     );
+    final editor = widget.scrollable ? ScrollEdgeArrows(child: quill) : quill;
 
     if (!widget.showToolbar || widget.readOnly) {
       return editor;

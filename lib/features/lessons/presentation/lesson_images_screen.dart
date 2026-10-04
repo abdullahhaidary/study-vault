@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../data/materials_providers.dart';
 
 /// Arguments for the lesson images list screen.
@@ -109,60 +110,64 @@ class LessonImagesScreen extends ConsumerWidget {
         icon: const Icon(Icons.add_photo_alternate_outlined),
         label: const Text('Add image'),
       ),
-      body: materialsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load images: $error')),
-        data: (materials) {
-          final images = [
-            for (final material in materials)
-              if (isImageMimeType(material.mimeType)) material,
-          ];
-          if (images.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.image_outlined,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'No images yet.',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Add a review image from your gallery.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      body: ScrollEdgeArrows(
+        // Keep the down arrow clear of the extended FAB.
+        bottomPadding: 72,
+        child: materialsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Could not load images: $error')),
+          data: (materials) {
+            final images = [
+              for (final material in materials)
+                if (isImageMimeType(material.mimeType)) material,
+            ];
+            if (images.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.image_outlined,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.outline,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'No images yet.',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Add a review image from your gallery.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-            itemCount: images.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final material = images[index];
-              return _ImageListTile(
-                material: material,
-                onOpen: () => _openImage(context, material),
-                onDelete: () => _confirmDelete(context, ref, material),
               );
-            },
-          );
-        },
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+              itemCount: images.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final material = images[index];
+                return _ImageListTile(
+                  material: material,
+                  onOpen: () => _openImage(context, material),
+                  onDelete: () => _confirmDelete(context, ref, material),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

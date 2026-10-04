@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/services/annotation_ai_context_builder.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
@@ -481,49 +482,53 @@ class StudyPinReaderPanel extends ConsumerWidget {
             ),
           ),
         Expanded(
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            children: [
-              if (showSelected) ...[
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.tertiaryContainer.withValues(
-                      alpha: 0.45,
+          child: ScrollEdgeArrows(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              children: [
+                if (showSelected) ...[
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiaryContainer.withValues(
+                        alpha: 0.45,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: AutoDirectionSelectableText(
-                      selected,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.4,
-                        fontStyle: FontStyle.italic,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: AutoDirectionSelectableText(
+                        selected,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.4,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (hasFull)
-                StudyRichTextViewer(storedValue: pin.fullExplanation!)
-              else
-                Text(
-                  'No note yet.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
+                  const SizedBox(height: 16),
+                ],
+                if (hasFull)
+                  StudyRichTextViewer(storedValue: pin.fullExplanation!)
+                else
+                  Text(
+                    'No note yet.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
+                const SizedBox(height: 16),
+                AiDiscussionsSection(
+                  kind: AiContextKind.studyPin,
+                  id: pin.id,
+                  dense: true,
                 ),
-              const SizedBox(height: 16),
-              AiDiscussionsSection(
-                kind: AiContextKind.studyPin,
-                id: pin.id,
-                dense: true,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

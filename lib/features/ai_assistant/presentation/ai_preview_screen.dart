@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
 import '../domain/ai_models.dart';
@@ -101,93 +102,95 @@ class AiTextPreviewScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('AI Preview')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(
-              child: isWide
-                  ? Row(
-                      children: [
-                        Expanded(child: originalPane()),
-                        const SizedBox(width: 12),
-                        Expanded(child: aiPane()),
-                      ],
-                    )
-                  : DefaultTabController(
-                      length: 2,
-                      child: Column(
+      body: ScrollEdgeArrows(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: isWide
+                    ? Row(
                         children: [
-                          const TabBar(
-                            tabs: [
-                              Tab(text: 'Original'),
-                              Tab(text: 'AI Version'),
-                            ],
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              children: [originalPane(), aiPane()],
-                            ),
-                          ),
+                          Expanded(child: originalPane()),
+                          const SizedBox(width: 12),
+                          Expanded(child: aiPane()),
                         ],
+                      )
+                    : DefaultTabController(
+                        length: 2,
+                        child: Column(
+                          children: [
+                            const TabBar(
+                              tabs: [
+                                Tab(text: 'Original'),
+                                Tab(text: 'AI Version'),
+                              ],
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                children: [originalPane(), aiPane()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(
+                      context,
+                      AiTextPreviewResult(
+                        action: AiPreviewApplyAction.cancel,
+                        markdown: result.markdown,
+                        storedRich: stored,
                       ),
                     ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(
-                    context,
-                    AiTextPreviewResult(
-                      action: AiPreviewApplyAction.cancel,
-                      markdown: result.markdown,
-                      storedRich: stored,
-                    ),
+                    child: const Text('Cancel'),
                   ),
-                  child: const Text('Cancel'),
-                ),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(
-                    context,
-                    AiTextPreviewResult(
-                      action: AiPreviewApplyAction.copy,
-                      markdown: result.markdown,
-                      storedRich: stored,
-                    ),
-                  ),
-                  child: const Text('Copy'),
-                ),
-                if (allowInsertBelow)
                   OutlinedButton(
                     onPressed: () => Navigator.pop(
                       context,
                       AiTextPreviewResult(
-                        action: AiPreviewApplyAction.insertBelow,
+                        action: AiPreviewApplyAction.copy,
                         markdown: result.markdown,
                         storedRich: stored,
                       ),
                     ),
-                    child: const Text('Insert Below'),
+                    child: const Text('Copy'),
                   ),
-                if (allowReplace)
-                  FilledButton(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      AiTextPreviewResult(
-                        action: AiPreviewApplyAction.replace,
-                        markdown: result.markdown,
-                        storedRich: stored,
+                  if (allowInsertBelow)
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(
+                        context,
+                        AiTextPreviewResult(
+                          action: AiPreviewApplyAction.insertBelow,
+                          markdown: result.markdown,
+                          storedRich: stored,
+                        ),
                       ),
+                      child: const Text('Insert Below'),
                     ),
-                    child: const Text('Replace'),
-                  ),
-              ],
-            ),
-          ],
+                  if (allowReplace)
+                    FilledButton(
+                      onPressed: () => Navigator.pop(
+                        context,
+                        AiTextPreviewResult(
+                          action: AiPreviewApplyAction.replace,
+                          markdown: result.markdown,
+                          storedRich: stored,
+                        ),
+                      ),
+                      child: const Text('Replace'),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

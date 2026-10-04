@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/quiz_models.dart';
 import 'generate_questions_sheet.dart';
 import 'quiz_session_screen.dart';
+import '../../../core/widgets/scroll_edge_arrows.dart';
 
 /// Results after submitting a quiz attempt.
 class QuizResultsScreen extends ConsumerWidget {
@@ -25,99 +26,101 @@ class QuizResultsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Quiz results')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Text(
-            '${score.percentage.round()}%',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.bold,
+      body: ScrollEdgeArrows(
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text(
+              '${score.percentage.round()}%',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Score: ${score.score} / 100',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 24),
-          _StatTile(
-            label: 'Correct',
-            value: '${score.correctCount}',
-            color: Colors.green,
-          ),
-          _StatTile(
-            label: 'Incorrect',
-            value: '${score.incorrectCount}',
-            color: Colors.red,
-          ),
-          _StatTile(label: 'Total', value: '${score.totalQuestions}'),
-          const SizedBox(height: 32),
-          if (score.incorrectCount > 0) ...[
-            FilledButton.tonalIcon(
+            const SizedBox(height: 8),
+            Text(
+              'Score: ${score.score} / 100',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 24),
+            _StatTile(
+              label: 'Correct',
+              value: '${score.correctCount}',
+              color: Colors.green,
+            ),
+            _StatTile(
+              label: 'Incorrect',
+              value: '${score.incorrectCount}',
+              color: Colors.red,
+            ),
+            _StatTile(label: 'Total', value: '${score.totalQuestions}'),
+            const SizedBox(height: 32),
+            if (score.incorrectCount > 0) ...[
+              FilledButton.tonalIcon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => QuizSessionScreen(
+                        questionSetId: questionSetId,
+                        existingAttemptId: attemptId,
+                        reviewMistakesOnly: true,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.rate_review_outlined),
+                label: const Text('Review mistakes'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final created = await createFlashcardsFromQuizMistakes(
+                    ref,
+                    questionSetId: questionSetId,
+                    attemptId: attemptId,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        created == 0
+                            ? 'No mistakes to convert.'
+                            : 'Created $created flashcard${created == 1 ? '' : 's'}.',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.style_outlined),
+                label: const Text('Create Flashcards from Mistakes'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            FilledButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
+                Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (_) => QuizSessionScreen(
-                      questionSetId: questionSetId,
-                      existingAttemptId: attemptId,
-                      reviewMistakesOnly: true,
-                    ),
+                    builder: (_) =>
+                        QuizSessionScreen(questionSetId: questionSetId),
                   ),
                 );
               },
-              icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('Review mistakes'),
+              icon: const Icon(Icons.replay),
+              label: const Text('Retry quiz'),
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final created = await createFlashcardsFromQuizMistakes(
-                  ref,
-                  questionSetId: questionSetId,
-                  attemptId: attemptId,
-                );
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      created == 0
-                          ? 'No mistakes to convert.'
-                          : 'Created $created flashcard${created == 1 ? '' : 's'}.',
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.style_outlined),
-              label: const Text('Create Flashcards from Mistakes'),
-            ),
-            const SizedBox(height: 8),
+            if (onGenerateAnother != null)
+              TextButton(
+                onPressed: onGenerateAnother,
+                child: const Text('Generate another quiz'),
+              )
+            else
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
           ],
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      QuizSessionScreen(questionSetId: questionSetId),
-                ),
-              );
-            },
-            icon: const Icon(Icons.replay),
-            label: const Text('Retry quiz'),
-          ),
-          const SizedBox(height: 8),
-          if (onGenerateAnother != null)
-            TextButton(
-              onPressed: onGenerateAnother,
-              child: const Text('Generate another quiz'),
-            )
-          else
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
-            ),
-        ],
+        ),
       ),
     );
   }
