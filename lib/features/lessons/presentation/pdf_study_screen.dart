@@ -8,6 +8,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
+import '../../ai_assistant/domain/ai_actions.dart';
+import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/domain/annotation_ai_context.dart';
 import '../../ai_assistant/domain/inline_ai_models.dart';
 import '../../ai_assistant/presentation/inline_ai_panel.dart';
@@ -20,10 +22,16 @@ import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../ai_questions/presentation/question_sets_screen.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
+import '../../ai_questions/services/pdf_text_extractor.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../notes/data/notes_providers.dart';
+import '../../pdf_ai_materials/data/pdf_ai_material_providers.dart';
+import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import '../../pdf_ai_materials/presentation/pdf_ai_materials_panel.dart';
+import '../../selection_ai/domain/selection_ai_host.dart';
+import '../../selection_ai/presentation/selection_ai_launcher.dart';
+import '../../selection_ai/presentation/selection_ai_toolbar.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
 import 'widgets/material_outline_panel.dart';
@@ -423,7 +431,153 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     await showGenerateQuestionsSheet(context, ref, launch: wrapped);
   }
 
-  Future<void> _openPdfInlineAi(PdfTextSelectionDelegate selection) async {
+  SelectionAiHost _selectionHost({String? lessonId, int? pageNumber}) {
+    return SelectionAiHost(
+      title: widget.title,
+      materialId: widget.resourceId,
+      lessonId: lessonId,
+      pageNumber: pageNumber,
+      filePath: widget.filePath,
+      loadSummary: () async {
+        final all =
+            ref.read(pdfAiMaterialsProvider(widget.resourceId)).valueOrNull ??
+            const <PdfAiMaterial>[];
+        return all
+            .where((m) => m.type == PdfAiMaterialType.summary.storageValue)
+            .firstOrNull
+            ?.content;
+      },
+      loadFullText: () async {
+        final pages = await PdfTextExtractor.extractPages(
+          filePath: widget.filePath,
+        );
+        return pages.map((p) => p.text.trim()).join('\n\n');
+      },
+      onAddPin: (_) async {
+        if (!_controller.isReady) return;
+        await _handleAddTextDescription(_controller.textSelectionDelegate);
+      },
+    );
+  }
+
+  Future<void> _pdfSelectionNote(PdfTextSelectionDelegate selection) async {
+    final selectedText = (await selection.getSelectedText()).trim();
+    if (selectedText.isEmpty || !mounted) return;
+    final material = await ref
+        .read(databaseProvider)
+        .getMaterialById(widget.resourceId);
+    if (!mounted) return;
+    await SelectionAiLauncher.saveNote(
+      context,
+      ref,
+      host: _selectionHost(lessonId: material?.lessonId),
+      markdown: selectedText,
+      selectedText: selectedText,
+    );
+    await selection.clearTextSelection();
+  }
+
+  Future<void> _pdfSelectionFlashcard(
+    PdfTextSelectionDelegate selection,
+  ) async {
+    final selectedText = (await selection.getSelectedText()).trim();
+    if (selectedText.isEmpty || !mounted) return;
+    final material = await ref
+        .read(databaseProvider)
+        .getMaterialById(widget.resourceId);
+    if (!mounted) return;
+    await SelectionAiLauncher.makeFlashcard(
+      context,
+      host: _selectionHost(lessonId: material?.lessonId),
+      selectedText: selectedText,
+    );
+  }
+
+  Future<void> _pdfSelectionTranslate(
+    PdfTextSelectionDelegate selection,
+  ) async {
+    final target = await showModalBottomSheet<AiLanguage>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('Translate to')),
+            for (final lang in const [
+              AiLanguage.english,
+              AiLanguage.persianDari,
+            ])
+              ListTile(
+                title: Text(lang.label),
+                onTap: () => Navigator.pop(context, lang),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (target == null || !mounted) return;
+    await _openPdfInlineAi(
+      selection,
+      initialAction: AiStudyAction.translate,
+      translateTarget: target,
+      scope: AiContextScope.selectionOnly,
+    );
+  }
+
+  Widget? _buildPdfContextMenu(
+    BuildContext context,
+    PdfViewerContextMenuBuilderParams params,
+  ) {
+    final delegate = params.textSelectionDelegate;
+    if (!params.isTextSelectionEnabled || !delegate.hasSelectedText) {
+      return null;
+    }
+    final anchors = TextSelectionToolbarAnchors(
+      primaryAnchor: params.anchorA,
+      secondaryAnchor: params.anchorB,
+    );
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SelectionAiToolbar(
+        anchors: anchors,
+        onCopy: () {
+          params.dismissContextMenu();
+          delegate.copyTextSelection();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Copied')));
+        },
+        onAi: () {
+          params.dismissContextMenu();
+          _openPdfInlineAi(delegate);
+        },
+        onTranslate: () {
+          params.dismissContextMenu();
+          _pdfSelectionTranslate(delegate);
+        },
+        onNote: () {
+          params.dismissContextMenu();
+          _pdfSelectionNote(delegate);
+        },
+        onFlashcard: () {
+          params.dismissContextMenu();
+          _pdfSelectionFlashcard(delegate);
+        },
+        onPin: () {
+          params.dismissContextMenu();
+          _handleAddTextDescription(delegate);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openPdfInlineAi(
+    PdfTextSelectionDelegate selection, {
+    AiStudyAction? initialAction,
+    AiLanguage? translateTarget,
+    AiContextScope? scope,
+  }) async {
     final selectedText = (await selection.getSelectedText()).trim();
     final ranges = await _textRangeInputs(selection);
     if (selectedText.isEmpty || ranges.isEmpty || !mounted) return;
@@ -473,15 +627,57 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         filePath: aiContext.filePath,
       );
     }
+    context = context.copyWith(sourceTitle: widget.title);
+
+    final host = _selectionHost(
+      lessonId: material?.lessonId,
+      pageNumber: pageNumber,
+    );
+    final resolved = await SelectionAiLauncher.resolveContext(
+      this.context,
+      host: host,
+      base: context,
+      scope: scope,
+    );
+    if (resolved == null || !mounted) return;
 
     setState(() {
       _inlineAi = _InlineAiSession(
         mode: InlineAiSourceMode.selection,
-        context: context,
+        context: resolved,
+        baseContext: context,
+        host: host,
         ranges: ranges,
         existingPin: existing,
         materialLessonId: material?.lessonId,
         selectedText: selectedText,
+        initialAction: initialAction,
+        translateTarget: translateTarget,
+      );
+    });
+  }
+
+  /// Re-asks the context scope for the open selection session.
+  Future<void> _changeInlineAiContext(_InlineAiSession session) async {
+    final base = session.baseContext;
+    final host = session.host;
+    if (base == null || host == null) return;
+    final resolved = await SelectionAiLauncher.resolveContext(
+      context,
+      host: host,
+      base: base,
+    );
+    if (resolved == null || !mounted || _inlineAi != session) return;
+    setState(() {
+      _inlineAi = _InlineAiSession(
+        mode: session.mode,
+        context: resolved,
+        baseContext: base,
+        host: host,
+        ranges: session.ranges,
+        existingPin: session.existingPin,
+        materialLessonId: session.materialLessonId,
+        selectedText: session.selectedText,
       );
     });
   }
@@ -634,6 +830,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       onDismiss: _closeInlineAi,
       resourceId: widget.resourceId,
       rangeInputs: session.ranges,
+      onChangeContext: session.baseContext == null
+          ? null
+          : () => _changeInlineAiContext(session),
       onGoToSource: session.context.pageNumber == null
           ? null
           : () {
@@ -828,39 +1027,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                           margin: 8,
                           textSelectionParams: const PdfTextSelectionParams(
                             enabled: true,
+                            showContextMenuAutomatically: true,
                           ),
-                          customizeContextMenuItems: (params, items) {
-                            if (!params.textSelectionDelegate.hasSelectedText) {
-                              return;
-                            }
-                            items.insert(
-                              0,
-                              ContextMenuButtonItem(
-                                label: 'AI',
-                                type: ContextMenuButtonType.custom,
-                                onPressed: () {
-                                  params.dismissContextMenu();
-                                  _openPdfInlineAi(
-                                    params.textSelectionDelegate,
-                                  );
-                                },
-                              ),
-                            );
-                            if (!annotate) return;
-                            items.insert(
-                              1,
-                              ContextMenuButtonItem(
-                                label: 'Add Description',
-                                type: ContextMenuButtonType.custom,
-                                onPressed: () {
-                                  params.dismissContextMenu();
-                                  _handleAddTextDescription(
-                                    params.textSelectionDelegate,
-                                  );
-                                },
-                              ),
-                            );
-                          },
+                          buildContextMenu: _buildPdfContextMenu,
                           onPageChanged: (pageNumber) {
                             setState(() => _currentPage = pageNumber);
                           },
@@ -988,10 +1157,13 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                       ),
                     if (_inlineAi != null)
                       InlineAiOverlay(
+                        key: ValueKey(_inlineAi),
                         mode: _inlineAi!.mode,
                         aiContext: _inlineAi!.context,
                         existingPin: _inlineAi!.existingPin,
                         useBottomSheetLayout: !_isWide,
+                        initialAction: _inlineAi!.initialAction,
+                        initialTranslateTarget: _inlineAi!.translateTarget,
                         callbacks: _inlineAiCallbacks(_inlineAi!),
                       ),
                     if (_showAiMaterials)
@@ -1032,6 +1204,10 @@ class _InlineAiSession {
     required this.existingPin,
     required this.materialLessonId,
     required this.selectedText,
+    this.baseContext,
+    this.host,
+    this.initialAction,
+    this.translateTarget,
   });
 
   final InlineAiSourceMode mode;
@@ -1040,4 +1216,10 @@ class _InlineAiSession {
   final StudyPin? existingPin;
   final String? materialLessonId;
   final String selectedText;
+
+  /// Scope-less context + host, kept so the user can change the scope.
+  final AnnotationAiContext? baseContext;
+  final SelectionAiHost? host;
+  final AiStudyAction? initialAction;
+  final AiLanguage? translateTarget;
 }

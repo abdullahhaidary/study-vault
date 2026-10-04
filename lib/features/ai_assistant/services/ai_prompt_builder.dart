@@ -80,8 +80,10 @@ Return concise but educational answers.
         surrounding != null &&
         surrounding.isNotEmpty) {
       buffer.writeln();
+      final label = request.surroundingLabel?.trim();
       buffer.writeln(
-        'SURROUNDING CONTEXT (clarify meaning only; do not digress):',
+        '${label == null || label.isEmpty ? 'SURROUNDING CONTEXT' : label} '
+        '(clarify meaning only; do not digress):',
       );
       buffer.writeln(surrounding);
     }

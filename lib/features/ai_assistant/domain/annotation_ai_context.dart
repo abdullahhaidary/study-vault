@@ -21,6 +21,8 @@ class AnnotationAiContext {
     this.language = AiLanguage.auto,
     this.direction,
     this.filePath,
+    this.contextScope = AiContextScope.surrounding,
+    this.sourceTitle,
   });
 
   final String? materialId;
@@ -44,6 +46,12 @@ class AnnotationAiContext {
   /// Optional PDF path for re-extracting surrounding text later.
   final String? filePath;
 
+  /// What [surroundingText] represents (nearby text, summary, full document).
+  final AiContextScope contextScope;
+
+  /// Human-readable source name (e.g. "Summary", "Note") for UI labels.
+  final String? sourceTitle;
+
   /// Best primary text (selection, else annotation body).
   String get primaryText {
     final selected = selectedText.trim();
@@ -52,6 +60,41 @@ class AnnotationAiContext {
   }
 
   bool get hasUsableText => primaryText.isNotEmpty;
+
+  AnnotationAiContext copyWith({
+    String? selectedText,
+    String? materialId,
+    String? lessonId,
+    int? pageNumber,
+    String? annotationText,
+    String? surroundingText,
+    bool clearSurrounding = false,
+    String? annotationId,
+    String? shortDescription,
+    AiLanguage? language,
+    TextDirection? direction,
+    String? filePath,
+    AiContextScope? contextScope,
+    String? sourceTitle,
+  }) {
+    return AnnotationAiContext(
+      selectedText: selectedText ?? this.selectedText,
+      materialId: materialId ?? this.materialId,
+      lessonId: lessonId ?? this.lessonId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      annotationText: annotationText ?? this.annotationText,
+      surroundingText: clearSurrounding
+          ? null
+          : (surroundingText ?? this.surroundingText),
+      annotationId: annotationId ?? this.annotationId,
+      shortDescription: shortDescription ?? this.shortDescription,
+      language: language ?? this.language,
+      direction: direction ?? this.direction,
+      filePath: filePath ?? this.filePath,
+      contextScope: contextScope ?? this.contextScope,
+      sourceTitle: sourceTitle ?? this.sourceTitle,
+    );
+  }
 
   AiStudyRequest toStudyRequest({
     required AiStudyAction action,
@@ -94,6 +137,7 @@ class AnnotationAiContext {
       selectedText: selectedText.trim().isEmpty ? null : selectedText.trim(),
       shortDescription: shortDescription,
       surroundingText: usingImage ? null : surroundingText,
+      surroundingLabel: usingImage ? null : contextScope.promptLabel,
       pageNumber: pageNumber,
       materialId: materialId,
       lessonId: lessonId,

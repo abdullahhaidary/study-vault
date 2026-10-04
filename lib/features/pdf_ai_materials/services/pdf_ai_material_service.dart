@@ -324,6 +324,12 @@ class PdfAiMaterialService {
     content: content,
   );
 
+  /// Overwrites one version in place (no new version row).
+  Future<PdfAiMaterial> overwriteVersion({
+    required PdfAiMaterial original,
+    required String content,
+  }) => _db.updatePdfAiMaterialContent(id: original.id, content: content);
+
   Future<void> deleteVersion(String id) => _db.deletePdfAiMaterial(id);
 
   static List<String> _splitDeterministically(String text, int maxCharacters) {

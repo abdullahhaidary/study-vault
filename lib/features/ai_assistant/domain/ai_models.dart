@@ -14,6 +14,45 @@ const kAiHardSourceLimit = 40000;
 /// Max surrounding context characters included with a selection.
 const kAiSurroundingContextLimit = 2500;
 
+/// Max characters of summary / full-document context sent with a selection.
+const kAiDocumentContextLimit = 30000;
+
+/// What extra material is sent alongside a text selection.
+enum AiContextScope { selectionOnly, surrounding, summary, fullText }
+
+extension AiContextScopeX on AiContextScope {
+  String get label => switch (this) {
+    AiContextScope.selectionOnly => 'Selection only',
+    AiContextScope.surrounding => 'Selection + nearby text',
+    AiContextScope.summary => 'Selection + summary',
+    AiContextScope.fullText => 'Selection + full text',
+  };
+
+  String get shortLabel => switch (this) {
+    AiContextScope.selectionOnly => 'Selection',
+    AiContextScope.surrounding => '+ Nearby',
+    AiContextScope.summary => '+ Summary',
+    AiContextScope.fullText => '+ Full text',
+  };
+
+  String get description => switch (this) {
+    AiContextScope.selectionOnly =>
+      'Fastest and cheapest. AI sees only what you selected.',
+    AiContextScope.surrounding => 'Adds the paragraphs around the selection.',
+    AiContextScope.summary => 'Adds the saved summary so AI knows the topic.',
+    AiContextScope.fullText =>
+      'Adds the whole document (truncated if very long).',
+  };
+
+  /// Heading used in the prompt for the extra context block.
+  String get promptLabel => switch (this) {
+    AiContextScope.selectionOnly => 'SURROUNDING CONTEXT',
+    AiContextScope.surrounding => 'SURROUNDING CONTEXT',
+    AiContextScope.summary => 'DOCUMENT SUMMARY',
+    AiContextScope.fullText => 'FULL DOCUMENT TEXT',
+  };
+}
+
 /// Longest side (pixels) when rendering a PDF page for vision.
 const kAiPageImageLongestSide = 1024.0;
 
@@ -72,6 +111,7 @@ class AiStudyRequest {
     this.selectedText,
     this.shortDescription,
     this.surroundingText,
+    this.surroundingLabel,
     this.pageNumber,
     this.materialId,
     this.lessonId,
@@ -101,6 +141,9 @@ class AiStudyRequest {
 
   /// Limited surrounding page / paragraph text for clarity.
   final String? surroundingText;
+
+  /// Prompt heading for [surroundingText] (defaults to surrounding context).
+  final String? surroundingLabel;
   final int? pageNumber;
   final String? materialId;
   final String? lessonId;
@@ -141,6 +184,7 @@ class AiStudyRequest {
     String? selectedText,
     String? shortDescription,
     String? surroundingText,
+    String? surroundingLabel,
     int? pageNumber,
     String? materialId,
     String? lessonId,
@@ -168,6 +212,7 @@ class AiStudyRequest {
       selectedText: selectedText ?? this.selectedText,
       shortDescription: shortDescription ?? this.shortDescription,
       surroundingText: surroundingText ?? this.surroundingText,
+      surroundingLabel: surroundingLabel ?? this.surroundingLabel,
       pageNumber: pageNumber ?? this.pageNumber,
       materialId: materialId ?? this.materialId,
       lessonId: lessonId ?? this.lessonId,

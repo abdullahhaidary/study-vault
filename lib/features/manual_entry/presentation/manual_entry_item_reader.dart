@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../selection_ai/domain/selection_ai_host.dart';
+import '../../selection_ai/presentation/selection_ai_area.dart';
 import '../domain/manual_entry_plan.dart';
 
 /// Full-screen markdown reader for one item before it is saved.
-class ManualEntryItemReader extends StatelessWidget {
+class ManualEntryItemReader extends ConsumerWidget {
   const ManualEntryItemReader({super.key, required this.item});
 
   final ManualEntryPlanItem item;
@@ -18,7 +21,7 @@ class ManualEntryItemReader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final markdownStyle = MarkdownStyleSheet.fromTheme(theme);
     return Scaffold(
@@ -54,7 +57,11 @@ class ManualEntryItemReader extends StatelessWidget {
           constraints: const BoxConstraints(
             maxWidth: AppSpacing.contentMaxWidth,
           ),
-          child: SelectionArea(
+          child: SelectionAiArea(
+            host: SelectionAiHost(
+              title: item.kind.label,
+              documentText: item.markdown,
+            ),
             child: Markdown(
               data: item.markdown,
               selectable: false,

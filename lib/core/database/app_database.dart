@@ -2462,6 +2462,17 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<PdfAiMaterial> updatePdfAiMaterialContent({
+    required String id,
+    required String content,
+  }) async {
+    if (content.trim().isEmpty) throw ArgumentError.value(content, 'content');
+    await (update(pdfAiMaterials)..where((t) => t.id.equals(id))).write(
+      PdfAiMaterialsCompanion(content: Value(content.trim())),
+    );
+    return (await getPdfAiMaterialById(id))!;
+  }
+
   Future<void> deletePdfAiMaterial(String id) async {
     await (delete(pdfAiMaterials)..where((t) => t.id.equals(id))).go();
   }

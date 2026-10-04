@@ -40,6 +40,65 @@ abstract final class AnnotationAiContextBuilder {
     );
   }
 
+  /// Context from a selection inside any plain / markdown text document
+  /// (AI materials, notes, chat messages). [documentText] is used only to
+  /// extract the nearby window; the scope decides what is actually sent.
+  static AnnotationAiContext fromTextSelection({
+    required String selectedText,
+    String? documentText,
+    String? materialId,
+    String? lessonId,
+    int? pageNumber,
+    String? sourceTitle,
+    AiLanguage language = AiLanguage.auto,
+  }) {
+    return fromPdfSelection(
+      selectedText: selectedText,
+      materialId: materialId,
+      lessonId: lessonId,
+      pageNumber: pageNumber,
+      pageText: documentText,
+      language: language,
+    ).copyWith(sourceTitle: sourceTitle);
+  }
+
+  /// Returns [base] with [scope] applied. [nearbyText] is the already
+  /// extracted window, [summaryText] / [fullText] are loaded by the host.
+  /// Large documents are truncated so selection + context stays sendable.
+  static AnnotationAiContext withScope(
+    AnnotationAiContext base, {
+    required AiContextScope scope,
+    String? nearbyText,
+    String? summaryText,
+    String? fullText,
+  }) {
+    final selectedLength = base.primaryText.length;
+    final budget = (kAiHardSourceLimit - selectedLength - 500).clamp(
+      0,
+      kAiDocumentContextLimit,
+    );
+    String? clamp(String? text) {
+      final trimmed = text?.trim();
+      if (trimmed == null || trimmed.isEmpty || budget == 0) return null;
+      if (trimmed.length <= budget) return trimmed;
+      return '${trimmed.substring(0, budget)}…';
+    }
+
+    final extra = switch (scope) {
+      AiContextScope.selectionOnly => null,
+      AiContextScope.surrounding => _clampSurrounding(
+        nearbyText ?? base.surroundingText,
+      ),
+      AiContextScope.summary => clamp(summaryText),
+      AiContextScope.fullText => clamp(fullText),
+    };
+    return base.copyWith(
+      contextScope: scope,
+      surroundingText: extra,
+      clearSurrounding: extra == null,
+    );
+  }
+
   /// Context from an existing study pin / annotation.
   static AnnotationAiContext fromStudyPin({
     required String pinId,

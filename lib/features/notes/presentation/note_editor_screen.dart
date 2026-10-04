@@ -6,6 +6,7 @@ import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
+import '../../selection_ai/presentation/quill_selection_apply.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_editor.dart';
 import '../data/notes_providers.dart';
@@ -162,6 +163,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     controller: _editor!,
                     autofocus: true,
                     expands: true,
+                    selectionAiHost: () => QuillSelectionApply.host(
+                      _editor!,
+                      title: 'Note',
+                      lessonId: item.lessonId,
+                    ),
                   ),
                 ),
               ],

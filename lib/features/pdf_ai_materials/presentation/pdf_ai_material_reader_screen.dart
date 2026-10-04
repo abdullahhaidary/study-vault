@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/database_provider.dart';
 import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
@@ -20,6 +21,9 @@ import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
+import '../../selection_ai/domain/markdown_selection_editor.dart';
+import '../../selection_ai/domain/selection_ai_host.dart';
+import '../../selection_ai/presentation/selection_ai_area.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 
@@ -62,12 +66,125 @@ class _PdfAiMaterialReaderScreenState
   double? _pendingScrollOffset;
   String? _chunkedGenerationId;
   List<String> _markdownChunks = const [];
+  String? _lessonId;
 
   @override
   void initState() {
     super.initState();
     _selectedId = widget.initialGenerationId;
     _scrollController.addListener(_saveScrollOffset);
+    ref.read(databaseProvider).getMaterialById(widget.materialId).then((m) {
+      if (mounted && m != null) setState(() => _lessonId = m.lessonId);
+    });
+  }
+
+  SelectionAiHost _selectionHost(PdfAiMaterial selected) {
+    return SelectionAiHost(
+      title: widget.type.shortName,
+      materialId: widget.materialId,
+      lessonId: _lessonId,
+      filePath: widget.filePath,
+      documentText: selected.content,
+      loadSummary: widget.type == PdfAiMaterialType.summary
+          ? null
+          : () async {
+              final all =
+                  ref
+                      .read(pdfAiMaterialsProvider(widget.materialId))
+                      .valueOrNull ??
+                  const <PdfAiMaterial>[];
+              return all
+                  .where(
+                    (m) => m.type == PdfAiMaterialType.summary.storageValue,
+                  )
+                  .firstOrNull
+                  ?.content;
+            },
+      onReplaceSelection: (sel, md) => _applySelectionEdit(
+        selected,
+        MarkdownSelectionEditor.replace(selected.content, sel, md),
+      ),
+      onInsertBelow: (sel, md) => _applySelectionEdit(
+        selected,
+        MarkdownSelectionEditor.insertBelow(selected.content, sel, md),
+      ),
+      onAppendToEnd: (_, md) => _applySelectionEdit(
+        selected,
+        MarkdownSelectionEditor.append(selected.content, md),
+      ),
+    );
+  }
+
+  /// Lets the user decide between a new version and overwriting this one.
+  Future<bool> _applySelectionEdit(
+    PdfAiMaterial selected,
+    String? newContent,
+  ) async {
+    if (newContent == null) {
+      _showError(
+        'Could not find the selected text in the ${widget.type.shortName}. '
+        'Use "Add at end" instead.',
+      );
+      return false;
+    }
+    if (newContent.trim() == selected.content.trim()) return false;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('Apply to ${widget.type.shortName}'),
+              subtitle: const Text('How should the change be saved?'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Save as new version'),
+              subtitle: Text('Version ${selected.version} stays in History'),
+              onTap: () => Navigator.pop(context, 'new'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text('Overwrite version ${selected.version}'),
+              subtitle: const Text('Changes this version in place'),
+              onTap: () => Navigator.pop(context, 'overwrite'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return false;
+    setState(() => _editing = true);
+    try {
+      final service = ref.read(pdfAiMaterialServiceProvider);
+      final saved = choice == 'new'
+          ? await service.editVersion(original: selected, content: newContent)
+          : await service.overwriteVersion(
+              original: selected,
+              content: newContent,
+            );
+      if (mounted) {
+        setState(() => _selectedId = saved.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              choice == 'new'
+                  ? 'Saved as version ${saved.version}.'
+                  : 'Version ${saved.version} updated.',
+            ),
+          ),
+        );
+      }
+      return true;
+    } on Object catch (_) {
+      _showError('Could not save your changes. Please try again.');
+      return false;
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
   }
 
   @override
@@ -484,7 +601,8 @@ class _PdfAiMaterialReaderScreenState
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 850),
-                    child: SelectionArea(
+                    child: SelectionAiArea(
+                      host: _selectionHost(selected),
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: MarkdownBody(
@@ -704,7 +822,8 @@ class _PdfAiMaterialReaderScreenState
                   children: [
                     Expanded(
                       child: ScrollEdgeArrows(
-                        child: SelectionArea(
+                        child: SelectionAiArea(
+                          host: _selectionHost(selected),
                           child: ListView.builder(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(AppSpacing.lg),

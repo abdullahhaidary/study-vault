@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/widgets/scroll_edge_arrows.dart';
+import '../../../selection_ai/domain/selection_ai_host.dart';
+import '../../../selection_ai/presentation/selection_ai_area.dart';
 import '../../domain/quill_paragraph_direction_sync.dart';
 import 'divider_embed_builder.dart';
 import 'study_note_toolbar.dart';
@@ -13,7 +16,7 @@ import 'study_note_toolbar.dart';
 ///
 /// Supports mixed LTR/RTL paragraphs (Persian/Dari/Arabic + English) via
 /// Quill direction attributes synced from Unicode first-strong detection.
-class StudyRichTextEditor extends StatefulWidget {
+class StudyRichTextEditor extends ConsumerStatefulWidget {
   const StudyRichTextEditor({
     super.key,
     required this.controller,
@@ -24,6 +27,7 @@ class StudyRichTextEditor extends StatefulWidget {
     this.showToolbar = true,
     this.expands = true,
     this.scrollable = true,
+    this.selectionAiHost,
   });
 
   final QuillController controller;
@@ -37,13 +41,20 @@ class StudyRichTextEditor extends StatefulWidget {
   /// When false, the editor participates in an outer scroll view (e.g. reader).
   final bool scrollable;
 
+  /// When set, selected text shows the Study Vault selection toolbar
+  /// (Copy · AI · …) instead of the default Quill context menu. Called lazily
+  /// so the host reflects the current document.
+  final SelectionAiHost Function()? selectionAiHost;
+
   @override
-  State<StudyRichTextEditor> createState() => _StudyRichTextEditorState();
+  ConsumerState<StudyRichTextEditor> createState() =>
+      _StudyRichTextEditorState();
 }
 
-class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
+class _StudyRichTextEditorState extends ConsumerState<StudyRichTextEditor> {
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
+  final _editorKey = GlobalKey<EditorState>();
 
   @override
   void initState() {
@@ -93,6 +104,7 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hostBuilder = widget.selectionAiHost;
     final quill = QuillEditor.basic(
       controller: widget.controller,
       focusNode: _focusNode,
@@ -105,6 +117,14 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
         scrollable: widget.scrollable,
         showCursor: !widget.readOnly,
         enableInteractiveSelection: true,
+        editorKey: hostBuilder == null ? null : _editorKey,
+        contextMenuBuilder: hostBuilder == null
+            ? QuillRawEditorConfig.defaultContextMenuBuilder
+            : SelectionAiQuillScope.contextMenuBuilder(
+                ref: ref,
+                controller: widget.controller,
+                host: hostBuilder,
+              ),
         embedBuilders: const [DividerEmbedBuilder()],
         customStyles: DefaultStyles(
           paragraph: DefaultTextBlockStyle(
@@ -178,7 +198,14 @@ class _StudyRichTextEditorState extends State<StudyRichTextEditor> {
         ),
       ),
     );
-    final editor = widget.scrollable ? ScrollEdgeArrows(child: quill) : quill;
+    final scoped = hostBuilder == null
+        ? quill
+        : SelectionAiQuillScope(
+            controller: widget.controller,
+            editorKey: _editorKey,
+            child: quill,
+          );
+    final editor = widget.scrollable ? ScrollEdgeArrows(child: scoped) : scoped;
 
     if (!widget.showToolbar || widget.readOnly) {
       return editor;

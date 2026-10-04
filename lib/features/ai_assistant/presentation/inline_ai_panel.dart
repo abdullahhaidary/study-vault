@@ -35,6 +35,10 @@ class InlineAiHostCallbacks {
     this.onAnnotationSaved,
     this.resourceId,
     this.rangeInputs = const [],
+    this.onReplaceSelection,
+    this.onInsertBelow,
+    this.onAppendToEnd,
+    this.onChangeContext,
   });
 
   final VoidCallback onDismiss;
@@ -45,6 +49,15 @@ class InlineAiHostCallbacks {
   final Future<void> Function(StudyPin pin)? onAnnotationSaved;
   final String? resourceId;
   final List<TextRangeInput> rangeInputs;
+
+  /// Apply the answer back into the host document. Return `true` when the
+  /// document changed so the panel can close.
+  final Future<bool> Function(String markdown)? onReplaceSelection;
+  final Future<bool> Function(String markdown)? onInsertBelow;
+  final Future<bool> Function(String markdown)? onAppendToEnd;
+
+  /// Lets the user pick a different context scope (reopens the panel).
+  final VoidCallback? onChangeContext;
 }
 
 /// Floating / docked inline AI panel over the PDF viewer.
@@ -57,6 +70,8 @@ class InlineAiOverlay extends ConsumerStatefulWidget {
     this.existingPin,
     this.anchorGlobal,
     this.useBottomSheetLayout = false,
+    this.initialAction,
+    this.initialTranslateTarget,
   });
 
   final InlineAiSourceMode mode;
@@ -65,6 +80,10 @@ class InlineAiOverlay extends ConsumerStatefulWidget {
   final StudyPin? existingPin;
   final Offset? anchorGlobal;
   final bool useBottomSheetLayout;
+
+  /// Runs immediately after opening (e.g. Translate from the toolbar).
+  final AiStudyAction? initialAction;
+  final AiLanguage? initialTranslateTarget;
 
   @override
   ConsumerState<InlineAiOverlay> createState() => _InlineAiOverlayState();
@@ -85,7 +104,20 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       existingPin: widget.existingPin,
     );
     _controller.addListener(_onChanged);
-    _controller.bootstrap();
+    _controller.bootstrap().then((_) {
+      final action = widget.initialAction;
+      if (action == null || !mounted) return;
+      if (action == AiStudyAction.translate &&
+          widget.initialTranslateTarget != null) {
+        _controller.runAction(
+          action,
+          translateTarget: widget.initialTranslateTarget,
+          ensureReady: _ensureReady,
+        );
+        return;
+      }
+      _run(action);
+    });
   }
 
   void _onChanged() {
@@ -330,6 +362,22 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     }
   }
 
+  Future<void> _apply(Future<bool> Function(String markdown) apply) async {
+    final markdown = _controller.state.markdown;
+    if (markdown.trim().isEmpty) return;
+    final bool changed;
+    try {
+      changed = await apply(markdown);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not apply the AI answer.')),
+      );
+      return;
+    }
+    if (changed && mounted) widget.callbacks.onDismiss();
+  }
+
   Future<void> _createFlashcards() async {
     final state = _controller.state;
     final source = state.context.primaryText;
@@ -527,8 +575,19 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
           : null,
       onSelectionChanged: _controller.setSelection,
       showAddToAnnotation:
-          widget.mode == InlineAiSourceMode.selection ||
-          _controller.existingPin != null,
+          widget.callbacks.resourceId != null &&
+          (widget.mode == InlineAiSourceMode.selection ||
+              _controller.existingPin != null),
+      onReplace: widget.callbacks.onReplaceSelection == null
+          ? null
+          : () => _apply(widget.callbacks.onReplaceSelection!),
+      onInsertBelow: widget.callbacks.onInsertBelow == null
+          ? null
+          : () => _apply(widget.callbacks.onInsertBelow!),
+      onAppend: widget.callbacks.onAppendToEnd == null
+          ? null
+          : () => _apply(widget.callbacks.onAppendToEnd!),
+      onChangeContext: widget.callbacks.onChangeContext,
     );
 
     if (narrow) {
@@ -589,6 +648,10 @@ class _InlineAiPanelCard extends StatelessWidget {
     this.onPageSendMode,
     this.onSelectionChanged,
     required this.showAddToAnnotation,
+    this.onReplace,
+    this.onInsertBelow,
+    this.onAppend,
+    this.onChangeContext,
   });
 
   final InlineAiViewState state;
@@ -608,11 +671,16 @@ class _InlineAiPanelCard extends StatelessWidget {
   final void Function(AiPageSendMode mode)? onPageSendMode;
   final ValueChanged<AiExecutionSelection>? onSelectionChanged;
   final bool showAddToAnnotation;
+  final Future<void> Function()? onReplace;
+  final Future<void> Function()? onInsertBelow;
+  final Future<void> Function()? onAppend;
+  final VoidCallback? onChangeContext;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final busy = state.phase == InlineAiPhase.loading;
+    final canApply = !busy && state.hasResponse;
     final chips = state.mode == InlineAiSourceMode.page
         ? InlineAiQuickActions.page
         : InlineAiQuickActions.selection;
@@ -662,12 +730,45 @@ class _InlineAiPanelCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-              child: Text(
-                state.contextLabel,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+              child: onChangeContext == null
+                  ? Text(
+                      state.contextLabel,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: InkWell(
+                        onTap: busy ? null : onChangeContext,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  state.contextLabel,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
             ),
             if (onPageSendMode != null)
               Padding(
@@ -838,11 +939,27 @@ class _InlineAiPanelCard extends StatelessWidget {
                       onPressed: onIgnore,
                       child: const Text('Ignore'),
                     ),
+                    if (onReplace != null)
+                      FilledButton.icon(
+                        onPressed: canApply ? onReplace : null,
+                        icon: const Icon(Icons.find_replace, size: 16),
+                        label: const Text('Replace'),
+                      ),
+                    if (onInsertBelow != null)
+                      FilledButton.tonalIcon(
+                        onPressed: canApply ? onInsertBelow : null,
+                        icon: const Icon(Icons.vertical_align_bottom, size: 16),
+                        label: const Text('Insert below'),
+                      ),
+                    if (onAppend != null)
+                      TextButton.icon(
+                        onPressed: canApply ? onAppend : null,
+                        icon: const Icon(Icons.playlist_add, size: 16),
+                        label: const Text('Add at end'),
+                      ),
                     if (showAddToAnnotation)
                       FilledButton(
-                        onPressed: busy || !state.hasResponse
-                            ? null
-                            : onAddToAnnotation,
+                        onPressed: canApply ? onAddToAnnotation : null,
                         child: const Text('Add to annotation'),
                       ),
                     TextButton(

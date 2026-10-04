@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
+import '../../selection_ai/presentation/quill_selection_apply.dart';
 import '../domain/study_note_codec.dart';
 import 'widgets/study_rich_text_editor.dart';
 
@@ -211,6 +212,11 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                     autofocus: !widget.readOnly,
                     showToolbar: !widget.readOnly,
                     expands: true,
+                    selectionAiHost: () => QuillSelectionApply.host(
+                      _controller,
+                      title: widget.title,
+                      readOnly: widget.readOnly,
+                    ),
                   ),
                 ),
               ],

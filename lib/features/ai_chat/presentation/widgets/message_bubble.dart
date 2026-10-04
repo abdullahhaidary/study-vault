@@ -7,6 +7,8 @@ import '../../../../core/text/text_direction_utils.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../ai_assistant/domain/ai_token_usage.dart';
 import '../../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
+import '../../../selection_ai/domain/selection_ai_host.dart';
+import '../../../selection_ai/presentation/selection_ai_area.dart';
 import '../../domain/chat_appearance.dart';
 import '../../domain/ai_chat_models.dart';
 
@@ -160,21 +162,25 @@ class MessageBubble extends StatelessWidget {
               ],
               Directionality(
                 textDirection: direction,
-                child: _isUser
-                    ? SelectableText(
-                        content,
-                        style: bodyStyle,
-                        textDirection: direction,
-                      )
-                    : SelectionArea(
-                        child: MarkdownBody(
+                child: SelectionAiArea(
+                  host: SelectionAiHost(
+                    title: _isUser ? 'your message' : 'AI reply',
+                    documentText: content,
+                  ),
+                  child: _isUser
+                      ? Text(
+                          content,
+                          style: bodyStyle,
+                          textDirection: direction,
+                        )
+                      : MarkdownBody(
                           data: content.isEmpty && isStreaming ? '…' : content,
                           selectable: false,
                           styleSheet: markdownStyle,
                           builders: chartMarkdownBuilders(markdownStyle),
                           onTapLink: (_, _, _) {},
                         ),
-                      ),
+                ),
               ),
               if (_isError && onRetry != null) ...[
                 const SizedBox(height: AppSpacing.xs),

@@ -110,8 +110,23 @@ class InlineAiViewState {
     if (mode == InlineAiSourceMode.page) {
       return page == null ? 'Context: Current page' : 'Context: Page $page';
     }
-    if (page == null) return 'Based on: Selection';
-    return 'Based on: Selection + Page $page context';
+    final hasExtra = (context.surroundingText ?? '').trim().isNotEmpty;
+    final scope = context.contextScope;
+    if (!hasExtra || scope == AiContextScope.selectionOnly) {
+      return page == null
+          ? 'Based on: Selection'
+          : 'Based on: Selection (page $page)';
+    }
+    if (scope == AiContextScope.surrounding) {
+      return page == null
+          ? 'Based on: Selection + nearby text'
+          : 'Based on: Selection + Page $page context';
+    }
+    final source = context.sourceTitle;
+    final extra = scope == AiContextScope.summary ? 'summary' : 'full text';
+    return source == null || source.isEmpty
+        ? 'Based on: Selection + $extra'
+        : 'Based on: Selection + $source $extra';
   }
 
   InlineAiViewState copyWith({
