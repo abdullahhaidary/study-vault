@@ -329,6 +329,7 @@ class _MaterialTypeCard extends StatelessWidget {
     PdfAiMaterialType.summary => Icons.summarize_outlined,
     PdfAiMaterialType.explanation => Icons.school_outlined,
     PdfAiMaterialType.deepExplanation => Icons.psychology_outlined,
+    PdfAiMaterialType.realWorldExamples => Icons.public_outlined,
     PdfAiMaterialType.slideshow => Icons.slideshow_outlined,
   };
 }

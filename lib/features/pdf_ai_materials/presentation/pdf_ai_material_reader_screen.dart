@@ -19,6 +19,9 @@ import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
+import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_assistant/services/quill_to_markdown.dart';
+import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
 import '../../selection_ai/domain/markdown_selection_editor.dart';
@@ -100,15 +103,15 @@ class _PdfAiMaterialReaderScreenState
                   .firstOrNull
                   ?.content;
             },
-      onReplaceSelection: (sel, md) => _applySelectionEdit(
+      onReplaceSelection: (sel, md) => _applyContentEdit(
         selected,
         MarkdownSelectionEditor.replace(selected.content, sel, md),
       ),
-      onInsertBelow: (sel, md) => _applySelectionEdit(
+      onInsertBelow: (sel, md) => _applyContentEdit(
         selected,
         MarkdownSelectionEditor.insertBelow(selected.content, sel, md),
       ),
-      onAppendToEnd: (_, md) => _applySelectionEdit(
+      onAppendToEnd: (_, md) => _applyContentEdit(
         selected,
         MarkdownSelectionEditor.append(selected.content, md),
       ),
@@ -116,7 +119,7 @@ class _PdfAiMaterialReaderScreenState
   }
 
   /// Lets the user decide between a new version and overwriting this one.
-  Future<bool> _applySelectionEdit(
+  Future<bool> _applyContentEdit(
     PdfAiMaterial selected,
     String? newContent,
   ) async {
@@ -373,58 +376,27 @@ class _PdfAiMaterialReaderScreenState
     return instruction;
   }
 
+  /// Opens the same full-screen rich editor used for notes; the result is
+  /// converted back to markdown and saved as a new version or in place.
   Future<void> _edit(PdfAiMaterial selected) async {
     if (_editing || _generating || _deleting) return;
-    final controller = TextEditingController(text: selected.content);
-    final edited = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit ${widget.type.shortName}'),
-        content: SizedBox(
-          width: 650,
-          height: MediaQuery.sizeOf(context).height * 0.6,
-          child: TextField(
-            controller: controller,
-            expands: true,
-            minLines: null,
-            maxLines: null,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Markdown content',
-            ),
-          ),
+    final edited = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => FullExplanationScreen(
+          initialText: MarkdownToQuill.toDeltaJson(selected.content),
+          title: 'Edit ${widget.type.shortName}',
+          materialId: widget.materialId,
+          lessonId: _lessonId,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) => FilledButton(
-              onPressed: value.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.pop(context, value.text.trim()),
-              child: const Text('Save as new version'),
-            ),
-          ),
-        ],
       ),
     );
-    controller.dispose();
-    if (edited == null || edited == selected.content.trim() || !mounted) return;
-    setState(() => _editing = true);
-    try {
-      final saved = await ref
-          .read(pdfAiMaterialServiceProvider)
-          .editVersion(original: selected, content: edited);
-      if (mounted) setState(() => _selectedId = saved.id);
-    } on Object catch (_) {
-      _showError('Could not save your changes. Please try again.');
-    } finally {
-      if (mounted) setState(() => _editing = false);
+    if (edited == null || !mounted) return;
+    final markdown = QuillToMarkdown.fromStored(edited);
+    if (markdown.trim().isEmpty) {
+      _showError('The ${widget.type.shortName} cannot be empty.');
+      return;
     }
+    await _applyContentEdit(selected, markdown);
   }
 
   Future<void> _delete(PdfAiMaterial selected) async {
@@ -469,7 +441,13 @@ class _PdfAiMaterialReaderScreenState
         materialId: widget.materialId,
         title: widget.pdfTitle,
       ),
-      draftText: 'I have a question about this PDF.',
+      draftText: switch (widget.type) {
+        PdfAiMaterialType.realWorldExamples =>
+          'Let\'s practice with real-world examples from this PDF. Pick one '
+              'topic, give me a new realistic scenario, and then ask me how '
+              'the theory maps to it before you reveal the answer.',
+        _ => 'I have a question about this PDF.',
+      },
     );
   }
 

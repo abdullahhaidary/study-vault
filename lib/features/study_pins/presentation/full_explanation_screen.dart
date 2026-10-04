@@ -18,12 +18,19 @@ class FullExplanationScreen extends StatefulWidget {
     this.initialText = '',
     this.readOnly = false,
     this.title = 'Full Note',
+    this.materialId,
+    this.lessonId,
   });
 
   /// Stored DB value: Quill Delta JSON or legacy plain text.
   final String initialText;
   final bool readOnly;
   final String title;
+
+  /// Optional owner used by the selection toolbar (notes, flashcards, AI
+  /// context) when this editor is opened for a PDF study material.
+  final String? materialId;
+  final String? lessonId;
 
   @override
   State<FullExplanationScreen> createState() => _FullExplanationScreenState();
@@ -216,6 +223,8 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                       _controller,
                       title: widget.title,
                       readOnly: widget.readOnly,
+                      materialId: widget.materialId,
+                      lessonId: widget.lessonId,
                     ),
                   ),
                 ),

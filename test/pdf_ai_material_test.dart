@@ -13,17 +13,27 @@ import 'package:study_vault/features/pdf_ai_materials/services/pdf_ai_material_s
 
 void main() {
   group('PDF AI prompt structure', () {
-    test('all four generation types have distinct typed instructions', () {
+    test('all five generation types have distinct typed instructions', () {
       final instructions = {
         for (final type in PdfAiMaterialType.values)
           type.storageValue: type.generationInstruction,
       };
 
-      expect(instructions, hasLength(4));
+      expect(instructions, hasLength(5));
       expect(instructions['slideshow'], contains('<!-- slide -->'));
       expect(instructions['summary'], contains('concise'));
       expect(instructions['explanation'], contains('university student'));
       expect(instructions['deep_explanation'], contains('first principles'));
+      expect(instructions['real_world_examples'], contains('## Topic map'));
+      expect(instructions['real_world_examples'], contains('**Scenario**'));
+      expect(
+        instructions['real_world_examples'],
+        contains('do not re-teach the theory'),
+      );
+      expect(
+        PdfAiMaterialTypeX.fromStorage('real_world_examples'),
+        PdfAiMaterialType.realWorldExamples,
+      );
       expect(
         PdfAiMaterialType.summary.maxOutputTokens,
         lessThan(PdfAiMaterialType.explanation.maxOutputTokens),
@@ -62,7 +72,7 @@ void main() {
       }
       expect(
         prompts.map((prompt) => prompt[2]['content']).toSet(),
-        hasLength(4),
+        hasLength(PdfAiMaterialType.values.length),
       );
       final custom = PdfAiPromptBuilder.messages(
         stableDocument: document,

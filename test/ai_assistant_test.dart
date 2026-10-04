@@ -9,6 +9,7 @@ import 'package:study_vault/features/ai_assistant/services/ai_output_validator.d
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/markdown_to_quill.dart';
+import 'package:study_vault/features/ai_assistant/services/quill_to_markdown.dart';
 
 void main() {
   group('MemoryAiCredentialStore', () {
@@ -187,6 +188,26 @@ void main() {
     expect(plain, contains('Quality — 0 defects'));
     expect(plain, isNot(contains('|')));
     expect(MarkdownToQuill.looksLikeMarkdown(md), isTrue);
+  });
+
+  test('QuillToMarkdown round-trips headings, lists, code, charts, links', () {
+    const md =
+        '# Title\n\n'
+        'Intro with **bold**, *italic*, `code` and a [link](https://x.y).\n\n'
+        '## Section\n\n'
+        '- One\n- Two\n  - Nested\n\n'
+        '1. First\n2. Second\n\n'
+        '> A quote\n\n'
+        '```chart\n'
+        '{"type":"bar","labels":["a","b"],"series":[{"name":"s","data":[1,2]}]}\n'
+        '```\n\n'
+        '---\n\n'
+        'Last paragraph.';
+    final once = QuillToMarkdown.fromStored(MarkdownToQuill.toDeltaJson(md));
+    expect(once, md);
+    // Stable on a second pass.
+    final twice = QuillToMarkdown.fromStored(MarkdownToQuill.toDeltaJson(once));
+    expect(twice, once);
   });
 
   test('MarkdownToQuill treats -- and --- as horizontal rules', () {

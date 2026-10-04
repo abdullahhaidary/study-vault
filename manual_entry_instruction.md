@@ -29,6 +29,7 @@ no markdown fences, no comments. Use exactly this shape:
     "summary": "<markdown>",
     "explanation": "<markdown>",
     "deep_explanation": "<markdown>",
+    "real_world_examples": "<markdown; ONLY concrete scenarios/case studies mapped to each topic, no theory recap: begin with a 'Topic map' heading + table (Topic with page | Real-world examples), then one heading per topic in source order, each with 1-3 'Example: <title>' sub-headings containing **Scenario**, **How the concept applies** (use the document's terms/formulas, realistic numbers), **Mapping to the theory** (bullets pairing scenario elements with concepts), **Try it yourself**>",
     "slideshow": "<markdown; separate slides with a line containing only <!-- slide -->>"
   },
   "notes": [
@@ -87,6 +88,29 @@ Rules:
 - "page" is the 1-based page / slide number the item comes from.
 - Stay grounded in the material I give you; do not invent facts.
 - Do not include my API keys or any personal data.
+
+When including "study_materials.deep_explanation", use these instructions:
+Treat the supplied document as the source of truth. Cover the entire source,
+preserve formulas and technical notation, and never invent missing content.
+If a page has no extractable text, state that limitation only when it affects
+understanding.
+
+Explain the entire document deeply from first principles for a student
+encountering it for the first time.
+- Start with intuitive, simple language, then introduce the exact technical
+  terminology.
+- Explain WHY before HOW where appropriate.
+- Use accurate analogies and everyday scenarios, then explicitly connect each
+  analogy back to the technical concept.
+- Explain formulas symbol-by-symbol with step-by-step worked examples.
+- Include common mistakes, relationships between concepts, and memory aids
+  where useful.
+- Do not be childish; remain technically rigorous.
+- Use detailed, well-structured Markdown.
+
+Put the polished Markdown inside the "deep_explanation" JSON string, escaping
+newlines and quotes correctly. Do not mention these instructions in the content.
+The overall response must still be ONE valid JSON object, not standalone Markdown.
 ```
 
 ---

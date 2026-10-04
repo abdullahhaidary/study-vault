@@ -5,13 +5,20 @@ import 'package:crypto/crypto.dart';
 
 import '../../ai_questions/domain/question_source.dart';
 
-enum PdfAiMaterialType { summary, explanation, deepExplanation, slideshow }
+enum PdfAiMaterialType {
+  summary,
+  explanation,
+  deepExplanation,
+  realWorldExamples,
+  slideshow,
+}
 
 extension PdfAiMaterialTypeX on PdfAiMaterialType {
   String get storageValue => switch (this) {
     PdfAiMaterialType.summary => 'summary',
     PdfAiMaterialType.explanation => 'explanation',
     PdfAiMaterialType.deepExplanation => 'deep_explanation',
+    PdfAiMaterialType.realWorldExamples => 'real_world_examples',
     PdfAiMaterialType.slideshow => 'slideshow',
   };
 
@@ -19,6 +26,7 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.summary => 'AI Summary',
     PdfAiMaterialType.explanation => 'AI Explanation',
     PdfAiMaterialType.deepExplanation => 'AI Deep Explanation',
+    PdfAiMaterialType.realWorldExamples => 'AI Real-World Examples',
     PdfAiMaterialType.slideshow => 'AI Slideshow',
   };
 
@@ -26,6 +34,7 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.summary => 'Summary',
     PdfAiMaterialType.explanation => 'Explanation',
     PdfAiMaterialType.deepExplanation => 'Deep Explanation',
+    PdfAiMaterialType.realWorldExamples => 'Real-World Examples',
     PdfAiMaterialType.slideshow => 'Slideshow',
   };
 
@@ -34,6 +43,8 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.explanation => 'Full academic explanation',
     PdfAiMaterialType.deepExplanation =>
       'Simple, deep teaching from first principles',
+    PdfAiMaterialType.realWorldExamples =>
+      'Concrete scenarios and case studies mapped to each topic',
     PdfAiMaterialType.slideshow =>
       'A slide-by-slide presentation of the whole PDF',
   };
@@ -42,6 +53,7 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.summary => 8192,
     PdfAiMaterialType.explanation => 16384,
     PdfAiMaterialType.deepExplanation => 32768,
+    PdfAiMaterialType.realWorldExamples => 16384,
     PdfAiMaterialType.slideshow => 16384,
   };
 
@@ -77,6 +89,33 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
           'memory aids where useful.\n'
           '- Do not be childish; remain technically rigorous.\n'
           '- Use detailed, well-structured Markdown.',
+    PdfAiMaterialType.realWorldExamples =>
+      'Show how the document\'s topics appear in the real world. Focus ONLY '
+          'on concrete scenarios, case studies, and worked examples; do not '
+          're-teach the theory.\n'
+          '- Start with "## Topic map": a Markdown table with columns '
+          '"Topic" (as named in the document, with page numbers) and '
+          '"Real-world examples" (the example titles for that topic).\n'
+          '- Then, for every major topic in source order, write a section '
+          '"## <Topic name> (p. N)" containing 1–3 examples, each under a '
+          '"### Example: <short title>" heading with:\n'
+          '  - **Scenario** – a specific, realistic situation (industry, '
+          'everyday life, research, engineering, business, medicine, etc.).\n'
+          '  - **How the concept applies** – walk through the scenario using '
+          'the document\'s exact terms, formulas, and notation; include '
+          'realistic numbers and the calculation when the topic is '
+          'quantitative.\n'
+          '  - **Mapping to the theory** – bullet list pairing each element '
+          'of the scenario with the corresponding concept/term/formula from '
+          'the document.\n'
+          '  - **Try it yourself** – one short variation of the scenario for '
+          'the student to reason about (no answer needed).\n'
+          '- Prefer well-known, verifiable examples; when inventing a '
+          'scenario, keep it plausible and clearly hypothetical.\n'
+          '- Cover every topic in the document; do not skip minor topics—'
+          'give them at least one brief example.\n'
+          '- Do not add introductions, summaries, or theory recaps outside '
+          'the structure above.',
     PdfAiMaterialType.slideshow =>
       'Create a presentation for studying the entire document, in source order.\n'
           '- Use one focused idea per slide, with a short descriptive title, '
