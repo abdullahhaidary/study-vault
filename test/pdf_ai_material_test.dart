@@ -1,7 +1,13 @@
 import 'dart:async';
 
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:study_vault/core/database/database_provider.dart';
+import 'package:study_vault/features/lessons/data/materials_providers.dart';
+import 'package:study_vault/features/pdf_ai_materials/data/pdf_ai_material_providers.dart';
+import 'package:study_vault/features/pdf_ai_materials/presentation/pdf_ai_material_reader_screen.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/database/app_database.dart';
@@ -138,6 +144,105 @@ void main() {
     });
 
     tearDown(() => db.close());
+
+    testWidgets('reader opens switchable materials without losing its place', (
+      tester,
+    ) async {
+      client.outputs.addAll([
+        List.generate(80, (i) => 'Summary paragraph $i.\n\n').join(),
+        'A saved real-world example.',
+      ]);
+      final materials = await tester.runAsync(() async => [
+        await _generate(service),
+        await _generate(service, type: PdfAiMaterialType.realWorldExamples),
+      ]);
+      await _pumpReader(tester, db, materials!);
+      final summaryList = find.byType(ListView).first;
+      await tester.drag(summaryList, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      final controller = tester.widget<ListView>(summaryList).controller!;
+      final offset = controller.offset;
+      expect(offset, greaterThan(0));
+
+      await tester.tap(find.byTooltip('Examples'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('A saved real-world example.'), findsOneWidget);
+      expect(find.byTooltip('Close study materials'), findsOneWidget);
+
+      final imagesTab = find.widgetWithText(Tab, 'Images');
+      await tester.ensureVisible(imagesTab);
+      await tester.tap(imagesTab);
+      await tester.pumpAndSettle();
+      expect(find.text('No images yet.'), findsOneWidget);
+
+      final examplesTab = find.widgetWithText(Tab, 'Examples');
+      await tester.ensureVisible(examplesTab);
+      await tester.tap(examplesTab);
+      await tester.pumpAndSettle();
+      expect(find.text('A saved real-world example.'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close study materials'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+      expect(controller.offset, offset);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('compact shortcuts fit a narrow reader and open images', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      client.outputs.add('A short summary.');
+      final summary = await tester.runAsync(() => _generate(service));
+      await _pumpReader(tester, db, [summary!]);
+      expect(find.byTooltip('Examples'), findsOneWidget);
+      expect(find.byTooltip('Images'), findsOneWidget);
+      expect(find.byTooltip('More materials'), findsOneWidget);
+      expect(find.byTooltip('History'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byTooltip('Images'));
+      await tester.pumpAndSettle();
+      expect(find.text('No images yet.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('Close study materials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('History'));
+      await tester.pumpAndSettle();
+      expect(find.text('Summary History'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('missing examples require explicit generation in the popup', (
+      tester,
+    ) async {
+      client.outputs.add('A short summary.');
+      final summary = await tester.runAsync(() => _generate(service));
+      await _pumpReader(tester, db, [summary!]);
+      final calls = client.messages.length;
+      await tester.tap(find.byTooltip('Examples'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Real-World Examples has not been generated yet.'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilledButton, 'Generate'), findsOneWidget);
+      expect(client.messages.length, calls);
+      await tester.tap(find.byTooltip('Close study materials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('More materials'));
+      await tester.pumpAndSettle();
+      expect(find.text('A short summary.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
 
     test('regeneration preserves versions and newest loads first', () async {
       client.outputs.addAll(['Version one', 'Version two']);
@@ -330,6 +435,36 @@ void main() {
       },
     );
   });
+}
+
+Future<void> _pumpReader(
+  WidgetTester tester,
+  AppDatabase db,
+  List<PdfAiMaterial> materials,
+) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        pdfAiMaterialsProvider('pdf-1').overrideWith(
+          (ref) => Stream.value(materials),
+        ),
+        materialsForLessonProvider('lesson-1').overrideWith(
+          (ref) => Stream.value([]),
+        ),
+      ],
+      child: const MaterialApp(
+        home: PdfAiMaterialReaderScreen(
+          materialId: 'pdf-1',
+          pdfTitle: 'PDF',
+          filePath: '/fake.pdf',
+          type: PdfAiMaterialType.summary,
+        ),
+      ),
+    ),
+  );
+  await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  await tester.pumpAndSettle();
 }
 
 Future<PdfAiMaterial> _generate(

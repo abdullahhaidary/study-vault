@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
+import '../../cloud_account/cloud_account_section.dart';
 import '../../manual_entry/presentation/manual_entry_settings_section.dart';
 
 /// App settings — AI Assistant + Backup & Restore.
@@ -86,6 +87,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const CloudAccountSection(),
+                    const SizedBox(height: AppSpacing.xl),
                     KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
                     const SizedBox(height: AppSpacing.xl),
                     const ManualEntrySettingsSection(),
