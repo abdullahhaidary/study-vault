@@ -178,6 +178,17 @@ void main() {
     },
   );
 
+  test('MarkdownToQuill renders tables as labelled bullets', () {
+    const md =
+        '| Dimension | Target |\n|---|---|\n| Delivery | Go-live |\n| Quality | 0 defects |';
+    final document = MarkdownToQuill.toDocument(md);
+    final plain = document.toPlainText();
+    expect(plain, contains('Delivery — Go-live'));
+    expect(plain, contains('Quality — 0 defects'));
+    expect(plain, isNot(contains('|')));
+    expect(MarkdownToQuill.looksLikeMarkdown(md), isTrue);
+  });
+
   test('MarkdownToQuill treats -- and --- as horizontal rules', () {
     final document = MarkdownToQuill.toDocument(
       'Above\n\n--\n\nMiddle\n\n---\n\nBelow',

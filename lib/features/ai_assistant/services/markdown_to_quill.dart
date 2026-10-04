@@ -21,8 +21,26 @@ abstract final class MarkdownToQuill {
     final lines = cleaned.split('\n');
     var inCodeBlock = false;
 
-    for (final line in lines) {
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
       final trimmedStart = line.trimLeft();
+
+      // Markdown table: header row followed by a |---|---| separator.
+      if (!inCodeBlock &&
+          _isTableRow(line) &&
+          i + 1 < lines.length &&
+          _isTableSeparator(lines[i + 1])) {
+        final header = _splitTableRow(line);
+        var end = i + 2;
+        final rows = <List<String>>[];
+        while (end < lines.length && _isTableRow(lines[end])) {
+          rows.add(_splitTableRow(lines[end]));
+          end++;
+        }
+        _appendTable(ops, header, rows);
+        i = end - 1;
+        continue;
+      }
 
       if (trimmedStart.startsWith('```')) {
         inCodeBlock = !inCodeBlock;
@@ -139,10 +157,69 @@ abstract final class MarkdownToQuill {
       return true;
     }
     if (text.contains('```')) return true;
+    if (RegExp(r'^\|.*\|\s*\n\|?\s*:?-{2,}', multiLine: true).hasMatch(text)) {
+      return true;
+    }
     // Require paired emphasis markers so stray asterisks don't trigger.
     if (RegExp(r'\*\*[^*\n]+\*\*').hasMatch(text)) return true;
     if (RegExp(r'__[^_\n]+__').hasMatch(text)) return true;
     return false;
+  }
+
+  static bool _isTableRow(String line) {
+    final t = line.trim();
+    return t.length >= 2 && t.startsWith('|') && t.endsWith('|');
+  }
+
+  static bool _isTableSeparator(String line) {
+    return RegExp(
+      r'^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$',
+    ).hasMatch(line.trim());
+  }
+
+  static List<String> _splitTableRow(String line) {
+    var t = line.trim();
+    if (t.startsWith('|')) t = t.substring(1);
+    if (t.endsWith('|')) t = t.substring(0, t.length - 1);
+    return t.split('|').map((c) => c.trim()).toList();
+  }
+
+  /// Quill has no table block; render each row as a bullet where the first
+  /// column is bold and remaining cells are labelled with their headers.
+  static void _appendTable(
+    List<Map<String, dynamic>> ops,
+    List<String> header,
+    List<List<String>> rows,
+  ) {
+    if (rows.isEmpty) {
+      _appendInline(ops, header.join(' · '));
+      ops.add({'insert': '\n'});
+      return;
+    }
+    for (final row in rows) {
+      final first = row.isEmpty ? '' : row.first;
+      final rest = <String>[];
+      for (var c = 1; c < row.length; c++) {
+        if (row[c].isEmpty) continue;
+        final label = c < header.length && header.length > 2
+            ? '${header[c]}: '
+            : '';
+        rest.add('$label${row[c]}');
+      }
+      if (first.isNotEmpty) {
+        ops.add({
+          'insert': first.replaceAll('**', ''),
+          'attributes': {'bold': true},
+        });
+        if (rest.isNotEmpty) ops.add({'insert': ' — '});
+      }
+      _appendInline(ops, rest.join(' · '));
+      ops.add({
+        'insert': '\n',
+        'attributes': {'list': 'bullet'},
+      });
+    }
+    ops.add({'insert': '\n'});
   }
 
   /// Markdown thematic break / horizontal rule on its own line.
