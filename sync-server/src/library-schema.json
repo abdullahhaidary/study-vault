@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "tables": {
     "classes": {
       "columns": {
@@ -1334,6 +1334,103 @@
         }
       ],
       "unique": []
+    },
+    "course_review_entries": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "part": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "version": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "source_fingerprint": {
+          "type": "TEXT",
+          "required": false
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": [
+        [
+          "subject_id",
+          "material_id",
+          "part",
+          "version"
+        ]
+      ]
+    },
+    "course_review_exclusions": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": [
+        [
+          "material_id"
+        ]
+      ]
     }
   }
 }

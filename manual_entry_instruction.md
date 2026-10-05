@@ -88,6 +88,8 @@ Rules:
 - "page" is the 1-based page / slide number the item comes from.
 - Stay grounded in the material I give you; do not invent facts.
 - Do not include my API keys or any personal data.
+- Only add "course_review" when I ask for a Course Review; its format is
+  described separately.
 
 When including "study_materials.deep_explanation", use these instructions:
 Treat the supplied document as the source of truth. Cover the entire source,
@@ -115,6 +117,67 @@ The overall response must still be ONE valid JSON object, not standalone Markdow
 
 ---
 
+## Course Review instruction
+
+Use this for the condensed, subject-wide review (Subject → **Course Review**).
+Send one or a few lectures at a time; each answer adds sections and never
+replaces lectures you did not include. In the app, **Copy prompt for lecture
+sections** copies this text plus the exact lesson and PDF names of the subject.
+
+```
+You are building the COURSE REVIEW of a subject in the Study Vault app. I have
+ALREADY studied every lecture in depth; this review is for fast end-of-course
+revision, not first-time learning. Read the lecture material I attach and
+answer with ONE JSON object only — no prose, no markdown fences, no comments:
+
+{
+  "format": "study-vault-manual-entry",
+  "version": 1,
+  "target": { "class": "<class name or omit>", "subject": "<subject name>" },
+  "course_review": {
+    "sections": [
+      {
+        "lesson": "<exact lesson name>",
+        "pdf": "<exact PDF title>",
+        "summary": "<markdown>",
+        "explanation": "<markdown>",
+        "deep_explanation": "<markdown>"
+      }
+    ],
+    "big_picture": "<markdown, optional>",
+    "examples": "<markdown, optional>"
+  }
+}
+
+One object in "sections" per lecture PDF I give you, using the exact lesson
+and PDF names I list. Depth for every section — remind, do not re-teach:
+- summary: key points, definitions, formulas, classifications and
+  exam-relevant facts as bullets; no examples; at most about 250 words.
+- explanation: short reminders of how the ideas connect and why they matter,
+  about one third of a full lesson explanation; at most about 400 words.
+- deep_explanation: compact core reasoning — key mechanisms, derivations or
+  processes in brief, formulas with each symbol's meaning, and 3–5 common
+  mistakes; no long analogies or worked examples; at most about 450 words.
+
+Only when I ask for them (normally once ALL lectures are in):
+- big_picture: 150–300 words on how the lectures fit together and build on
+  each other.
+- examples: about 10 short examples for the WHOLE course (not per lecture),
+  spread across lectures and chosen for exam relevance. Each one: a level-3
+  heading "Example N: <title>", a line "*Lecture: <name>*", then 2–5 lines
+  with the scenario and the key takeaway.
+
+Rules:
+- Use only the attached material; never invent facts. Keep technical terms,
+  formulas and notation exactly as the source.
+- Markdown inside the strings; start headings at level 3 because the app adds
+  the lecture heading. Write formulas inline.
+- Escape quotes and newlines inside JSON strings correctly. Omit keys you have
+  nothing for.
+```
+
+---
+
 ## What each section becomes in the app
 
 | JSON key           | Saved as                                            | Needs a PDF? |
@@ -124,6 +187,7 @@ The overall response must still be ONE valid JSON object, not standalone Markdow
 | `notes`            | Lesson notes (rich text)                            | No |
 | `flashcards`       | Lesson flashcards                                   | No |
 | `quizzes`          | AI Questions quiz sets you can play in Quiz Mode    | No |
+| `course_review`    | Subject Course Review: one section per PDF (Summary / Explanation / Deep), plus course-wide `big_picture` and `examples` | No lesson needed — each section is matched to a PDF of the subject by `lesson` + `pdf` |
 
 `target` is only a hint. The app matches the names against your existing
 classes, subjects, lessons, and PDFs (case-insensitive). Matches are
@@ -139,6 +203,10 @@ Before saving, the preview flags items that overlap existing content:
 - A note with the same title, a flashcard with the same front, a quiz with the
   same title, or an annotation with the same page + label → **Add**,
   **Replace**, or **Skip**.
+- A Course Review section for a PDF that already has one, or existing
+  examples / big picture → **New version**, **Replace latest**, or **Skip**.
+  PDF names are matched ignoring case, extra spaces and a `.pdf` ending; a
+  section that matches no PDF waits until you choose one.
 
 Nothing is written until you tap **Save**. The save runs in one transaction:
 either everything you selected is saved, or nothing changes.
@@ -169,6 +237,24 @@ Summary + deep explanation for a PDF:
   "study_materials": {
     "summary": "# Gradient Descent\n- Iterative optimisation …",
     "deep_explanation": "# Why do we need optimisation?\n…"
+  }
+}
+```
+
+Append one lecture to a subject's Course Review:
+
+```json
+{
+  "format": "study-vault-manual-entry",
+  "version": 1,
+  "target": { "subject": "Project Management" },
+  "course_review": {
+    "sections": [
+      { "lesson": "Slide 2", "pdf": "Lect-02",
+        "summary": "### Key points\n- …",
+        "explanation": "### How it fits\n…",
+        "deep_explanation": "### Core reasoning\n…" }
+    ]
   }
 }
 ```

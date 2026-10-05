@@ -16,10 +16,17 @@ import 'manual_entry_preview_screen.dart';
 
 /// Paste AI-produced JSON → pick target → review → preview → save.
 class ManualEntryImportScreen extends ConsumerStatefulWidget {
-  const ManualEntryImportScreen({super.key, this.initialLessonId});
+  const ManualEntryImportScreen({
+    super.key,
+    this.initialLessonId,
+    this.initialSubjectId,
+  });
 
   /// When opened from a lesson, pre-selects that class/subject/lesson.
   final String? initialLessonId;
+
+  /// When opened from a Course Review, pre-selects that class/subject.
+  final String? initialSubjectId;
 
   @override
   ConsumerState<ManualEntryImportScreen> createState() =>
@@ -45,6 +52,7 @@ class _ManualEntryImportScreenState
   final _matched = <String>{};
 
   ManualEntryPlan? _plan;
+  final _reviewAssignments = <String, String?>{};
   bool _building = false;
   bool _saving = false;
 
@@ -67,15 +75,15 @@ class _ManualEntryImportScreenState
     if (!mounted) return;
     setState(() => _classes = classes);
     final lessonId = widget.initialLessonId;
-    if (lessonId == null) return;
-    final lesson = await _db.getLessonById(lessonId);
-    final subject = lesson == null
+    final lesson = lessonId == null ? null : await _db.getLessonById(lessonId);
+    final subjectId = lesson?.subjectId ?? widget.initialSubjectId;
+    final subject = subjectId == null
         ? null
-        : await _db.getSubjectById(lesson.subjectId);
-    if (lesson == null || subject == null || !mounted) return;
+        : await _db.getSubjectById(subjectId);
+    if (subject == null || !mounted) return;
     await _selectClass(subject.classId);
     await _selectSubject(subject.id);
-    await _selectLesson(lesson.id);
+    if (lesson != null) await _selectLesson(lesson.id);
   }
 
   Future<void> _selectClass(String? id) async {
@@ -107,7 +115,9 @@ class _ManualEntryImportScreenState
       _pdfs = const [];
       _pdfId = null;
       _plan = null;
+      _reviewAssignments.clear();
     });
+    await _rebuildPlan();
   }
 
   Future<void> _selectLesson(String? id) async {
@@ -138,6 +148,7 @@ class _ManualEntryImportScreenState
       _bundle = null;
       _plan = null;
       _matched.clear();
+      _reviewAssignments.clear();
     });
     try {
       final bundle = ManualEntryParser.parse(_json.text);
@@ -212,26 +223,31 @@ class _ManualEntryImportScreenState
 
   Future<void> _rebuildPlan() async {
     final bundle = _bundle;
-    final lessonId = _lessonId;
-    if (bundle == null || lessonId == null) {
+    final subject = _subjects.where((s) => s.id == _subjectId).firstOrNull;
+    final lesson = _lessons.where((l) => l.id == _lessonId).firstOrNull;
+    // Course Review content needs only the subject.
+    if (bundle == null ||
+        subject == null ||
+        (lesson == null && bundle.courseReview.itemCount == 0)) {
       setState(() => _plan = null);
       return;
     }
     setState(() => _building = true);
-    final lesson = _lessons.firstWhere((l) => l.id == lessonId);
     final pdf = _pdfs.where((p) => p.id == _pdfId).firstOrNull;
     final plan = await ref
         .read(manualEntryImportServiceProvider)
         .buildPlan(
           bundle: bundle,
           target: ManualEntryTarget(
-            lessonId: lesson.id,
-            lessonName: lesson.name,
-            subjectId: lesson.subjectId,
+            lessonId: lesson?.id,
+            lessonName: lesson?.name,
+            subjectId: subject.id,
+            subjectName: subject.name,
             materialId: pdf?.id,
             materialTitle: pdf?.title,
           ),
           previous: _plan,
+          reviewAssignments: Map.of(_reviewAssignments),
         );
     if (!mounted) return;
     setState(() {
@@ -255,18 +271,24 @@ class _ManualEntryImportScreenState
     await _parse();
   }
 
-  Future<void> _copyInstructions({required bool full}) async {
+  Future<void> _copyInstructions(String which) async {
     final markdown = await ref.read(manualEntryInstructionProvider.future);
-    final text = full ? markdown : manualEntryPromptFromInstruction(markdown);
+    final text = switch (which) {
+      'full' => markdown,
+      'review' => courseReviewPromptFromInstruction(markdown),
+      _ => manualEntryPromptFromInstruction(markdown),
+    };
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          full
-              ? 'Full format guide copied.'
-              : 'AI instruction copied. Paste it into ChatGPT with your slides.',
-        ),
+        content: Text(switch (which) {
+          'full' => 'Full format guide copied.',
+          'review' =>
+            'Course Review instruction copied. Paste it into the AI with '
+                'your lecture slides or materials.',
+          _ => 'AI instruction copied. Paste it into ChatGPT with your slides.',
+        }),
       ),
     );
   }
@@ -285,6 +307,17 @@ class _ManualEntryImportScreenState
   Future<void> _save() async {
     final plan = _plan;
     if (plan == null || _saving) return;
+    if (plan.missingLesson) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Choose a lesson, or untick the lesson items (everything except '
+            'the Course Review).',
+          ),
+        ),
+      );
+      return;
+    }
     if (plan.missingPdf) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -309,7 +342,8 @@ class _ManualEntryImportScreenState
           title: Text('Replace $replacing existing item(s)?'),
           content: const Text(
             'Replaced notes, flashcards, quizzes, and annotations are '
-            'overwritten. Replaced AI materials lose their latest version. '
+            'overwritten. Replaced AI materials and Course Review parts lose '
+            'their latest version. '
             'This cannot be undone.',
           ),
           actions: [
@@ -335,14 +369,21 @@ class _ManualEntryImportScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Saved to ${plan.target.lessonName}: ${result.summary}',
+            'Saved to ${plan.target.displayName}: ${result.summary}',
           ),
         ),
       );
+      final onlyReview = plan.items
+          .where((i) => i.willWrite)
+          .every((i) => i.kind == ManualEntryKind.courseReview);
       Navigator.of(context).pushNamedAndRemoveUntil(
-        AppRoutes.lessonDetails,
+        onlyReview || plan.target.lessonId == null
+            ? AppRoutes.courseReview
+            : AppRoutes.lessonDetails,
         (route) => route.isFirst,
-        arguments: plan.target.lessonId,
+        arguments: onlyReview || plan.target.lessonId == null
+            ? plan.target.subjectId
+            : plan.target.lessonId,
       );
     } catch (e) {
       if (!mounted) return;
@@ -358,7 +399,7 @@ class _ManualEntryImportScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final plan = _plan;
-    final canSave = plan != null && plan.writeCount > 0 && !plan.missingPdf;
+    final canSave = plan != null && plan.canSave;
 
     return Scaffold(
       appBar: AppBar(
@@ -366,11 +407,15 @@ class _ManualEntryImportScreenState
         actions: [
           PopupMenuButton<String>(
             tooltip: 'Instructions',
-            onSelected: (v) => _copyInstructions(full: v == 'full'),
+            onSelected: _copyInstructions,
             itemBuilder: (_) => const [
               PopupMenuItem(
                 value: 'prompt',
                 child: Text('Copy AI instruction'),
+              ),
+              PopupMenuItem(
+                value: 'review',
+                child: Text('Copy Course Review instruction'),
               ),
               PopupMenuItem(
                 value: 'full',
@@ -409,8 +454,10 @@ class _ManualEntryImportScreenState
                         Card(
                           child: ListTile(
                             leading: const Icon(Icons.arrow_upward),
-                            title: const Text(
-                              'Choose a lesson to review items',
+                            title: Text(
+                              _subjectId == null
+                                  ? 'Choose a subject to review items'
+                                  : 'Choose a lesson to review items',
                             ),
                             subtitle: Text(
                               '${_bundle!.itemCount} item(s) ready to import.',
@@ -514,9 +561,14 @@ class _ManualEntryImportScreenState
                   label: const Text('Parse'),
                 ),
                 TextButton.icon(
-                  onPressed: () => _copyInstructions(full: false),
+                  onPressed: () => _copyInstructions('prompt'),
                   icon: const Icon(Icons.copy_all_outlined),
                   label: const Text('Copy AI instruction'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _copyInstructions('review'),
+                  icon: const Icon(Icons.auto_stories_outlined),
+                  label: const Text('Copy Course Review instruction'),
                 ),
               ],
             ),
@@ -624,7 +676,9 @@ class _ManualEntryImportScreenState
             ),
             const SizedBox(height: AppSpacing.sm),
             _picker<Lesson>(
-              label: 'Lesson',
+              label: bundle.needsLesson
+                  ? 'Lesson'
+                  : 'Lesson (not needed for the Course Review)',
               hint: hint.lessonName,
               matched: _matched.contains('lesson'),
               value: _lessonId,
@@ -745,6 +799,28 @@ class _ManualEntryImportScreenState
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            if (plan.missingLesson)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  'Notes, flashcards, quizzes and study materials need a '
+                  'lesson.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            if (plan.unassignedSections > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  '${plan.unassignedSections} Course Review section(s) need '
+                  'a PDF and will not be saved until you choose one.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
+                ),
+              ),
             if (plan.missingPdf)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
@@ -867,6 +943,40 @@ class _ManualEntryImportScreenState
                   ),
                 ],
               ),
+              if (item.requiresTarget && item.included)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.sm,
+                    AppSpacing.xxs,
+                    0,
+                    AppSpacing.xs,
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey('${item.id}-${item.targetMaterialId}'),
+                    initialValue: item.targetMaterialId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Attach to PDF',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      errorText: item.missingTarget ? 'Choose a PDF' : null,
+                    ),
+                    items: [
+                      for (final pdf in _plan!.reviewPdfs)
+                        DropdownMenuItem(
+                          value: pdf.id,
+                          child: Text(
+                            pdf.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (id) {
+                      _reviewAssignments[item.id] = id;
+                      _rebuildPlan();
+                    },
+                  ),
+                ),
               if (item.hasConflict && item.included) ...[
                 Padding(
                   padding: const EdgeInsets.only(left: AppSpacing.sm),
@@ -912,6 +1022,7 @@ class _ManualEntryImportScreenState
         ManualEntryKind.annotation => b.annotations.length,
         ManualEntryKind.flashcard => b.flashcards.length,
         ManualEntryKind.quiz => b.quizzes.length,
+        ManualEntryKind.courseReview => b.courseReview.itemCount,
       };
 }
 
@@ -921,6 +1032,7 @@ IconData manualEntryKindIcon(ManualEntryKind kind) => switch (kind) {
   ManualEntryKind.annotation => Icons.push_pin_outlined,
   ManualEntryKind.flashcard => Icons.style_outlined,
   ManualEntryKind.quiz => Icons.quiz_outlined,
+  ManualEntryKind.courseReview => Icons.auto_stories_outlined,
 };
 
 IconData _iconFor(ManualEntryKind kind) => manualEntryKindIcon(kind);

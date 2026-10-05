@@ -624,6 +624,61 @@ class QuizAnswers extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Condensed subject-wide review content, versioned like [PdfAiMaterials].
+///
+/// Per-lecture sections reference their source PDF; subject-wide parts
+/// (examples, big picture) leave [materialId] null.
+@DataClassName('CourseReviewEntry')
+class CourseReviewEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get subjectId =>
+      text().references(Subjects, #id, onDelete: KeyAction.cascade)();
+  TextColumn get materialId => text().nullable().references(
+    LessonMaterials,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  /// `summary` | `explanation` | `deep_explanation` | `examples` |
+  /// `big_picture`
+  TextColumn get part => text()();
+  TextColumn get content => text()();
+  IntColumn get version => integer()();
+
+  /// Source identity when generated or imported; a mismatch marks it outdated.
+  TextColumn get sourceFingerprint => text().nullable()();
+  TextColumn get provider => text().nullable()();
+  TextColumn get model => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {subjectId, materialId, part, version},
+  ];
+}
+
+/// PDFs deliberately left out of a subject's Course Review.
+@DataClassName('CourseReviewExclusion')
+class CourseReviewExclusions extends Table {
+  TextColumn get id => text()();
+  TextColumn get subjectId =>
+      text().references(Subjects, #id, onDelete: KeyAction.cascade)();
+  TextColumn get materialId =>
+      text().references(LessonMaterials, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {materialId},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -651,6 +706,8 @@ class QuizAnswers extends Table {
     QuizQuestionOptions,
     QuizAttempts,
     QuizAnswers,
+    CourseReviewEntries,
+    CourseReviewExclusions,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -660,7 +717,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -675,6 +732,7 @@ class AppDatabase extends _$AppDatabase {
       await _createQuizIndexes();
       await _createAnnotationAiGenerationIndexes();
       await _createPdfAiMaterialIndexes();
+      await _createCourseReviewIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -795,8 +853,20 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(pdfAiMaterials);
         await _createPdfAiMaterialIndexes();
       }
+      if (from < 17) {
+        await m.createTable(courseReviewEntries);
+        await m.createTable(courseReviewExclusions);
+        await _createCourseReviewIndexes();
+      }
     },
   );
+
+  Future<void> _createCourseReviewIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_course_review_subject '
+      'ON course_review_entries (subject_id, material_id, part, version DESC)',
+    );
+  }
 
   Future<void> _createPdfAiMaterialIndexes() async {
     await customStatement(
@@ -2475,6 +2545,93 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deletePdfAiMaterial(String id) async {
     await (delete(pdfAiMaterials)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ── Course Review ────────────────────────────────────────
+
+  Future<List<CourseReviewEntry>> courseReviewEntriesForSubject(
+    String subjectId,
+  ) {
+    return (select(
+      courseReviewEntries,
+    )..where((t) => t.subjectId.equals(subjectId))).get();
+  }
+
+  Future<List<CourseReviewExclusion>> courseReviewExclusionsForSubject(
+    String subjectId,
+  ) {
+    return (select(
+      courseReviewExclusions,
+    )..where((t) => t.subjectId.equals(subjectId))).get();
+  }
+
+  /// Appends a new version for one (subject, PDF or null, part).
+  Future<CourseReviewEntry> insertCourseReviewVersion({
+    required String id,
+    required String subjectId,
+    required String? materialId,
+    required String part,
+    required String content,
+    String? sourceFingerprint,
+    String? provider,
+    String? model,
+  }) {
+    if (content.trim().isEmpty) throw ArgumentError.value(content, 'content');
+    return transaction(() async {
+      final maxVersion = courseReviewEntries.version.max();
+      final query = selectOnly(courseReviewEntries)
+        ..addColumns([maxVersion])
+        ..where(
+          courseReviewEntries.subjectId.equals(subjectId) &
+              courseReviewEntries.part.equals(part) &
+              (materialId == null
+                  ? courseReviewEntries.materialId.isNull()
+                  : courseReviewEntries.materialId.equals(materialId)),
+        );
+      final version = ((await query.getSingle()).read(maxVersion) ?? 0) + 1;
+      await into(courseReviewEntries).insert(
+        CourseReviewEntriesCompanion.insert(
+          id: id,
+          subjectId: subjectId,
+          materialId: Value(materialId),
+          part: part,
+          content: content.trim(),
+          version: version,
+          sourceFingerprint: Value(sourceFingerprint),
+          provider: Value(provider),
+          model: Value(model),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return (select(
+        courseReviewEntries,
+      )..where((t) => t.id.equals(id))).getSingle();
+    });
+  }
+
+  Future<void> deleteCourseReviewEntry(String id) async {
+    await (delete(courseReviewEntries)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> setCourseReviewExcluded({
+    required String id,
+    required String subjectId,
+    required String materialId,
+    required bool excluded,
+  }) async {
+    await (delete(
+      courseReviewExclusions,
+    )..where((t) => t.materialId.equals(materialId))).go();
+    if (excluded) {
+      await into(courseReviewExclusions).insert(
+        CourseReviewExclusionsCompanion.insert(
+          id: id,
+          subjectId: subjectId,
+          materialId: materialId,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
   }
 }
 

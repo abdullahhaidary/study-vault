@@ -18,6 +18,7 @@ import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/study_review/presentation/recent_reviews_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
+import '../features/course_review/presentation/course_review_screen.dart';
 
 /// Named route constants.
 abstract final class AppRoutes {
@@ -39,6 +40,7 @@ abstract final class AppRoutes {
   static const questionSets = '/ai-questions';
   static const manualEntry = '/manual-entry';
   static const reviews = '/reviews';
+  static const courseReview = '/course-review';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -129,11 +131,20 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       );
 
     case AppRoutes.manualEntry:
+      final args = settings.arguments;
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => ManualEntryImportScreen(
-          initialLessonId: settings.arguments as String?,
+          initialLessonId: args is String ? args : null,
+          initialSubjectId: args is ({String subjectId}) ? args.subjectId : null,
         ),
+      );
+
+    case AppRoutes.courseReview:
+      final subjectId = settings.arguments as String;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => CourseReviewScreen(subjectId: subjectId),
       );
 
     case AppRoutes.classDetails:

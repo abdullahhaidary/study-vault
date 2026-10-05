@@ -79,6 +79,41 @@ class ManualQuiz {
   }
 }
 
+/// One per-PDF Course Review section; every part is optional.
+class ManualCourseReviewSection {
+  const ManualCourseReviewSection({
+    this.lessonName,
+    this.pdfTitle,
+    this.summary,
+    this.explanation,
+    this.deepExplanation,
+  });
+
+  final String? lessonName;
+  final String? pdfTitle;
+  final String? summary;
+  final String? explanation;
+  final String? deepExplanation;
+
+  String get label => [?lessonName, ?pdfTitle].join(' — ');
+}
+
+/// The subject-wide condensed review found in the JSON.
+class ManualCourseReview {
+  const ManualCourseReview({
+    this.sections = const [],
+    this.examples,
+    this.bigPicture,
+  });
+
+  final List<ManualCourseReviewSection> sections;
+  final String? examples;
+  final String? bigPicture;
+
+  int get itemCount =>
+      sections.length + (examples == null ? 0 : 1) + (bigPicture == null ? 0 : 1);
+}
+
 /// Everything found in one pasted JSON document.
 class ManualEntryBundle {
   const ManualEntryBundle({
@@ -89,6 +124,7 @@ class ManualEntryBundle {
     required this.flashcards,
     required this.quizzes,
     required this.warnings,
+    this.courseReview = const ManualCourseReview(),
   });
 
   final ManualEntryTargetHint target;
@@ -97,26 +133,27 @@ class ManualEntryBundle {
   final List<ManualAnnotation> annotations;
   final List<ManualFlashcard> flashcards;
   final List<ManualQuiz> quizzes;
+  final ManualCourseReview courseReview;
 
   /// Non-fatal problems (skipped items, unknown fields). Shown to the user.
   final List<String> warnings;
 
-  bool get isEmpty =>
-      studyMaterials.isEmpty &&
-      notes.isEmpty &&
-      annotations.isEmpty &&
-      flashcards.isEmpty &&
-      quizzes.isEmpty;
+  bool get isEmpty => itemCount == 0;
 
   /// Study materials and annotations live on a PDF, not directly on a lesson.
   bool get needsPdf => studyMaterials.isNotEmpty || annotations.isNotEmpty;
+
+  /// Everything except the Course Review belongs to one lesson.
+  bool get needsLesson =>
+      needsPdf || notes.isNotEmpty || flashcards.isNotEmpty || quizzes.isNotEmpty;
 
   int get itemCount =>
       studyMaterials.length +
       notes.length +
       annotations.length +
       flashcards.length +
-      quizzes.length;
+      quizzes.length +
+      courseReview.itemCount;
 }
 
 /// Lenient parser for the format described in `manual_entry_instruction.md`.
@@ -177,7 +214,47 @@ abstract final class ManualEntryParser {
       annotations: _annotations(root['annotations'], warnings),
       flashcards: _flashcards(root['flashcards'], warnings),
       quizzes: _quizzes(root['quizzes'], warnings),
+      courseReview: _courseReview(root['course_review'], warnings),
       warnings: warnings,
+    );
+  }
+
+  static ManualCourseReview _courseReview(Object? raw, List<String> warnings) {
+    if (raw == null) return const ManualCourseReview();
+    if (raw is! Map) {
+      warnings.add('"course_review" must be an object; skipped.');
+      return const ManualCourseReview();
+    }
+    final sections = _list(raw['sections'], 'course_review.sections', warnings, (
+      item,
+      index,
+    ) {
+      final section = ManualCourseReviewSection(
+        lessonName: _string(item['lesson']),
+        pdfTitle: _string(item['pdf']),
+        summary: _string(item['summary']),
+        explanation: _string(item['explanation']),
+        deepExplanation:
+            _string(item['deep_explanation']) ?? _string(item['deep']),
+      );
+      if (section.summary == null &&
+          section.explanation == null &&
+          section.deepExplanation == null) {
+        warnings.add('Course Review section #${index + 1} is empty; skipped.');
+        return null;
+      }
+      if (section.lessonName == null && section.pdfTitle == null) {
+        warnings.add(
+          'Course Review section #${index + 1} has no "lesson" or "pdf"; '
+          'choose its PDF when reviewing.',
+        );
+      }
+      return section;
+    });
+    return ManualCourseReview(
+      sections: sections,
+      examples: _string(raw['examples']),
+      bigPicture: _string(raw['big_picture']),
     );
   }
 

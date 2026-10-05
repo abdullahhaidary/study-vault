@@ -32,7 +32,7 @@ async function request(route, { method = 'GET', body, auth = token, headers = {}
     ...(body ? { 'content-type': 'application/json' } : {}), ...headers,
   }, body: body ? JSON.stringify(body) : undefined });
 }
-const batch = (mutations) => ({ schemaVersion: 16, mutations });
+const batch = (mutations) => ({ schemaVersion: 17, mutations });
 const change = (id = randomUUID(), data = { id }, baseRevision = 0) => ({
   table: 'study_notes', id, data, baseRevision, mutationId: randomUUID(),
 });
@@ -93,7 +93,7 @@ test('untrusted origins and invalid batches are rejected', async () => {
   assert.equal((await request('/v1/changes', { method: 'POST', body: batch([invalid]) })).status, 400);
   const valid = change();
   assert.equal(validateMutations(batch([valid, valid])), false);
-  assert.equal(validateMutations({ schemaVersion: 17, mutations: [valid] }), false);
+  assert.equal(validateMutations({ schemaVersion: 18, mutations: [valid] }), false);
   assert.equal(validateMutations(batch([{ ...valid, data: { id: 'wrong' } }])), false);
 });
 

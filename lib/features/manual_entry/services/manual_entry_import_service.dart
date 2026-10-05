@@ -8,6 +8,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_questions/domain/quiz_models.dart';
+import '../../course_review/data/course_review_repository.dart';
+import '../../course_review/domain/course_review_models.dart';
 import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -25,16 +27,27 @@ class ManualEntryImportService {
   static const provider = 'manual';
   static const sourceType = 'manual_entry';
 
+  /// [reviewAssignments] maps Course Review item ids to a PDF the user chose
+  /// (null clears a match).
   Future<ManualEntryPlan> buildPlan({
     required ManualEntryBundle bundle,
     required ManualEntryTarget target,
     ManualEntryPlan? previous,
+    Map<String, String?> reviewAssignments = const {},
   }) async {
-    final notes = await _db.getStudyNotesForLesson(target.lessonId);
-    final flashcards = await _db
-        .watchFlashcardsForLesson(target.lessonId)
-        .first;
-    final quizzes = await _db.watchQuestionSetsForLesson(target.lessonId).first;
+    final lessonId = target.lessonId;
+    final notes = lessonId == null
+        ? const <StudyNote>[]
+        : await _db.getStudyNotesForLesson(lessonId);
+    final flashcards = lessonId == null
+        ? const <Flashcard>[]
+        : await _db.watchFlashcardsForLesson(lessonId).first;
+    final quizzes = lessonId == null
+        ? const <QuestionSet>[]
+        : await _db.watchQuestionSetsForLesson(lessonId).first;
+    final review = bundle.courseReview.itemCount == 0
+        ? null
+        : await CourseReviewRepository(_db).load(target.subjectId);
     final materials = target.materialId == null
         ? const <PdfAiMaterial>[]
         : await _db.watchPdfAiMaterials(target.materialId!).first;
@@ -168,6 +181,9 @@ class ManualEntryImportService {
         ),
       );
     }
+    if (review != null) {
+      items.addAll(_courseReviewItems(bundle, review, reviewAssignments));
+    }
 
     if (previous != null) {
       final old = {for (final item in previous.items) item.id: item};
@@ -235,14 +251,194 @@ class ManualEntryImportService {
         annotations: pins.length,
         flashcards: flashcards.length,
         quizzes: quizzes.length,
+        courseReviewParts: review == null
+            ? 0
+            : review.sources.where((s) => s.hasSection).length +
+                  review.overview.length,
       ),
+      reviewPdfs: [
+        for (final s in review?.sources ?? const <CourseReviewSource>[])
+          ManualEntryPdfChoice(id: s.material.id, label: s.label),
+      ],
     );
+  }
+
+  /// Lesson names and PDF titles compared ignoring case, spacing and `.pdf`.
+  static String normalizeName(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'\.pdf\s*$'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  static CourseReviewSource? matchSource(
+    CourseReviewState review,
+    ManualCourseReviewSection section,
+  ) {
+    final lesson = section.lessonName == null
+        ? null
+        : normalizeName(section.lessonName!);
+    final pdf = section.pdfTitle == null
+        ? null
+        : normalizeName(section.pdfTitle!);
+    final inLesson = lesson == null
+        ? const <CourseReviewSource>[]
+        : review.sources
+              .where((s) => normalizeName(s.lesson.name) == lesson)
+              .toList();
+    final pool = inLesson.isEmpty ? review.sources : inLesson;
+    if (pdf != null) {
+      final byTitle = pool
+          .where((s) => normalizeName(s.material.title) == pdf)
+          .toList();
+      if (byTitle.length == 1) return byTitle.single;
+      return null;
+    }
+    return inLesson.length == 1 ? inLesson.single : null;
+  }
+
+  List<ManualEntryPlanItem> _courseReviewItems(
+    ManualEntryBundle bundle,
+    CourseReviewState review,
+    Map<String, String?> assignments,
+  ) {
+    final items = <ManualEntryPlanItem>[];
+    final sections = bundle.courseReview.sections;
+    for (var i = 0; i < sections.length; i++) {
+      final section = sections[i];
+      final id = 'cr:s:$i';
+      final source = assignments.containsKey(id)
+          ? (assignments[id] == null
+                ? null
+                : review.sourceFor(assignments[id]!))
+          : matchSource(review, section);
+      final parts = _sectionParts(section);
+      final latest = source?.latest.values.fold<CourseReviewEntry?>(
+              null,
+              (best, e) => best == null || e.version > best.version ? e : best,
+            );
+      items.add(
+        ManualEntryPlanItem(
+          id: id,
+          kind: ManualEntryKind.courseReview,
+          title: source?.label ??
+              (section.label.isEmpty ? 'Section ${i + 1}' : section.label),
+          preview: _firstLine(parts.values.first),
+          markdown: [
+            for (final e in parts.entries) '## ${e.key.label}\n\n${e.value}',
+          ].join('\n\n'),
+          detail: [
+            parts.keys.map((p) => p.label).join(' · '),
+            if (source == null)
+              section.label.isEmpty
+                  ? 'Choose a PDF'
+                  : 'JSON said "${section.label}" — choose a PDF',
+            if (source?.excluded ?? false) 'PDF is excluded from the review',
+          ].join(' · '),
+          targetMaterialId: source?.material.id,
+          requiresTarget: true,
+          existing: latest == null
+              ? null
+              : ExistingMatch(
+                  id: 'cr:${source!.material.id}',
+                  description: 'Review section v${latest.version}',
+                ),
+        ),
+      );
+    }
+    for (final (part, markdown) in [
+      (CourseReviewPart.bigPicture, bundle.courseReview.bigPicture),
+      (CourseReviewPart.examples, bundle.courseReview.examples),
+    ]) {
+      if (markdown == null) continue;
+      final latest = review.overview[part];
+      items.add(
+        ManualEntryPlanItem(
+          id: 'cr:${part.storageValue}',
+          kind: ManualEntryKind.courseReview,
+          title: 'Course ${part.label.toLowerCase()}',
+          preview: _firstLine(markdown),
+          markdown: markdown,
+          detail: '${_chars(markdown)} chars',
+          existing: latest == null
+              ? null
+              : ExistingMatch(
+                  id: latest.id,
+                  description: '${part.label} v${latest.version}',
+                ),
+        ),
+      );
+    }
+    return items;
+  }
+
+  static Map<CourseReviewPart, String> _sectionParts(
+    ManualCourseReviewSection section,
+  ) => {
+    if (section.summary != null) CourseReviewPart.summary: section.summary!,
+    if (section.explanation != null)
+      CourseReviewPart.explanation: section.explanation!,
+    if (section.deepExplanation != null)
+      CourseReviewPart.deepExplanation: section.deepExplanation!,
+  };
+
+  /// Sections are written before subject-wide parts, so imported examples
+  /// are current for the sections imported alongside them.
+  Future<void> _writeCourseReview(
+    ManualEntryPlan plan,
+    List<ManualEntryPlanItem> items,
+  ) async {
+    if (items.isEmpty) return;
+    final repository = CourseReviewRepository(_db);
+    final subjectId = plan.target.subjectId;
+    var review = await repository.load(subjectId);
+    if (review == null) throw StateError('The subject no longer exists.');
+    final sections = items.where((i) => i.id.startsWith('cr:s:')).toList();
+    for (final item in sections) {
+      final source = review.sourceFor(item.targetMaterialId!);
+      if (source == null) throw StateError('A chosen PDF no longer exists.');
+      final parts = _sectionParts(
+        plan.bundle.courseReview.sections[_index(item.id)],
+      );
+      for (final entry in parts.entries) {
+        if (item.replaces && source.latest[entry.key] != null) {
+          await _db.deleteCourseReviewEntry(source.latest[entry.key]!.id);
+        }
+        await _db.insertCourseReviewVersion(
+          id: _uuid.v4(),
+          subjectId: subjectId,
+          materialId: source.material.id,
+          part: entry.key.storageValue,
+          content: entry.value,
+          sourceFingerprint: source.currentFingerprint,
+          provider: provider,
+          model: sourceType,
+        );
+      }
+    }
+    if (sections.isNotEmpty) review = (await repository.load(subjectId))!;
+    for (final item in items.where((i) => !i.id.startsWith('cr:s:'))) {
+      final part = CourseReviewPart.fromStorage(item.id.substring(3))!;
+      if (item.replaces) await _db.deleteCourseReviewEntry(item.existing!.id);
+      await _db.insertCourseReviewVersion(
+        id: _uuid.v4(),
+        subjectId: subjectId,
+        materialId: null,
+        part: part.storageValue,
+        content: item.markdown,
+        sourceFingerprint: review.overviewFingerprint,
+        provider: provider,
+        model: sourceType,
+      );
+    }
   }
 
   /// Writes every included, non-skipped item in a single transaction.
   Future<ManualEntryImportResult> apply(ManualEntryPlan plan) async {
     if (plan.missingPdf) {
       throw StateError('Choose a PDF for study materials and annotations.');
+    }
+    if (plan.missingLesson) {
+      throw StateError('Choose a lesson for notes, flashcards and quizzes.');
     }
     var added = 0;
     var replaced = 0;
@@ -268,8 +464,14 @@ class ManualEntryImportService {
             await _writeFlashcard(plan, item, now);
           case ManualEntryKind.quiz:
             await _writeQuiz(plan, item, now);
+          case ManualEntryKind.courseReview:
+            break;
         }
       }
+      await _writeCourseReview(plan, [
+        for (final item in plan.items)
+          if (item.willWrite && item.kind == ManualEntryKind.courseReview) item,
+      ]);
     });
     return ManualEntryImportResult(
       added: added,

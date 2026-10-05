@@ -22,3 +22,12 @@ String manualEntryPromptFromInstruction(String markdown) {
   ).firstMatch(markdown);
   return match?.group(1)?.trim() ?? markdown.trim();
 }
+
+/// The Course Review block, for building a subject's condensed review in an
+/// external AI.
+String courseReviewPromptFromInstruction(String markdown) {
+  final match = RegExp(
+    r'## Course Review instruction[\s\S]*?```\n([\s\S]*?)\n```',
+  ).firstMatch(markdown);
+  return match?.group(1)?.trim() ?? markdown.trim();
+}

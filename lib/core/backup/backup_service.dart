@@ -68,7 +68,7 @@ class BuiltBackup {
 class BackupService {
   /// Keep default in sync with [AppDatabase.schemaVersion] /
   /// [kStudyVaultSchemaVersion] in backup_providers.dart.
-  BackupService({this.currentSchemaVersion = 16});
+  BackupService({this.currentSchemaVersion = 17});
 
   /// Injected for tests; production uses [AppDatabase.schemaVersion].
   final int currentSchemaVersion;

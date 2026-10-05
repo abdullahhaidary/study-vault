@@ -9,7 +9,7 @@ export const tables = new Set([
   'annotation_ai_generations', 'pdf_ai_materials', 'question_sets', 'quiz_questions',
   'quiz_question_options', 'quiz_attempts', 'quiz_answers', 'material_files',
 ]);
-export const schemaVersion = 16;
+export const schemaVersion = 17;
 
 export function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;

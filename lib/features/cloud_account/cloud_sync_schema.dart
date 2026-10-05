@@ -1,3 +1,4 @@
+import '../../../core/backup/backup_providers.dart' show kStudyVaultSchemaVersion;
 import '../../../core/database/app_database.dart';
 import 'cloud_sync_models.dart';
 
@@ -47,7 +48,10 @@ class CloudSyncSchema {
     return CloudSyncSchema(result);
   }
 
-  Map<String, dynamic> toJson() => {'schemaVersion': 16, 'tables': tables};
+  Map<String, dynamic> toJson() => {
+    'schemaVersion': kStudyVaultSchemaVersion,
+    'tables': tables,
+  };
 
   void validateRow(String key, Map<String, dynamic> row) {
     if (row['id'] != cloudId(key)) {

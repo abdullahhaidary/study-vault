@@ -31,7 +31,7 @@ class _ManualEntryPreviewScreenState extends State<ManualEntryPreviewScreen> {
     final replaced = plan.replacedIds;
 
     return DetailScaffold(
-      title: plan.target.lessonName,
+      title: plan.target.displayName,
       description: 'Preview — nothing is saved yet.',
       actions: [
         IconButton(
@@ -44,7 +44,7 @@ class _ManualEntryPreviewScreenState extends State<ManualEntryPreviewScreen> {
           onPressed: () => setState(() => _showExisting = !_showExisting),
         ),
       ],
-      floatingActionButton: plan.writeCount == 0 || plan.missingPdf
+      floatingActionButton: !plan.canSave
           ? null
           : FloatingActionButton.extended(
               onPressed: () => Navigator.pop(context, true),
@@ -88,7 +88,10 @@ class _ManualEntryPreviewScreenState extends State<ManualEntryPreviewScreen> {
                   ManualEntryKind.flashcard,
                   ManualEntryKind.quiz,
                   ManualEntryKind.note,
-                ]) ...[
+                  ManualEntryKind.courseReview,
+                ])
+                  if (kind != ManualEntryKind.courseReview ||
+                      plan.ofKind(kind).isNotEmpty) ...[
                   _ToolSection(
                     kind: kind,
                     plan: plan,
@@ -344,6 +347,7 @@ class _ToolSection extends StatelessWidget {
     final unit = switch (kind) {
       ManualEntryKind.flashcard => 'card',
       ManualEntryKind.quiz => 'quiz',
+      ManualEntryKind.courseReview => 'part',
       _ => 'note',
     };
 
@@ -562,7 +566,7 @@ class _NewRow extends StatelessWidget {
           child: Text(
             item.replaces
                 ? 'Replaces'
-                : item.kind == ManualEntryKind.studyMaterial && item.hasConflict
+                : item.kind.isVersioned && item.hasConflict
                 ? 'New version'
                 : 'New',
             style: theme.textTheme.labelSmall?.copyWith(

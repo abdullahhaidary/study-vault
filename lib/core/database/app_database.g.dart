@@ -15992,6 +15992,968 @@ class QuizAnswersCompanion extends UpdateCompanion<QuizAnswer> {
   }
 }
 
+class $CourseReviewEntriesTable extends CourseReviewEntries
+    with TableInfo<$CourseReviewEntriesTable, CourseReviewEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CourseReviewEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<String> subjectId = GeneratedColumn<String>(
+    'subject_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES subjects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _materialIdMeta = const VerificationMeta(
+    'materialId',
+  );
+  @override
+  late final GeneratedColumn<String> materialId = GeneratedColumn<String>(
+    'material_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _partMeta = const VerificationMeta('part');
+  @override
+  late final GeneratedColumn<String> part = GeneratedColumn<String>(
+    'part',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceFingerprintMeta = const VerificationMeta(
+    'sourceFingerprint',
+  );
+  @override
+  late final GeneratedColumn<String> sourceFingerprint =
+      GeneratedColumn<String>(
+        'source_fingerprint',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    subjectId,
+    materialId,
+    part,
+    content,
+    version,
+    sourceFingerprint,
+    provider,
+    model,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'course_review_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CourseReviewEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectIdMeta);
+    }
+    if (data.containsKey('material_id')) {
+      context.handle(
+        _materialIdMeta,
+        materialId.isAcceptableOrUnknown(data['material_id']!, _materialIdMeta),
+      );
+    }
+    if (data.containsKey('part')) {
+      context.handle(
+        _partMeta,
+        part.isAcceptableOrUnknown(data['part']!, _partMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_partMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    if (data.containsKey('source_fingerprint')) {
+      context.handle(
+        _sourceFingerprintMeta,
+        sourceFingerprint.isAcceptableOrUnknown(
+          data['source_fingerprint']!,
+          _sourceFingerprintMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {subjectId, materialId, part, version},
+  ];
+  @override
+  CourseReviewEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CourseReviewEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_id'],
+      )!,
+      materialId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_id'],
+      ),
+      part: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}part'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      sourceFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_fingerprint'],
+      ),
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CourseReviewEntriesTable createAlias(String alias) {
+    return $CourseReviewEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class CourseReviewEntry extends DataClass
+    implements Insertable<CourseReviewEntry> {
+  final String id;
+  final String subjectId;
+  final String? materialId;
+
+  /// `summary` | `explanation` | `deep_explanation` | `examples` |
+  /// `big_picture`
+  final String part;
+  final String content;
+  final int version;
+
+  /// Source identity when generated or imported; a mismatch marks it outdated.
+  final String? sourceFingerprint;
+  final String? provider;
+  final String? model;
+  final DateTime createdAt;
+  const CourseReviewEntry({
+    required this.id,
+    required this.subjectId,
+    this.materialId,
+    required this.part,
+    required this.content,
+    required this.version,
+    this.sourceFingerprint,
+    this.provider,
+    this.model,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['subject_id'] = Variable<String>(subjectId);
+    if (!nullToAbsent || materialId != null) {
+      map['material_id'] = Variable<String>(materialId);
+    }
+    map['part'] = Variable<String>(part);
+    map['content'] = Variable<String>(content);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || sourceFingerprint != null) {
+      map['source_fingerprint'] = Variable<String>(sourceFingerprint);
+    }
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CourseReviewEntriesCompanion toCompanion(bool nullToAbsent) {
+    return CourseReviewEntriesCompanion(
+      id: Value(id),
+      subjectId: Value(subjectId),
+      materialId: materialId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(materialId),
+      part: Value(part),
+      content: Value(content),
+      version: Value(version),
+      sourceFingerprint: sourceFingerprint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceFingerprint),
+      provider: provider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(provider),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CourseReviewEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CourseReviewEntry(
+      id: serializer.fromJson<String>(json['id']),
+      subjectId: serializer.fromJson<String>(json['subjectId']),
+      materialId: serializer.fromJson<String?>(json['materialId']),
+      part: serializer.fromJson<String>(json['part']),
+      content: serializer.fromJson<String>(json['content']),
+      version: serializer.fromJson<int>(json['version']),
+      sourceFingerprint: serializer.fromJson<String?>(
+        json['sourceFingerprint'],
+      ),
+      provider: serializer.fromJson<String?>(json['provider']),
+      model: serializer.fromJson<String?>(json['model']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'subjectId': serializer.toJson<String>(subjectId),
+      'materialId': serializer.toJson<String?>(materialId),
+      'part': serializer.toJson<String>(part),
+      'content': serializer.toJson<String>(content),
+      'version': serializer.toJson<int>(version),
+      'sourceFingerprint': serializer.toJson<String?>(sourceFingerprint),
+      'provider': serializer.toJson<String?>(provider),
+      'model': serializer.toJson<String?>(model),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CourseReviewEntry copyWith({
+    String? id,
+    String? subjectId,
+    Value<String?> materialId = const Value.absent(),
+    String? part,
+    String? content,
+    int? version,
+    Value<String?> sourceFingerprint = const Value.absent(),
+    Value<String?> provider = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    DateTime? createdAt,
+  }) => CourseReviewEntry(
+    id: id ?? this.id,
+    subjectId: subjectId ?? this.subjectId,
+    materialId: materialId.present ? materialId.value : this.materialId,
+    part: part ?? this.part,
+    content: content ?? this.content,
+    version: version ?? this.version,
+    sourceFingerprint: sourceFingerprint.present
+        ? sourceFingerprint.value
+        : this.sourceFingerprint,
+    provider: provider.present ? provider.value : this.provider,
+    model: model.present ? model.value : this.model,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CourseReviewEntry copyWithCompanion(CourseReviewEntriesCompanion data) {
+    return CourseReviewEntry(
+      id: data.id.present ? data.id.value : this.id,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      materialId: data.materialId.present
+          ? data.materialId.value
+          : this.materialId,
+      part: data.part.present ? data.part.value : this.part,
+      content: data.content.present ? data.content.value : this.content,
+      version: data.version.present ? data.version.value : this.version,
+      sourceFingerprint: data.sourceFingerprint.present
+          ? data.sourceFingerprint.value
+          : this.sourceFingerprint,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseReviewEntry(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('materialId: $materialId, ')
+          ..write('part: $part, ')
+          ..write('content: $content, ')
+          ..write('version: $version, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    subjectId,
+    materialId,
+    part,
+    content,
+    version,
+    sourceFingerprint,
+    provider,
+    model,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CourseReviewEntry &&
+          other.id == this.id &&
+          other.subjectId == this.subjectId &&
+          other.materialId == this.materialId &&
+          other.part == this.part &&
+          other.content == this.content &&
+          other.version == this.version &&
+          other.sourceFingerprint == this.sourceFingerprint &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.createdAt == this.createdAt);
+}
+
+class CourseReviewEntriesCompanion extends UpdateCompanion<CourseReviewEntry> {
+  final Value<String> id;
+  final Value<String> subjectId;
+  final Value<String?> materialId;
+  final Value<String> part;
+  final Value<String> content;
+  final Value<int> version;
+  final Value<String?> sourceFingerprint;
+  final Value<String?> provider;
+  final Value<String?> model;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CourseReviewEntriesCompanion({
+    this.id = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.materialId = const Value.absent(),
+    this.part = const Value.absent(),
+    this.content = const Value.absent(),
+    this.version = const Value.absent(),
+    this.sourceFingerprint = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CourseReviewEntriesCompanion.insert({
+    required String id,
+    required String subjectId,
+    this.materialId = const Value.absent(),
+    required String part,
+    required String content,
+    required int version,
+    this.sourceFingerprint = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       subjectId = Value(subjectId),
+       part = Value(part),
+       content = Value(content),
+       version = Value(version),
+       createdAt = Value(createdAt);
+  static Insertable<CourseReviewEntry> custom({
+    Expression<String>? id,
+    Expression<String>? subjectId,
+    Expression<String>? materialId,
+    Expression<String>? part,
+    Expression<String>? content,
+    Expression<int>? version,
+    Expression<String>? sourceFingerprint,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (materialId != null) 'material_id': materialId,
+      if (part != null) 'part': part,
+      if (content != null) 'content': content,
+      if (version != null) 'version': version,
+      if (sourceFingerprint != null) 'source_fingerprint': sourceFingerprint,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CourseReviewEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? subjectId,
+    Value<String?>? materialId,
+    Value<String>? part,
+    Value<String>? content,
+    Value<int>? version,
+    Value<String?>? sourceFingerprint,
+    Value<String?>? provider,
+    Value<String?>? model,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CourseReviewEntriesCompanion(
+      id: id ?? this.id,
+      subjectId: subjectId ?? this.subjectId,
+      materialId: materialId ?? this.materialId,
+      part: part ?? this.part,
+      content: content ?? this.content,
+      version: version ?? this.version,
+      sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<String>(subjectId.value);
+    }
+    if (materialId.present) {
+      map['material_id'] = Variable<String>(materialId.value);
+    }
+    if (part.present) {
+      map['part'] = Variable<String>(part.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (sourceFingerprint.present) {
+      map['source_fingerprint'] = Variable<String>(sourceFingerprint.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseReviewEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('materialId: $materialId, ')
+          ..write('part: $part, ')
+          ..write('content: $content, ')
+          ..write('version: $version, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CourseReviewExclusionsTable extends CourseReviewExclusions
+    with TableInfo<$CourseReviewExclusionsTable, CourseReviewExclusion> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CourseReviewExclusionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<String> subjectId = GeneratedColumn<String>(
+    'subject_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES subjects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _materialIdMeta = const VerificationMeta(
+    'materialId',
+  );
+  @override
+  late final GeneratedColumn<String> materialId = GeneratedColumn<String>(
+    'material_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, subjectId, materialId, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'course_review_exclusions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CourseReviewExclusion> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectIdMeta);
+    }
+    if (data.containsKey('material_id')) {
+      context.handle(
+        _materialIdMeta,
+        materialId.isAcceptableOrUnknown(data['material_id']!, _materialIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_materialIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {materialId},
+  ];
+  @override
+  CourseReviewExclusion map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CourseReviewExclusion(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_id'],
+      )!,
+      materialId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CourseReviewExclusionsTable createAlias(String alias) {
+    return $CourseReviewExclusionsTable(attachedDatabase, alias);
+  }
+}
+
+class CourseReviewExclusion extends DataClass
+    implements Insertable<CourseReviewExclusion> {
+  final String id;
+  final String subjectId;
+  final String materialId;
+  final DateTime createdAt;
+  const CourseReviewExclusion({
+    required this.id,
+    required this.subjectId,
+    required this.materialId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['subject_id'] = Variable<String>(subjectId);
+    map['material_id'] = Variable<String>(materialId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CourseReviewExclusionsCompanion toCompanion(bool nullToAbsent) {
+    return CourseReviewExclusionsCompanion(
+      id: Value(id),
+      subjectId: Value(subjectId),
+      materialId: Value(materialId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CourseReviewExclusion.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CourseReviewExclusion(
+      id: serializer.fromJson<String>(json['id']),
+      subjectId: serializer.fromJson<String>(json['subjectId']),
+      materialId: serializer.fromJson<String>(json['materialId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'subjectId': serializer.toJson<String>(subjectId),
+      'materialId': serializer.toJson<String>(materialId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CourseReviewExclusion copyWith({
+    String? id,
+    String? subjectId,
+    String? materialId,
+    DateTime? createdAt,
+  }) => CourseReviewExclusion(
+    id: id ?? this.id,
+    subjectId: subjectId ?? this.subjectId,
+    materialId: materialId ?? this.materialId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CourseReviewExclusion copyWithCompanion(
+    CourseReviewExclusionsCompanion data,
+  ) {
+    return CourseReviewExclusion(
+      id: data.id.present ? data.id.value : this.id,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      materialId: data.materialId.present
+          ? data.materialId.value
+          : this.materialId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseReviewExclusion(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('materialId: $materialId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, subjectId, materialId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CourseReviewExclusion &&
+          other.id == this.id &&
+          other.subjectId == this.subjectId &&
+          other.materialId == this.materialId &&
+          other.createdAt == this.createdAt);
+}
+
+class CourseReviewExclusionsCompanion
+    extends UpdateCompanion<CourseReviewExclusion> {
+  final Value<String> id;
+  final Value<String> subjectId;
+  final Value<String> materialId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CourseReviewExclusionsCompanion({
+    this.id = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.materialId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CourseReviewExclusionsCompanion.insert({
+    required String id,
+    required String subjectId,
+    required String materialId,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       subjectId = Value(subjectId),
+       materialId = Value(materialId),
+       createdAt = Value(createdAt);
+  static Insertable<CourseReviewExclusion> custom({
+    Expression<String>? id,
+    Expression<String>? subjectId,
+    Expression<String>? materialId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (materialId != null) 'material_id': materialId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CourseReviewExclusionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? subjectId,
+    Value<String>? materialId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CourseReviewExclusionsCompanion(
+      id: id ?? this.id,
+      subjectId: subjectId ?? this.subjectId,
+      materialId: materialId ?? this.materialId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<String>(subjectId.value);
+    }
+    if (materialId.present) {
+      map['material_id'] = Variable<String>(materialId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseReviewExclusionsCompanion(')
+          ..write('id: $id, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('materialId: $materialId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16030,6 +16992,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $QuizQuestionOptionsTable(this);
   late final $QuizAttemptsTable quizAttempts = $QuizAttemptsTable(this);
   late final $QuizAnswersTable quizAnswers = $QuizAnswersTable(this);
+  late final $CourseReviewEntriesTable courseReviewEntries =
+      $CourseReviewEntriesTable(this);
+  late final $CourseReviewExclusionsTable courseReviewExclusions =
+      $CourseReviewExclusionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16060,6 +17026,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     quizQuestionOptions,
     quizAttempts,
     quizAnswers,
+    courseReviewEntries,
+    courseReviewExclusions,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -16229,6 +17197,38 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('quiz_answers', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'subjects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('course_review_entries', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lesson_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('course_review_entries', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'subjects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('course_review_exclusions', kind: UpdateKind.delete),
+      ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lesson_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('course_review_exclusions', kind: UpdateKind.delete),
+      ],
     ),
   ]);
 }
@@ -17238,6 +18238,52 @@ final class $$SubjectsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$CourseReviewEntriesTable, List<CourseReviewEntry>>
+  _courseReviewEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.courseReviewEntries,
+        aliasName: 'subjects__id__course_review_entries__subject_id',
+      );
+
+  $$CourseReviewEntriesTableProcessedTableManager get courseReviewEntriesRefs {
+    final manager = $$CourseReviewEntriesTableTableManager(
+      $_db,
+      $_db.courseReviewEntries,
+    ).filter((f) => f.subjectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _courseReviewEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $CourseReviewExclusionsTable,
+    List<CourseReviewExclusion>
+  >
+  _courseReviewExclusionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.courseReviewExclusions,
+        aliasName: 'subjects__id__course_review_exclusions__subject_id',
+      );
+
+  $$CourseReviewExclusionsTableProcessedTableManager
+  get courseReviewExclusionsRefs {
+    final manager = $$CourseReviewExclusionsTableTableManager(
+      $_db,
+      $_db.courseReviewExclusions,
+    ).filter((f) => f.subjectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _courseReviewExclusionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$SubjectsTableFilterComposer
@@ -17447,6 +18493,57 @@ class $$SubjectsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> courseReviewEntriesRefs(
+    Expression<bool> Function($$CourseReviewEntriesTableFilterComposer f) f,
+  ) {
+    final $$CourseReviewEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseReviewEntries,
+      getReferencedColumn: (t) => t.subjectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseReviewEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.courseReviewEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> courseReviewExclusionsRefs(
+    Expression<bool> Function($$CourseReviewExclusionsTableFilterComposer f) f,
+  ) {
+    final $$CourseReviewExclusionsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewExclusions,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewExclusionsTableFilterComposer(
+                $db: $db,
+                $table: $db.courseReviewExclusions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 }
@@ -17736,6 +18833,58 @@ class $$SubjectsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> courseReviewEntriesRefs<T extends Object>(
+    Expression<T> Function($$CourseReviewEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$CourseReviewEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewEntries,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.courseReviewEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> courseReviewExclusionsRefs<T extends Object>(
+    Expression<T> Function($$CourseReviewExclusionsTableAnnotationComposer a) f,
+  ) {
+    final $$CourseReviewExclusionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewExclusions,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewExclusionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.courseReviewExclusions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$SubjectsTableTableManager
@@ -17759,6 +18908,8 @@ class $$SubjectsTableTableManager
             bool studyNotesRefs,
             bool flashcardsRefs,
             bool questionSetsRefs,
+            bool courseReviewEntriesRefs,
+            bool courseReviewExclusionsRefs,
           })
         > {
   $$SubjectsTableTableManager(_$AppDatabase db, $SubjectsTable table)
@@ -17833,6 +18984,8 @@ class $$SubjectsTableTableManager
                 studyNotesRefs = false,
                 flashcardsRefs = false,
                 questionSetsRefs = false,
+                courseReviewEntriesRefs = false,
+                courseReviewExclusionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -17842,6 +18995,8 @@ class $$SubjectsTableTableManager
                     if (studyNotesRefs) db.studyNotes,
                     if (flashcardsRefs) db.flashcards,
                     if (questionSetsRefs) db.questionSets,
+                    if (courseReviewEntriesRefs) db.courseReviewEntries,
+                    if (courseReviewExclusionsRefs) db.courseReviewExclusions,
                   ],
                   addJoins:
                       <
@@ -17995,6 +19150,48 @@ class $$SubjectsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (courseReviewEntriesRefs)
+                        await $_getPrefetchedData<
+                          Subject,
+                          $SubjectsTable,
+                          CourseReviewEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SubjectsTableReferences
+                              ._courseReviewEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SubjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseReviewEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.subjectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (courseReviewExclusionsRefs)
+                        await $_getPrefetchedData<
+                          Subject,
+                          $SubjectsTable,
+                          CourseReviewExclusion
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SubjectsTableReferences
+                              ._courseReviewExclusionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SubjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseReviewExclusionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.subjectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -18023,6 +19220,8 @@ typedef $$SubjectsTableProcessedTableManager =
         bool studyNotesRefs,
         bool flashcardsRefs,
         bool questionSetsRefs,
+        bool courseReviewEntriesRefs,
+        bool courseReviewExclusionsRefs,
       })
     >;
 typedef $$LessonGroupsTableCreateCompanionBuilder =
@@ -19641,6 +20840,53 @@ final class $$LessonMaterialsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$CourseReviewEntriesTable, List<CourseReviewEntry>>
+  _courseReviewEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.courseReviewEntries,
+        aliasName: 'lesson_materials__id__course_review_entries__material_id',
+      );
+
+  $$CourseReviewEntriesTableProcessedTableManager get courseReviewEntriesRefs {
+    final manager = $$CourseReviewEntriesTableTableManager(
+      $_db,
+      $_db.courseReviewEntries,
+    ).filter((f) => f.materialId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _courseReviewEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $CourseReviewExclusionsTable,
+    List<CourseReviewExclusion>
+  >
+  _courseReviewExclusionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.courseReviewExclusions,
+        aliasName:
+            'lesson_materials__id__course_review_exclusions__material_id',
+      );
+
+  $$CourseReviewExclusionsTableProcessedTableManager
+  get courseReviewExclusionsRefs {
+    final manager = $$CourseReviewExclusionsTableTableManager(
+      $_db,
+      $_db.courseReviewExclusions,
+    ).filter((f) => f.materialId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _courseReviewExclusionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$LessonMaterialsTableFilterComposer
@@ -19838,6 +21084,57 @@ class $$LessonMaterialsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> courseReviewEntriesRefs(
+    Expression<bool> Function($$CourseReviewEntriesTableFilterComposer f) f,
+  ) {
+    final $$CourseReviewEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseReviewEntries,
+      getReferencedColumn: (t) => t.materialId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseReviewEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.courseReviewEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> courseReviewExclusionsRefs(
+    Expression<bool> Function($$CourseReviewExclusionsTableFilterComposer f) f,
+  ) {
+    final $$CourseReviewExclusionsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewExclusions,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewExclusionsTableFilterComposer(
+                $db: $db,
+                $table: $db.courseReviewExclusions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 }
@@ -20102,6 +21399,58 @@ class $$LessonMaterialsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> courseReviewEntriesRefs<T extends Object>(
+    Expression<T> Function($$CourseReviewEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$CourseReviewEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewEntries,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.courseReviewEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> courseReviewExclusionsRefs<T extends Object>(
+    Expression<T> Function($$CourseReviewExclusionsTableAnnotationComposer a) f,
+  ) {
+    final $$CourseReviewExclusionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.courseReviewExclusions,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CourseReviewExclusionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.courseReviewExclusions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LessonMaterialsTableTableManager
@@ -20124,6 +21473,8 @@ class $$LessonMaterialsTableTableManager
             bool annotationAiGenerationsRefs,
             bool pdfAiMaterialsRefs,
             bool questionSetsRefs,
+            bool courseReviewEntriesRefs,
+            bool courseReviewExclusionsRefs,
           })
         > {
   $$LessonMaterialsTableTableManager(
@@ -20203,6 +21554,8 @@ class $$LessonMaterialsTableTableManager
                 annotationAiGenerationsRefs = false,
                 pdfAiMaterialsRefs = false,
                 questionSetsRefs = false,
+                courseReviewEntriesRefs = false,
+                courseReviewExclusionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -20212,6 +21565,8 @@ class $$LessonMaterialsTableTableManager
                     if (annotationAiGenerationsRefs) db.annotationAiGenerations,
                     if (pdfAiMaterialsRefs) db.pdfAiMaterials,
                     if (questionSetsRefs) db.questionSets,
+                    if (courseReviewEntriesRefs) db.courseReviewEntries,
+                    if (courseReviewExclusionsRefs) db.courseReviewExclusions,
                   ],
                   addJoins:
                       <
@@ -20354,6 +21709,48 @@ class $$LessonMaterialsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (courseReviewEntriesRefs)
+                        await $_getPrefetchedData<
+                          LessonMaterial,
+                          $LessonMaterialsTable,
+                          CourseReviewEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonMaterialsTableReferences
+                              ._courseReviewEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonMaterialsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseReviewEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.materialId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (courseReviewExclusionsRefs)
+                        await $_getPrefetchedData<
+                          LessonMaterial,
+                          $LessonMaterialsTable,
+                          CourseReviewExclusion
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonMaterialsTableReferences
+                              ._courseReviewExclusionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonMaterialsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseReviewExclusionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.materialId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -20381,6 +21778,8 @@ typedef $$LessonMaterialsTableProcessedTableManager =
         bool annotationAiGenerationsRefs,
         bool pdfAiMaterialsRefs,
         bool questionSetsRefs,
+        bool courseReviewEntriesRefs,
+        bool courseReviewExclusionsRefs,
       })
     >;
 typedef $$StudyPinCategoriesTableCreateCompanionBuilder =
@@ -30744,6 +32143,943 @@ typedef $$QuizAnswersTableProcessedTableManager =
       QuizAnswer,
       PrefetchHooks Function({bool quizAttemptId, bool questionId})
     >;
+typedef $$CourseReviewEntriesTableCreateCompanionBuilder =
+    CourseReviewEntriesCompanion Function({
+      required String id,
+      required String subjectId,
+      Value<String?> materialId,
+      required String part,
+      required String content,
+      required int version,
+      Value<String?> sourceFingerprint,
+      Value<String?> provider,
+      Value<String?> model,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$CourseReviewEntriesTableUpdateCompanionBuilder =
+    CourseReviewEntriesCompanion Function({
+      Value<String> id,
+      Value<String> subjectId,
+      Value<String?> materialId,
+      Value<String> part,
+      Value<String> content,
+      Value<int> version,
+      Value<String?> sourceFingerprint,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$CourseReviewEntriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CourseReviewEntriesTable,
+          CourseReviewEntry
+        > {
+  $$CourseReviewEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SubjectsTable _subjectIdTable(_$AppDatabase db) => db.subjects
+      .createAlias('course_review_entries__subject_id__subjects__id');
+
+  $$SubjectsTableProcessedTableManager get subjectId {
+    final $_column = $_itemColumn<String>('subject_id')!;
+
+    final manager = $$SubjectsTableTableManager(
+      $_db,
+      $_db.subjects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_subjectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonMaterialsTable _materialIdTable(_$AppDatabase db) => db
+      .lessonMaterials
+      .createAlias('course_review_entries__material_id__lesson_materials__id');
+
+  $$LessonMaterialsTableProcessedTableManager? get materialId {
+    final $_column = $_itemColumn<String>('material_id');
+    if ($_column == null) return null;
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_materialIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CourseReviewEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CourseReviewEntriesTable> {
+  $$CourseReviewEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get part => $composableBuilder(
+    column: $table.part,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SubjectsTableFilterComposer get subjectId {
+    final $$SubjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableFilterComposer get materialId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CourseReviewEntriesTable> {
+  $$CourseReviewEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get part => $composableBuilder(
+    column: $table.part,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SubjectsTableOrderingComposer get subjectId {
+    final $$SubjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableOrderingComposer get materialId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CourseReviewEntriesTable> {
+  $$CourseReviewEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get part =>
+      $composableBuilder(column: $table.part, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$SubjectsTableAnnotationComposer get subjectId {
+    final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableAnnotationComposer get materialId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CourseReviewEntriesTable,
+          CourseReviewEntry,
+          $$CourseReviewEntriesTableFilterComposer,
+          $$CourseReviewEntriesTableOrderingComposer,
+          $$CourseReviewEntriesTableAnnotationComposer,
+          $$CourseReviewEntriesTableCreateCompanionBuilder,
+          $$CourseReviewEntriesTableUpdateCompanionBuilder,
+          (CourseReviewEntry, $$CourseReviewEntriesTableReferences),
+          CourseReviewEntry,
+          PrefetchHooks Function({bool subjectId, bool materialId})
+        > {
+  $$CourseReviewEntriesTableTableManager(
+    _$AppDatabase db,
+    $CourseReviewEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CourseReviewEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CourseReviewEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CourseReviewEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> subjectId = const Value.absent(),
+                Value<String?> materialId = const Value.absent(),
+                Value<String> part = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> sourceFingerprint = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CourseReviewEntriesCompanion(
+                id: id,
+                subjectId: subjectId,
+                materialId: materialId,
+                part: part,
+                content: content,
+                version: version,
+                sourceFingerprint: sourceFingerprint,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String subjectId,
+                Value<String?> materialId = const Value.absent(),
+                required String part,
+                required String content,
+                required int version,
+                Value<String?> sourceFingerprint = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CourseReviewEntriesCompanion.insert(
+                id: id,
+                subjectId: subjectId,
+                materialId: materialId,
+                part: part,
+                content: content,
+                version: version,
+                sourceFingerprint: sourceFingerprint,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CourseReviewEntriesTable, CourseReviewEntry>(
+                    table,
+                  ),
+                  $$CourseReviewEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({subjectId = false, materialId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (subjectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.subjectId,
+                                referencedTable:
+                                    $$CourseReviewEntriesTableReferences
+                                        ._subjectIdTable(db),
+                                referencedColumn:
+                                    $$CourseReviewEntriesTableReferences
+                                        ._subjectIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (materialId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.materialId,
+                                referencedTable:
+                                    $$CourseReviewEntriesTableReferences
+                                        ._materialIdTable(db),
+                                referencedColumn:
+                                    $$CourseReviewEntriesTableReferences
+                                        ._materialIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CourseReviewEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CourseReviewEntriesTable,
+      CourseReviewEntry,
+      $$CourseReviewEntriesTableFilterComposer,
+      $$CourseReviewEntriesTableOrderingComposer,
+      $$CourseReviewEntriesTableAnnotationComposer,
+      $$CourseReviewEntriesTableCreateCompanionBuilder,
+      $$CourseReviewEntriesTableUpdateCompanionBuilder,
+      (CourseReviewEntry, $$CourseReviewEntriesTableReferences),
+      CourseReviewEntry,
+      PrefetchHooks Function({bool subjectId, bool materialId})
+    >;
+typedef $$CourseReviewExclusionsTableCreateCompanionBuilder =
+    CourseReviewExclusionsCompanion Function({
+      required String id,
+      required String subjectId,
+      required String materialId,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$CourseReviewExclusionsTableUpdateCompanionBuilder =
+    CourseReviewExclusionsCompanion Function({
+      Value<String> id,
+      Value<String> subjectId,
+      Value<String> materialId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$CourseReviewExclusionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CourseReviewExclusionsTable,
+          CourseReviewExclusion
+        > {
+  $$CourseReviewExclusionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SubjectsTable _subjectIdTable(_$AppDatabase db) => db.subjects
+      .createAlias('course_review_exclusions__subject_id__subjects__id');
+
+  $$SubjectsTableProcessedTableManager get subjectId {
+    final $_column = $_itemColumn<String>('subject_id')!;
+
+    final manager = $$SubjectsTableTableManager(
+      $_db,
+      $_db.subjects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_subjectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonMaterialsTable _materialIdTable(_$AppDatabase db) =>
+      db.lessonMaterials.createAlias(
+        'course_review_exclusions__material_id__lesson_materials__id',
+      );
+
+  $$LessonMaterialsTableProcessedTableManager get materialId {
+    final $_column = $_itemColumn<String>('material_id')!;
+
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_materialIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CourseReviewExclusionsTableFilterComposer
+    extends Composer<_$AppDatabase, $CourseReviewExclusionsTable> {
+  $$CourseReviewExclusionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SubjectsTableFilterComposer get subjectId {
+    final $$SubjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableFilterComposer get materialId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewExclusionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CourseReviewExclusionsTable> {
+  $$CourseReviewExclusionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SubjectsTableOrderingComposer get subjectId {
+    final $$SubjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableOrderingComposer get materialId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewExclusionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CourseReviewExclusionsTable> {
+  $$CourseReviewExclusionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$SubjectsTableAnnotationComposer get subjectId {
+    final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableAnnotationComposer get materialId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseReviewExclusionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CourseReviewExclusionsTable,
+          CourseReviewExclusion,
+          $$CourseReviewExclusionsTableFilterComposer,
+          $$CourseReviewExclusionsTableOrderingComposer,
+          $$CourseReviewExclusionsTableAnnotationComposer,
+          $$CourseReviewExclusionsTableCreateCompanionBuilder,
+          $$CourseReviewExclusionsTableUpdateCompanionBuilder,
+          (CourseReviewExclusion, $$CourseReviewExclusionsTableReferences),
+          CourseReviewExclusion,
+          PrefetchHooks Function({bool subjectId, bool materialId})
+        > {
+  $$CourseReviewExclusionsTableTableManager(
+    _$AppDatabase db,
+    $CourseReviewExclusionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CourseReviewExclusionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CourseReviewExclusionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CourseReviewExclusionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> subjectId = const Value.absent(),
+                Value<String> materialId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CourseReviewExclusionsCompanion(
+                id: id,
+                subjectId: subjectId,
+                materialId: materialId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String subjectId,
+                required String materialId,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CourseReviewExclusionsCompanion.insert(
+                id: id,
+                subjectId: subjectId,
+                materialId: materialId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $CourseReviewExclusionsTable,
+                    CourseReviewExclusion
+                  >(table),
+                  $$CourseReviewExclusionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({subjectId = false, materialId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (subjectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.subjectId,
+                                referencedTable:
+                                    $$CourseReviewExclusionsTableReferences
+                                        ._subjectIdTable(db),
+                                referencedColumn:
+                                    $$CourseReviewExclusionsTableReferences
+                                        ._subjectIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (materialId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.materialId,
+                                referencedTable:
+                                    $$CourseReviewExclusionsTableReferences
+                                        ._materialIdTable(db),
+                                referencedColumn:
+                                    $$CourseReviewExclusionsTableReferences
+                                        ._materialIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CourseReviewExclusionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CourseReviewExclusionsTable,
+      CourseReviewExclusion,
+      $$CourseReviewExclusionsTableFilterComposer,
+      $$CourseReviewExclusionsTableOrderingComposer,
+      $$CourseReviewExclusionsTableAnnotationComposer,
+      $$CourseReviewExclusionsTableCreateCompanionBuilder,
+      $$CourseReviewExclusionsTableUpdateCompanionBuilder,
+      (CourseReviewExclusion, $$CourseReviewExclusionsTableReferences),
+      CourseReviewExclusion,
+      PrefetchHooks Function({bool subjectId, bool materialId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -30801,4 +33137,11 @@ class $AppDatabaseManager {
       $$QuizAttemptsTableTableManager(_db, _db.quizAttempts);
   $$QuizAnswersTableTableManager get quizAnswers =>
       $$QuizAnswersTableTableManager(_db, _db.quizAnswers);
+  $$CourseReviewEntriesTableTableManager get courseReviewEntries =>
+      $$CourseReviewEntriesTableTableManager(_db, _db.courseReviewEntries);
+  $$CourseReviewExclusionsTableTableManager get courseReviewExclusions =>
+      $$CourseReviewExclusionsTableTableManager(
+        _db,
+        _db.courseReviewExclusions,
+      );
 }

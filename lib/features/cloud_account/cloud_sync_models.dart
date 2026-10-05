@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../../core/backup/backup_providers.dart'
+    show kStudyVaultSchemaVersion;
+
 String cloudCanonical(Object? value) {
   if (value is Map) {
     final keys = value.keys.cast<String>().toList()..sort();
@@ -38,7 +41,7 @@ class CloudSnapshot {
   final Map<String, int> revisions;
 
   factory CloudSnapshot.fromJson(Map<String, dynamic> json) {
-    if (json['schemaVersion'] != 16 ||
+    if (json['schemaVersion'] != kStudyVaultSchemaVersion ||
         json['head'] is! int ||
         (json['head'] as int) < 0 ||
         json['records'] is! List) {

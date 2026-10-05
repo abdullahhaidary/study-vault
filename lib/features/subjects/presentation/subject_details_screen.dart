@@ -10,6 +10,7 @@ import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../course_review/presentation/course_review_entry_card.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../lessons/data/lesson_groups_providers.dart';
 import '../../lessons/data/lessons_providers.dart';
@@ -119,6 +120,12 @@ class SubjectDetailsScreen extends ConsumerWidget {
                     title: subject.name,
                   ),
                 ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: AppSpacing.md,
+                child: CourseReviewEntryCard(subjectId: subjectId),
               ),
             ),
             SliverToBoxAdapter(

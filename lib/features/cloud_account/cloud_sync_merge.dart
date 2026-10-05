@@ -69,13 +69,9 @@ class CloudMerge {
           );
           return serverOrder != 0 ? serverOrder : a.compareTo(b);
         });
-      if (name == 'pdf_ai_materials' || name == 'annotation_ai_generations') {
-        final number = name == 'pdf_ai_materials'
-            ? 'version'
-            : 'generation_number';
-        final scope = name == 'pdf_ai_materials'
-            ? ['material_id', 'type']
-            : ['source_fingerprint', 'action_type'];
+      final versioned = _versionedTables[name];
+      if (versioned != null) {
+        final (number, scope) = versioned;
         final sample = rows[ordered.first]!;
         var maximum = rows.entries
             .where(
@@ -153,6 +149,20 @@ class CloudMerge {
       token: token,
     );
   }
+
+  /// Version column and scope of tables whose concurrent versions are
+  /// renumbered instead of reported as conflicts.
+  static const _versionedTables = {
+    'pdf_ai_materials': ('version', ['material_id', 'type']),
+    'annotation_ai_generations': (
+      'generation_number',
+      ['source_fingerprint', 'action_type'],
+    ),
+    'course_review_entries': (
+      'version',
+      ['subject_id', 'material_id', 'part'],
+    ),
+  };
 
   static Map<String, dynamic> _without(
     Map<String, dynamic> row,
