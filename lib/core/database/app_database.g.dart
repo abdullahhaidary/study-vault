@@ -16954,6 +16954,4159 @@ class CourseReviewExclusionsCompanion
   }
 }
 
+class $ReferenceBooksTable extends ReferenceBooks
+    with TableInfo<$ReferenceBooksTable, ReferenceBook> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBooksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 300,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _authorMeta = const VerificationMeta('author');
+  @override
+  late final GeneratedColumn<String> author = GeneratedColumn<String>(
+    'author',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _originalFileNameMeta = const VerificationMeta(
+    'originalFileName',
+  );
+  @override
+  late final GeneratedColumn<String> originalFileName = GeneratedColumn<String>(
+    'original_file_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _storedFileNameMeta = const VerificationMeta(
+    'storedFileName',
+  );
+  @override
+  late final GeneratedColumn<String> storedFileName = GeneratedColumn<String>(
+    'stored_file_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pageCountMeta = const VerificationMeta(
+    'pageCount',
+  );
+  @override
+  late final GeneratedColumn<int> pageCount = GeneratedColumn<int>(
+    'page_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    author,
+    originalFileName,
+    storedFileName,
+    pageCount,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_books';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBook> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('author')) {
+      context.handle(
+        _authorMeta,
+        author.isAcceptableOrUnknown(data['author']!, _authorMeta),
+      );
+    }
+    if (data.containsKey('original_file_name')) {
+      context.handle(
+        _originalFileNameMeta,
+        originalFileName.isAcceptableOrUnknown(
+          data['original_file_name']!,
+          _originalFileNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_originalFileNameMeta);
+    }
+    if (data.containsKey('stored_file_name')) {
+      context.handle(
+        _storedFileNameMeta,
+        storedFileName.isAcceptableOrUnknown(
+          data['stored_file_name']!,
+          _storedFileNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_storedFileNameMeta);
+    }
+    if (data.containsKey('page_count')) {
+      context.handle(
+        _pageCountMeta,
+        pageCount.isAcceptableOrUnknown(data['page_count']!, _pageCountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageCountMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceBook map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBook(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      author: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}author'],
+      ),
+      originalFileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}original_file_name'],
+      )!,
+      storedFileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stored_file_name'],
+      )!,
+      pageCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_count'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBooksTable createAlias(String alias) {
+    return $ReferenceBooksTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBook extends DataClass implements Insertable<ReferenceBook> {
+  final String id;
+  final String title;
+  final String? author;
+  final String originalFileName;
+  final String storedFileName;
+  final int pageCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReferenceBook({
+    required this.id,
+    required this.title,
+    this.author,
+    required this.originalFileName,
+    required this.storedFileName,
+    required this.pageCount,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || author != null) {
+      map['author'] = Variable<String>(author);
+    }
+    map['original_file_name'] = Variable<String>(originalFileName);
+    map['stored_file_name'] = Variable<String>(storedFileName);
+    map['page_count'] = Variable<int>(pageCount);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReferenceBooksCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBooksCompanion(
+      id: Value(id),
+      title: Value(title),
+      author: author == null && nullToAbsent
+          ? const Value.absent()
+          : Value(author),
+      originalFileName: Value(originalFileName),
+      storedFileName: Value(storedFileName),
+      pageCount: Value(pageCount),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReferenceBook.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBook(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      author: serializer.fromJson<String?>(json['author']),
+      originalFileName: serializer.fromJson<String>(json['originalFileName']),
+      storedFileName: serializer.fromJson<String>(json['storedFileName']),
+      pageCount: serializer.fromJson<int>(json['pageCount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'author': serializer.toJson<String?>(author),
+      'originalFileName': serializer.toJson<String>(originalFileName),
+      'storedFileName': serializer.toJson<String>(storedFileName),
+      'pageCount': serializer.toJson<int>(pageCount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReferenceBook copyWith({
+    String? id,
+    String? title,
+    Value<String?> author = const Value.absent(),
+    String? originalFileName,
+    String? storedFileName,
+    int? pageCount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReferenceBook(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    author: author.present ? author.value : this.author,
+    originalFileName: originalFileName ?? this.originalFileName,
+    storedFileName: storedFileName ?? this.storedFileName,
+    pageCount: pageCount ?? this.pageCount,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReferenceBook copyWithCompanion(ReferenceBooksCompanion data) {
+    return ReferenceBook(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      author: data.author.present ? data.author.value : this.author,
+      originalFileName: data.originalFileName.present
+          ? data.originalFileName.value
+          : this.originalFileName,
+      storedFileName: data.storedFileName.present
+          ? data.storedFileName.value
+          : this.storedFileName,
+      pageCount: data.pageCount.present ? data.pageCount.value : this.pageCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBook(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('author: $author, ')
+          ..write('originalFileName: $originalFileName, ')
+          ..write('storedFileName: $storedFileName, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    author,
+    originalFileName,
+    storedFileName,
+    pageCount,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBook &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.author == this.author &&
+          other.originalFileName == this.originalFileName &&
+          other.storedFileName == this.storedFileName &&
+          other.pageCount == this.pageCount &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReferenceBooksCompanion extends UpdateCompanion<ReferenceBook> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<String?> author;
+  final Value<String> originalFileName;
+  final Value<String> storedFileName;
+  final Value<int> pageCount;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReferenceBooksCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.author = const Value.absent(),
+    this.originalFileName = const Value.absent(),
+    this.storedFileName = const Value.absent(),
+    this.pageCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBooksCompanion.insert({
+    required String id,
+    required String title,
+    this.author = const Value.absent(),
+    required String originalFileName,
+    required String storedFileName,
+    required int pageCount,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       originalFileName = Value(originalFileName),
+       storedFileName = Value(storedFileName),
+       pageCount = Value(pageCount),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReferenceBook> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<String>? author,
+    Expression<String>? originalFileName,
+    Expression<String>? storedFileName,
+    Expression<int>? pageCount,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (author != null) 'author': author,
+      if (originalFileName != null) 'original_file_name': originalFileName,
+      if (storedFileName != null) 'stored_file_name': storedFileName,
+      if (pageCount != null) 'page_count': pageCount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBooksCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<String?>? author,
+    Value<String>? originalFileName,
+    Value<String>? storedFileName,
+    Value<int>? pageCount,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBooksCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      originalFileName: originalFileName ?? this.originalFileName,
+      storedFileName: storedFileName ?? this.storedFileName,
+      pageCount: pageCount ?? this.pageCount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (author.present) {
+      map['author'] = Variable<String>(author.value);
+    }
+    if (originalFileName.present) {
+      map['original_file_name'] = Variable<String>(originalFileName.value);
+    }
+    if (storedFileName.present) {
+      map['stored_file_name'] = Variable<String>(storedFileName.value);
+    }
+    if (pageCount.present) {
+      map['page_count'] = Variable<int>(pageCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBooksCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('author: $author, ')
+          ..write('originalFileName: $originalFileName, ')
+          ..write('storedFileName: $storedFileName, ')
+          ..write('pageCount: $pageCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookSubjectsTable extends ReferenceBookSubjects
+    with TableInfo<$ReferenceBookSubjectsTable, ReferenceBookSubject> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookSubjectsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _subjectIdMeta = const VerificationMeta(
+    'subjectId',
+  );
+  @override
+  late final GeneratedColumn<String> subjectId = GeneratedColumn<String>(
+    'subject_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES subjects (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, bookId, subjectId, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_subjects';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookSubject> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('subject_id')) {
+      context.handle(
+        _subjectIdMeta,
+        subjectId.isAcceptableOrUnknown(data['subject_id']!, _subjectIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {bookId, subjectId},
+  ];
+  @override
+  ReferenceBookSubject map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookSubject(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      subjectId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookSubjectsTable createAlias(String alias) {
+    return $ReferenceBookSubjectsTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookSubject extends DataClass
+    implements Insertable<ReferenceBookSubject> {
+  final String id;
+  final String bookId;
+  final String subjectId;
+  final DateTime createdAt;
+  const ReferenceBookSubject({
+    required this.id,
+    required this.bookId,
+    required this.subjectId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['subject_id'] = Variable<String>(subjectId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceBookSubjectsCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookSubjectsCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      subjectId: Value(subjectId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceBookSubject.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookSubject(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      subjectId: serializer.fromJson<String>(json['subjectId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'subjectId': serializer.toJson<String>(subjectId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceBookSubject copyWith({
+    String? id,
+    String? bookId,
+    String? subjectId,
+    DateTime? createdAt,
+  }) => ReferenceBookSubject(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    subjectId: subjectId ?? this.subjectId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceBookSubject copyWithCompanion(ReferenceBookSubjectsCompanion data) {
+    return ReferenceBookSubject(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      subjectId: data.subjectId.present ? data.subjectId.value : this.subjectId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookSubject(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, bookId, subjectId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookSubject &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.subjectId == this.subjectId &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceBookSubjectsCompanion
+    extends UpdateCompanion<ReferenceBookSubject> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String> subjectId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ReferenceBookSubjectsCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.subjectId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookSubjectsCompanion.insert({
+    required String id,
+    required String bookId,
+    required String subjectId,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       subjectId = Value(subjectId),
+       createdAt = Value(createdAt);
+  static Insertable<ReferenceBookSubject> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? subjectId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (subjectId != null) 'subject_id': subjectId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookSubjectsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String>? subjectId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookSubjectsCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      subjectId: subjectId ?? this.subjectId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (subjectId.present) {
+      map['subject_id'] = Variable<String>(subjectId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookSubjectsCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('subjectId: $subjectId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookChaptersTable extends ReferenceBookChapters
+    with TableInfo<$ReferenceBookChaptersTable, ReferenceBookChapter> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookChaptersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<int> level = GeneratedColumn<int>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _startPageMeta = const VerificationMeta(
+    'startPage',
+  );
+  @override
+  late final GeneratedColumn<int> startPage = GeneratedColumn<int>(
+    'start_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endPageMeta = const VerificationMeta(
+    'endPage',
+  );
+  @override
+  late final GeneratedColumn<int> endPage = GeneratedColumn<int>(
+    'end_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('notStarted'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    title,
+    level,
+    startPage,
+    endPage,
+    sortOrder,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_chapters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookChapter> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    }
+    if (data.containsKey('start_page')) {
+      context.handle(
+        _startPageMeta,
+        startPage.isAcceptableOrUnknown(data['start_page']!, _startPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startPageMeta);
+    }
+    if (data.containsKey('end_page')) {
+      context.handle(
+        _endPageMeta,
+        endPage.isAcceptableOrUnknown(data['end_page']!, _endPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endPageMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sortOrderMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceBookChapter map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookChapter(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}level'],
+      )!,
+      startPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_page'],
+      )!,
+      endPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_page'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookChaptersTable createAlias(String alias) {
+    return $ReferenceBookChaptersTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookChapter extends DataClass
+    implements Insertable<ReferenceBookChapter> {
+  final String id;
+  final String bookId;
+  final String title;
+
+  /// 0 = top-level chapter, 1 = section, …
+  final int level;
+  final int startPage;
+  final int endPage;
+  final int sortOrder;
+
+  /// `notStarted` | `reading` | `done`
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReferenceBookChapter({
+    required this.id,
+    required this.bookId,
+    required this.title,
+    required this.level,
+    required this.startPage,
+    required this.endPage,
+    required this.sortOrder,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['title'] = Variable<String>(title);
+    map['level'] = Variable<int>(level);
+    map['start_page'] = Variable<int>(startPage);
+    map['end_page'] = Variable<int>(endPage);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReferenceBookChaptersCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookChaptersCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      title: Value(title),
+      level: Value(level),
+      startPage: Value(startPage),
+      endPage: Value(endPage),
+      sortOrder: Value(sortOrder),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReferenceBookChapter.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookChapter(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      title: serializer.fromJson<String>(json['title']),
+      level: serializer.fromJson<int>(json['level']),
+      startPage: serializer.fromJson<int>(json['startPage']),
+      endPage: serializer.fromJson<int>(json['endPage']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'title': serializer.toJson<String>(title),
+      'level': serializer.toJson<int>(level),
+      'startPage': serializer.toJson<int>(startPage),
+      'endPage': serializer.toJson<int>(endPage),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReferenceBookChapter copyWith({
+    String? id,
+    String? bookId,
+    String? title,
+    int? level,
+    int? startPage,
+    int? endPage,
+    int? sortOrder,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReferenceBookChapter(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    title: title ?? this.title,
+    level: level ?? this.level,
+    startPage: startPage ?? this.startPage,
+    endPage: endPage ?? this.endPage,
+    sortOrder: sortOrder ?? this.sortOrder,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReferenceBookChapter copyWithCompanion(ReferenceBookChaptersCompanion data) {
+    return ReferenceBookChapter(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      title: data.title.present ? data.title.value : this.title,
+      level: data.level.present ? data.level.value : this.level,
+      startPage: data.startPage.present ? data.startPage.value : this.startPage,
+      endPage: data.endPage.present ? data.endPage.value : this.endPage,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookChapter(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('title: $title, ')
+          ..write('level: $level, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    title,
+    level,
+    startPage,
+    endPage,
+    sortOrder,
+    status,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookChapter &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.title == this.title &&
+          other.level == this.level &&
+          other.startPage == this.startPage &&
+          other.endPage == this.endPage &&
+          other.sortOrder == this.sortOrder &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReferenceBookChaptersCompanion
+    extends UpdateCompanion<ReferenceBookChapter> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String> title;
+  final Value<int> level;
+  final Value<int> startPage;
+  final Value<int> endPage;
+  final Value<int> sortOrder;
+  final Value<String> status;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReferenceBookChaptersCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.level = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookChaptersCompanion.insert({
+    required String id,
+    required String bookId,
+    required String title,
+    this.level = const Value.absent(),
+    required int startPage,
+    required int endPage,
+    required int sortOrder,
+    this.status = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       title = Value(title),
+       startPage = Value(startPage),
+       endPage = Value(endPage),
+       sortOrder = Value(sortOrder),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReferenceBookChapter> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? title,
+    Expression<int>? level,
+    Expression<int>? startPage,
+    Expression<int>? endPage,
+    Expression<int>? sortOrder,
+    Expression<String>? status,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (title != null) 'title': title,
+      if (level != null) 'level': level,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookChaptersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String>? title,
+    Value<int>? level,
+    Value<int>? startPage,
+    Value<int>? endPage,
+    Value<int>? sortOrder,
+    Value<String>? status,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookChaptersCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      title: title ?? this.title,
+      level: level ?? this.level,
+      startPage: startPage ?? this.startPage,
+      endPage: endPage ?? this.endPage,
+      sortOrder: sortOrder ?? this.sortOrder,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<int>(level.value);
+    }
+    if (startPage.present) {
+      map['start_page'] = Variable<int>(startPage.value);
+    }
+    if (endPage.present) {
+      map['end_page'] = Variable<int>(endPage.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookChaptersCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('title: $title, ')
+          ..write('level: $level, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookAiItemsTable extends ReferenceBookAiItems
+    with TableInfo<$ReferenceBookAiItemsTable, ReferenceBookAiItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookAiItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _chapterIdMeta = const VerificationMeta(
+    'chapterId',
+  );
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+    'chapter_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_book_chapters (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scopeKeyMeta = const VerificationMeta(
+    'scopeKey',
+  );
+  @override
+  late final GeneratedColumn<String> scopeKey = GeneratedColumn<String>(
+    'scope_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startPageMeta = const VerificationMeta(
+    'startPage',
+  );
+  @override
+  late final GeneratedColumn<int> startPage = GeneratedColumn<int>(
+    'start_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endPageMeta = const VerificationMeta(
+    'endPage',
+  );
+  @override
+  late final GeneratedColumn<int> endPage = GeneratedColumn<int>(
+    'end_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    chapterId,
+    kind,
+    scopeKey,
+    startPage,
+    endPage,
+    content,
+    version,
+    provider,
+    model,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_ai_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookAiItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(
+        _chapterIdMeta,
+        chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('scope_key')) {
+      context.handle(
+        _scopeKeyMeta,
+        scopeKey.isAcceptableOrUnknown(data['scope_key']!, _scopeKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scopeKeyMeta);
+    }
+    if (data.containsKey('start_page')) {
+      context.handle(
+        _startPageMeta,
+        startPage.isAcceptableOrUnknown(data['start_page']!, _startPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startPageMeta);
+    }
+    if (data.containsKey('end_page')) {
+      context.handle(
+        _endPageMeta,
+        endPage.isAcceptableOrUnknown(data['end_page']!, _endPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endPageMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {bookId, kind, scopeKey, version},
+  ];
+  @override
+  ReferenceBookAiItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookAiItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      chapterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chapter_id'],
+      ),
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      scopeKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope_key'],
+      )!,
+      startPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_page'],
+      )!,
+      endPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_page'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookAiItemsTable createAlias(String alias) {
+    return $ReferenceBookAiItemsTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookAiItem extends DataClass
+    implements Insertable<ReferenceBookAiItem> {
+  final String id;
+  final String bookId;
+  final String? chapterId;
+
+  /// `brief` | `summary` | `explanation`
+  final String kind;
+
+  /// Chapter id or `pages:{start}-{end}`; versions count per scope.
+  final String scopeKey;
+  final int startPage;
+  final int endPage;
+  final String content;
+  final int version;
+  final String? provider;
+  final String? model;
+  final DateTime createdAt;
+  const ReferenceBookAiItem({
+    required this.id,
+    required this.bookId,
+    this.chapterId,
+    required this.kind,
+    required this.scopeKey,
+    required this.startPage,
+    required this.endPage,
+    required this.content,
+    required this.version,
+    this.provider,
+    this.model,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    if (!nullToAbsent || chapterId != null) {
+      map['chapter_id'] = Variable<String>(chapterId);
+    }
+    map['kind'] = Variable<String>(kind);
+    map['scope_key'] = Variable<String>(scopeKey);
+    map['start_page'] = Variable<int>(startPage);
+    map['end_page'] = Variable<int>(endPage);
+    map['content'] = Variable<String>(content);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceBookAiItemsCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookAiItemsCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      chapterId: chapterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterId),
+      kind: Value(kind),
+      scopeKey: Value(scopeKey),
+      startPage: Value(startPage),
+      endPage: Value(endPage),
+      content: Value(content),
+      version: Value(version),
+      provider: provider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(provider),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceBookAiItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookAiItem(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      chapterId: serializer.fromJson<String?>(json['chapterId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      scopeKey: serializer.fromJson<String>(json['scopeKey']),
+      startPage: serializer.fromJson<int>(json['startPage']),
+      endPage: serializer.fromJson<int>(json['endPage']),
+      content: serializer.fromJson<String>(json['content']),
+      version: serializer.fromJson<int>(json['version']),
+      provider: serializer.fromJson<String?>(json['provider']),
+      model: serializer.fromJson<String?>(json['model']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'chapterId': serializer.toJson<String?>(chapterId),
+      'kind': serializer.toJson<String>(kind),
+      'scopeKey': serializer.toJson<String>(scopeKey),
+      'startPage': serializer.toJson<int>(startPage),
+      'endPage': serializer.toJson<int>(endPage),
+      'content': serializer.toJson<String>(content),
+      'version': serializer.toJson<int>(version),
+      'provider': serializer.toJson<String?>(provider),
+      'model': serializer.toJson<String?>(model),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceBookAiItem copyWith({
+    String? id,
+    String? bookId,
+    Value<String?> chapterId = const Value.absent(),
+    String? kind,
+    String? scopeKey,
+    int? startPage,
+    int? endPage,
+    String? content,
+    int? version,
+    Value<String?> provider = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    DateTime? createdAt,
+  }) => ReferenceBookAiItem(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    chapterId: chapterId.present ? chapterId.value : this.chapterId,
+    kind: kind ?? this.kind,
+    scopeKey: scopeKey ?? this.scopeKey,
+    startPage: startPage ?? this.startPage,
+    endPage: endPage ?? this.endPage,
+    content: content ?? this.content,
+    version: version ?? this.version,
+    provider: provider.present ? provider.value : this.provider,
+    model: model.present ? model.value : this.model,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceBookAiItem copyWithCompanion(ReferenceBookAiItemsCompanion data) {
+    return ReferenceBookAiItem(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      scopeKey: data.scopeKey.present ? data.scopeKey.value : this.scopeKey,
+      startPage: data.startPage.present ? data.startPage.value : this.startPage,
+      endPage: data.endPage.present ? data.endPage.value : this.endPage,
+      content: data.content.present ? data.content.value : this.content,
+      version: data.version.present ? data.version.value : this.version,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookAiItem(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('kind: $kind, ')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('content: $content, ')
+          ..write('version: $version, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    chapterId,
+    kind,
+    scopeKey,
+    startPage,
+    endPage,
+    content,
+    version,
+    provider,
+    model,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookAiItem &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.chapterId == this.chapterId &&
+          other.kind == this.kind &&
+          other.scopeKey == this.scopeKey &&
+          other.startPage == this.startPage &&
+          other.endPage == this.endPage &&
+          other.content == this.content &&
+          other.version == this.version &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceBookAiItemsCompanion
+    extends UpdateCompanion<ReferenceBookAiItem> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String?> chapterId;
+  final Value<String> kind;
+  final Value<String> scopeKey;
+  final Value<int> startPage;
+  final Value<int> endPage;
+  final Value<String> content;
+  final Value<int> version;
+  final Value<String?> provider;
+  final Value<String?> model;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ReferenceBookAiItemsCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.scopeKey = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.content = const Value.absent(),
+    this.version = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookAiItemsCompanion.insert({
+    required String id,
+    required String bookId,
+    this.chapterId = const Value.absent(),
+    required String kind,
+    required String scopeKey,
+    required int startPage,
+    required int endPage,
+    required String content,
+    required int version,
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       kind = Value(kind),
+       scopeKey = Value(scopeKey),
+       startPage = Value(startPage),
+       endPage = Value(endPage),
+       content = Value(content),
+       version = Value(version),
+       createdAt = Value(createdAt);
+  static Insertable<ReferenceBookAiItem> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? chapterId,
+    Expression<String>? kind,
+    Expression<String>? scopeKey,
+    Expression<int>? startPage,
+    Expression<int>? endPage,
+    Expression<String>? content,
+    Expression<int>? version,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (kind != null) 'kind': kind,
+      if (scopeKey != null) 'scope_key': scopeKey,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (content != null) 'content': content,
+      if (version != null) 'version': version,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookAiItemsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String?>? chapterId,
+    Value<String>? kind,
+    Value<String>? scopeKey,
+    Value<int>? startPage,
+    Value<int>? endPage,
+    Value<String>? content,
+    Value<int>? version,
+    Value<String?>? provider,
+    Value<String?>? model,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookAiItemsCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      chapterId: chapterId ?? this.chapterId,
+      kind: kind ?? this.kind,
+      scopeKey: scopeKey ?? this.scopeKey,
+      startPage: startPage ?? this.startPage,
+      endPage: endPage ?? this.endPage,
+      content: content ?? this.content,
+      version: version ?? this.version,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (scopeKey.present) {
+      map['scope_key'] = Variable<String>(scopeKey.value);
+    }
+    if (startPage.present) {
+      map['start_page'] = Variable<int>(startPage.value);
+    }
+    if (endPage.present) {
+      map['end_page'] = Variable<int>(endPage.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookAiItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('kind: $kind, ')
+          ..write('scopeKey: $scopeKey, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('content: $content, ')
+          ..write('version: $version, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookNotesTable extends ReferenceBookNotes
+    with TableInfo<$ReferenceBookNotesTable, ReferenceBookNote> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookNotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _selectedTextMeta = const VerificationMeta(
+    'selectedText',
+  );
+  @override
+  late final GeneratedColumn<String> selectedText = GeneratedColumn<String>(
+    'selected_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    pageNumber,
+    title,
+    content,
+    selectedText,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_notes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookNote> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageNumberMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('selected_text')) {
+      context.handle(
+        _selectedTextMeta,
+        selectedText.isAcceptableOrUnknown(
+          data['selected_text']!,
+          _selectedTextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceBookNote map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookNote(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      selectedText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_text'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookNotesTable createAlias(String alias) {
+    return $ReferenceBookNotesTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookNote extends DataClass
+    implements Insertable<ReferenceBookNote> {
+  final String id;
+  final String bookId;
+  final int pageNumber;
+  final String title;
+  final String content;
+  final String? selectedText;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReferenceBookNote({
+    required this.id,
+    required this.bookId,
+    required this.pageNumber,
+    required this.title,
+    required this.content,
+    this.selectedText,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['page_number'] = Variable<int>(pageNumber);
+    map['title'] = Variable<String>(title);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || selectedText != null) {
+      map['selected_text'] = Variable<String>(selectedText);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ReferenceBookNotesCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookNotesCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      pageNumber: Value(pageNumber),
+      title: Value(title),
+      content: Value(content),
+      selectedText: selectedText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedText),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReferenceBookNote.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookNote(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      pageNumber: serializer.fromJson<int>(json['pageNumber']),
+      title: serializer.fromJson<String>(json['title']),
+      content: serializer.fromJson<String>(json['content']),
+      selectedText: serializer.fromJson<String?>(json['selectedText']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'pageNumber': serializer.toJson<int>(pageNumber),
+      'title': serializer.toJson<String>(title),
+      'content': serializer.toJson<String>(content),
+      'selectedText': serializer.toJson<String?>(selectedText),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReferenceBookNote copyWith({
+    String? id,
+    String? bookId,
+    int? pageNumber,
+    String? title,
+    String? content,
+    Value<String?> selectedText = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReferenceBookNote(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    pageNumber: pageNumber ?? this.pageNumber,
+    title: title ?? this.title,
+    content: content ?? this.content,
+    selectedText: selectedText.present ? selectedText.value : this.selectedText,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReferenceBookNote copyWithCompanion(ReferenceBookNotesCompanion data) {
+    return ReferenceBookNote(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      title: data.title.present ? data.title.value : this.title,
+      content: data.content.present ? data.content.value : this.content,
+      selectedText: data.selectedText.present
+          ? data.selectedText.value
+          : this.selectedText,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookNote(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('selectedText: $selectedText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    pageNumber,
+    title,
+    content,
+    selectedText,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookNote &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.pageNumber == this.pageNumber &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.selectedText == this.selectedText &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReferenceBookNotesCompanion extends UpdateCompanion<ReferenceBookNote> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<int> pageNumber;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<String?> selectedText;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ReferenceBookNotesCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.selectedText = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookNotesCompanion.insert({
+    required String id,
+    required String bookId,
+    required int pageNumber,
+    required String title,
+    this.content = const Value.absent(),
+    this.selectedText = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       pageNumber = Value(pageNumber),
+       title = Value(title),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReferenceBookNote> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<int>? pageNumber,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<String>? selectedText,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (selectedText != null) 'selected_text': selectedText,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookNotesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<int>? pageNumber,
+    Value<String>? title,
+    Value<String>? content,
+    Value<String?>? selectedText,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookNotesCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      selectedText: selectedText ?? this.selectedText,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (selectedText.present) {
+      map['selected_text'] = Variable<String>(selectedText.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookNotesCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('selectedText: $selectedText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookMessagesTable extends ReferenceBookMessages
+    with TableInfo<$ReferenceBookMessagesTable, ReferenceBookMessage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookMessagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourcePagesMeta = const VerificationMeta(
+    'sourcePages',
+  );
+  @override
+  late final GeneratedColumn<String> sourcePages = GeneratedColumn<String>(
+    'source_pages',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    role,
+    content,
+    sourcePages,
+    provider,
+    model,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_messages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookMessage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('source_pages')) {
+      context.handle(
+        _sourcePagesMeta,
+        sourcePages.isAcceptableOrUnknown(
+          data['source_pages']!,
+          _sourcePagesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceBookMessage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookMessage(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      sourcePages: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_pages'],
+      ),
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookMessagesTable createAlias(String alias) {
+    return $ReferenceBookMessagesTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookMessage extends DataClass
+    implements Insertable<ReferenceBookMessage> {
+  final String id;
+  final String bookId;
+
+  /// `user` | `assistant`
+  final String role;
+  final String content;
+
+  /// JSON list of page numbers that were sent as sources.
+  final String? sourcePages;
+  final String? provider;
+  final String? model;
+  final DateTime createdAt;
+  const ReferenceBookMessage({
+    required this.id,
+    required this.bookId,
+    required this.role,
+    required this.content,
+    this.sourcePages,
+    this.provider,
+    this.model,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['role'] = Variable<String>(role);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || sourcePages != null) {
+      map['source_pages'] = Variable<String>(sourcePages);
+    }
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceBookMessagesCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookMessagesCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      role: Value(role),
+      content: Value(content),
+      sourcePages: sourcePages == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourcePages),
+      provider: provider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(provider),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceBookMessage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookMessage(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      role: serializer.fromJson<String>(json['role']),
+      content: serializer.fromJson<String>(json['content']),
+      sourcePages: serializer.fromJson<String?>(json['sourcePages']),
+      provider: serializer.fromJson<String?>(json['provider']),
+      model: serializer.fromJson<String?>(json['model']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'role': serializer.toJson<String>(role),
+      'content': serializer.toJson<String>(content),
+      'sourcePages': serializer.toJson<String?>(sourcePages),
+      'provider': serializer.toJson<String?>(provider),
+      'model': serializer.toJson<String?>(model),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceBookMessage copyWith({
+    String? id,
+    String? bookId,
+    String? role,
+    String? content,
+    Value<String?> sourcePages = const Value.absent(),
+    Value<String?> provider = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    DateTime? createdAt,
+  }) => ReferenceBookMessage(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    role: role ?? this.role,
+    content: content ?? this.content,
+    sourcePages: sourcePages.present ? sourcePages.value : this.sourcePages,
+    provider: provider.present ? provider.value : this.provider,
+    model: model.present ? model.value : this.model,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceBookMessage copyWithCompanion(ReferenceBookMessagesCompanion data) {
+    return ReferenceBookMessage(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      role: data.role.present ? data.role.value : this.role,
+      content: data.content.present ? data.content.value : this.content,
+      sourcePages: data.sourcePages.present
+          ? data.sourcePages.value
+          : this.sourcePages,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookMessage(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('sourcePages: $sourcePages, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    role,
+    content,
+    sourcePages,
+    provider,
+    model,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookMessage &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.role == this.role &&
+          other.content == this.content &&
+          other.sourcePages == this.sourcePages &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceBookMessagesCompanion
+    extends UpdateCompanion<ReferenceBookMessage> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String> role;
+  final Value<String> content;
+  final Value<String?> sourcePages;
+  final Value<String?> provider;
+  final Value<String?> model;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ReferenceBookMessagesCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.content = const Value.absent(),
+    this.sourcePages = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookMessagesCompanion.insert({
+    required String id,
+    required String bookId,
+    required String role,
+    required String content,
+    this.sourcePages = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       role = Value(role),
+       content = Value(content),
+       createdAt = Value(createdAt);
+  static Insertable<ReferenceBookMessage> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? role,
+    Expression<String>? content,
+    Expression<String>? sourcePages,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (role != null) 'role': role,
+      if (content != null) 'content': content,
+      if (sourcePages != null) 'source_pages': sourcePages,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookMessagesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String>? role,
+    Value<String>? content,
+    Value<String?>? sourcePages,
+    Value<String?>? provider,
+    Value<String?>? model,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookMessagesCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      sourcePages: sourcePages ?? this.sourcePages,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (sourcePages.present) {
+      map['source_pages'] = Variable<String>(sourcePages.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookMessagesCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('sourcePages: $sourcePages, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookLinksTable extends ReferenceBookLinks
+    with TableInfo<$ReferenceBookLinksTable, ReferenceBookLink> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookLinksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _materialIdMeta = const VerificationMeta(
+    'materialId',
+  );
+  @override
+  late final GeneratedColumn<String> materialId = GeneratedColumn<String>(
+    'material_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _startPageMeta = const VerificationMeta(
+    'startPage',
+  );
+  @override
+  late final GeneratedColumn<int> startPage = GeneratedColumn<int>(
+    'start_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endPageMeta = const VerificationMeta(
+    'endPage',
+  );
+  @override
+  late final GeneratedColumn<int> endPage = GeneratedColumn<int>(
+    'end_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<String> priority = GeneratedColumn<String>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _doneMeta = const VerificationMeta('done');
+  @override
+  late final GeneratedColumn<bool> done = GeneratedColumn<bool>(
+    'done',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("done" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    materialId,
+    startPage,
+    endPage,
+    priority,
+    reason,
+    done,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_links';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookLink> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('material_id')) {
+      context.handle(
+        _materialIdMeta,
+        materialId.isAcceptableOrUnknown(data['material_id']!, _materialIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_materialIdMeta);
+    }
+    if (data.containsKey('start_page')) {
+      context.handle(
+        _startPageMeta,
+        startPage.isAcceptableOrUnknown(data['start_page']!, _startPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startPageMeta);
+    }
+    if (data.containsKey('end_page')) {
+      context.handle(
+        _endPageMeta,
+        endPage.isAcceptableOrUnknown(data['end_page']!, _endPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endPageMeta);
+    }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priorityMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    }
+    if (data.containsKey('done')) {
+      context.handle(
+        _doneMeta,
+        done.isAcceptableOrUnknown(data['done']!, _doneMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReferenceBookLink map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookLink(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      materialId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}material_id'],
+      )!,
+      startPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_page'],
+      )!,
+      endPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_page'],
+      )!,
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}priority'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      ),
+      done: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}done'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookLinksTable createAlias(String alias) {
+    return $ReferenceBookLinksTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookLink extends DataClass
+    implements Insertable<ReferenceBookLink> {
+  final String id;
+  final String bookId;
+  final String materialId;
+  final int startPage;
+  final int endPage;
+
+  /// `must` | `skim` | `optional`
+  final String priority;
+  final String? reason;
+  final bool done;
+  final DateTime createdAt;
+  const ReferenceBookLink({
+    required this.id,
+    required this.bookId,
+    required this.materialId,
+    required this.startPage,
+    required this.endPage,
+    required this.priority,
+    this.reason,
+    required this.done,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['material_id'] = Variable<String>(materialId);
+    map['start_page'] = Variable<int>(startPage);
+    map['end_page'] = Variable<int>(endPage);
+    map['priority'] = Variable<String>(priority);
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    map['done'] = Variable<bool>(done);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceBookLinksCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookLinksCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      materialId: Value(materialId),
+      startPage: Value(startPage),
+      endPage: Value(endPage),
+      priority: Value(priority),
+      reason: reason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reason),
+      done: Value(done),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceBookLink.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookLink(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      materialId: serializer.fromJson<String>(json['materialId']),
+      startPage: serializer.fromJson<int>(json['startPage']),
+      endPage: serializer.fromJson<int>(json['endPage']),
+      priority: serializer.fromJson<String>(json['priority']),
+      reason: serializer.fromJson<String?>(json['reason']),
+      done: serializer.fromJson<bool>(json['done']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'materialId': serializer.toJson<String>(materialId),
+      'startPage': serializer.toJson<int>(startPage),
+      'endPage': serializer.toJson<int>(endPage),
+      'priority': serializer.toJson<String>(priority),
+      'reason': serializer.toJson<String?>(reason),
+      'done': serializer.toJson<bool>(done),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceBookLink copyWith({
+    String? id,
+    String? bookId,
+    String? materialId,
+    int? startPage,
+    int? endPage,
+    String? priority,
+    Value<String?> reason = const Value.absent(),
+    bool? done,
+    DateTime? createdAt,
+  }) => ReferenceBookLink(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    materialId: materialId ?? this.materialId,
+    startPage: startPage ?? this.startPage,
+    endPage: endPage ?? this.endPage,
+    priority: priority ?? this.priority,
+    reason: reason.present ? reason.value : this.reason,
+    done: done ?? this.done,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceBookLink copyWithCompanion(ReferenceBookLinksCompanion data) {
+    return ReferenceBookLink(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      materialId: data.materialId.present
+          ? data.materialId.value
+          : this.materialId,
+      startPage: data.startPage.present ? data.startPage.value : this.startPage,
+      endPage: data.endPage.present ? data.endPage.value : this.endPage,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      done: data.done.present ? data.done.value : this.done,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookLink(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('materialId: $materialId, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('priority: $priority, ')
+          ..write('reason: $reason, ')
+          ..write('done: $done, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    materialId,
+    startPage,
+    endPage,
+    priority,
+    reason,
+    done,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookLink &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.materialId == this.materialId &&
+          other.startPage == this.startPage &&
+          other.endPage == this.endPage &&
+          other.priority == this.priority &&
+          other.reason == this.reason &&
+          other.done == this.done &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceBookLinksCompanion extends UpdateCompanion<ReferenceBookLink> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String> materialId;
+  final Value<int> startPage;
+  final Value<int> endPage;
+  final Value<String> priority;
+  final Value<String?> reason;
+  final Value<bool> done;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ReferenceBookLinksCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.materialId = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.done = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookLinksCompanion.insert({
+    required String id,
+    required String bookId,
+    required String materialId,
+    required int startPage,
+    required int endPage,
+    required String priority,
+    this.reason = const Value.absent(),
+    this.done = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       materialId = Value(materialId),
+       startPage = Value(startPage),
+       endPage = Value(endPage),
+       priority = Value(priority),
+       createdAt = Value(createdAt);
+  static Insertable<ReferenceBookLink> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? materialId,
+    Expression<int>? startPage,
+    Expression<int>? endPage,
+    Expression<String>? priority,
+    Expression<String>? reason,
+    Expression<bool>? done,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (materialId != null) 'material_id': materialId,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (priority != null) 'priority': priority,
+      if (reason != null) 'reason': reason,
+      if (done != null) 'done': done,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookLinksCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String>? materialId,
+    Value<int>? startPage,
+    Value<int>? endPage,
+    Value<String>? priority,
+    Value<String?>? reason,
+    Value<bool>? done,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookLinksCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      materialId: materialId ?? this.materialId,
+      startPage: startPage ?? this.startPage,
+      endPage: endPage ?? this.endPage,
+      priority: priority ?? this.priority,
+      reason: reason ?? this.reason,
+      done: done ?? this.done,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (materialId.present) {
+      map['material_id'] = Variable<String>(materialId.value);
+    }
+    if (startPage.present) {
+      map['start_page'] = Variable<int>(startPage.value);
+    }
+    if (endPage.present) {
+      map['end_page'] = Variable<int>(endPage.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<String>(priority.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (done.present) {
+      map['done'] = Variable<bool>(done.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookLinksCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('materialId: $materialId, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('priority: $priority, ')
+          ..write('reason: $reason, ')
+          ..write('done: $done, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReferenceBookQuizzesTable extends ReferenceBookQuizzes
+    with TableInfo<$ReferenceBookQuizzesTable, ReferenceBookQuiz> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReferenceBookQuizzesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_books (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _chapterIdMeta = const VerificationMeta(
+    'chapterId',
+  );
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+    'chapter_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reference_book_chapters (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _questionSetIdMeta = const VerificationMeta(
+    'questionSetId',
+  );
+  @override
+  late final GeneratedColumn<String> questionSetId = GeneratedColumn<String>(
+    'question_set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES question_sets (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    chapterId,
+    questionSetId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reference_book_quizzes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReferenceBookQuiz> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(
+        _chapterIdMeta,
+        chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chapterIdMeta);
+    }
+    if (data.containsKey('question_set_id')) {
+      context.handle(
+        _questionSetIdMeta,
+        questionSetId.isAcceptableOrUnknown(
+          data['question_set_id']!,
+          _questionSetIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_questionSetIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {questionSetId},
+  ];
+  @override
+  ReferenceBookQuiz map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReferenceBookQuiz(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_id'],
+      )!,
+      chapterId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chapter_id'],
+      )!,
+      questionSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}question_set_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ReferenceBookQuizzesTable createAlias(String alias) {
+    return $ReferenceBookQuizzesTable(attachedDatabase, alias);
+  }
+}
+
+class ReferenceBookQuiz extends DataClass
+    implements Insertable<ReferenceBookQuiz> {
+  final String id;
+  final String bookId;
+  final String chapterId;
+  final String questionSetId;
+  final DateTime createdAt;
+  const ReferenceBookQuiz({
+    required this.id,
+    required this.bookId,
+    required this.chapterId,
+    required this.questionSetId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['book_id'] = Variable<String>(bookId);
+    map['chapter_id'] = Variable<String>(chapterId);
+    map['question_set_id'] = Variable<String>(questionSetId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ReferenceBookQuizzesCompanion toCompanion(bool nullToAbsent) {
+    return ReferenceBookQuizzesCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      chapterId: Value(chapterId),
+      questionSetId: Value(questionSetId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ReferenceBookQuiz.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReferenceBookQuiz(
+      id: serializer.fromJson<String>(json['id']),
+      bookId: serializer.fromJson<String>(json['bookId']),
+      chapterId: serializer.fromJson<String>(json['chapterId']),
+      questionSetId: serializer.fromJson<String>(json['questionSetId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'bookId': serializer.toJson<String>(bookId),
+      'chapterId': serializer.toJson<String>(chapterId),
+      'questionSetId': serializer.toJson<String>(questionSetId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ReferenceBookQuiz copyWith({
+    String? id,
+    String? bookId,
+    String? chapterId,
+    String? questionSetId,
+    DateTime? createdAt,
+  }) => ReferenceBookQuiz(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    chapterId: chapterId ?? this.chapterId,
+    questionSetId: questionSetId ?? this.questionSetId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ReferenceBookQuiz copyWithCompanion(ReferenceBookQuizzesCompanion data) {
+    return ReferenceBookQuiz(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      questionSetId: data.questionSetId.present
+          ? data.questionSetId.value
+          : this.questionSetId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookQuiz(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('questionSetId: $questionSetId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, bookId, chapterId, questionSetId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReferenceBookQuiz &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.chapterId == this.chapterId &&
+          other.questionSetId == this.questionSetId &&
+          other.createdAt == this.createdAt);
+}
+
+class ReferenceBookQuizzesCompanion extends UpdateCompanion<ReferenceBookQuiz> {
+  final Value<String> id;
+  final Value<String> bookId;
+  final Value<String> chapterId;
+  final Value<String> questionSetId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ReferenceBookQuizzesCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.questionSetId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReferenceBookQuizzesCompanion.insert({
+    required String id,
+    required String bookId,
+    required String chapterId,
+    required String questionSetId,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       bookId = Value(bookId),
+       chapterId = Value(chapterId),
+       questionSetId = Value(questionSetId),
+       createdAt = Value(createdAt);
+  static Insertable<ReferenceBookQuiz> custom({
+    Expression<String>? id,
+    Expression<String>? bookId,
+    Expression<String>? chapterId,
+    Expression<String>? questionSetId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (questionSetId != null) 'question_set_id': questionSetId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReferenceBookQuizzesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? bookId,
+    Value<String>? chapterId,
+    Value<String>? questionSetId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ReferenceBookQuizzesCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      chapterId: chapterId ?? this.chapterId,
+      questionSetId: questionSetId ?? this.questionSetId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (questionSetId.present) {
+      map['question_set_id'] = Variable<String>(questionSetId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReferenceBookQuizzesCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('questionSetId: $questionSetId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16996,6 +21149,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $CourseReviewEntriesTable(this);
   late final $CourseReviewExclusionsTable courseReviewExclusions =
       $CourseReviewExclusionsTable(this);
+  late final $ReferenceBooksTable referenceBooks = $ReferenceBooksTable(this);
+  late final $ReferenceBookSubjectsTable referenceBookSubjects =
+      $ReferenceBookSubjectsTable(this);
+  late final $ReferenceBookChaptersTable referenceBookChapters =
+      $ReferenceBookChaptersTable(this);
+  late final $ReferenceBookAiItemsTable referenceBookAiItems =
+      $ReferenceBookAiItemsTable(this);
+  late final $ReferenceBookNotesTable referenceBookNotes =
+      $ReferenceBookNotesTable(this);
+  late final $ReferenceBookMessagesTable referenceBookMessages =
+      $ReferenceBookMessagesTable(this);
+  late final $ReferenceBookLinksTable referenceBookLinks =
+      $ReferenceBookLinksTable(this);
+  late final $ReferenceBookQuizzesTable referenceBookQuizzes =
+      $ReferenceBookQuizzesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -17028,6 +21196,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     quizAnswers,
     courseReviewEntries,
     courseReviewExclusions,
+    referenceBooks,
+    referenceBookSubjects,
+    referenceBookChapters,
+    referenceBookAiItems,
+    referenceBookNotes,
+    referenceBookMessages,
+    referenceBookLinks,
+    referenceBookQuizzes,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -17229,6 +21405,90 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       result: [
         TableUpdate('course_review_exclusions', kind: UpdateKind.delete),
       ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_subjects', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'subjects',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_subjects', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_chapters', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_ai_items', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_book_chapters',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_ai_items', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_notes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_links', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lesson_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_links', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_books',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_quizzes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reference_book_chapters',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_quizzes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'question_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('reference_book_quizzes', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -18284,6 +22544,31 @@ final class $$SubjectsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $ReferenceBookSubjectsTable,
+    List<ReferenceBookSubject>
+  >
+  _referenceBookSubjectsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookSubjects,
+        aliasName: 'subjects__id__reference_book_subjects__subject_id',
+      );
+
+  $$ReferenceBookSubjectsTableProcessedTableManager
+  get referenceBookSubjectsRefs {
+    final manager = $$ReferenceBookSubjectsTableTableManager(
+      $_db,
+      $_db.referenceBookSubjects,
+    ).filter((f) => f.subjectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookSubjectsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$SubjectsTableFilterComposer
@@ -18538,6 +22823,32 @@ class $$SubjectsTableFilterComposer
               }) => $$CourseReviewExclusionsTableFilterComposer(
                 $db: $db,
                 $table: $db.courseReviewExclusions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookSubjectsRefs(
+    Expression<bool> Function($$ReferenceBookSubjectsTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookSubjectsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookSubjects,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookSubjectsTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookSubjects,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -18885,6 +23196,32 @@ class $$SubjectsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> referenceBookSubjectsRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookSubjectsTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookSubjectsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookSubjects,
+          getReferencedColumn: (t) => t.subjectId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookSubjectsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookSubjects,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$SubjectsTableTableManager
@@ -18910,6 +23247,7 @@ class $$SubjectsTableTableManager
             bool questionSetsRefs,
             bool courseReviewEntriesRefs,
             bool courseReviewExclusionsRefs,
+            bool referenceBookSubjectsRefs,
           })
         > {
   $$SubjectsTableTableManager(_$AppDatabase db, $SubjectsTable table)
@@ -18986,6 +23324,7 @@ class $$SubjectsTableTableManager
                 questionSetsRefs = false,
                 courseReviewEntriesRefs = false,
                 courseReviewExclusionsRefs = false,
+                referenceBookSubjectsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -18997,6 +23336,7 @@ class $$SubjectsTableTableManager
                     if (questionSetsRefs) db.questionSets,
                     if (courseReviewEntriesRefs) db.courseReviewEntries,
                     if (courseReviewExclusionsRefs) db.courseReviewExclusions,
+                    if (referenceBookSubjectsRefs) db.referenceBookSubjects,
                   ],
                   addJoins:
                       <
@@ -19192,6 +23532,27 @@ class $$SubjectsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (referenceBookSubjectsRefs)
+                        await $_getPrefetchedData<
+                          Subject,
+                          $SubjectsTable,
+                          ReferenceBookSubject
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SubjectsTableReferences
+                              ._referenceBookSubjectsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SubjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookSubjectsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.subjectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -19222,6 +23583,7 @@ typedef $$SubjectsTableProcessedTableManager =
         bool questionSetsRefs,
         bool courseReviewEntriesRefs,
         bool courseReviewExclusionsRefs,
+        bool referenceBookSubjectsRefs,
       })
     >;
 typedef $$LessonGroupsTableCreateCompanionBuilder =
@@ -20887,6 +25249,27 @@ final class $$LessonMaterialsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ReferenceBookLinksTable, List<ReferenceBookLink>>
+  _referenceBookLinksRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookLinks,
+        aliasName: 'lesson_materials__id__reference_book_links__material_id',
+      );
+
+  $$ReferenceBookLinksTableProcessedTableManager get referenceBookLinksRefs {
+    final manager = $$ReferenceBookLinksTableTableManager(
+      $_db,
+      $_db.referenceBookLinks,
+    ).filter((f) => f.materialId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookLinksRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$LessonMaterialsTableFilterComposer
@@ -21135,6 +25518,31 @@ class $$LessonMaterialsTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookLinksRefs(
+    Expression<bool> Function($$ReferenceBookLinksTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookLinksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookLinks,
+      getReferencedColumn: (t) => t.materialId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookLinksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -21451,6 +25859,32 @@ class $$LessonMaterialsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> referenceBookLinksRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookLinksTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookLinksTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookLinks,
+          getReferencedColumn: (t) => t.materialId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookLinksTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookLinks,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$LessonMaterialsTableTableManager
@@ -21475,6 +25909,7 @@ class $$LessonMaterialsTableTableManager
             bool questionSetsRefs,
             bool courseReviewEntriesRefs,
             bool courseReviewExclusionsRefs,
+            bool referenceBookLinksRefs,
           })
         > {
   $$LessonMaterialsTableTableManager(
@@ -21556,6 +25991,7 @@ class $$LessonMaterialsTableTableManager
                 questionSetsRefs = false,
                 courseReviewEntriesRefs = false,
                 courseReviewExclusionsRefs = false,
+                referenceBookLinksRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -21567,6 +26003,7 @@ class $$LessonMaterialsTableTableManager
                     if (questionSetsRefs) db.questionSets,
                     if (courseReviewEntriesRefs) db.courseReviewEntries,
                     if (courseReviewExclusionsRefs) db.courseReviewExclusions,
+                    if (referenceBookLinksRefs) db.referenceBookLinks,
                   ],
                   addJoins:
                       <
@@ -21751,6 +26188,27 @@ class $$LessonMaterialsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (referenceBookLinksRefs)
+                        await $_getPrefetchedData<
+                          LessonMaterial,
+                          $LessonMaterialsTable,
+                          ReferenceBookLink
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonMaterialsTableReferences
+                              ._referenceBookLinksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonMaterialsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookLinksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.materialId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -21780,6 +26238,7 @@ typedef $$LessonMaterialsTableProcessedTableManager =
         bool questionSetsRefs,
         bool courseReviewEntriesRefs,
         bool courseReviewExclusionsRefs,
+        bool referenceBookLinksRefs,
       })
     >;
 typedef $$StudyPinCategoriesTableCreateCompanionBuilder =
@@ -29384,6 +33843,31 @@ final class $$QuestionSetsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $ReferenceBookQuizzesTable,
+    List<ReferenceBookQuiz>
+  >
+  _referenceBookQuizzesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookQuizzes,
+        aliasName: 'question_sets__id__reference_book_quizzes__question_set_id',
+      );
+
+  $$ReferenceBookQuizzesTableProcessedTableManager
+  get referenceBookQuizzesRefs {
+    final manager = $$ReferenceBookQuizzesTableTableManager(
+      $_db,
+      $_db.referenceBookQuizzes,
+    ).filter((f) => f.questionSetId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookQuizzesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$QuestionSetsTableFilterComposer
@@ -29590,6 +34074,31 @@ class $$QuestionSetsTableFilterComposer
           }) => $$QuizAttemptsTableFilterComposer(
             $db: $db,
             $table: $db.quizAttempts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookQuizzesRefs(
+    Expression<bool> Function($$ReferenceBookQuizzesTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookQuizzesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookQuizzes,
+      getReferencedColumn: (t) => t.questionSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookQuizzesTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookQuizzes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -29966,6 +34475,32 @@ class $$QuestionSetsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> referenceBookQuizzesRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookQuizzesTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookQuizzesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookQuizzes,
+          getReferencedColumn: (t) => t.questionSetId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookQuizzesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookQuizzes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$QuestionSetsTableTableManager
@@ -29987,6 +34522,7 @@ class $$QuestionSetsTableTableManager
             bool subjectId,
             bool quizQuestionsRefs,
             bool quizAttemptsRefs,
+            bool referenceBookQuizzesRefs,
           })
         > {
   $$QuestionSetsTableTableManager(_$AppDatabase db, $QuestionSetsTable table)
@@ -30107,12 +34643,14 @@ class $$QuestionSetsTableTableManager
                 subjectId = false,
                 quizQuestionsRefs = false,
                 quizAttemptsRefs = false,
+                referenceBookQuizzesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (quizQuestionsRefs) db.quizQuestions,
                     if (quizAttemptsRefs) db.quizAttempts,
+                    if (referenceBookQuizzesRefs) db.referenceBookQuizzes,
                   ],
                   addJoins:
                       <
@@ -30222,6 +34760,27 @@ class $$QuestionSetsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (referenceBookQuizzesRefs)
+                        await $_getPrefetchedData<
+                          QuestionSet,
+                          $QuestionSetsTable,
+                          ReferenceBookQuiz
+                        >(
+                          currentTable: table,
+                          referencedTable: $$QuestionSetsTableReferences
+                              ._referenceBookQuizzesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$QuestionSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookQuizzesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.questionSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -30248,6 +34807,7 @@ typedef $$QuestionSetsTableProcessedTableManager =
         bool subjectId,
         bool quizQuestionsRefs,
         bool quizAttemptsRefs,
+        bool referenceBookQuizzesRefs,
       })
     >;
 typedef $$QuizQuestionsTableCreateCompanionBuilder =
@@ -33080,6 +37640,4451 @@ typedef $$CourseReviewExclusionsTableProcessedTableManager =
       CourseReviewExclusion,
       PrefetchHooks Function({bool subjectId, bool materialId})
     >;
+typedef $$ReferenceBooksTableCreateCompanionBuilder =
+    ReferenceBooksCompanion Function({
+      required String id,
+      required String title,
+      Value<String?> author,
+      required String originalFileName,
+      required String storedFileName,
+      required int pageCount,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBooksTableUpdateCompanionBuilder =
+    ReferenceBooksCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<String?> author,
+      Value<String> originalFileName,
+      Value<String> storedFileName,
+      Value<int> pageCount,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBooksTableReferences
+    extends BaseReferences<_$AppDatabase, $ReferenceBooksTable, ReferenceBook> {
+  $$ReferenceBooksTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<
+    $ReferenceBookSubjectsTable,
+    List<ReferenceBookSubject>
+  >
+  _referenceBookSubjectsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookSubjects,
+        aliasName: 'reference_books__id__reference_book_subjects__book_id',
+      );
+
+  $$ReferenceBookSubjectsTableProcessedTableManager
+  get referenceBookSubjectsRefs {
+    final manager = $$ReferenceBookSubjectsTableTableManager(
+      $_db,
+      $_db.referenceBookSubjects,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookSubjectsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookChaptersTable,
+    List<ReferenceBookChapter>
+  >
+  _referenceBookChaptersRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookChapters,
+        aliasName: 'reference_books__id__reference_book_chapters__book_id',
+      );
+
+  $$ReferenceBookChaptersTableProcessedTableManager
+  get referenceBookChaptersRefs {
+    final manager = $$ReferenceBookChaptersTableTableManager(
+      $_db,
+      $_db.referenceBookChapters,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookChaptersRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookAiItemsTable,
+    List<ReferenceBookAiItem>
+  >
+  _referenceBookAiItemsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookAiItems,
+        aliasName: 'reference_books__id__reference_book_ai_items__book_id',
+      );
+
+  $$ReferenceBookAiItemsTableProcessedTableManager
+  get referenceBookAiItemsRefs {
+    final manager = $$ReferenceBookAiItemsTableTableManager(
+      $_db,
+      $_db.referenceBookAiItems,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookAiItemsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ReferenceBookNotesTable, List<ReferenceBookNote>>
+  _referenceBookNotesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookNotes,
+        aliasName: 'reference_books__id__reference_book_notes__book_id',
+      );
+
+  $$ReferenceBookNotesTableProcessedTableManager get referenceBookNotesRefs {
+    final manager = $$ReferenceBookNotesTableTableManager(
+      $_db,
+      $_db.referenceBookNotes,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookNotesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookMessagesTable,
+    List<ReferenceBookMessage>
+  >
+  _referenceBookMessagesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookMessages,
+        aliasName: 'reference_books__id__reference_book_messages__book_id',
+      );
+
+  $$ReferenceBookMessagesTableProcessedTableManager
+  get referenceBookMessagesRefs {
+    final manager = $$ReferenceBookMessagesTableTableManager(
+      $_db,
+      $_db.referenceBookMessages,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookMessagesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ReferenceBookLinksTable, List<ReferenceBookLink>>
+  _referenceBookLinksRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookLinks,
+        aliasName: 'reference_books__id__reference_book_links__book_id',
+      );
+
+  $$ReferenceBookLinksTableProcessedTableManager get referenceBookLinksRefs {
+    final manager = $$ReferenceBookLinksTableTableManager(
+      $_db,
+      $_db.referenceBookLinks,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookLinksRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookQuizzesTable,
+    List<ReferenceBookQuiz>
+  >
+  _referenceBookQuizzesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookQuizzes,
+        aliasName: 'reference_books__id__reference_book_quizzes__book_id',
+      );
+
+  $$ReferenceBookQuizzesTableProcessedTableManager
+  get referenceBookQuizzesRefs {
+    final manager = $$ReferenceBookQuizzesTableTableManager(
+      $_db,
+      $_db.referenceBookQuizzes,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookQuizzesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ReferenceBooksTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBooksTable> {
+  $$ReferenceBooksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originalFileName => $composableBuilder(
+    column: $table.originalFileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storedFileName => $composableBuilder(
+    column: $table.storedFileName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageCount => $composableBuilder(
+    column: $table.pageCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> referenceBookSubjectsRefs(
+    Expression<bool> Function($$ReferenceBookSubjectsTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookSubjectsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookSubjects,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookSubjectsTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookSubjects,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookChaptersRefs(
+    Expression<bool> Function($$ReferenceBookChaptersTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookChaptersTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookAiItemsRefs(
+    Expression<bool> Function($$ReferenceBookAiItemsTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookAiItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookAiItems,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookAiItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookAiItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookNotesRefs(
+    Expression<bool> Function($$ReferenceBookNotesTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookNotesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookNotes,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookNotesTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookNotes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookMessagesRefs(
+    Expression<bool> Function($$ReferenceBookMessagesTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookMessagesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookMessages,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookMessagesTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookMessages,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookLinksRefs(
+    Expression<bool> Function($$ReferenceBookLinksTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookLinksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookLinks,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookLinksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookLinks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookQuizzesRefs(
+    Expression<bool> Function($$ReferenceBookQuizzesTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookQuizzesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookQuizzes,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookQuizzesTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookQuizzes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReferenceBooksTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBooksTable> {
+  $$ReferenceBooksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get author => $composableBuilder(
+    column: $table.author,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get originalFileName => $composableBuilder(
+    column: $table.originalFileName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storedFileName => $composableBuilder(
+    column: $table.storedFileName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageCount => $composableBuilder(
+    column: $table.pageCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReferenceBooksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBooksTable> {
+  $$ReferenceBooksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get author =>
+      $composableBuilder(column: $table.author, builder: (column) => column);
+
+  GeneratedColumn<String> get originalFileName => $composableBuilder(
+    column: $table.originalFileName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storedFileName => $composableBuilder(
+    column: $table.storedFileName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pageCount =>
+      $composableBuilder(column: $table.pageCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> referenceBookSubjectsRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookSubjectsTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookSubjectsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookSubjects,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookSubjectsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookSubjects,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookChaptersRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookChaptersTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookChaptersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookAiItemsRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookAiItemsTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookAiItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookAiItems,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookAiItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookAiItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookNotesRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookNotesTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookNotesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookNotes,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookNotesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookNotes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookMessagesRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookMessagesTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookMessagesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookMessages,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookMessagesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookMessages,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookLinksRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookLinksTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookLinksTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookLinks,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookLinksTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookLinks,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookQuizzesRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookQuizzesTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookQuizzesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookQuizzes,
+          getReferencedColumn: (t) => t.bookId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookQuizzesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookQuizzes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$ReferenceBooksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBooksTable,
+          ReferenceBook,
+          $$ReferenceBooksTableFilterComposer,
+          $$ReferenceBooksTableOrderingComposer,
+          $$ReferenceBooksTableAnnotationComposer,
+          $$ReferenceBooksTableCreateCompanionBuilder,
+          $$ReferenceBooksTableUpdateCompanionBuilder,
+          (ReferenceBook, $$ReferenceBooksTableReferences),
+          ReferenceBook,
+          PrefetchHooks Function({
+            bool referenceBookSubjectsRefs,
+            bool referenceBookChaptersRefs,
+            bool referenceBookAiItemsRefs,
+            bool referenceBookNotesRefs,
+            bool referenceBookMessagesRefs,
+            bool referenceBookLinksRefs,
+            bool referenceBookQuizzesRefs,
+          })
+        > {
+  $$ReferenceBooksTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBooksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBooksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceBooksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReferenceBooksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> author = const Value.absent(),
+                Value<String> originalFileName = const Value.absent(),
+                Value<String> storedFileName = const Value.absent(),
+                Value<int> pageCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBooksCompanion(
+                id: id,
+                title: title,
+                author: author,
+                originalFileName: originalFileName,
+                storedFileName: storedFileName,
+                pageCount: pageCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                Value<String?> author = const Value.absent(),
+                required String originalFileName,
+                required String storedFileName,
+                required int pageCount,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBooksCompanion.insert(
+                id: id,
+                title: title,
+                author: author,
+                originalFileName: originalFileName,
+                storedFileName: storedFileName,
+                pageCount: pageCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceBooksTable, ReferenceBook>(table),
+                  $$ReferenceBooksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                referenceBookSubjectsRefs = false,
+                referenceBookChaptersRefs = false,
+                referenceBookAiItemsRefs = false,
+                referenceBookNotesRefs = false,
+                referenceBookMessagesRefs = false,
+                referenceBookLinksRefs = false,
+                referenceBookQuizzesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (referenceBookSubjectsRefs) db.referenceBookSubjects,
+                    if (referenceBookChaptersRefs) db.referenceBookChapters,
+                    if (referenceBookAiItemsRefs) db.referenceBookAiItems,
+                    if (referenceBookNotesRefs) db.referenceBookNotes,
+                    if (referenceBookMessagesRefs) db.referenceBookMessages,
+                    if (referenceBookLinksRefs) db.referenceBookLinks,
+                    if (referenceBookQuizzesRefs) db.referenceBookQuizzes,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (referenceBookSubjectsRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookSubject
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookSubjectsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookSubjectsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookChaptersRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookChapter
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookChaptersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookChaptersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookAiItemsRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookAiItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookAiItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookAiItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookNotesRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookNote
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookNotesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookNotesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookMessagesRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookMessage
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookMessagesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookMessagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookLinksRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookLink
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookLinksRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookLinksRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookQuizzesRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBook,
+                          $ReferenceBooksTable,
+                          ReferenceBookQuiz
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ReferenceBooksTableReferences
+                              ._referenceBookQuizzesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBooksTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookQuizzesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ReferenceBooksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBooksTable,
+      ReferenceBook,
+      $$ReferenceBooksTableFilterComposer,
+      $$ReferenceBooksTableOrderingComposer,
+      $$ReferenceBooksTableAnnotationComposer,
+      $$ReferenceBooksTableCreateCompanionBuilder,
+      $$ReferenceBooksTableUpdateCompanionBuilder,
+      (ReferenceBook, $$ReferenceBooksTableReferences),
+      ReferenceBook,
+      PrefetchHooks Function({
+        bool referenceBookSubjectsRefs,
+        bool referenceBookChaptersRefs,
+        bool referenceBookAiItemsRefs,
+        bool referenceBookNotesRefs,
+        bool referenceBookMessagesRefs,
+        bool referenceBookLinksRefs,
+        bool referenceBookQuizzesRefs,
+      })
+    >;
+typedef $$ReferenceBookSubjectsTableCreateCompanionBuilder =
+    ReferenceBookSubjectsCompanion Function({
+      required String id,
+      required String bookId,
+      required String subjectId,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookSubjectsTableUpdateCompanionBuilder =
+    ReferenceBookSubjectsCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String> subjectId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookSubjectsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookSubjectsTable,
+          ReferenceBookSubject
+        > {
+  $$ReferenceBookSubjectsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_subjects__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SubjectsTable _subjectIdTable(_$AppDatabase db) => db.subjects
+      .createAlias('reference_book_subjects__subject_id__subjects__id');
+
+  $$SubjectsTableProcessedTableManager get subjectId {
+    final $_column = $_itemColumn<String>('subject_id')!;
+
+    final manager = $$SubjectsTableTableManager(
+      $_db,
+      $_db.subjects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_subjectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookSubjectsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookSubjectsTable> {
+  $$ReferenceBookSubjectsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SubjectsTableFilterComposer get subjectId {
+    final $$SubjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookSubjectsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookSubjectsTable> {
+  $$ReferenceBookSubjectsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SubjectsTableOrderingComposer get subjectId {
+    final $$SubjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookSubjectsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookSubjectsTable> {
+  $$ReferenceBookSubjectsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SubjectsTableAnnotationComposer get subjectId {
+    final $$SubjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.subjectId,
+      referencedTable: $db.subjects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SubjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookSubjectsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookSubjectsTable,
+          ReferenceBookSubject,
+          $$ReferenceBookSubjectsTableFilterComposer,
+          $$ReferenceBookSubjectsTableOrderingComposer,
+          $$ReferenceBookSubjectsTableAnnotationComposer,
+          $$ReferenceBookSubjectsTableCreateCompanionBuilder,
+          $$ReferenceBookSubjectsTableUpdateCompanionBuilder,
+          (ReferenceBookSubject, $$ReferenceBookSubjectsTableReferences),
+          ReferenceBookSubject,
+          PrefetchHooks Function({bool bookId, bool subjectId})
+        > {
+  $$ReferenceBookSubjectsTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookSubjectsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookSubjectsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ReferenceBookSubjectsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookSubjectsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String> subjectId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookSubjectsCompanion(
+                id: id,
+                bookId: bookId,
+                subjectId: subjectId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required String subjectId,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookSubjectsCompanion.insert(
+                id: id,
+                bookId: bookId,
+                subjectId: subjectId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $ReferenceBookSubjectsTable,
+                    ReferenceBookSubject
+                  >(table),
+                  $$ReferenceBookSubjectsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({bookId = false, subjectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable:
+                                    $$ReferenceBookSubjectsTableReferences
+                                        ._bookIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookSubjectsTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (subjectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.subjectId,
+                                referencedTable:
+                                    $$ReferenceBookSubjectsTableReferences
+                                        ._subjectIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookSubjectsTableReferences
+                                        ._subjectIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReferenceBookSubjectsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookSubjectsTable,
+      ReferenceBookSubject,
+      $$ReferenceBookSubjectsTableFilterComposer,
+      $$ReferenceBookSubjectsTableOrderingComposer,
+      $$ReferenceBookSubjectsTableAnnotationComposer,
+      $$ReferenceBookSubjectsTableCreateCompanionBuilder,
+      $$ReferenceBookSubjectsTableUpdateCompanionBuilder,
+      (ReferenceBookSubject, $$ReferenceBookSubjectsTableReferences),
+      ReferenceBookSubject,
+      PrefetchHooks Function({bool bookId, bool subjectId})
+    >;
+typedef $$ReferenceBookChaptersTableCreateCompanionBuilder =
+    ReferenceBookChaptersCompanion Function({
+      required String id,
+      required String bookId,
+      required String title,
+      Value<int> level,
+      required int startPage,
+      required int endPage,
+      required int sortOrder,
+      Value<String> status,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookChaptersTableUpdateCompanionBuilder =
+    ReferenceBookChaptersCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String> title,
+      Value<int> level,
+      Value<int> startPage,
+      Value<int> endPage,
+      Value<int> sortOrder,
+      Value<String> status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookChaptersTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookChaptersTable,
+          ReferenceBookChapter
+        > {
+  $$ReferenceBookChaptersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_chapters__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookAiItemsTable,
+    List<ReferenceBookAiItem>
+  >
+  _referenceBookAiItemsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookAiItems,
+        aliasName:
+            'reference_book_chapters__id__reference_book_ai_items__chapter_id',
+      );
+
+  $$ReferenceBookAiItemsTableProcessedTableManager
+  get referenceBookAiItemsRefs {
+    final manager = $$ReferenceBookAiItemsTableTableManager(
+      $_db,
+      $_db.referenceBookAiItems,
+    ).filter((f) => f.chapterId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookAiItemsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ReferenceBookQuizzesTable,
+    List<ReferenceBookQuiz>
+  >
+  _referenceBookQuizzesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.referenceBookQuizzes,
+        aliasName:
+            'reference_book_chapters__id__reference_book_quizzes__chapter_id',
+      );
+
+  $$ReferenceBookQuizzesTableProcessedTableManager
+  get referenceBookQuizzesRefs {
+    final manager = $$ReferenceBookQuizzesTableTableManager(
+      $_db,
+      $_db.referenceBookQuizzes,
+    ).filter((f) => f.chapterId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _referenceBookQuizzesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ReferenceBookChaptersTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookChaptersTable> {
+  $$ReferenceBookChaptersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> referenceBookAiItemsRefs(
+    Expression<bool> Function($$ReferenceBookAiItemsTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookAiItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookAiItems,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookAiItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookAiItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> referenceBookQuizzesRefs(
+    Expression<bool> Function($$ReferenceBookQuizzesTableFilterComposer f) f,
+  ) {
+    final $$ReferenceBookQuizzesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.referenceBookQuizzes,
+      getReferencedColumn: (t) => t.chapterId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBookQuizzesTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBookQuizzes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReferenceBookChaptersTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookChaptersTable> {
+  $$ReferenceBookChaptersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookChaptersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookChaptersTable> {
+  $$ReferenceBookChaptersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+
+  GeneratedColumn<int> get startPage =>
+      $composableBuilder(column: $table.startPage, builder: (column) => column);
+
+  GeneratedColumn<int> get endPage =>
+      $composableBuilder(column: $table.endPage, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> referenceBookAiItemsRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookAiItemsTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookAiItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookAiItems,
+          getReferencedColumn: (t) => t.chapterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookAiItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookAiItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> referenceBookQuizzesRefs<T extends Object>(
+    Expression<T> Function($$ReferenceBookQuizzesTableAnnotationComposer a) f,
+  ) {
+    final $$ReferenceBookQuizzesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.referenceBookQuizzes,
+          getReferencedColumn: (t) => t.chapterId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookQuizzesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookQuizzes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$ReferenceBookChaptersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookChaptersTable,
+          ReferenceBookChapter,
+          $$ReferenceBookChaptersTableFilterComposer,
+          $$ReferenceBookChaptersTableOrderingComposer,
+          $$ReferenceBookChaptersTableAnnotationComposer,
+          $$ReferenceBookChaptersTableCreateCompanionBuilder,
+          $$ReferenceBookChaptersTableUpdateCompanionBuilder,
+          (ReferenceBookChapter, $$ReferenceBookChaptersTableReferences),
+          ReferenceBookChapter,
+          PrefetchHooks Function({
+            bool bookId,
+            bool referenceBookAiItemsRefs,
+            bool referenceBookQuizzesRefs,
+          })
+        > {
+  $$ReferenceBookChaptersTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookChaptersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookChaptersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ReferenceBookChaptersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookChaptersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int> level = const Value.absent(),
+                Value<int> startPage = const Value.absent(),
+                Value<int> endPage = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookChaptersCompanion(
+                id: id,
+                bookId: bookId,
+                title: title,
+                level: level,
+                startPage: startPage,
+                endPage: endPage,
+                sortOrder: sortOrder,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required String title,
+                Value<int> level = const Value.absent(),
+                required int startPage,
+                required int endPage,
+                required int sortOrder,
+                Value<String> status = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookChaptersCompanion.insert(
+                id: id,
+                bookId: bookId,
+                title: title,
+                level: level,
+                startPage: startPage,
+                endPage: endPage,
+                sortOrder: sortOrder,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $ReferenceBookChaptersTable,
+                    ReferenceBookChapter
+                  >(table),
+                  $$ReferenceBookChaptersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                bookId = false,
+                referenceBookAiItemsRefs = false,
+                referenceBookQuizzesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (referenceBookAiItemsRefs) db.referenceBookAiItems,
+                    if (referenceBookQuizzesRefs) db.referenceBookQuizzes,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (bookId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.bookId,
+                                    referencedTable:
+                                        $$ReferenceBookChaptersTableReferences
+                                            ._bookIdTable(db),
+                                    referencedColumn:
+                                        $$ReferenceBookChaptersTableReferences
+                                            ._bookIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (referenceBookAiItemsRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBookChapter,
+                          $ReferenceBookChaptersTable,
+                          ReferenceBookAiItem
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$ReferenceBookChaptersTableReferences
+                                  ._referenceBookAiItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBookChaptersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookAiItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.chapterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (referenceBookQuizzesRefs)
+                        await $_getPrefetchedData<
+                          ReferenceBookChapter,
+                          $ReferenceBookChaptersTable,
+                          ReferenceBookQuiz
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$ReferenceBookChaptersTableReferences
+                                  ._referenceBookQuizzesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ReferenceBookChaptersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).referenceBookQuizzesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.chapterId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ReferenceBookChaptersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookChaptersTable,
+      ReferenceBookChapter,
+      $$ReferenceBookChaptersTableFilterComposer,
+      $$ReferenceBookChaptersTableOrderingComposer,
+      $$ReferenceBookChaptersTableAnnotationComposer,
+      $$ReferenceBookChaptersTableCreateCompanionBuilder,
+      $$ReferenceBookChaptersTableUpdateCompanionBuilder,
+      (ReferenceBookChapter, $$ReferenceBookChaptersTableReferences),
+      ReferenceBookChapter,
+      PrefetchHooks Function({
+        bool bookId,
+        bool referenceBookAiItemsRefs,
+        bool referenceBookQuizzesRefs,
+      })
+    >;
+typedef $$ReferenceBookAiItemsTableCreateCompanionBuilder =
+    ReferenceBookAiItemsCompanion Function({
+      required String id,
+      required String bookId,
+      Value<String?> chapterId,
+      required String kind,
+      required String scopeKey,
+      required int startPage,
+      required int endPage,
+      required String content,
+      required int version,
+      Value<String?> provider,
+      Value<String?> model,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookAiItemsTableUpdateCompanionBuilder =
+    ReferenceBookAiItemsCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String?> chapterId,
+      Value<String> kind,
+      Value<String> scopeKey,
+      Value<int> startPage,
+      Value<int> endPage,
+      Value<String> content,
+      Value<int> version,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookAiItemsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookAiItemsTable,
+          ReferenceBookAiItem
+        > {
+  $$ReferenceBookAiItemsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_ai_items__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ReferenceBookChaptersTable _chapterIdTable(_$AppDatabase db) =>
+      db.referenceBookChapters.createAlias(
+        'reference_book_ai_items__chapter_id__reference_book_chapters__id',
+      );
+
+  $$ReferenceBookChaptersTableProcessedTableManager? get chapterId {
+    final $_column = $_itemColumn<String>('chapter_id');
+    if ($_column == null) return null;
+    final manager = $$ReferenceBookChaptersTableTableManager(
+      $_db,
+      $_db.referenceBookChapters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookAiItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookAiItemsTable> {
+  $$ReferenceBookAiItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableFilterComposer get chapterId {
+    final $$ReferenceBookChaptersTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReferenceBookAiItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookAiItemsTable> {
+  $$ReferenceBookAiItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scopeKey => $composableBuilder(
+    column: $table.scopeKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableOrderingComposer get chapterId {
+    final $$ReferenceBookChaptersTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableOrderingComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReferenceBookAiItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookAiItemsTable> {
+  $$ReferenceBookAiItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get scopeKey =>
+      $composableBuilder(column: $table.scopeKey, builder: (column) => column);
+
+  GeneratedColumn<int> get startPage =>
+      $composableBuilder(column: $table.startPage, builder: (column) => column);
+
+  GeneratedColumn<int> get endPage =>
+      $composableBuilder(column: $table.endPage, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableAnnotationComposer get chapterId {
+    final $$ReferenceBookChaptersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ReferenceBookAiItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookAiItemsTable,
+          ReferenceBookAiItem,
+          $$ReferenceBookAiItemsTableFilterComposer,
+          $$ReferenceBookAiItemsTableOrderingComposer,
+          $$ReferenceBookAiItemsTableAnnotationComposer,
+          $$ReferenceBookAiItemsTableCreateCompanionBuilder,
+          $$ReferenceBookAiItemsTableUpdateCompanionBuilder,
+          (ReferenceBookAiItem, $$ReferenceBookAiItemsTableReferences),
+          ReferenceBookAiItem,
+          PrefetchHooks Function({bool bookId, bool chapterId})
+        > {
+  $$ReferenceBookAiItemsTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookAiItemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookAiItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceBookAiItemsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookAiItemsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String?> chapterId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> scopeKey = const Value.absent(),
+                Value<int> startPage = const Value.absent(),
+                Value<int> endPage = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookAiItemsCompanion(
+                id: id,
+                bookId: bookId,
+                chapterId: chapterId,
+                kind: kind,
+                scopeKey: scopeKey,
+                startPage: startPage,
+                endPage: endPage,
+                content: content,
+                version: version,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                Value<String?> chapterId = const Value.absent(),
+                required String kind,
+                required String scopeKey,
+                required int startPage,
+                required int endPage,
+                required String content,
+                required int version,
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookAiItemsCompanion.insert(
+                id: id,
+                bookId: bookId,
+                chapterId: chapterId,
+                kind: kind,
+                scopeKey: scopeKey,
+                startPage: startPage,
+                endPage: endPage,
+                content: content,
+                version: version,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceBookAiItemsTable, ReferenceBookAiItem>(
+                    table,
+                  ),
+                  $$ReferenceBookAiItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({bookId = false, chapterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable:
+                                    $$ReferenceBookAiItemsTableReferences
+                                        ._bookIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookAiItemsTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (chapterId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.chapterId,
+                                referencedTable:
+                                    $$ReferenceBookAiItemsTableReferences
+                                        ._chapterIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookAiItemsTableReferences
+                                        ._chapterIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReferenceBookAiItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookAiItemsTable,
+      ReferenceBookAiItem,
+      $$ReferenceBookAiItemsTableFilterComposer,
+      $$ReferenceBookAiItemsTableOrderingComposer,
+      $$ReferenceBookAiItemsTableAnnotationComposer,
+      $$ReferenceBookAiItemsTableCreateCompanionBuilder,
+      $$ReferenceBookAiItemsTableUpdateCompanionBuilder,
+      (ReferenceBookAiItem, $$ReferenceBookAiItemsTableReferences),
+      ReferenceBookAiItem,
+      PrefetchHooks Function({bool bookId, bool chapterId})
+    >;
+typedef $$ReferenceBookNotesTableCreateCompanionBuilder =
+    ReferenceBookNotesCompanion Function({
+      required String id,
+      required String bookId,
+      required int pageNumber,
+      required String title,
+      Value<String> content,
+      Value<String?> selectedText,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookNotesTableUpdateCompanionBuilder =
+    ReferenceBookNotesCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<int> pageNumber,
+      Value<String> title,
+      Value<String> content,
+      Value<String?> selectedText,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookNotesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookNotesTable,
+          ReferenceBookNote
+        > {
+  $$ReferenceBookNotesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_notes__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookNotesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookNotesTable> {
+  $$ReferenceBookNotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookNotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookNotesTable> {
+  $$ReferenceBookNotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookNotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookNotesTable> {
+  $$ReferenceBookNotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookNotesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookNotesTable,
+          ReferenceBookNote,
+          $$ReferenceBookNotesTableFilterComposer,
+          $$ReferenceBookNotesTableOrderingComposer,
+          $$ReferenceBookNotesTableAnnotationComposer,
+          $$ReferenceBookNotesTableCreateCompanionBuilder,
+          $$ReferenceBookNotesTableUpdateCompanionBuilder,
+          (ReferenceBookNote, $$ReferenceBookNotesTableReferences),
+          ReferenceBookNote,
+          PrefetchHooks Function({bool bookId})
+        > {
+  $$ReferenceBookNotesTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookNotesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookNotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceBookNotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookNotesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<int> pageNumber = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String?> selectedText = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookNotesCompanion(
+                id: id,
+                bookId: bookId,
+                pageNumber: pageNumber,
+                title: title,
+                content: content,
+                selectedText: selectedText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required int pageNumber,
+                required String title,
+                Value<String> content = const Value.absent(),
+                Value<String?> selectedText = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookNotesCompanion.insert(
+                id: id,
+                bookId: bookId,
+                pageNumber: pageNumber,
+                title: title,
+                content: content,
+                selectedText: selectedText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceBookNotesTable, ReferenceBookNote>(
+                    table,
+                  ),
+                  $$ReferenceBookNotesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({bookId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable:
+                                    $$ReferenceBookNotesTableReferences
+                                        ._bookIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookNotesTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReferenceBookNotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookNotesTable,
+      ReferenceBookNote,
+      $$ReferenceBookNotesTableFilterComposer,
+      $$ReferenceBookNotesTableOrderingComposer,
+      $$ReferenceBookNotesTableAnnotationComposer,
+      $$ReferenceBookNotesTableCreateCompanionBuilder,
+      $$ReferenceBookNotesTableUpdateCompanionBuilder,
+      (ReferenceBookNote, $$ReferenceBookNotesTableReferences),
+      ReferenceBookNote,
+      PrefetchHooks Function({bool bookId})
+    >;
+typedef $$ReferenceBookMessagesTableCreateCompanionBuilder =
+    ReferenceBookMessagesCompanion Function({
+      required String id,
+      required String bookId,
+      required String role,
+      required String content,
+      Value<String?> sourcePages,
+      Value<String?> provider,
+      Value<String?> model,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookMessagesTableUpdateCompanionBuilder =
+    ReferenceBookMessagesCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String> role,
+      Value<String> content,
+      Value<String?> sourcePages,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookMessagesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookMessagesTable,
+          ReferenceBookMessage
+        > {
+  $$ReferenceBookMessagesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_messages__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookMessagesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookMessagesTable> {
+  $$ReferenceBookMessagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourcePages => $composableBuilder(
+    column: $table.sourcePages,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookMessagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookMessagesTable> {
+  $$ReferenceBookMessagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourcePages => $composableBuilder(
+    column: $table.sourcePages,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookMessagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookMessagesTable> {
+  $$ReferenceBookMessagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get sourcePages => $composableBuilder(
+    column: $table.sourcePages,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookMessagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookMessagesTable,
+          ReferenceBookMessage,
+          $$ReferenceBookMessagesTableFilterComposer,
+          $$ReferenceBookMessagesTableOrderingComposer,
+          $$ReferenceBookMessagesTableAnnotationComposer,
+          $$ReferenceBookMessagesTableCreateCompanionBuilder,
+          $$ReferenceBookMessagesTableUpdateCompanionBuilder,
+          (ReferenceBookMessage, $$ReferenceBookMessagesTableReferences),
+          ReferenceBookMessage,
+          PrefetchHooks Function({bool bookId})
+        > {
+  $$ReferenceBookMessagesTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookMessagesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookMessagesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ReferenceBookMessagesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookMessagesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String?> sourcePages = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookMessagesCompanion(
+                id: id,
+                bookId: bookId,
+                role: role,
+                content: content,
+                sourcePages: sourcePages,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required String role,
+                required String content,
+                Value<String?> sourcePages = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookMessagesCompanion.insert(
+                id: id,
+                bookId: bookId,
+                role: role,
+                content: content,
+                sourcePages: sourcePages,
+                provider: provider,
+                model: model,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $ReferenceBookMessagesTable,
+                    ReferenceBookMessage
+                  >(table),
+                  $$ReferenceBookMessagesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({bookId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable:
+                                    $$ReferenceBookMessagesTableReferences
+                                        ._bookIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookMessagesTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReferenceBookMessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookMessagesTable,
+      ReferenceBookMessage,
+      $$ReferenceBookMessagesTableFilterComposer,
+      $$ReferenceBookMessagesTableOrderingComposer,
+      $$ReferenceBookMessagesTableAnnotationComposer,
+      $$ReferenceBookMessagesTableCreateCompanionBuilder,
+      $$ReferenceBookMessagesTableUpdateCompanionBuilder,
+      (ReferenceBookMessage, $$ReferenceBookMessagesTableReferences),
+      ReferenceBookMessage,
+      PrefetchHooks Function({bool bookId})
+    >;
+typedef $$ReferenceBookLinksTableCreateCompanionBuilder =
+    ReferenceBookLinksCompanion Function({
+      required String id,
+      required String bookId,
+      required String materialId,
+      required int startPage,
+      required int endPage,
+      required String priority,
+      Value<String?> reason,
+      Value<bool> done,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookLinksTableUpdateCompanionBuilder =
+    ReferenceBookLinksCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String> materialId,
+      Value<int> startPage,
+      Value<int> endPage,
+      Value<String> priority,
+      Value<String?> reason,
+      Value<bool> done,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookLinksTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookLinksTable,
+          ReferenceBookLink
+        > {
+  $$ReferenceBookLinksTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_links__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonMaterialsTable _materialIdTable(_$AppDatabase db) => db
+      .lessonMaterials
+      .createAlias('reference_book_links__material_id__lesson_materials__id');
+
+  $$LessonMaterialsTableProcessedTableManager get materialId {
+    final $_column = $_itemColumn<String>('material_id')!;
+
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_materialIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookLinksTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookLinksTable> {
+  $$ReferenceBookLinksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get done => $composableBuilder(
+    column: $table.done,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableFilterComposer get materialId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookLinksTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookLinksTable> {
+  $$ReferenceBookLinksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get done => $composableBuilder(
+    column: $table.done,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableOrderingComposer get materialId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookLinksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookLinksTable> {
+  $$ReferenceBookLinksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get startPage =>
+      $composableBuilder(column: $table.startPage, builder: (column) => column);
+
+  GeneratedColumn<int> get endPage =>
+      $composableBuilder(column: $table.endPage, builder: (column) => column);
+
+  GeneratedColumn<String> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<bool> get done =>
+      $composableBuilder(column: $table.done, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableAnnotationComposer get materialId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.materialId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookLinksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookLinksTable,
+          ReferenceBookLink,
+          $$ReferenceBookLinksTableFilterComposer,
+          $$ReferenceBookLinksTableOrderingComposer,
+          $$ReferenceBookLinksTableAnnotationComposer,
+          $$ReferenceBookLinksTableCreateCompanionBuilder,
+          $$ReferenceBookLinksTableUpdateCompanionBuilder,
+          (ReferenceBookLink, $$ReferenceBookLinksTableReferences),
+          ReferenceBookLink,
+          PrefetchHooks Function({bool bookId, bool materialId})
+        > {
+  $$ReferenceBookLinksTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookLinksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookLinksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceBookLinksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookLinksTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String> materialId = const Value.absent(),
+                Value<int> startPage = const Value.absent(),
+                Value<int> endPage = const Value.absent(),
+                Value<String> priority = const Value.absent(),
+                Value<String?> reason = const Value.absent(),
+                Value<bool> done = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookLinksCompanion(
+                id: id,
+                bookId: bookId,
+                materialId: materialId,
+                startPage: startPage,
+                endPage: endPage,
+                priority: priority,
+                reason: reason,
+                done: done,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required String materialId,
+                required int startPage,
+                required int endPage,
+                required String priority,
+                Value<String?> reason = const Value.absent(),
+                Value<bool> done = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookLinksCompanion.insert(
+                id: id,
+                bookId: bookId,
+                materialId: materialId,
+                startPage: startPage,
+                endPage: endPage,
+                priority: priority,
+                reason: reason,
+                done: done,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceBookLinksTable, ReferenceBookLink>(
+                    table,
+                  ),
+                  $$ReferenceBookLinksTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({bookId = false, materialId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable:
+                                    $$ReferenceBookLinksTableReferences
+                                        ._bookIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookLinksTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (materialId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.materialId,
+                                referencedTable:
+                                    $$ReferenceBookLinksTableReferences
+                                        ._materialIdTable(db),
+                                referencedColumn:
+                                    $$ReferenceBookLinksTableReferences
+                                        ._materialIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReferenceBookLinksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookLinksTable,
+      ReferenceBookLink,
+      $$ReferenceBookLinksTableFilterComposer,
+      $$ReferenceBookLinksTableOrderingComposer,
+      $$ReferenceBookLinksTableAnnotationComposer,
+      $$ReferenceBookLinksTableCreateCompanionBuilder,
+      $$ReferenceBookLinksTableUpdateCompanionBuilder,
+      (ReferenceBookLink, $$ReferenceBookLinksTableReferences),
+      ReferenceBookLink,
+      PrefetchHooks Function({bool bookId, bool materialId})
+    >;
+typedef $$ReferenceBookQuizzesTableCreateCompanionBuilder =
+    ReferenceBookQuizzesCompanion Function({
+      required String id,
+      required String bookId,
+      required String chapterId,
+      required String questionSetId,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ReferenceBookQuizzesTableUpdateCompanionBuilder =
+    ReferenceBookQuizzesCompanion Function({
+      Value<String> id,
+      Value<String> bookId,
+      Value<String> chapterId,
+      Value<String> questionSetId,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ReferenceBookQuizzesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ReferenceBookQuizzesTable,
+          ReferenceBookQuiz
+        > {
+  $$ReferenceBookQuizzesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReferenceBooksTable _bookIdTable(_$AppDatabase db) => db
+      .referenceBooks
+      .createAlias('reference_book_quizzes__book_id__reference_books__id');
+
+  $$ReferenceBooksTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<String>('book_id')!;
+
+    final manager = $$ReferenceBooksTableTableManager(
+      $_db,
+      $_db.referenceBooks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ReferenceBookChaptersTable _chapterIdTable(_$AppDatabase db) =>
+      db.referenceBookChapters.createAlias(
+        'reference_book_quizzes__chapter_id__reference_book_chapters__id',
+      );
+
+  $$ReferenceBookChaptersTableProcessedTableManager get chapterId {
+    final $_column = $_itemColumn<String>('chapter_id')!;
+
+    final manager = $$ReferenceBookChaptersTableTableManager(
+      $_db,
+      $_db.referenceBookChapters,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $QuestionSetsTable _questionSetIdTable(_$AppDatabase db) =>
+      db.questionSets.createAlias(
+        'reference_book_quizzes__question_set_id__question_sets__id',
+      );
+
+  $$QuestionSetsTableProcessedTableManager get questionSetId {
+    final $_column = $_itemColumn<String>('question_set_id')!;
+
+    final manager = $$QuestionSetsTableTableManager(
+      $_db,
+      $_db.questionSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_questionSetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReferenceBookQuizzesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReferenceBookQuizzesTable> {
+  $$ReferenceBookQuizzesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReferenceBooksTableFilterComposer get bookId {
+    final $$ReferenceBooksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableFilterComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableFilterComposer get chapterId {
+    final $$ReferenceBookChaptersTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableFilterComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$QuestionSetsTableFilterComposer get questionSetId {
+    final $$QuestionSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.questionSetId,
+      referencedTable: $db.questionSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$QuestionSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.questionSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookQuizzesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReferenceBookQuizzesTable> {
+  $$ReferenceBookQuizzesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReferenceBooksTableOrderingComposer get bookId {
+    final $$ReferenceBooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableOrderingComposer get chapterId {
+    final $$ReferenceBookChaptersTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableOrderingComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$QuestionSetsTableOrderingComposer get questionSetId {
+    final $$QuestionSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.questionSetId,
+      referencedTable: $db.questionSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$QuestionSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.questionSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookQuizzesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReferenceBookQuizzesTable> {
+  $$ReferenceBookQuizzesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ReferenceBooksTableAnnotationComposer get bookId {
+    final $$ReferenceBooksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.referenceBooks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReferenceBooksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.referenceBooks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ReferenceBookChaptersTableAnnotationComposer get chapterId {
+    final $$ReferenceBookChaptersTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.chapterId,
+          referencedTable: $db.referenceBookChapters,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ReferenceBookChaptersTableAnnotationComposer(
+                $db: $db,
+                $table: $db.referenceBookChapters,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$QuestionSetsTableAnnotationComposer get questionSetId {
+    final $$QuestionSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.questionSetId,
+      referencedTable: $db.questionSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$QuestionSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.questionSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReferenceBookQuizzesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReferenceBookQuizzesTable,
+          ReferenceBookQuiz,
+          $$ReferenceBookQuizzesTableFilterComposer,
+          $$ReferenceBookQuizzesTableOrderingComposer,
+          $$ReferenceBookQuizzesTableAnnotationComposer,
+          $$ReferenceBookQuizzesTableCreateCompanionBuilder,
+          $$ReferenceBookQuizzesTableUpdateCompanionBuilder,
+          (ReferenceBookQuiz, $$ReferenceBookQuizzesTableReferences),
+          ReferenceBookQuiz,
+          PrefetchHooks Function({
+            bool bookId,
+            bool chapterId,
+            bool questionSetId,
+          })
+        > {
+  $$ReferenceBookQuizzesTableTableManager(
+    _$AppDatabase db,
+    $ReferenceBookQuizzesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReferenceBookQuizzesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReferenceBookQuizzesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ReferenceBookQuizzesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> bookId = const Value.absent(),
+                Value<String> chapterId = const Value.absent(),
+                Value<String> questionSetId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookQuizzesCompanion(
+                id: id,
+                bookId: bookId,
+                chapterId: chapterId,
+                questionSetId: questionSetId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String bookId,
+                required String chapterId,
+                required String questionSetId,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ReferenceBookQuizzesCompanion.insert(
+                id: id,
+                bookId: bookId,
+                chapterId: chapterId,
+                questionSetId: questionSetId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ReferenceBookQuizzesTable, ReferenceBookQuiz>(
+                    table,
+                  ),
+                  $$ReferenceBookQuizzesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({bookId = false, chapterId = false, questionSetId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (bookId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.bookId,
+                                    referencedTable:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._bookIdTable(db),
+                                    referencedColumn:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._bookIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (chapterId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.chapterId,
+                                    referencedTable:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._chapterIdTable(db),
+                                    referencedColumn:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._chapterIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (questionSetId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.questionSetId,
+                                    referencedTable:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._questionSetIdTable(db),
+                                    referencedColumn:
+                                        $$ReferenceBookQuizzesTableReferences
+                                            ._questionSetIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ReferenceBookQuizzesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReferenceBookQuizzesTable,
+      ReferenceBookQuiz,
+      $$ReferenceBookQuizzesTableFilterComposer,
+      $$ReferenceBookQuizzesTableOrderingComposer,
+      $$ReferenceBookQuizzesTableAnnotationComposer,
+      $$ReferenceBookQuizzesTableCreateCompanionBuilder,
+      $$ReferenceBookQuizzesTableUpdateCompanionBuilder,
+      (ReferenceBookQuiz, $$ReferenceBookQuizzesTableReferences),
+      ReferenceBookQuiz,
+      PrefetchHooks Function({bool bookId, bool chapterId, bool questionSetId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -33144,4 +42149,20 @@ class $AppDatabaseManager {
         _db,
         _db.courseReviewExclusions,
       );
+  $$ReferenceBooksTableTableManager get referenceBooks =>
+      $$ReferenceBooksTableTableManager(_db, _db.referenceBooks);
+  $$ReferenceBookSubjectsTableTableManager get referenceBookSubjects =>
+      $$ReferenceBookSubjectsTableTableManager(_db, _db.referenceBookSubjects);
+  $$ReferenceBookChaptersTableTableManager get referenceBookChapters =>
+      $$ReferenceBookChaptersTableTableManager(_db, _db.referenceBookChapters);
+  $$ReferenceBookAiItemsTableTableManager get referenceBookAiItems =>
+      $$ReferenceBookAiItemsTableTableManager(_db, _db.referenceBookAiItems);
+  $$ReferenceBookNotesTableTableManager get referenceBookNotes =>
+      $$ReferenceBookNotesTableTableManager(_db, _db.referenceBookNotes);
+  $$ReferenceBookMessagesTableTableManager get referenceBookMessages =>
+      $$ReferenceBookMessagesTableTableManager(_db, _db.referenceBookMessages);
+  $$ReferenceBookLinksTableTableManager get referenceBookLinks =>
+      $$ReferenceBookLinksTableTableManager(_db, _db.referenceBookLinks);
+  $$ReferenceBookQuizzesTableTableManager get referenceBookQuizzes =>
+      $$ReferenceBookQuizzesTableTableManager(_db, _db.referenceBookQuizzes);
 }

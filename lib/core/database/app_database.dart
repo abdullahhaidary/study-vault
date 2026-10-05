@@ -679,6 +679,173 @@ class CourseReviewExclusions extends Table {
   ];
 }
 
+/// A reference book PDF stored at `books/{id}/{storedFileName}`.
+class ReferenceBooks extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 300)();
+  TextColumn get author => text().nullable()();
+  TextColumn get originalFileName => text()();
+  TextColumn get storedFileName => text()();
+  IntColumn get pageCount => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Subjects a book is shown on; a book may belong to none (global shelf).
+class ReferenceBookSubjects extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get subjectId =>
+      text().references(Subjects, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {bookId, subjectId},
+  ];
+}
+
+class ReferenceBookChapters extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text()();
+
+  /// 0 = top-level chapter, 1 = section, …
+  IntColumn get level => integer().withDefault(const Constant(0))();
+  IntColumn get startPage => integer()();
+  IntColumn get endPage => integer()();
+  IntColumn get sortOrder => integer()();
+
+  /// `notStarted` | `reading` | `done`
+  TextColumn get status => text().withDefault(const Constant('notStarted'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Versioned AI text for a book: chapter briefs/summaries, page explanations.
+class ReferenceBookAiItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get chapterId => text().nullable().references(
+    ReferenceBookChapters,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  /// `brief` | `summary` | `explanation`
+  TextColumn get kind => text()();
+
+  /// Chapter id or `pages:{start}-{end}`; versions count per scope.
+  TextColumn get scopeKey => text()();
+  IntColumn get startPage => integer()();
+  IntColumn get endPage => integer()();
+  TextColumn get content => text()();
+  IntColumn get version => integer()();
+  TextColumn get provider => text().nullable()();
+  TextColumn get model => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {bookId, kind, scopeKey, version},
+  ];
+}
+
+/// Page notes and bookmarks (a bookmark is a note without content).
+class ReferenceBookNotes extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  IntColumn get pageNumber => integer()();
+  TextColumn get title => text()();
+  TextColumn get content => text().withDefault(const Constant(''))();
+  TextColumn get selectedText => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// "Ask the book" conversation; assistant turns cite pages.
+class ReferenceBookMessages extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+
+  /// `user` | `assistant`
+  TextColumn get role => text()();
+  TextColumn get content => text()();
+
+  /// JSON list of page numbers that were sent as sources.
+  TextColumn get sourcePages => text().nullable()();
+  TextColumn get provider => text().nullable()();
+  TextColumn get model => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Book pages that cover a lecture PDF.
+class ReferenceBookLinks extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get materialId =>
+      text().references(LessonMaterials, #id, onDelete: KeyAction.cascade)();
+  IntColumn get startPage => integer()();
+  IntColumn get endPage => integer()();
+
+  /// `must` | `skim` | `optional`
+  TextColumn get priority => text()();
+  TextColumn get reason => text().nullable()();
+  BoolColumn get done => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Quizzes generated from a book chapter.
+@DataClassName('ReferenceBookQuiz')
+class ReferenceBookQuizzes extends Table {
+  TextColumn get id => text()();
+  TextColumn get bookId =>
+      text().references(ReferenceBooks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get chapterId => text().references(
+    ReferenceBookChapters,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get questionSetId =>
+      text().references(QuestionSets, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {questionSetId},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -708,6 +875,14 @@ class CourseReviewExclusions extends Table {
     QuizAnswers,
     CourseReviewEntries,
     CourseReviewExclusions,
+    ReferenceBooks,
+    ReferenceBookSubjects,
+    ReferenceBookChapters,
+    ReferenceBookAiItems,
+    ReferenceBookNotes,
+    ReferenceBookMessages,
+    ReferenceBookLinks,
+    ReferenceBookQuizzes,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -717,12 +892,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      await _createLocalBookTables();
     },
     onCreate: (Migrator m) async {
       await m.createAll();
@@ -858,8 +1034,39 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(courseReviewExclusions);
         await _createCourseReviewIndexes();
       }
+      if (from < 18) {
+        await m.createTable(referenceBooks);
+        await m.createTable(referenceBookSubjects);
+        await m.createTable(referenceBookChapters);
+        await m.createTable(referenceBookAiItems);
+        await m.createTable(referenceBookNotes);
+        await m.createTable(referenceBookMessages);
+        await m.createTable(referenceBookLinks);
+        await m.createTable(referenceBookQuizzes);
+      }
     },
   );
+
+  /// Device-local, derivable book data. Deliberately not Drift tables so
+  /// sync, schema contracts and backups-by-table never include them.
+  Future<void> _createLocalBookTables() async {
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS local_book_pages ('
+      'book_id TEXT NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, '
+      'PRIMARY KEY (book_id, page))',
+    );
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS local_book_vectors ('
+      'book_id TEXT NOT NULL, page INTEGER NOT NULL, model TEXT NOT NULL, '
+      'vector BLOB NOT NULL, PRIMARY KEY (book_id, page))',
+    );
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS local_book_state ('
+      'book_id TEXT PRIMARY KEY, stored_file_name TEXT, indexed_pages '
+      'INTEGER NOT NULL DEFAULT 0, page_count INTEGER NOT NULL DEFAULT 0, '
+      'last_page INTEGER NOT NULL DEFAULT 1, vectors_model TEXT)',
+    );
+  }
 
   Future<void> _createCourseReviewIndexes() async {
     await customStatement(
