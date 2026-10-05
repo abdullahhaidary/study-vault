@@ -1,15 +1,14 @@
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { sha256 } from './security.js';
 
-export const tables = new Set([
-  'classes', 'subject_groups', 'subjects', 'lesson_groups', 'lessons',
-  'lesson_materials', 'study_pin_categories', 'study_pins', 'study_pin_text_ranges',
-  'favorites', 'study_review_sessions', 'study_review_events', 'material_bookmarks',
-  'study_notes', 'flashcards', 'ai_chats', 'ai_chat_messages', 'ai_message_context_refs',
-  'annotation_ai_generations', 'pdf_ai_materials', 'question_sets', 'quiz_questions',
-  'quiz_question_options', 'quiz_attempts', 'quiz_answers', 'material_files',
-]);
+// The app-generated contract is the single source of synced tables.
+const librarySchema = JSON.parse(readFileSync(new URL('./library-schema.json', import.meta.url), 'utf8'));
+export const tables = new Set([...Object.keys(librarySchema.tables), 'material_files']);
 export const schemaVersion = 17;
+if (librarySchema.schemaVersion !== schemaVersion) {
+  throw new Error(`library-schema.json is version ${librarySchema.schemaVersion}, expected ${schemaVersion}.`);
+}
 
 export function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;

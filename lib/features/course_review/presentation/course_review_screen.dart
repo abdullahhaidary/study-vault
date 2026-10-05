@@ -119,7 +119,8 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
                   child: TabBarView(
                     children: [
                       _lecturesTab(state),
-                      for (final part in _readingParts) _readingTab(state, part),
+                      for (final part in _readingParts)
+                        _readingTab(state, part),
                     ],
                   ),
                 ),
@@ -182,7 +183,9 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
                     onPressed: _stopRequested
                         ? null
                         : () => setState(() => _stopRequested = true),
-                    child: Text(_stopRequested ? 'Stopping…' : 'Stop after this'),
+                    child: Text(
+                      _stopRequested ? 'Stopping…' : 'Stop after this',
+                    ),
                   ),
               ],
             ),
@@ -714,9 +717,9 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
         .read(courseReviewServiceProvider)
         .saveEdit(entry: entry, content: markdown);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved as v${entry.version + 1}.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Saved as v${entry.version + 1}.')));
   }
 
   void _openImport() {

@@ -136,7 +136,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) => ManualEntryImportScreen(
           initialLessonId: args is String ? args : null,
-          initialSubjectId: args is ({String subjectId}) ? args.subjectId : null,
+          initialSubjectId: args is ({String subjectId})
+              ? args.subjectId
+              : null,
         ),
       );
 

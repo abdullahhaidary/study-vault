@@ -158,10 +158,7 @@ class CloudMerge {
       'generation_number',
       ['source_fingerprint', 'action_type'],
     ),
-    'course_review_entries': (
-      'version',
-      ['subject_id', 'material_id', 'part'],
-    ),
+    'course_review_entries': ('version', ['subject_id', 'material_id', 'part']),
   };
 
   static Map<String, dynamic> _without(

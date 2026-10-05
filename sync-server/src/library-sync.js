@@ -58,7 +58,7 @@ function validateLibrary(rows) {
       continue;
     }
     if (!spec || Object.keys(row.data).length !== Object.keys(spec.columns).length ||
-        Object.keys(row.data).some((c) => !Object.hasOwn(spec.columns, c))) return 'The record columns do not match schema version 16.';
+        Object.keys(row.data).some((c) => !Object.hasOwn(spec.columns, c))) return `The record columns do not match schema version ${schemaVersion}.`;
     for (const [column, definition] of Object.entries(spec.columns)) {
       const value = row.data[column];
       if (value === null) {

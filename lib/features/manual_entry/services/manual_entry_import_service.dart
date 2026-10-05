@@ -313,14 +313,15 @@ class ManualEntryImportService {
           : matchSource(review, section);
       final parts = _sectionParts(section);
       final latest = source?.latest.values.fold<CourseReviewEntry?>(
-              null,
-              (best, e) => best == null || e.version > best.version ? e : best,
-            );
+        null,
+        (best, e) => best == null || e.version > best.version ? e : best,
+      );
       items.add(
         ManualEntryPlanItem(
           id: id,
           kind: ManualEntryKind.courseReview,
-          title: source?.label ??
+          title:
+              source?.label ??
               (section.label.isEmpty ? 'Section ${i + 1}' : section.label),
           preview: _firstLine(parts.values.first),
           markdown: [

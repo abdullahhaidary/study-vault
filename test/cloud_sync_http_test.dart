@@ -151,6 +151,27 @@ void main() {
           updatedAt: now,
         ),
       );
+      await a.insertCourseReviewVersion(
+        id: 'review-section',
+        subjectId: 's',
+        materialId: 'p',
+        part: 'summary',
+        content: '- Review point',
+        sourceFingerprint: 'pdf:p:test.pdf',
+      );
+      await a.insertCourseReviewVersion(
+        id: 'review-examples',
+        subjectId: 's',
+        materialId: null,
+        part: 'examples',
+        content: '### Example 1',
+      );
+      await a.setCourseReviewExcluded(
+        id: 'review-exclusion',
+        subjectId: 's',
+        materialId: 'p',
+        excluded: true,
+      );
       final uploaded = await first.sync(
         token: session.token,
         accountId: session.accountId,
@@ -165,6 +186,16 @@ void main() {
       expect(downloaded.conflicts, isEmpty);
       expect((await b.watchAllClasses().first).single.name, 'فارسی Class');
       expect((await b.getStudyPinById('pin'))!.xRatio, 0.0);
+      final review = await b.courseReviewEntriesForSubject('s');
+      expect(review.map((e) => e.id).toSet(), {
+        'review-section',
+        'review-examples',
+      });
+      expect(
+        review.firstWhere((e) => e.id == 'review-examples').materialId,
+        isNull,
+      );
+      expect(await b.courseReviewExclusionsForSubject('s'), hasLength(1));
       expect(
         await File(
           p.join(second.filesRoot.path, 'lessons/l/test.pdf'),

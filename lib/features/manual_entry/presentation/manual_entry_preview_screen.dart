@@ -92,14 +92,14 @@ class _ManualEntryPreviewScreenState extends State<ManualEntryPreviewScreen> {
                 ])
                   if (kind != ManualEntryKind.courseReview ||
                       plan.ofKind(kind).isNotEmpty) ...[
-                  _ToolSection(
-                    kind: kind,
-                    plan: plan,
-                    replaced: replaced,
-                    showExisting: _showExisting,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
+                    _ToolSection(
+                      kind: kind,
+                      plan: plan,
+                      replaced: replaced,
+                      showExisting: _showExisting,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                 if (plan.missingPdf)
                   Card(
                     color: theme.colorScheme.errorContainer,

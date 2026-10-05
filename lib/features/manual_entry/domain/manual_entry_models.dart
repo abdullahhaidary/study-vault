@@ -111,7 +111,9 @@ class ManualCourseReview {
   final String? bigPicture;
 
   int get itemCount =>
-      sections.length + (examples == null ? 0 : 1) + (bigPicture == null ? 0 : 1);
+      sections.length +
+      (examples == null ? 0 : 1) +
+      (bigPicture == null ? 0 : 1);
 }
 
 /// Everything found in one pasted JSON document.
@@ -145,7 +147,10 @@ class ManualEntryBundle {
 
   /// Everything except the Course Review belongs to one lesson.
   bool get needsLesson =>
-      needsPdf || notes.isNotEmpty || flashcards.isNotEmpty || quizzes.isNotEmpty;
+      needsPdf ||
+      notes.isNotEmpty ||
+      flashcards.isNotEmpty ||
+      quizzes.isNotEmpty;
 
   int get itemCount =>
       studyMaterials.length +
@@ -225,32 +230,36 @@ abstract final class ManualEntryParser {
       warnings.add('"course_review" must be an object; skipped.');
       return const ManualCourseReview();
     }
-    final sections = _list(raw['sections'], 'course_review.sections', warnings, (
-      item,
-      index,
-    ) {
-      final section = ManualCourseReviewSection(
-        lessonName: _string(item['lesson']),
-        pdfTitle: _string(item['pdf']),
-        summary: _string(item['summary']),
-        explanation: _string(item['explanation']),
-        deepExplanation:
-            _string(item['deep_explanation']) ?? _string(item['deep']),
-      );
-      if (section.summary == null &&
-          section.explanation == null &&
-          section.deepExplanation == null) {
-        warnings.add('Course Review section #${index + 1} is empty; skipped.');
-        return null;
-      }
-      if (section.lessonName == null && section.pdfTitle == null) {
-        warnings.add(
-          'Course Review section #${index + 1} has no "lesson" or "pdf"; '
-          'choose its PDF when reviewing.',
+    final sections = _list(
+      raw['sections'],
+      'course_review.sections',
+      warnings,
+      (item, index) {
+        final section = ManualCourseReviewSection(
+          lessonName: _string(item['lesson']),
+          pdfTitle: _string(item['pdf']),
+          summary: _string(item['summary']),
+          explanation: _string(item['explanation']),
+          deepExplanation:
+              _string(item['deep_explanation']) ?? _string(item['deep']),
         );
-      }
-      return section;
-    });
+        if (section.summary == null &&
+            section.explanation == null &&
+            section.deepExplanation == null) {
+          warnings.add(
+            'Course Review section #${index + 1} is empty; skipped.',
+          );
+          return null;
+        }
+        if (section.lessonName == null && section.pdfTitle == null) {
+          warnings.add(
+            'Course Review section #${index + 1} has no "lesson" or "pdf"; '
+            'choose its PDF when reviewing.',
+          );
+        }
+        return section;
+      },
+    );
     return ManualCourseReview(
       sections: sections,
       examples: _string(raw['examples']),

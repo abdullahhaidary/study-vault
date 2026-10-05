@@ -1,4 +1,5 @@
-import '../../../core/backup/backup_providers.dart' show kStudyVaultSchemaVersion;
+import '../../../core/backup/backup_providers.dart'
+    show kStudyVaultSchemaVersion;
 import '../../../core/database/app_database.dart';
 import 'cloud_sync_models.dart';
 

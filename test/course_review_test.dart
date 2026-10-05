@@ -12,6 +12,7 @@ import 'package:study_vault/features/course_review/presentation/course_review_sc
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_questions/domain/question_source.dart';
+import 'package:study_vault/features/course_review/data/course_review_providers.dart';
 import 'package:study_vault/features/course_review/domain/course_review_models.dart';
 import 'package:study_vault/features/course_review/domain/course_review_prompts.dart';
 import 'package:study_vault/features/course_review/services/course_review_service.dart';
@@ -19,7 +20,6 @@ import 'package:study_vault/features/manual_entry/data/manual_entry_providers.da
 import 'package:study_vault/features/manual_entry/domain/manual_entry_models.dart';
 import 'package:study_vault/features/manual_entry/domain/manual_entry_plan.dart';
 import 'package:study_vault/features/manual_entry/services/manual_entry_import_service.dart';
-import 'package:study_vault/features/pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import 'package:study_vault/features/pdf_ai_materials/services/pdf_ai_material_service.dart';
 
 const _selection = AiExecutionSelection(
@@ -298,10 +298,8 @@ void main() {
   testWidgets('screen shows lecture status and the combined summary', (
     tester,
   ) async {
-    final widgetDb = AppDatabase.forTesting(NativeDatabase.memory());
-    await tester.runAsync(() async {
-      await _seed(widgetDb);
-      await widgetDb.insertCourseReviewVersion(
+    final state = await tester.runAsync(() async {
+      await db.insertCourseReviewVersion(
         id: 'e1',
         subjectId: 'subject-1',
         materialId: 'pdf-1',
@@ -309,19 +307,23 @@ void main() {
         content: '- **Scope** baseline',
         sourceFingerprint: 'pdf:pdf-1:l1.pdf',
       );
+      return load();
     });
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(widgetDb)],
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          courseReviewProvider(
+            'subject-1',
+          ).overrideWith((ref) => Stream.value(state)),
+        ],
         child: const MaterialApp(
           home: CourseReviewScreen(subjectId: 'subject-1'),
         ),
       ),
     );
-    for (var i = 0; i < 5; i++) {
-      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-      await tester.pump();
-    }
+    await tester.pump();
+    await tester.pump();
     expect(find.text('Course Review'), findsOneWidget);
     expect(find.textContaining('Scope'), findsOneWidget);
     expect(find.text('Lect-02 .pdf'), findsOneWidget);
@@ -333,7 +335,6 @@ void main() {
     expect(find.textContaining('Not added yet'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.runAsync(widgetDb.close);
   });
 
   group('prompts', () {
