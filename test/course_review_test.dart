@@ -13,6 +13,7 @@ import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_questions/domain/question_source.dart';
 import 'package:study_vault/features/course_review/data/course_review_providers.dart';
+import 'package:study_vault/features/reference_books/data/book_providers.dart';
 import 'package:study_vault/features/course_review/domain/course_review_models.dart';
 import 'package:study_vault/features/course_review/domain/course_review_prompts.dart';
 import 'package:study_vault/features/course_review/services/course_review_service.dart';
@@ -316,6 +317,9 @@ void main() {
           courseReviewProvider(
             'subject-1',
           ).overrideWith((ref) => Stream.value(state)),
+          materialBookLinksProvider.overrideWith(
+            (ref, id) => Stream.value(const []),
+          ),
         ],
         child: const MaterialApp(
           home: CourseReviewScreen(subjectId: 'subject-1'),

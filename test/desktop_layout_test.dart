@@ -72,7 +72,7 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
       expect(find.byType(NavigationRail), findsOneWidget);
       final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.selectedIndex, 1);
+      expect(rail.selectedIndex, 2);
 
       await tester.tap(find.text('Library').first);
       await tester.pumpAndSettle();
