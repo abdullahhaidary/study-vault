@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -891,6 +892,40 @@ class AppDatabase extends _$AppDatabase {
   /// Useful for tests — inject a custom executor.
   AppDatabase.forTesting(super.e);
 
+  Timer? _externalWatch;
+  int? _dataVersion;
+
+  /// Refreshes open screens when another process (the Devin MCP tool)
+  /// commits to this database file. `data_version` only changes for
+  /// commits made by other connections.
+  void watchExternalChanges({Duration interval = const Duration(seconds: 2)}) {
+    _externalWatch ??= Timer.periodic(interval, (_) async {
+      try {
+        final version =
+            (await customSelect(
+                  'PRAGMA data_version',
+                ).getSingle()).data.values.first
+                as int;
+        final previous = _dataVersion;
+        _dataVersion = version;
+        if (previous != null && previous != version) {
+          notifyUpdates({
+            for (final table in allTables) TableUpdate.onTable(table),
+          });
+        }
+      } on Object {
+        // Busy or closing; try again next tick.
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _externalWatch?.cancel();
+    _externalWatch = null;
+    return super.close();
+  }
+
   @override
   int get schemaVersion => 18;
 
@@ -898,6 +933,8 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      // Other local writers (the Devin MCP tool) may hold a brief lock.
+      await customStatement('PRAGMA busy_timeout = 10000');
       await _createLocalBookTables();
     },
     onCreate: (Migrator m) async {

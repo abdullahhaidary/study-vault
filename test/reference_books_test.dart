@@ -130,6 +130,68 @@ void main() {
         'Pages 51–60',
       ]);
     });
+
+    test('distrusts junk bookmarks and uses headings instead', () {
+      // Mirrors a real import: out-of-order flat bookmarks, a same-page
+      // collision, a "Page N" label, and wrong destinations.
+      final chapters = BookChapterDetector.detect(
+        pageCount: 60,
+        outline: const [
+          OutlineEntry('Title Page', 0, 2),
+          OutlineEntry('Part III. Ending the Project', 0, 2),
+          OutlineEntry('Page 154', 0, 30),
+          OutlineEntry('Chapter 1', 0, 8),
+          OutlineEntry('Chapter 5 Scope', 0, 20),
+        ],
+        pageText: {
+          8: 'CHAPTER 1\nIntroduction\nFigure 1.1 Chapter 1 objectives',
+          20: 'CHAPTER 5\nManaging Project Scope\nFigure 5.1 objectives',
+          40: 'CHAPTER 6\nManaging Project Scheduling\nFigure 6.1 objectives',
+        },
+      );
+      expect(
+        [for (final c in chapters) '${c.title}:${c.startPage}-${c.endPage}'],
+        [
+          'Chapter 1: Introduction:8-19',
+          'Chapter 5: Managing Project Scope:20-39',
+          'Chapter 6: Managing Project Scheduling:40-60',
+        ],
+      );
+    });
+
+    test('skips contents pages and body-text chapter mentions', () {
+      final chapters = BookChapterDetector.detect(
+        pageCount: 100,
+        outline: const [],
+        pageText: {
+          // Table of contents: several headings on one page.
+          3: 'Contents\nPreface\nPART I. FOUNDATIONS\n'
+              'Chapter 1. Introduction\nChapter 2. Planning',
+          // Continuation page whose first lines still list headings.
+          4: 'Chapter Exercises\nReferences\n'
+              'PART III. EXECUTING AND ENDING THE\nPROJECT\n'
+              'Chapter 11. Managing Project Execution',
+          // Bare mid-sentence reference is not a chapter start.
+          30: 'as well as those resources, are discussed in\n'
+              'Chapter 7.\nThis chapter provides',
+          10: 'PART I\nProject Management Foundations',
+          15: 'CHAPTER 1\nIntroduction\nFigure 1.1 objectives',
+          50: 'CHAPTER 7\nManaging Project Resources\nFigure 7.1 objectives',
+          80: 'PART III\nEnding the Project',
+          85: 'CHAPTER 11\nManaging Project Execution\nFigure 11.1 objectives',
+        },
+      );
+      expect(
+        [for (final c in chapters) '${c.title}:${c.level}:${c.startPage}'],
+        [
+          'Part I: Project Management Foundations:0:10',
+          'Chapter 1: Introduction:1:15',
+          'Chapter 7: Managing Project Resources:1:50',
+          'Part III: Ending the Project:0:80',
+          'Chapter 11: Managing Project Execution:1:85',
+        ],
+      );
+    });
   });
 
   group('reading plan', () {

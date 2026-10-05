@@ -10,6 +10,7 @@ import '../../ai_questions/presentation/quiz_session_screen.dart';
 import '../data/book_providers.dart';
 import '../data/book_repository.dart';
 import '../domain/book_prompts.dart';
+import '../domain/book_text_index.dart';
 import '../services/book_ai_service.dart';
 import 'book_actions.dart';
 import 'book_markdown.dart';
@@ -311,7 +312,7 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
     void open(int page) => openBookReader(context, book, page: page);
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: Column(
@@ -346,6 +347,7 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
             tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: 'Brief'),
+              Tab(text: 'Pages'),
               Tab(text: 'Summary'),
               Tab(text: 'Explanations'),
               Tab(text: 'Quiz'),
@@ -376,11 +378,21 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  for (final kind in const [
+                  _itemTab(
+                    book,
+                    chapter,
                     BookAiKind.brief,
+                    latest(BookAiKind.brief),
+                    open,
+                  ),
+                  _PagesView(book: book, chapter: chapter, onOpenPage: open),
+                  _itemTab(
+                    book,
+                    chapter,
                     BookAiKind.summary,
-                  ])
-                    _itemTab(book, chapter, kind, latest(kind), open),
+                    latest(BookAiKind.summary),
+                    open,
+                  ),
                   _explanationsTab(book, chapter, explanations, open),
                   _quizTab(book, chapter),
                 ],
@@ -524,6 +536,121 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The chapter's trimmed pages as indexed text. The first scroll item is a
+/// Show-all toggle between this chapter's range and the whole book.
+class _PagesView extends ConsumerStatefulWidget {
+  const _PagesView({
+    required this.book,
+    required this.chapter,
+    required this.onOpenPage,
+  });
+
+  final ReferenceBook book;
+  final ReferenceBookChapter chapter;
+  final ValueChanged<int> onOpenPage;
+
+  @override
+  ConsumerState<_PagesView> createState() => _PagesViewState();
+}
+
+class _PagesViewState extends ConsumerState<_PagesView> {
+  bool _showAll = false;
+  late final Future<List<BookPage>> _pages = ref
+      .read(bookRepositoryProvider)
+      .pages(widget.book.id);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chapter = widget.chapter;
+    return FutureBuilder<List<BookPage>>(
+      future: _pages,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const AppLoading();
+        }
+        final all = snap.data ?? const <BookPage>[];
+        if (all.isEmpty) {
+          return const EmptyState(
+            icon: Icons.article_outlined,
+            title: 'No pages on this device',
+            message: 'Index the book first, then its pages show up here.',
+          );
+        }
+        final shown = _showAll
+            ? all
+            : [
+                for (final p in all)
+                  if (p.page >= chapter.startPage && p.page <= chapter.endPage)
+                    p,
+              ];
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            96,
+          ),
+          itemCount: shown.length + 1,
+          itemBuilder: (context, i) {
+            if (i == 0) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _showAll = !_showAll),
+                  icon: Icon(
+                    _showAll ? Icons.unfold_less : Icons.unfold_more,
+                  ),
+                  label: Text(
+                    _showAll
+                        ? 'This ${chapter.level == 0 ? 'part' : 'chapter'} '
+                              'only · pp. ${chapter.startPage}–${chapter.endPage}'
+                        : 'Show all · ${all.length} pages',
+                  ),
+                ),
+              );
+            }
+            final p = shown[i - 1];
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Page ${p.page}',
+                          style: theme.textTheme.labelLarge,
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () => widget.onOpenPage(p.page),
+                          icon: const Icon(
+                            Icons.chrome_reader_mode_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Read'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    SelectableText(
+                      p.text.trim().isEmpty
+                          ? '(no extractable text)'
+                          : p.text.trim(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
