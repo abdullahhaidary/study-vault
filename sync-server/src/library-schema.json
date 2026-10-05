@@ -1,0 +1,1339 @@
+{
+  "schemaVersion": 16,
+  "tables": {
+    "classes": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "description": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [],
+      "unique": []
+    },
+    "subject_groups": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "class_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "description": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "class_id",
+          "table": "classes"
+        }
+      ],
+      "unique": []
+    },
+    "subjects": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "class_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_group_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "description": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "class_id",
+          "table": "classes"
+        },
+        {
+          "column": "subject_group_id",
+          "table": "subject_groups"
+        }
+      ],
+      "unique": []
+    },
+    "lesson_groups": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "description": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": []
+    },
+    "lessons": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "lesson_group_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "description": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "progress_status": {
+          "type": "TEXT",
+          "required": true
+        },
+        "last_studied_at": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "progress_updated_at": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_group_id",
+          "table": "lesson_groups"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": []
+    },
+    "lesson_materials": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "original_file_name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "stored_file_name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "mime_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        }
+      ],
+      "unique": []
+    },
+    "study_pin_categories": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "color_value": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "icon_key": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "is_system": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [],
+      "unique": []
+    },
+    "study_pins": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "resource_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "pin_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "category_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "page_number": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "x_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "y_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "short_text": {
+          "type": "TEXT",
+          "required": true
+        },
+        "full_explanation": {
+          "type": "TEXT",
+          "required": false
+        },
+        "full_explanation_plain_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "selected_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "deleted_at": {
+          "type": "INTEGER",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "category_id",
+          "table": "study_pin_categories"
+        },
+        {
+          "column": "resource_id",
+          "table": "lesson_materials"
+        }
+      ],
+      "unique": []
+    },
+    "study_pin_text_ranges": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "study_pin_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "page_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "x_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "y_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "width_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "height_ratio": {
+          "type": "REAL",
+          "required": true
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "study_pin_id",
+          "table": "study_pins"
+        }
+      ],
+      "unique": []
+    },
+    "favorites": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "entity_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "entity_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [],
+      "unique": [
+        [
+          "entity_type",
+          "entity_id"
+        ]
+      ]
+    },
+    "study_review_sessions": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "scope_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "scope_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "started_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "completed_at": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_items": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "reviewed_items": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "shuffle": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [],
+      "unique": []
+    },
+    "study_review_events": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "study_pin_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "session_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "rating": {
+          "type": "TEXT",
+          "required": true
+        },
+        "reviewed_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "response_time_ms": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "session_id",
+          "table": "study_review_sessions"
+        },
+        {
+          "column": "study_pin_id",
+          "table": "study_pins"
+        }
+      ],
+      "unique": []
+    },
+    "material_bookmarks": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "page_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        }
+      ],
+      "unique": [
+        [
+          "material_id",
+          "page_number"
+        ]
+      ]
+    },
+    "study_notes": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "plain_text_content": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "deleted_at": {
+          "type": "INTEGER",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": []
+    },
+    "flashcards": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "source_study_pin_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "front": {
+          "type": "TEXT",
+          "required": true
+        },
+        "back": {
+          "type": "TEXT",
+          "required": true
+        },
+        "back_plain_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "deleted_at": {
+          "type": "INTEGER",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        },
+        {
+          "column": "source_study_pin_id",
+          "table": "study_pins"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": [
+        [
+          "source_study_pin_id"
+        ]
+      ]
+    },
+    "ai_chats": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "model_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "last_message_at": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "draft_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "draft_context_json": {
+          "type": "TEXT",
+          "required": false
+        }
+      },
+      "foreignKeys": [],
+      "unique": []
+    },
+    "ai_chat_messages": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "chat_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "role": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "status": {
+          "type": "TEXT",
+          "required": false
+        },
+        "context_json": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "ai_provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "ai_model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "prompt_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "completion_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_hit_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_miss_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "request_duration_ms": {
+          "type": "INTEGER",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "chat_id",
+          "table": "ai_chats"
+        }
+      ],
+      "unique": []
+    },
+    "ai_message_context_refs": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "message_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "chat_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "context_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "context_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "chat_id",
+          "table": "ai_chats"
+        },
+        {
+          "column": "message_id",
+          "table": "ai_chat_messages"
+        }
+      ],
+      "unique": [
+        [
+          "message_id",
+          "context_type",
+          "context_id"
+        ]
+      ]
+    },
+    "annotation_ai_generations": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "annotation_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "page_number": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "source_fingerprint": {
+          "type": "TEXT",
+          "required": true
+        },
+        "action_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "input_text": {
+          "type": "TEXT",
+          "required": true
+        },
+        "context_snapshot": {
+          "type": "TEXT",
+          "required": false
+        },
+        "custom_prompt": {
+          "type": "TEXT",
+          "required": false
+        },
+        "action_mode": {
+          "type": "TEXT",
+          "required": false
+        },
+        "response_text": {
+          "type": "TEXT",
+          "required": true
+        },
+        "response_kind": {
+          "type": "TEXT",
+          "required": true
+        },
+        "language": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model_name": {
+          "type": "TEXT",
+          "required": false
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": true
+        },
+        "prompt_version": {
+          "type": "TEXT",
+          "required": false
+        },
+        "parent_generation_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "generation_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "linked_question_set_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "linked_flashcard_batch_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "prompt_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "completion_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_hit_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_miss_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "request_duration_ms": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "annotation_id",
+          "table": "study_pins"
+        },
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        },
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        }
+      ],
+      "unique": [
+        [
+          "source_fingerprint",
+          "action_type",
+          "generation_number"
+        ]
+      ]
+    },
+    "pdf_ai_materials": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "version": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "generated_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "prompt_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "completion_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_hit_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_miss_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "request_duration_ms": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "source_fingerprint": {
+          "type": "TEXT",
+          "required": true
+        },
+        "custom_instruction": {
+          "type": "TEXT",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        }
+      ],
+      "unique": [
+        [
+          "material_id",
+          "type",
+          "version"
+        ]
+      ]
+    },
+    "question_sets": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "source_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "source_reference": {
+          "type": "TEXT",
+          "required": false
+        },
+        "question_count": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "question_type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "difficulty": {
+          "type": "TEXT",
+          "required": true
+        },
+        "ai_provider": {
+          "type": "TEXT",
+          "required": true
+        },
+        "ai_model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "prompt_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "completion_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_hit_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "cache_miss_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "request_duration_ms": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        },
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": []
+    },
+    "quiz_questions": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question_set_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "type": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question": {
+          "type": "TEXT",
+          "required": true
+        },
+        "correct_answer": {
+          "type": "TEXT",
+          "required": true
+        },
+        "explanation": {
+          "type": "TEXT",
+          "required": false
+        },
+        "difficulty": {
+          "type": "TEXT",
+          "required": false
+        },
+        "source_page": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "source_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "position": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "question_set_id",
+          "table": "question_sets"
+        }
+      ],
+      "unique": []
+    },
+    "quiz_question_options": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "option_text": {
+          "type": "TEXT",
+          "required": true
+        },
+        "is_correct": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "position": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "question_id",
+          "table": "quiz_questions"
+        }
+      ],
+      "unique": []
+    },
+    "quiz_attempts": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question_set_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "started_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "completed_at": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "score": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_questions": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "mode": {
+          "type": "TEXT",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "question_set_id",
+          "table": "question_sets"
+        }
+      ],
+      "unique": []
+    },
+    "quiz_answers": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "quiz_attempt_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "selected_option_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "answer_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "is_correct": {
+          "type": "INTEGER",
+          "required": false
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "question_id",
+          "table": "quiz_questions"
+        },
+        {
+          "column": "quiz_attempt_id",
+          "table": "quiz_attempts"
+        }
+      ],
+      "unique": []
+    }
+  }
+}

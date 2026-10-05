@@ -180,7 +180,6 @@ class LessonDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lessonAsync = ref.watch(lessonByIdProvider(lessonId));
     final materialsAsync = ref.watch(materialsForLessonProvider(lessonId));
-    final theme = Theme.of(context);
     final flashcardCount = ref
         .watch(flashcardCountForLessonProvider(lessonId))
         .valueOrNull;
@@ -212,6 +211,18 @@ class LessonDetailsScreen extends ConsumerWidget {
             body: const AppErrorState(message: 'Lesson not found'),
           );
         }
+
+        final desktop = AppSpacing.isDesktopLayout(context);
+        final materialsBody = _materialsBody(context, ref, materialsAsync);
+        final studyTools = _studyTools(
+          context,
+          ref,
+          lesson: lesson,
+          materialsAsync: materialsAsync,
+          flashcardCount: flashcardCount,
+          bookmarkCount: bookmarkCount,
+          imageSubtitle: imageSubtitle,
+        );
 
         return DetailScaffold(
           title: lesson.name,
@@ -274,148 +285,185 @@ class LessonDetailsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            materialsAsync.when(
-              loading: () => const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.xl),
-                  child: AppLoading(),
-                ),
-              ),
-              error: (error, _) => const SliverToBoxAdapter(
+            if (desktop)
+              SliverToBoxAdapter(
                 child: DetailContent(
-                  child: AppErrorState(message: 'Could not load materials.'),
-                ),
-              ),
-              data: (materials) {
-                final pdfs = [
-                  for (final material in materials)
-                    if (isPdfMimeType(material.mimeType)) material,
-                ];
-                return _ContiguousSliver(
-                  children: [
-                    DetailContent(
-                      bottom: AppSpacing.xs,
-                      child: const SectionHeader(title: 'Materials'),
-                    ),
-                    if (pdfs.isEmpty)
-                      DetailContent(
-                        bottom: AppSpacing.md,
-                        child: Text(
-                          'No PDFs yet. Attach a PDF to study here.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      )
-                    else
-                      DetailContent(
-                        bottom: AppSpacing.md,
+                  bottom: AppSpacing.md,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            for (final material in pdfs)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.xs,
-                                ),
-                                child: GroupedItemTile(
-                                  title: material.title,
-                                  subtitle: 'PDF',
-                                  icon: Icons.picture_as_pdf_outlined,
-                                  onTap: () => _openMaterial(context, material),
-                                  onDelete: () =>
-                                      _confirmDelete(context, ref, material),
-                                  deleteLabel: 'Remove',
-                                ),
-                              ),
+                            const SectionHeader(title: 'Materials'),
+                            materialsBody,
                           ],
                         ),
                       ),
-                  ],
-                );
-              },
-            ),
-            _ContiguousSliver(
-              children: [
-                DetailContent(
-                  bottom: AppSpacing.xs,
-                  child: const SectionHeader(title: 'Study tools'),
-                ),
-                DetailContent(
-                  bottom: AppSpacing.md,
-                  child: Column(
-                    children: [
-                      _StudyToolTile(
-                        icon: Icons.style_outlined,
-                        title: 'Flashcards',
-                        subtitle: flashcardCount == null
-                            ? 'Open flashcards'
-                            : flashcardCount == 1
-                            ? '1 card'
-                            : '$flashcardCount cards',
-                        onTap: () => Navigator.of(context).pushNamed(
-                          AppRoutes.flashcardsList,
-                          arguments: FlashcardsListScope.lesson(
-                            id: lessonId,
-                            title: lesson.name,
-                          ),
+                      const SizedBox(width: AppSpacing.xl),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SectionHeader(title: 'Study tools'),
+                            studyTools,
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      _StudyToolTile(
-                        icon: Icons.image_outlined,
-                        title: 'Images',
-                        subtitle: imageSubtitle,
-                        onTap: () => Navigator.of(context).pushNamed(
-                          AppRoutes.lessonImages,
-                          arguments: LessonImagesScope(
-                            lessonId: lessonId,
-                            title: lesson.name,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      _StudyToolTile(
-                        icon: Icons.quiz_outlined,
-                        title: 'AI Questions',
-                        subtitle: 'Generated quizzes',
-                        onTap: () => Navigator.of(context).pushNamed(
-                          AppRoutes.questionSets,
-                          arguments: QuestionSetsScope.lesson(
-                            id: lessonId,
-                            title: lesson.name,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      _StudyToolTile(
-                        icon: Icons.library_books_outlined,
-                        title: 'AI Study Materials',
-                        subtitle: 'Summary · Explanation · Deep Explanation',
-                        onTap: () => _openAiStudyMaterials(
-                          context,
-                          ref,
-                          materialsAsync.valueOrNull ?? const [],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      NotesListSection.lesson(lessonId: lessonId),
-                      const SizedBox(height: AppSpacing.xs),
-                      _StudyToolTile(
-                        icon: Icons.bookmark_outline,
-                        title: 'Bookmarks',
-                        subtitle: bookmarkCount == null
-                            ? 'Saved pages'
-                            : bookmarkCount == 1
-                            ? '1 bookmark'
-                            : '$bookmarkCount bookmarks',
-                        interactive: false,
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              )
+            else ...[
+              _ContiguousSliver(
+                children: [
+                  DetailContent(
+                    bottom: AppSpacing.xs,
+                    child: const SectionHeader(title: 'Materials'),
+                  ),
+                  DetailContent(bottom: AppSpacing.md, child: materialsBody),
+                ],
+              ),
+              _ContiguousSliver(
+                children: [
+                  DetailContent(
+                    bottom: AppSpacing.xs,
+                    child: const SectionHeader(title: 'Study tools'),
+                  ),
+                  DetailContent(bottom: AppSpacing.md, child: studyTools),
+                ],
+              ),
+            ],
             const SliverToBoxAdapter(child: SizedBox(height: 72)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _studyTools(
+    BuildContext context,
+    WidgetRef ref, {
+    required Lesson lesson,
+    required AsyncValue<List<LessonMaterial>> materialsAsync,
+    required int? flashcardCount,
+    required int? bookmarkCount,
+    required String imageSubtitle,
+  }) {
+    return Column(
+      children: [
+        _StudyToolTile(
+          icon: Icons.style_outlined,
+          title: 'Flashcards',
+          subtitle: flashcardCount == null
+              ? 'Open flashcards'
+              : flashcardCount == 1
+              ? '1 card'
+              : '$flashcardCount cards',
+          onTap: () => Navigator.of(context).pushNamed(
+            AppRoutes.flashcardsList,
+            arguments: FlashcardsListScope.lesson(
+              id: lessonId,
+              title: lesson.name,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _StudyToolTile(
+          icon: Icons.image_outlined,
+          title: 'Images',
+          subtitle: imageSubtitle,
+          onTap: () => Navigator.of(context).pushNamed(
+            AppRoutes.lessonImages,
+            arguments: LessonImagesScope(
+              lessonId: lessonId,
+              title: lesson.name,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _StudyToolTile(
+          icon: Icons.quiz_outlined,
+          title: 'AI Questions',
+          subtitle: 'Generated quizzes',
+          onTap: () => Navigator.of(context).pushNamed(
+            AppRoutes.questionSets,
+            arguments: QuestionSetsScope.lesson(
+              id: lessonId,
+              title: lesson.name,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _StudyToolTile(
+          icon: Icons.library_books_outlined,
+          title: 'AI Study Materials',
+          subtitle: 'Summary · Explanation · Deep Explanation',
+          onTap: () => _openAiStudyMaterials(
+            context,
+            ref,
+            materialsAsync.valueOrNull ?? const [],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        NotesListSection.lesson(lessonId: lessonId),
+        const SizedBox(height: AppSpacing.xs),
+        _StudyToolTile(
+          icon: Icons.bookmark_outline,
+          title: 'Bookmarks',
+          subtitle: bookmarkCount == null
+              ? 'Saved pages'
+              : bookmarkCount == 1
+              ? '1 bookmark'
+              : '$bookmarkCount bookmarks',
+          interactive: false,
+        ),
+      ],
+    );
+  }
+
+  Widget _materialsBody(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<LessonMaterial>> materialsAsync,
+  ) {
+    final theme = Theme.of(context);
+    return materialsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: AppLoading(),
+      ),
+      error: (error, _) =>
+          const AppErrorState(message: 'Could not load materials.'),
+      data: (materials) {
+        final pdfs = [
+          for (final material in materials)
+            if (isPdfMimeType(material.mimeType)) material,
+        ];
+        if (pdfs.isEmpty) {
+          return Text(
+            'No PDFs yet. Attach a PDF to study here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final material in pdfs)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: GroupedItemTile(
+                  title: material.title,
+                  subtitle: 'PDF',
+                  icon: Icons.picture_as_pdf_outlined,
+                  onTap: () => _openMaterial(context, material),
+                  onDelete: () => _confirmDelete(context, ref, material),
+                  deleteLabel: 'Remove',
+                ),
+              ),
           ],
         );
       },

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Consistent spacing, radii, and layout breakpoints.
@@ -31,6 +32,27 @@ abstract final class AppSpacing {
 
   static bool isWide(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= wideBreakpoint;
+
+  /// Window width at which desktop platforms use the desktop shell.
+  static const double desktopBreakpoint = 1000;
+
+  /// Max content width inside the desktop shell.
+  static const double contentMaxWidthWide = 1280;
+
+  static bool get isDesktopPlatform => switch (defaultTargetPlatform) {
+    TargetPlatform.linux ||
+    TargetPlatform.windows ||
+    TargetPlatform.macOS => true,
+    _ => false,
+  };
+
+  /// Desktop OS with a window wide enough for the desktop layout.
+  static bool isDesktopLayout(BuildContext context) =>
+      isDesktopPlatform &&
+      MediaQuery.sizeOf(context).width >= desktopBreakpoint;
+
+  static double contentWidth(BuildContext context) =>
+      isDesktopLayout(context) ? contentMaxWidthWide : contentMaxWidth;
 }
 
 abstract final class AppRadii {

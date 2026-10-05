@@ -4,6 +4,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/desktop_frame.dart';
 import '../core/widgets/system_bottom_inset.dart';
 import '../features/study_workspace/presentation/study_workspace_overlay.dart';
 import 'routes.dart';
@@ -18,6 +19,8 @@ class StudyVaultApp extends StatelessWidget {
       title: 'Study Vault',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      navigatorKey: appNavigatorKey,
+      navigatorObservers: [appRouteObserver],
       initialRoute: AppRoutes.home,
       onGenerateRoute: onGenerateRoute,
       builder: (context, child) {
@@ -26,7 +29,11 @@ class StudyVaultApp extends StatelessWidget {
         return ColoredBox(
           color: AppColors.surface,
           child: SystemBottomSafeArea(
-            child: StudyWorkspaceHost(child: child ?? const SizedBox.shrink()),
+            child: DesktopFrame(
+              child: StudyWorkspaceHost(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
           ),
         );
       },

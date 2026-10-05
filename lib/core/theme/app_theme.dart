@@ -58,8 +58,12 @@ class AppTheme {
         'Segoe UI',
         'Roboto',
       ],
-      visualDensity: VisualDensity.standard,
-      materialTapTargetSize: MaterialTapTargetSize.padded,
+      visualDensity: AppSpacing.isDesktopPlatform
+          ? VisualDensity.compact
+          : VisualDensity.standard,
+      materialTapTargetSize: AppSpacing.isDesktopPlatform
+          ? MaterialTapTargetSize.shrinkWrap
+          : MaterialTapTargetSize.padded,
       dividerTheme: DividerThemeData(
         color: colorScheme.outlineVariant,
         thickness: 1,

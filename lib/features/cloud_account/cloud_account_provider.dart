@@ -3,8 +3,15 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path/path.dart' as p;
 
+import '../../../core/backup/backup_io.dart';
+import '../../../core/backup/backup_service.dart';
+import '../../../core/database/database_provider.dart';
+import '../../../core/storage/study_vault_paths.dart';
 import 'cloud_api.dart';
+import 'cloud_sync_models.dart';
+import 'cloud_sync_service.dart';
 
 abstract interface class CloudSessionStore {
   Future<CloudSession?> read();
@@ -39,21 +46,54 @@ class SecureCloudSessionStore implements CloudSessionStore {
 }
 
 class CloudAccountState {
-  const CloudAccountState({this.username, this.busy = false, this.message});
+  const CloudAccountState({
+    this.username,
+    this.busy = false,
+    this.message,
+    this.syncEnabled = false,
+    this.lastSync,
+    this.backupPath,
+    this.conflicts = const [],
+    this.resolutionToken,
+  });
   final String? username;
   final bool busy;
   final String? message;
+  final bool syncEnabled;
+  final DateTime? lastSync;
+  final String? backupPath;
+  final List<CloudConflict> conflicts;
+  final String? resolutionToken;
 }
+
+final cloudSyncServiceProvider = FutureProvider<CloudSyncService>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final docs = await StudyVaultPaths.documentsDirectory();
+  final files = await StudyVaultPaths.materialsDirectory();
+  final api = CloudApi();
+  ref.onDispose(api.close);
+  return CloudSyncService(
+    db: db,
+    remote: api,
+    filesRoot: files,
+    recoveryRoot: Directory(p.join(docs.path, 'study_vault_sync_recovery')),
+    serverId: CloudApi.origin.toString(),
+  );
+});
 
 final cloudAccountProvider =
     StateNotifierProvider<CloudAccountController, CloudAccountState>((ref) {
       final api = CloudApi();
       ref.onDispose(api.close);
-      return CloudAccountController(api, SecureCloudSessionStore());
+      return CloudAccountController(
+        api,
+        SecureCloudSessionStore(),
+        syncService: () => ref.read(cloudSyncServiceProvider.future),
+      );
     });
 
 class CloudAccountController extends StateNotifier<CloudAccountState> {
-  CloudAccountController(this._api, this._store)
+  CloudAccountController(this._api, this._store, {this.syncService})
     : super(const CloudAccountState(busy: true)) {
     _restore();
   }
@@ -61,6 +101,21 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
   final CloudApi _api;
   final CloudSessionStore _store;
   CloudSession? _session;
+  final Future<CloudSyncService> Function()? syncService;
+  bool _syncEnabled = false;
+  CloudSyncOutcome _sync = const CloudSyncOutcome();
+
+  Future<void> _loadSyncInfo() async {
+    if (syncService == null || _session == null) return;
+    final service = await syncService!();
+    final info = await service.info();
+    _syncEnabled =
+        info['account'] == '${service.serverId}|${_session!.accountId}';
+    _sync = CloudSyncOutcome(
+      lastSync: DateTime.tryParse('${info['last_sync']}'),
+      backupPath: info['backup_path'] as String?,
+    );
+  }
 
   void _show({bool busy = false, String? message}) {
     if (mounted) {
@@ -68,6 +123,11 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
         username: _session?.username,
         busy: busy,
         message: message,
+        syncEnabled: _syncEnabled,
+        lastSync: _sync.lastSync,
+        backupPath: _sync.backupPath,
+        conflicts: _sync.conflicts,
+        resolutionToken: _sync.resolutionToken,
       );
     }
   }
@@ -75,6 +135,7 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
   Future<void> _restore() async {
     try {
       _session = await _store.read();
+      await _loadSyncInfo();
       _show();
     } catch (_) {
       _show(
@@ -104,9 +165,10 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
         return false;
       }
       _session = session;
+      await _loadSyncInfo();
       _show(
         message:
-            'Signed in securely. Library synchronization is not enabled yet.',
+            'Signed in securely. Use Sync now to synchronize your library.',
       );
       return true;
     } on CloudApiException catch (error) {
@@ -115,6 +177,90 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
     } catch (_) {
       _show(message: 'Sign-in failed. Your local study data is unchanged.');
       return false;
+    }
+  }
+
+  Future<void> syncNow({
+    bool consent = false,
+    CloudConflictChoice? choice,
+    String? resolutionToken,
+  }) async {
+    final session = _session;
+    if (state.busy || session == null || syncService == null) return;
+    _show(busy: true, message: 'Connecting securely…');
+    try {
+      await _api.verify(session);
+      final service = await syncService!();
+      final result = await service.sync(
+        token: session.token,
+        accountId: session.accountId,
+        consent: consent,
+        choice: choice,
+        resolutionToken: resolutionToken,
+        onProgress: (message) => _show(busy: true, message: message),
+      );
+      await _loadSyncInfo();
+      _sync = CloudSyncOutcome(
+        conflicts: result.conflicts,
+        resolutionToken: result.resolutionToken,
+        lastSync: result.lastSync ?? _sync.lastSync,
+        backupPath: result.backupPath ?? _sync.backupPath,
+      );
+      _show(message: result.message);
+    } catch (error) {
+      await _loadSyncInfo().catchError((_) {});
+      if (error is CloudApiException && error.status == 401) {
+        try {
+          await _store.clear();
+          _session = null;
+          _syncEnabled = false;
+        } catch (_) {}
+      }
+      _show(
+        message: error is CloudApiException
+            ? error.message
+            : error is CloudSyncFailure
+            ? error.message
+            : 'Sync was interrupted. Your recovery copies were kept. Check your connection and storage, then tap Sync now to retry.',
+      );
+    }
+  }
+
+  Future<void> exportRecovery() async {
+    final path = state.backupPath;
+    if (state.busy || path == null) return;
+    _show(busy: true, message: 'Preparing recovery backup export…');
+    Directory? temporary;
+    try {
+      final file = File(path);
+      final backups = BackupService();
+      final manifest = await backups.inspectBackup(file);
+      temporary = await Directory.systemTemp.createTemp('sv_recovery_export_');
+      final copy = File(
+        p.join(temporary.path, 'StudyVault-before-sync.svbackup'),
+      );
+      await copyFileStreaming(file, copy);
+      await backups.exportBuiltBackup(
+        BuiltBackup(
+          archiveFile: copy,
+          manifest: manifest,
+          suggestedFileName: 'StudyVault-before-sync.svbackup',
+          workDir: temporary,
+        ),
+      );
+      _show(
+        message:
+            'Recovery backup export finished. The original recovery copy was kept.',
+      );
+    } catch (_) {
+      _show(
+        message:
+            'Could not export the backup. The original recovery copy was kept.',
+      );
+    } finally {
+      if (temporary != null && await temporary.exists()) {
+        await temporary.delete(recursive: true);
+      }
     }
   }
 
@@ -161,6 +307,8 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
       return;
     }
     _session = null;
+    _syncEnabled = false;
+    _sync = const CloudSyncOutcome();
     try {
       await _api.logout(session);
       _show(message: 'Signed out. Local study data was kept.');

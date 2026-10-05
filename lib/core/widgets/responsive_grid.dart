@@ -27,13 +27,16 @@ class ResponsiveGrid extends StatelessWidget {
         final itemWidth =
             (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: runSpacing,
-          children: [
-            for (final child in children)
-              SizedBox(width: itemWidth, child: child),
-          ],
+        return SizedBox(
+          width: width,
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: runSpacing,
+            children: [
+              for (final child in children)
+                SizedBox(width: itemWidth, child: child),
+            ],
+          ),
         );
       },
     );

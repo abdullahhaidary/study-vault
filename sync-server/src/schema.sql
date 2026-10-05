@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS records (
   data jsonb,
   PRIMARY KEY(account_id, table_name, record_id)
 );
+CREATE TABLE IF NOT EXISTS sync_commits (
+  account_id uuid NOT NULL REFERENCES accounts(id),
+  operation_id uuid NOT NULL,
+  request_hash text NOT NULL,
+  response jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(account_id, operation_id)
+);
 CREATE TABLE IF NOT EXISTS files (
   account_id uuid NOT NULL REFERENCES accounts(id),
   digest text NOT NULL CHECK(digest ~ '^[a-f0-9]{64}$'),

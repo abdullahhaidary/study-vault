@@ -81,7 +81,7 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
                     behavior: HitTestBehavior.opaque,
                     onPanUpdate: (details) => _moveLauncher(details.delta),
                     child: FloatingActionButton.small(
-                      heroTag: 'global-study-ai',
+                      heroTag: null,
                       onPressed: controller.restore,
                       child: const Icon(Icons.auto_awesome),
                     ),
@@ -237,20 +237,24 @@ class _WindowOverlayNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Navigator(
-      onGenerateRoute: (settings) {
-        return PageRouteBuilder<void>(
-          settings: settings,
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-          pageBuilder: (_, _, _) => _FloatingChatWindow(
-            onDrag: onDrag,
-            onResize: onResize,
-            onMinimize: onMinimize,
-            onClose: onClose,
-          ),
-        );
-      },
+    // This navigator lives outside the app navigator; sharing MaterialApp's
+    // HeroController with it locks both navigators.
+    return HeroControllerScope.none(
+      child: Navigator(
+        onGenerateRoute: (settings) {
+          return PageRouteBuilder<void>(
+            settings: settings,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (_, _, _) => _FloatingChatWindow(
+              onDrag: onDrag,
+              onResize: onResize,
+              onMinimize: onMinimize,
+              onClose: onClose,
+            ),
+          );
+        },
+      ),
     );
   }
 }

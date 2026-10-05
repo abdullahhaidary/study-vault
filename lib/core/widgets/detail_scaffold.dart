@@ -47,8 +47,8 @@ class DetailScaffold extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.topCenter,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: AppSpacing.contentMaxWidth,
+                    constraints: BoxConstraints(
+                      maxWidth: AppSpacing.contentWidth(context),
                     ),
                     child: Padding(
                       padding: AppSpacing.pageInsets(
@@ -92,7 +92,7 @@ class DetailContent extends StatelessWidget {
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+        constraints: BoxConstraints(maxWidth: AppSpacing.contentWidth(context)),
         child: Padding(
           padding: EdgeInsets.fromLTRB(page.left, 0, page.right, bottom),
           child: child,

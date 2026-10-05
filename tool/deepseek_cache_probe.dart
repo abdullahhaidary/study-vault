@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
@@ -49,6 +51,11 @@ void main() async {
     List<Map<String, String>>? previousPrefix;
     for (var i = 0; i < questions.length; i++) {
       final request = AiStudyRequest(
+        selection: AiExecutionSelection(
+          provider: AiProviderId.deepseek,
+          requestedModelId: model,
+          resolvedModelId: model,
+        ),
         action: AiStudyAction.askAi,
         sourceText: document,
         selectedText: document,

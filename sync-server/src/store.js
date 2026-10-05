@@ -19,9 +19,9 @@ export function canonical(value) {
   return JSON.stringify(value);
 }
 
-export function validateMutations(body) {
+export function validateMutations(body, maximum = 100) {
   if (body?.schemaVersion !== schemaVersion || !Array.isArray(body.mutations) ||
-      body.mutations.length < 1 || body.mutations.length > 100) return false;
+      body.mutations.length < 1 || body.mutations.length > maximum) return false;
   const ids = new Set();
   const mutations = new Set();
   return body.mutations.every((m) => {

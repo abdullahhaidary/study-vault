@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/desktop_frame.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive_grid.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
@@ -26,6 +27,7 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(subjectCountsProvider).valueOrNull ?? const <String, int>{};
     final continueAsync = ref.watch(continueStudyingLessonsProvider);
     final theme = Theme.of(context);
+    final desktop = AppSpacing.isDesktopLayout(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -35,45 +37,65 @@ class HomeScreen extends ConsumerWidget {
           slivers: [
             SliverAppBar(
               pinned: true,
-              title: const Text('Study Vault'),
-              actions: [
-                IconButton(
-                  tooltip: 'AI Chat',
-                  onPressed: () =>
-                      ref.read(studyWorkspaceProvider.notifier).open(),
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Search',
-                  onPressed: () =>
-                      Navigator.of(context).pushNamed(AppRoutes.search),
-                  icon: const Icon(Icons.search),
-                ),
-                PopupMenuButton<String>(
-                  tooltip: 'More',
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'add_class':
-                        CreateClassDialog.show(context);
-                      case 'reviews':
-                        RecentReviewsScreen.open(context);
-                      case 'favorites':
-                        ShellNavigation.openFavorites(context);
-                      case 'settings':
-                        ShellNavigation.openSettings(context);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'add_class', child: Text('Add Class')),
-                    PopupMenuItem(
-                      value: 'reviews',
-                      child: Text('Recent Reviews'),
-                    ),
-                    PopupMenuItem(value: 'favorites', child: Text('Favorites')),
-                    PopupMenuItem(value: 'settings', child: Text('Settings')),
-                  ],
-                ),
-              ],
+              title: Text(desktop ? 'Library' : 'Study Vault'),
+              actions: desktop
+                  ? [
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.md),
+                        child: FilledButton.icon(
+                          onPressed: () => CreateClassDialog.show(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Class'),
+                        ),
+                      ),
+                    ]
+                  : [
+                      IconButton(
+                        tooltip: 'AI Chat',
+                        onPressed: () =>
+                            ref.read(studyWorkspaceProvider.notifier).open(),
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Search',
+                        onPressed: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.search),
+                        icon: const Icon(Icons.search),
+                      ),
+                      PopupMenuButton<String>(
+                        tooltip: 'More',
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'add_class':
+                              CreateClassDialog.show(context);
+                            case 'reviews':
+                              RecentReviewsScreen.open(context);
+                            case 'favorites':
+                              ShellNavigation.openFavorites(context);
+                            case 'settings':
+                              ShellNavigation.openSettings(context);
+                          }
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: 'add_class',
+                            child: Text('Add Class'),
+                          ),
+                          PopupMenuItem(
+                            value: 'reviews',
+                            child: Text('Recent Reviews'),
+                          ),
+                          PopupMenuItem(
+                            value: 'favorites',
+                            child: Text('Favorites'),
+                          ),
+                          PopupMenuItem(
+                            value: 'settings',
+                            child: Text('Settings'),
+                          ),
+                        ],
+                      ),
+                    ],
             ),
             continueAsync.when(
               loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
@@ -89,12 +111,10 @@ class HomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SectionHeader(title: 'Continue Studying'),
-                        ...lessons.take(3).map((lesson) {
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.xs,
-                            ),
-                            child: ListTile(
+                        AdaptiveItemList(
+                          minItemWidth: 300,
+                          children: lessons.take(desktop ? 4 : 3).map((lesson) {
+                            return ListTile(
                               tileColor: theme.colorScheme.surface,
                               shape: RoundedRectangleBorder(
                                 borderRadius: AppRadii.mdAll,
@@ -122,9 +142,9 @@ class HomeScreen extends ConsumerWidget {
                                 AppRoutes.lessonDetails,
                                 arguments: lesson.id,
                               ),
-                            ),
-                          );
-                        }),
+                            );
+                          }).toList(),
+                        ),
                         const SizedBox(height: AppSpacing.md),
                       ],
                     ),
@@ -203,7 +223,7 @@ class ContentHomePadding extends StatelessWidget {
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+        constraints: BoxConstraints(maxWidth: AppSpacing.contentWidth(context)),
         child: Padding(
           padding: EdgeInsets.fromLTRB(page.left, 0, page.right, bottom),
           child: child,

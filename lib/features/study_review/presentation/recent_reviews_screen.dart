@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -13,9 +14,7 @@ class RecentReviewsScreen extends ConsumerWidget {
   const RecentReviewsScreen({super.key});
 
   static Future<void> open(BuildContext context) {
-    return Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const RecentReviewsScreen()));
+    return Navigator.of(context).pushNamed(AppRoutes.reviews);
   }
 
   @override

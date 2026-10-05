@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/desktop_frame.dart';
 import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
@@ -166,6 +167,19 @@ class ClassDetailsScreen extends ConsumerWidget {
 
     final children = <Widget>[];
     final theme = Theme.of(context);
+    Widget subjectTile(Subject subject) => GroupedItemTile(
+      title: subject.name,
+      subtitle: subject.description,
+      icon: Icons.menu_book_outlined,
+      onTap: () => Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.subjectDetails, arguments: subject.id),
+      onEdit: () => CreateSubjectDialog.show(
+        context,
+        classId: classId,
+        existing: subject,
+      ),
+    );
 
     for (final group in groupList) {
       final inGroup = subjectList
@@ -196,28 +210,9 @@ class ClassDetailsScreen extends ConsumerWidget {
           ),
         );
       } else {
-        for (final subject in inGroup) {
-          children.add(
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: GroupedItemTile(
-                title: subject.name,
-                subtitle: subject.description,
-                icon: Icons.menu_book_outlined,
-                onTap: () {
-                  Navigator.of(
-                    context,
-                  ).pushNamed(AppRoutes.subjectDetails, arguments: subject.id);
-                },
-                onEdit: () => CreateSubjectDialog.show(
-                  context,
-                  classId: classId,
-                  existing: subject,
-                ),
-              ),
-            ),
-          );
-        }
+        children.add(
+          AdaptiveItemList(children: [for (final s in inGroup) subjectTile(s)]),
+        );
       }
       children.add(const SizedBox(height: AppSpacing.xs));
     }
@@ -242,28 +237,9 @@ class ClassDetailsScreen extends ConsumerWidget {
           ),
         );
       }
-      for (final subject in ungrouped) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: GroupedItemTile(
-              title: subject.name,
-              subtitle: subject.description,
-              icon: Icons.menu_book_outlined,
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.subjectDetails, arguments: subject.id);
-              },
-              onEdit: () => CreateSubjectDialog.show(
-                context,
-                classId: classId,
-                existing: subject,
-              ),
-            ),
-          ),
-        );
-      }
+      children.add(
+        AdaptiveItemList(children: [for (final s in ungrouped) subjectTile(s)]),
+      );
     }
 
     return [

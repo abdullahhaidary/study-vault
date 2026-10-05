@@ -16,6 +16,7 @@ import '../features/notes/presentation/note_editor_screen.dart';
 import '../features/notes/presentation/note_reader_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/study_review/presentation/recent_reviews_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 
 /// Named route constants.
@@ -37,6 +38,7 @@ abstract final class AppRoutes {
   static const lessonImages = '/lesson-images';
   static const questionSets = '/ai-questions';
   static const manualEntry = '/manual-entry';
+  static const reviews = '/reviews';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -118,6 +120,12 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) =>
             QuestionSetsScreen(scope: settings.arguments as QuestionSetsScope),
+      );
+
+    case AppRoutes.reviews:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const RecentReviewsScreen(),
       );
 
     case AppRoutes.manualEntry:

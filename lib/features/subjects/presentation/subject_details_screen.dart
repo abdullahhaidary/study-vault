@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/desktop_frame.dart';
 import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
@@ -217,6 +218,19 @@ class SubjectDetailsScreen extends ConsumerWidget {
     for (final lesson in lessonList) {
       lessonsByGroup.putIfAbsent(lesson.lessonGroupId, () => []).add(lesson);
     }
+    Widget lessonTile(Lesson lesson) => GroupedItemTile(
+      title: lesson.name,
+      subtitle: _lessonSubtitle(lesson),
+      icon: Icons.auto_stories_outlined,
+      onTap: () => Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id),
+      onEdit: () => CreateLessonDialog.show(
+        context,
+        subjectId: subjectId,
+        existing: lesson,
+      ),
+    );
 
     for (final group in groupList) {
       final inGroup = lessonsByGroup[group.id] ?? const <Lesson>[];
@@ -245,28 +259,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
           ),
         );
       } else {
-        for (final lesson in inGroup) {
-          children.add(
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: GroupedItemTile(
-                title: lesson.name,
-                subtitle: _lessonSubtitle(lesson),
-                icon: Icons.auto_stories_outlined,
-                onTap: () {
-                  Navigator.of(
-                    context,
-                  ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id);
-                },
-                onEdit: () => CreateLessonDialog.show(
-                  context,
-                  subjectId: subjectId,
-                  existing: lesson,
-                ),
-              ),
-            ),
-          );
-        }
+        children.add(
+          AdaptiveItemList(children: [for (final l in inGroup) lessonTile(l)]),
+        );
       }
       children.add(const SizedBox(height: AppSpacing.xs));
     }
@@ -289,28 +284,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
           ),
         );
       }
-      for (final lesson in ungrouped) {
-        children.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: GroupedItemTile(
-              title: lesson.name,
-              subtitle: _lessonSubtitle(lesson),
-              icon: Icons.auto_stories_outlined,
-              onTap: () {
-                Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id);
-              },
-              onEdit: () => CreateLessonDialog.show(
-                context,
-                subjectId: subjectId,
-                existing: lesson,
-              ),
-            ),
-          ),
-        );
-      }
+      children.add(
+        AdaptiveItemList(children: [for (final l in ungrouped) lessonTile(l)]),
+      );
     }
 
     return [

@@ -2,6 +2,7 @@
 
 - Flutter verification: `flutter test --no-pub`; target individual files for isolated changes. Run `flutter analyze` for Dart changes.
 - POCO/ARM64 test APK: `flutter build apk --release --target-platform android-arm64 --split-per-abi --no-pub`. Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`. The current Android release configuration uses the debug signing key, so this is a sideload/testing artifact, not a production-store release.
+- Desktop layout: `DesktopFrame` (lib/core/widgets/desktop_frame.dart) wraps the root navigator with a persistent `NavigationRail` when `AppSpacing.isDesktopLayout` is true (Linux/Windows/macOS and window width ≥ 1000). Phones and narrow windows keep the mobile layout. Use `AppSpacing.contentWidth(context)` instead of the fixed 840 max width, and `AdaptiveItemList` for lists that should become grids on desktop. Tests: `test/desktop_layout_test.dart`.
 - The desktop app stores SQLite and material files through `StudyVaultPaths`; do not change a live database while testing. Use `AppDatabase.forTesting(NativeDatabase.memory())`.
 - `file-share-server/` is a separate unauthenticated LAN sharing tool, not the private cloud backend. Do not publish it as the authenticated API.
 - `sync-server/` is the private Node/PostgreSQL backend. Production uses Node 24; its Dockerfile pins the runtime image.
@@ -10,6 +11,11 @@
 - Build the backend with `docker build -t study-vault-sync:verification sync-server`.
 - Additional checks: `npm audit --omit=dev --prefix sync-server`, `bash -n sync-server/deploy/backup.sh sync-server/deploy/renew-certificate.sh`, and `git diff --check`.
 - Backend sync uses schema version 16, account-scoped rows, immutable revision history, explicit tombstones, mutation IDs for retries, and optimistic revision checks. Conflicting batches must remain atomic.
+- The Flutter client uses `/v2/snapshot` and `/v2/sync`: one account-wide expected head and a durable operation ID make a whole-library commit atomic and retryable. Do not replace this with independent v1 batches for related records.
+- Sync is manual and opt-in. Its local baseline and pending operation are in `local_cloud_sync`, excluded from the synchronized app tables; account/server binding prevents accidental cross-account uploads. Never put session tokens in this table.
+- The first implementation supports 20,000 metadata records, a 48 MiB snapshot, and files up to 256 MiB each. Conflicts require an explicit choice. Local recovery archives are kept under the app documents directory in `study_vault_sync_recovery` and can be exported from Settings.
+- `test/cloud_schema_contract_test.dart` checks all 25 Drift tables against `sync-server/src/library-schema.json`. After an intentional database-schema change, regenerate with `flutter test --no-pub --dart-define=UPDATE_CLOUD_SCHEMA=true test/cloud_schema_contract_test.dart` and review the contract diff.
+- Flutter sync checks: `flutter test --no-pub test/cloud_schema_contract_test.dart test/cloud_sync_merge_test.dart test/cloud_sync_service_test.dart test/cloud_account_test.dart`. With `TEST_DATABASE_URL` pointing at a local disposable PostgreSQL database, also run `flutter test --no-pub test/cloud_sync_http_test.dart` for a real Dart-to-Node-to-PostgreSQL round trip.
 - Private file manifests must reference an already-uploaded SHA-256-verified blob. Do not serve the file directory publicly.
 - Production deployment uses the dedicated `/opt/study-vault` Docker Compose project. Do not alter other VPS projects, their credentials, or their databases.
 - Keep database secrets and TLS private keys out of source control and terminal output. Provision the app account with the interactive `npm run account -- create USERNAME` command inside the API container.

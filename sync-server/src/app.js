@@ -7,6 +7,7 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { rateLimit, sessionToken, sha256, verifyPassword } from './security.js';
 import { push, schemaVersion, validateMutations } from './store.js';
+import { snapshot, commitLibrary, validCommit } from './library-sync.js';
 
 export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   maxFileBytes = 256 * 1024 * 1024, quotaBytes = 10 * 1024 * 1024 * 1024 }) {
@@ -22,10 +23,11 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   });
   app.get('/healthz', async (_req, res) => {
     await pool.query('SELECT 1');
-    res.json({ status: 'ok', schemaVersion });
+    res.json({ status: 'ok', schemaVersion, syncProtocol: 2 });
   });
   app.use(rateLimit({ maximum: 600, windowMs: 60000 }));
-  app.use(express.json({ limit: '4mb', strict: true }));
+  const jsonBody = express.json({ limit: '4mb', strict: true });
+  app.use((req, res, next) => req.path === '/v2/sync' ? next() : jsonBody(req, res, next));
   let passwordChecks = 0;
   app.post('/v1/login', rateLimit({ maximum: 10, windowMs: 15 * 60000 }), async (req, res) => {
     const { username, password, deviceName } = req.body ?? {};
@@ -53,7 +55,7 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
       [sha256(token), account.id, deviceName.trim(), expiresAt]);
     res.json({ token, expiresAt: expiresAt.toISOString(), account: { id: account.id, username: account.username } });
   });
-  app.use('/v1', async (req, res, next) => {
+  app.use(['/v1', '/v2'], async (req, res, next) => {
     const match = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(req.get('authorization') ?? '');
     if (!match) return res.status(401).json({ error: 'Sign in required.' });
     req.tokenHash = sha256(match[1]);
@@ -64,7 +66,7 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   });
   app.get('/v1/me', async (req, res) => {
     const result = await pool.query('SELECT id,username FROM accounts WHERE id=$1', [req.accountId]);
-    res.json({ account: result.rows[0], schemaVersion, maxFileBytes, quotaBytes });
+    res.json({ account: result.rows[0], schemaVersion, syncProtocol: 2, maxFileBytes, quotaBytes });
   });
   app.post('/v1/logout', async (req, res) => {
     await pool.query('DELETE FROM sessions WHERE token_hash=$1', [req.tokenHash]);
@@ -89,6 +91,14 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   app.post('/v1/changes', async (req, res) => {
     if (!validateMutations(req.body)) return res.status(400).json({ error: 'Invalid sync batch or unsupported schema version.' });
     const { status, ...result } = await push(pool, req.accountId, req.body.mutations);
+    res.status(status).json(result);
+  });
+  app.get('/v2/snapshot', async (req, res) => {
+    res.json(await snapshot(pool, req.accountId));
+  });
+  app.post('/v2/sync', express.json({ limit: '64mb', strict: true }), async (req, res) => {
+    if (!validCommit(req.body)) return res.status(400).json({ error: 'Invalid library commit.' });
+    const { status, ...result } = await commitLibrary(pool, req.accountId, req.body);
     res.status(status).json(result);
   });
   const uploads = new Map();
@@ -144,6 +154,11 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
       await unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error; });
     }
   });
+  app.head('/v1/files/:digest', async (req, res) => {
+    const found = await pool.query('SELECT bytes FROM files WHERE account_id=$1 AND digest=$2', [req.accountId, req.params.digest]);
+    if (!found.rowCount) return res.status(404).end();
+    res.set({ 'Content-Length': String(found.rows[0].bytes), 'X-Checksum-Sha256': req.params.digest }).status(200).end();
+  });
   app.get('/v1/files/:digest', async (req, res) => {
     const found = await pool.query('SELECT bytes FROM files WHERE account_id=$1 AND digest=$2', [req.accountId, req.params.digest]);
     if (!found.rowCount) return res.status(404).json({ error: 'File not found.' });
@@ -157,7 +172,7 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));
   app.use((error, _req, res, _next) => {
     if (res.headersSent) return res.destroy();
-    const status = error.type === 'entity.too.large' ? 413 : error.type === 'entity.parse.failed' ? 400 : 500;
+    const status = error.status === 413 || error.type === 'entity.too.large' ? 413 : error.type === 'entity.parse.failed' ? 400 : 500;
     res.status(status).json({ error: status === 500 ? 'Request failed. Please retry.' : 'Invalid request body.' });
   });
   return app;

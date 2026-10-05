@@ -164,7 +164,7 @@ void main() {
     expect(await controller.signIn('test-user', 'test-only-password'), isTrue);
     expect(store.value, isNotNull);
     expect(controller.state.username, 'test-user');
-    expect(controller.state.message, contains('not enabled yet'));
+    expect(controller.state.message, contains('Use Sync now'));
     await controller.signOut();
     expect(store.value, isNull);
     expect(controller.state.username, isNull);
@@ -257,5 +257,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Signed in as test-user'), findsOneWidget);
     expect(find.text('Check connection'), findsOneWidget);
+    await tester.tap(find.text('Enable sync'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enable private library sync?'), findsOneWidget);
+    expect(
+      find.textContaining('Later edits and deletions propagate'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(controller.state.syncEnabled, isFalse);
   });
 }
