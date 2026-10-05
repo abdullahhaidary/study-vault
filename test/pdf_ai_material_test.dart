@@ -16,6 +16,7 @@ import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
 import 'package:study_vault/features/ai_questions/domain/question_source.dart';
 import 'package:study_vault/features/pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import 'package:study_vault/features/pdf_ai_materials/services/pdf_ai_material_service.dart';
+import 'package:study_vault/features/reference_books/data/book_providers.dart';
 
 void main() {
   group('PDF AI prompt structure', () {
@@ -451,6 +452,9 @@ Future<void> _pumpReader(
         ),
         materialsForLessonProvider('lesson-1').overrideWith(
           (ref) => Stream.value([]),
+        ),
+        materialBookLinksProvider.overrideWith(
+          (ref, id) => Stream.value(const []),
         ),
       ],
       child: const MaterialApp(

@@ -10,6 +10,7 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/cloud_account/cloud_sync_schema.dart';
 import 'package:study_vault/features/course_review/data/course_review_repository.dart';
 import 'package:study_vault/features/course_review/domain/course_review_models.dart';
+import 'package:study_vault/features/pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import 'package:study_vault/features/study_pins/domain/study_note_codec.dart';
 
 /// Drives tool/study_vault_mcp.py over stdio like Devin does.
@@ -190,6 +191,9 @@ void main() {
       tools.map((t) => (t as Map)['name']),
       containsAll([
         'library_overview',
+        'add_lesson',
+        'attach_file',
+        'draft_pdf_study_material',
         'add_flashcards',
         'set_course_review_section',
         'add_book_item',
@@ -221,6 +225,33 @@ void main() {
       (await mcp.call('add_flashcards', cards)).text,
       contains('2 skipped'),
     );
+
+    expect(
+      (await mcp.call('add_lesson', {
+        'subject_id': 's1',
+        'name': 'Seminar deck',
+      })).text,
+      startsWith('PREVIEW'),
+    );
+    final newLesson = await mcp.call('add_lesson', {
+      'subject_id': 's1',
+      'name': 'Seminar deck',
+      'apply': true,
+    });
+    expect(newLesson.text, startsWith('Saved'));
+    final lessonId = RegExp(r'lesson_id: ([0-9a-f-]+)')
+        .firstMatch(newLesson.text)![1]!;
+    final attachSource = File(p.join(dir.path, 'deck.pdf'))
+      ..writeAsBytesSync(const [0x25, 0x50, 0x44, 0x46]);
+    final attach = await mcp.call('attach_file', {
+      'lesson_id': lessonId,
+      'path': attachSource.path,
+      'apply': true,
+    });
+    expect(attach.error, isFalse, reason: attach.text);
+    expect(attach.text, startsWith('Saved'));
+    final materialId = RegExp(r'material_id: ([0-9a-f-]+)')
+        .firstMatch(attach.text)![1]!;
 
     for (final (tool, args) in [
       (
@@ -329,6 +360,22 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase(File(dbPath)));
     addTearDown(db.close);
     expect(await db.customSelect('PRAGMA foreign_key_check').get(), isEmpty);
+    final attached = (await db.getMaterialById(materialId))!;
+    expect(attached.lessonId, lessonId);
+    expect(attached.title, 'deck.pdf');
+    expect(attached.mimeType, 'application/pdf');
+    expect(
+      File(
+        p.join(
+          dir.path,
+          'study_vault_files',
+          'lessons',
+          lessonId,
+          attached.storedFileName,
+        ),
+      ).existsSync(),
+      isTrue,
+    );
     final flashcards = await db.watchFlashcardsForLesson('l1').first;
     expect(flashcards, hasLength(2));
     final card = flashcards.firstWhere((c) => c.front == 'What is a project?');
@@ -344,7 +391,10 @@ void main() {
     expect(StudyNoteCodec.decode(note.content).toPlainText(), contains('Risk'));
 
     final state = (await CourseReviewRepository(db).load('s1'))!;
-    expect(state.sources.single.status, CourseReviewSourceStatus.added);
+    expect(
+      state.sourceFor('m1')!.status,
+      CourseReviewSourceStatus.added,
+    );
     expect(state.overview.keys, hasLength(2));
     expect(state.overviewOutdated, isFalse);
 
@@ -366,6 +416,8 @@ void main() {
 
     final schema = await CloudSyncSchema.load(db);
     for (final table in [
+      'lessons',
+      'lesson_materials',
       'flashcards',
       'study_notes',
       'pdf_ai_materials',
@@ -381,6 +433,65 @@ void main() {
         schema.validateRow(cloudKey(table, row.data['id'] as String), row.data);
       }
     }
+  }, skip: !hasPython);
+
+  test('PDF draft preview stays local and attachment generation matches app prompts', () async {
+    final pdf = File(p.join(dir.path, 'study_vault_files', 'lessons', 'l1', 'l.pdf'));
+    await pdf.parent.create(recursive: true);
+    await pdf.writeAsBytes([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]);
+    final mcp = await _Mcp.start(dbPath);
+    addTearDown(mcp.close);
+    final preview = await mcp.call('draft_pdf_study_material', {
+      'material_id': 'm1',
+      'type': 'summary',
+    });
+    expect(preview.error, isFalse, reason: preview.text);
+    expect(preview.text, contains('nothing sent or saved yet'));
+    expect(preview.text, contains('application/pdf'));
+    final python = r'''
+import importlib.util, io, json, os
+from unittest.mock import patch
+spec = importlib.util.spec_from_file_location("mcp", "tool/study_vault_mcp.py")
+mcp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mcp)
+seen = {}
+def fake_open(request, timeout):
+    seen["url"] = request.full_url
+    seen["body"] = json.loads(request.data)
+    return io.BytesIO(b'{"candidates":[{"content":{"parts":[{"text":"# PDF draft"}]}}]}')
+with patch.object(mcp.urllib.request, "urlopen", fake_open):
+    result = mcp.call_tool("draft_pdf_study_material", {
+        "material_id": "m1", "type": "summary", "apply": True})
+print(json.dumps({"result": result, "body": seen["body"],
+                  "url": seen["url"], "system": mcp.PDF_PROMPT_SYSTEM,
+                  "prompts": mcp.PDF_PROMPTS}))
+''';
+    final run = await Process.run('python3', ['-c', python], environment: {
+      'STUDY_VAULT_DB': dbPath,
+      'GEMINI_API_KEY': 'not-a-real-key',
+    });
+    expect(run.exitCode, 0, reason: run.stderr.toString());
+    final output = jsonDecode(run.stdout as String) as Map<String, dynamic>;
+    expect(output['result'], contains('UNSAVED AI Summary draft'));
+    expect(output['url'], endsWith('gemini-3.8-flash:generateContent'));
+    final body = output['body'] as Map<String, dynamic>;
+    final parts = ((body['contents'] as List).single as Map)['parts'] as List;
+    final pdfPart = parts.singleWhere((part) => (part as Map).containsKey('inlineData')) as Map;
+    final attached = pdfPart['inlineData'] as Map;
+    expect(attached['mimeType'], 'application/pdf');
+    expect(base64Decode(attached['data'] as String), await pdf.readAsBytes());
+    expect(parts.last['text'], contains('GENERATION REQUEST: AI Summary'));
+    expect(output['system'], PdfAiPromptBuilder.systemMessage);
+    final prompts = output['prompts'] as Map;
+    for (final type in PdfAiMaterialType.values) {
+      final values = prompts[type.storageValue] as List;
+      expect(values[0], type.displayName);
+      expect(values[1], type.maxOutputTokens);
+      expect(values[2], type.generationInstruction);
+    }
+    final db = AppDatabase.forTesting(NativeDatabase(File(dbPath)));
+    addTearDown(db.close);
+    expect(await db.listPdfAiMaterials(materialId: 'm1', type: 'summary'), hasLength(1));
   }, skip: !hasPython);
 
   test('an open app database notices commits from the MCP tool', () async {

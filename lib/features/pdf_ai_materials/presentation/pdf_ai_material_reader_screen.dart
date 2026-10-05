@@ -24,6 +24,7 @@ import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
+import '../../reference_books/presentation/lecture_book_links.dart';
 import '../../selection_ai/domain/markdown_selection_editor.dart';
 import '../../selection_ai/domain/selection_ai_host.dart';
 import '../../selection_ai/presentation/selection_ai_area.dart';
@@ -567,6 +568,8 @@ class _PdfAiMaterialReaderScreenState
     );
     return Column(
       children: [
+        if (!widget.embedded)
+          MaterialBookLinksSection(materialId: widget.materialId),
         Expanded(
           child: PageView.builder(
             controller: _slideController,
@@ -798,6 +801,8 @@ class _PdfAiMaterialReaderScreenState
               ? _slideshowBody(selected, slides, usage)
               : Column(
                   children: [
+                    if (!widget.embedded)
+                      MaterialBookLinksSection(materialId: widget.materialId),
                     Expanded(
                       child: ScrollEdgeArrows(
                         child: SelectionAiArea(

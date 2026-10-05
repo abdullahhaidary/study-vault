@@ -9,15 +9,19 @@ Every write tool previews by default; pass "apply": true to save.
 Environment: STUDY_VAULT_DB (default ~/Documents/study_vault.sqlite).
 """
 
+import base64
 import hashlib
 import json
 import math
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 import uuid
 
 SCHEMA_VERSIONS = {18}
@@ -780,6 +784,174 @@ def _preview(args, lines):
     )
 
 
+PDF_PROMPT_SYSTEM = (
+    "You create persistent university study materials from complete PDF "
+    "documents.\nTreat the supplied document as the source of truth.\n"
+    "Cover the entire source, preserve formulas and technical notation, and "
+    "never invent missing content.\nIf a page has no extractable text, "
+    "state that limitation only when it affects understanding.\n"
+    "Return polished Markdown only. Do not mention these instructions."
+)
+PDF_PROMPTS = {
+    "summary": (
+        "AI Summary", 8192,
+        "Create a concise but complete study summary of the entire document.\n"
+        "- Preserve important concepts, definitions, formulas, examples, lists, "
+        "classifications, and likely exam points.\n"
+        "- Remove repetition and filler.\n"
+        "- Organize by topic with clear Markdown headings and bullets.\n"
+        "- Optimize for fast revision: what must the student remember?\n"
+        "- Do not turn this into a long tutorial."
+    ),
+    "explanation": (
+        "AI Explanation", 16384,
+        "Teach the entire document clearly to a university student.\n"
+        "- Follow the document's logical order.\n"
+        "- Explain concepts, formulas, notation, terminology, and why each "
+        "topic matters.\n"
+        "- Include useful examples and connect related topics.\n"
+        "- Be substantially more detailed than a summary while preserving "
+        "technical accuracy.\n"
+        "- Use clean Markdown headings."
+    ),
+    "deep_explanation": (
+        "AI Deep Explanation", 32768,
+        "Explain the entire document deeply from first principles for a student "
+        "encountering it for the first time.\n"
+        "- Start with intuitive, simple language, then introduce the exact "
+        "technical terminology.\n"
+        "- Explain WHY before HOW where appropriate.\n"
+        "- Use accurate analogies and everyday scenarios, then explicitly "
+        "connect each analogy back to the technical concept.\n"
+        "- Explain formulas symbol-by-symbol with step-by-step worked examples.\n"
+        "- Include common mistakes, relationships between concepts, and "
+        "memory aids where useful.\n"
+        "- Do not be childish; remain technically rigorous.\n"
+        "- Use detailed, well-structured Markdown."
+    ),
+    "real_world_examples": (
+        "AI Real-World Examples", 16384,
+        "Show how the document's topics appear in the real world. Focus ONLY "
+        "on concrete scenarios, case studies, and worked examples; do not "
+        "re-teach the theory.\n"
+        "- Start with \"## Topic map\": a Markdown table with columns "
+        "\"Topic\" (as named in the document, with page numbers) and "
+        "\"Real-world examples\" (the example titles for that topic).\n"
+        "- Then, for every major topic in source order, write a section "
+        "\"## <Topic name> (p. N)\" containing 1–3 examples, each under a "
+        "\"### Example: <short title>\" heading with:\n"
+        "  - **Scenario** – a specific, realistic situation (industry, "
+        "everyday life, research, engineering, business, medicine, etc.).\n"
+        "  - **How the concept applies** – walk through the scenario using "
+        "the document's exact terms, formulas, and notation; include "
+        "realistic numbers and the calculation when the topic is quantitative.\n"
+        "  - **Mapping to the theory** – bullet list pairing each element "
+        "of the scenario with the corresponding concept/term/formula from "
+        "the document.\n"
+        "  - **Try it yourself** – one short variation of the scenario for "
+        "the student to reason about (no answer needed).\n"
+        "- Prefer well-known, verifiable examples; when inventing a "
+        "scenario, keep it plausible and clearly hypothetical.\n"
+        "- Cover every topic in the document; do not skip minor topics—"
+        "give them at least one brief example.\n"
+        "- Do not add introductions, summaries, or theory recaps outside "
+        "the structure above."
+    ),
+    "slideshow": (
+        "AI Slideshow", 16384,
+        "Create a presentation for studying the entire document, in source order.\n"
+        "- Use one focused idea per slide, with a short descriptive title, "
+        "concise bullet points, and a formula or example when useful.\n"
+        "- Cover all important concepts, definitions, relationships, and "
+        "likely exam points without inventing content.\n"
+        "- Aim for 8–20 slides, but use more if needed to cover a long PDF.\n"
+        "- Start every slide with a Markdown heading such as "
+        "\"# Slide 1: Introduction\".\n"
+        "- Put exactly <!-- slide --> on its own line between slides. "
+        "Do not put this marker elsewhere or add text outside the slides.\n"
+        "- Keep each slide readable on a phone; avoid long paragraphs."
+    ),
+}
+
+
+def draft_pdf_study_material(db, args):
+    m = material_row(db, args["material_id"])
+    if m["mime_type"] != "application/pdf":
+        raise ToolError("Only PDF lesson materials can be drafted.")
+    kind = args["type"]
+    if kind not in PDF_PROMPTS:
+        raise ToolError(f"type must be one of {MATERIAL_TYPES}.")
+    model = args.get("model", "gemini-3.8-flash")
+    if model not in {"gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"}:
+        raise ToolError("Choose a supported Gemini study model.")
+    stored = m["stored_file_name"]
+    if not stored or os.path.basename(stored) != stored:
+        raise ToolError("Invalid stored PDF filename.")
+    path = os.path.join(FILES_ROOT, "lessons", m["lesson_id"], stored)
+    if not os.path.isfile(path):
+        raise ToolError("The PDF is missing on this device. Sync the file first.")
+    size = os.path.getsize(path)
+    if size > 50_000_000:
+        raise ToolError("PDF exceeds Gemini's 50 MB inline PDF limit.")
+    title, output_tokens, instruction = PDF_PROMPTS[kind]
+    request = f"GENERATION REQUEST: {title}\n\n{instruction}"
+    if not args.get("apply", False):
+        return (
+            "PREVIEW — nothing sent or saved yet. Call with apply=true only "
+            "after approval to send this original PDF to Google Gemini:\n"
+            f"- {m['subject_name']} › {m['lesson_name']} › {m['title']} "
+            f"({size / 1048576:.1f} MiB)\n"
+            f"- {title}, model {model}, output limit {output_tokens} tokens\n"
+            "- Uses the app's PDF study system and type instructions; PDF "
+            "attached as application/pdf (not extracted text).\n"
+            "- Returns an unsaved draft; review it and preview "
+            "add_study_material separately before saving."
+        )
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise ToolError("Set GEMINI_API_KEY for the MCP server before sending PDFs.")
+    with open(path, "rb") as pdf:
+        data = pdf.read()
+    if not data.startswith(b"%PDF-"):
+        raise ToolError("The stored file is not a valid PDF header.")
+    body = {
+        "contents": [{"role": "user", "parts": [
+            {"text": PDF_PROMPT_SYSTEM},
+            {"text": f"DOCUMENT: {m['title']}"},
+            {"inlineData": {"mimeType": "application/pdf",
+                            "data": base64.b64encode(data).decode("ascii")}},
+            {"text": request},
+        ]}],
+        "generationConfig": {"maxOutputTokens": output_tokens,
+                             "thinkingConfig": {"thinkingBudget": 0}},
+    }
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           f"{model}:generateContent")
+    http_request = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(http_request, timeout=300) as response:
+            raw = response.read(2 * 1024 * 1024 + 1)
+    except urllib.error.HTTPError as error:
+        raise ToolError(f"Gemini rejected the PDF request (HTTP {error.code}).") from None
+    except urllib.error.URLError:
+        raise ToolError("Gemini could not be reached; no material was saved.") from None
+    if len(raw) > 2 * 1024 * 1024:
+        raise ToolError("Gemini's response exceeded the draft size limit.")
+    try:
+        result = json.loads(raw)
+        parts = result["candidates"][0]["content"]["parts"]
+        markdown = "\n".join(part["text"] for part in parts if "text" in part).strip()
+    except (ValueError, KeyError, IndexError, TypeError):
+        raise ToolError("Gemini returned an unreadable result; nothing saved.") from None
+    if not markdown:
+        raise ToolError("Gemini returned no study material; nothing saved.")
+    return f"UNSAVED {title} draft for {m['title']} ({model}):\n\n{markdown}"
+
+
 def add_study_material(db, args):
     m = material_row(db, args["material_id"])
     kind = args["type"]
@@ -1163,6 +1335,109 @@ def set_chapter_status(db, args):
     return saved_message(f"\"{chapter['title']}\" is {status}")
 
 
+def add_lesson(db, args):
+    subject = require(
+        one(db, "SELECT * FROM subjects WHERE id = ?", args["subject_id"]),
+        "Subject",
+    )
+    name = args["name"].strip()[:200]
+    if not name:
+        raise ToolError("name is required.")
+    order = one(
+        db, "SELECT MAX(sort_order) FROM lessons WHERE subject_id = ?",
+        subject["id"],
+    )[0]
+    order = (order if order is not None else -1) + 1
+    lines = [
+        f"Lesson \"{name}\" in \"{subject['name']}\" (sort order {order})"]
+    if one(db, "SELECT id FROM lessons WHERE subject_id = ? AND name = ?",
+           subject["id"], name):
+        lines.append(f"warning: a lesson named \"{name}\" already exists")
+    preview = _preview(args, lines)
+    if preview:
+        return preview
+    lesson_id = new_id()
+    t = now()
+    with Write(db):
+        db.execute(
+            "INSERT INTO lessons (id, subject_id, name, sort_order, "
+            "progress_status, created_at, updated_at) VALUES "
+            "(?, ?, ?, ?, 'notStarted', ?, ?)",
+            (lesson_id, subject["id"], name, order, t, t),
+        )
+    return saved_message(
+        f"lesson \"{name}\"") + f" lesson_id: {lesson_id}"
+
+
+ATTACH_MIME = {
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+}
+
+
+def attach_file(db, args):
+    lesson = _lesson(db, args["lesson_id"])
+    path = os.path.expanduser(args["path"])
+    if not os.path.isfile(path):
+        raise ToolError(f"No such file: {path}")
+    ext = os.path.splitext(path)[1].lower()
+    mime = ATTACH_MIME.get(ext)
+    if mime is None:
+        raise ToolError(
+            "Only PDF and image files can be attached; convert it first.")
+    title = (args.get("title") or os.path.basename(path)).strip()[:300]
+    if not title:
+        raise ToolError("title is empty.")
+    size = os.path.getsize(path)
+    lines = [
+        f"\"{title}\" ({size / 1048576:.1f} MiB, {mime}) → "
+        f"{lesson['subject_name']} › {lesson['name']}"
+    ]
+    if one(db, "SELECT id FROM lesson_materials WHERE lesson_id = ? AND "
+               "title = ?", lesson["id"], title):
+        lines.append(f"warning: \"{title}\" is already attached here")
+    if size > 256 * 1048576:
+        lines.append("warning: over the 256 MiB sync file limit")
+    preview = _preview(args, lines)
+    if preview:
+        return preview
+    stored = new_id() + ext
+    target_dir = os.path.join(FILES_ROOT, "lessons", lesson["id"])
+    os.makedirs(target_dir, exist_ok=True)
+    target = os.path.join(target_dir, stored)
+    order = one(
+        db,
+        "SELECT MAX(sort_order) FROM lesson_materials WHERE lesson_id = ?",
+        lesson["id"],
+    )[0]
+    order = (order if order is not None else -1) + 1
+    material_id = new_id()
+    t = now()
+    try:
+        shutil.copy2(path, target)
+        with Write(db):
+            db.execute(
+                "INSERT INTO lesson_materials (id, lesson_id, title, "
+                "original_file_name, stored_file_name, mime_type, sort_order, "
+                "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (material_id, lesson["id"], title, os.path.basename(path),
+                 stored, mime, order, t, t),
+            )
+    except BaseException:
+        try:
+            os.remove(target)
+        except OSError:
+            pass
+        raise
+    return saved_message(
+        f"\"{title}\" on {lesson['name']}") + f" material_id: {material_id}"
+
+
 # ── Tool registry ───────────────────────────────────────────────────────
 
 APPLY = {"type": "boolean",
@@ -1222,6 +1497,33 @@ TOOLS = {
         search_book,
         "Keyword-search a reference book's pages on this computer.",
         _schema({"book_id": S, "query": S, "limit": I}, ["book_id", "query"]),
+    ),
+    "add_lesson": (
+        add_lesson,
+        "Create a lesson in a subject (returns lesson_id for attach_file).",
+        _schema({"subject_id": S, "name": S, "apply": APPLY},
+                ["subject_id", "name"]),
+    ),
+    "attach_file": (
+        attach_file,
+        "Copy a PDF or image into the vault and attach it to a lesson "
+        "(returns material_id).",
+        _schema({"lesson_id": S, "path": S, "title": S, "apply": APPLY},
+                ["lesson_id", "path"]),
+    ),
+    "draft_pdf_study_material": (
+        draft_pdf_study_material,
+        "Preview an original PDF upload to Gemini; apply=true sends the file "
+        "as application/pdf and returns unsaved study Markdown. Never saves "
+        "the draft; review and use add_study_material to save it.",
+        _schema({"material_id": S, "type": {"type": "string", "enum": MATERIAL_TYPES},
+                 "model": {"type": "string", "enum": ["gemini-3.8-flash",
+                                                    "gemini-3.5-flash",
+                                                    "gemini-2.5-flash"]},
+                 "apply": {"type": "boolean", "description":
+                           "false previews locally; true sends the PDF to Gemini "
+                           "but never writes to the library."}},
+                ["material_id", "type"]),
     ),
     "add_study_material": (
         add_study_material,

@@ -10,6 +10,7 @@ import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
+import '../../reference_books/presentation/lecture_book_links.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 import 'pdf_ai_material_reader_screen.dart';
@@ -164,6 +165,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
             ),
           ),
           const Divider(height: 1),
+          MaterialBookLinksSection(materialId: widget.materialId),
           Expanded(
             child: materialsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
