@@ -25,6 +25,15 @@ String cloudTable(String key) => key.substring(0, key.indexOf('/'));
 String cloudId(String key) => key.substring(key.indexOf('/') + 1);
 typedef CloudRows = Map<String, Map<String, dynamic>>;
 
+/// Path under the materials folder of the file a record needs, if any.
+String? cloudFilePath(String table, Map<String, dynamic> row) =>
+    switch (table) {
+      'lesson_materials' =>
+        'lessons/${row['lesson_id']}/${row['stored_file_name']}',
+      'reference_books' => 'books/${row['id']}/${row['stored_file_name']}',
+      _ => null,
+    };
+
 CloudRows cloudRowsFromJson(Object? json) => {
   for (final entry in (json as Map<String, dynamic>).entries)
     entry.key: Map<String, dynamic>.from(entry.value as Map),

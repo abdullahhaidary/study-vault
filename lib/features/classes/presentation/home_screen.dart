@@ -68,6 +68,8 @@ class HomeScreen extends ConsumerWidget {
                           switch (value) {
                             case 'add_class':
                               CreateClassDialog.show(context);
+                            case 'books':
+                              Navigator.of(context).pushNamed(AppRoutes.books);
                             case 'reviews':
                               RecentReviewsScreen.open(context);
                             case 'favorites':
@@ -80,6 +82,10 @@ class HomeScreen extends ConsumerWidget {
                           PopupMenuItem(
                             value: 'add_class',
                             child: Text('Add Class'),
+                          ),
+                          PopupMenuItem(
+                            value: 'books',
+                            child: Text('Reference Books'),
                           ),
                           PopupMenuItem(
                             value: 'reviews',

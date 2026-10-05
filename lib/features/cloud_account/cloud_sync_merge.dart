@@ -159,6 +159,7 @@ class CloudMerge {
       ['source_fingerprint', 'action_type'],
     ),
     'course_review_entries': ('version', ['subject_id', 'material_id', 'part']),
+    'reference_book_ai_items': ('version', ['book_id', 'kind', 'scope_key']),
   };
 
   static Map<String, dynamic> _without(

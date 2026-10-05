@@ -19,6 +19,8 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/study_review/presentation/recent_reviews_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 import '../features/course_review/presentation/course_review_screen.dart';
+import '../features/reference_books/presentation/book_details_screen.dart';
+import '../features/reference_books/presentation/books_shelf_screen.dart';
 
 /// Named route constants.
 abstract final class AppRoutes {
@@ -41,6 +43,8 @@ abstract final class AppRoutes {
   static const manualEntry = '/manual-entry';
   static const reviews = '/reviews';
   static const courseReview = '/course-review';
+  static const books = '/books';
+  static const bookDetails = '/book';
 }
 
 /// Central route generator — keeps navigation in one place.
@@ -140,6 +144,19 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
               ? args.subjectId
               : null,
         ),
+      );
+
+    case AppRoutes.books:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const BooksShelfScreen(),
+      );
+
+    case AppRoutes.bookDetails:
+      final bookId = settings.arguments as String;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => BookDetailsScreen(bookId: bookId),
       );
 
     case AppRoutes.courseReview:

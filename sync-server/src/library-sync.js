@@ -78,10 +78,9 @@ function validateLibrary(rows) {
       if (unique.has(constraint)) return 'Two records violate a uniqueness constraint.';
       unique.set(constraint, row.id);
     }
-    if (row.table === 'lesson_materials') {
-      const path = `lessons/${row.data.lesson_id}/${row.data.stored_file_name}`;
-      if (!live.has(key('material_files', path))) return 'Upload the PDF or image and its manifest before publishing the material.';
-    }
+    const path = row.table === 'lesson_materials' ? `lessons/${row.data.lesson_id}/${row.data.stored_file_name}`
+      : row.table === 'reference_books' ? `books/${row.data.id}/${row.data.stored_file_name}` : null;
+    if (path !== null && !live.has(key('material_files', path))) return 'Upload the PDF or image and its manifest before publishing the material.';
   }
   return null;
 }

@@ -143,14 +143,10 @@ class CloudSyncService {
     CloudRows known,
   ) {
     final rows = <String, Map<String, dynamic>>{...records, ...actualFiles};
-    for (final entry in records.entries.where(
-      (e) => cloudTable(e.key) == 'lesson_materials',
-    )) {
-      final data = entry.value;
-      final key = cloudKey(
-        'material_files',
-        'lessons/${data['lesson_id']}/${data['stored_file_name']}',
-      );
+    for (final entry in records.entries) {
+      final path = cloudFilePath(cloudTable(entry.key), entry.value);
+      if (path == null) continue;
+      final key = cloudKey('material_files', path);
       if (!rows.containsKey(key) && known.containsKey(key)) {
         rows[key] = Map.of(known[key]!);
       }

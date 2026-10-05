@@ -50,12 +50,15 @@ class BookIndexer extends StateNotifier<Map<String, BookJob>> {
     bool detectHeadings = false,
   }) async {
     if (isRunning(book.id)) return;
-    final repository = _ref.read(bookRepositoryProvider);
-    final local = await repository.localState(book.id);
-    if (local.isIndexed(book)) return;
-    if (!await File(await BookStorage.absolutePath(book)).exists()) return;
     _set(book.id, const BookJob(label: 'Indexing pages'));
     try {
+      final repository = _ref.read(bookRepositoryProvider);
+      final local = await repository.localState(book.id);
+      if (local.isIndexed(book) ||
+          !await File(await BookStorage.absolutePath(book)).exists()) {
+        _set(book.id, null);
+        return;
+      }
       await _ref
           .read(bookImportServiceProvider)
           .indexBook(

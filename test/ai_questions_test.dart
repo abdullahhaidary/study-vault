@@ -23,9 +23,9 @@ void main() {
   group('schema / backup version alignment', () {
     test('schema version is 16 everywhere', () {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
-      expect(db.schemaVersion, 17);
-      expect(kStudyVaultSchemaVersion, 17);
-      expect(BackupService().currentSchemaVersion, 17);
+      expect(db.schemaVersion, 18);
+      expect(kStudyVaultSchemaVersion, 18);
+      expect(BackupService().currentSchemaVersion, 18);
       return db.close();
     });
   });

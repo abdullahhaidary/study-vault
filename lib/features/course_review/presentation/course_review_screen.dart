@@ -8,15 +8,12 @@ import '../../../core/database/app_database.dart';
 import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../ai_assistant/data/ai_providers.dart';
-import '../../ai_assistant/domain/ai_actions.dart';
-import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
-import '../../ai_assistant/presentation/ai_assistant_controller.dart';
-import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
+import '../../ai_assistant/presentation/pick_ai_model.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../manual_entry/data/manual_entry_providers.dart';
+import '../../reference_books/presentation/lecture_book_links.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../data/course_review_providers.dart';
 import '../domain/course_review_models.dart';
@@ -316,49 +313,65 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
     };
     final version = source.latest[CourseReviewPart.summary]?.version;
     return Card(
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(
-          source.material.title,
-          style: status == CourseReviewSourceStatus.excluded
-              ? TextStyle(color: theme.colorScheme.outline)
-              : null,
-        ),
-        subtitle: Text(
-          [
-            source.lesson.name,
-            status.label + (version == null ? '' : ' · v$version'),
-            if (!source.excluded)
-              source.usesLessonMaterials
-                  ? 'from lesson materials'
-                  : 'from PDF text',
-          ].join(' · '),
-        ),
-        trailing: PopupMenuButton<String>(
-          enabled: !_busy,
-          onSelected: (v) => _onSourceAction(source, v),
-          itemBuilder: (_) => [
-            if (!source.excluded)
-              PopupMenuItem(
-                value: 'generate',
-                child: Text(
-                  source.hasSection ? 'Regenerate section' : 'Generate section',
-                ),
-              ),
-            for (final part in CourseReviewPart.sectionParts)
-              if (source.latest[part] != null)
-                PopupMenuItem(
-                  value: 'edit:${part.storageValue}',
-                  child: Text('Edit ${part.label.toLowerCase()}'),
-                ),
+      child: Column(
+        children: [
+          _sourceListTile(source, theme, icon, color, status, version),
+          LectureBookLinks(materialId: source.material.id),
+        ],
+      ),
+    );
+  }
+
+  Widget _sourceListTile(
+    CourseReviewSource source,
+    ThemeData theme,
+    IconData icon,
+    Color color,
+    CourseReviewSourceStatus status,
+    int? version,
+  ) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        source.material.title,
+        style: status == CourseReviewSourceStatus.excluded
+            ? TextStyle(color: theme.colorScheme.outline)
+            : null,
+      ),
+      subtitle: Text(
+        [
+          source.lesson.name,
+          status.label + (version == null ? '' : ' · v$version'),
+          if (!source.excluded)
+            source.usesLessonMaterials
+                ? 'from lesson materials'
+                : 'from PDF text',
+        ].join(' · '),
+      ),
+      trailing: PopupMenuButton<String>(
+        enabled: !_busy,
+        onSelected: (v) => _onSourceAction(source, v),
+        itemBuilder: (_) => [
+          if (!source.excluded)
             PopupMenuItem(
-              value: source.excluded ? 'include' : 'exclude',
+              value: 'generate',
               child: Text(
-                source.excluded ? 'Include in review' : 'Exclude from review',
+                source.hasSection ? 'Regenerate section' : 'Generate section',
               ),
             ),
-          ],
-        ),
+          for (final part in CourseReviewPart.sectionParts)
+            if (source.latest[part] != null)
+              PopupMenuItem(
+                value: 'edit:${part.storageValue}',
+                child: Text('Edit ${part.label.toLowerCase()}'),
+              ),
+          PopupMenuItem(
+            value: source.excluded ? 'include' : 'exclude',
+            child: Text(
+              source.excluded ? 'Include in review' : 'Exclude from review',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -550,22 +563,8 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
 
   // ── Actions ──────────────────────────────────────────────
 
-  Future<AiExecutionSelection?> _pickModel(String title) async {
-    if (!await AiAssistantController.ensureReady(context, ref)) return null;
-    if (!mounted) return null;
-    final selection = await AiExecutionSelection.fromGlobal(
-      ref.read(aiSettingsStoreProvider),
-      action: AiStudyAction.customPrompt,
-    );
-    if (!mounted) return null;
-    return await showAiModelSelector(
-          context,
-          selected: selection,
-          action: AiStudyAction.customPrompt,
-          title: title,
-        ) ??
-        selection;
-  }
+  Future<AiExecutionSelection?> _pickModel(String title) =>
+      pickAiModel(context, ref, title: title);
 
   Future<void> _generateSections(List<CourseReviewSource> sources) async {
     if (_busy || sources.isEmpty) return;
@@ -787,10 +786,5 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
     );
   }
 
-  static String _message(Object error) => switch (error) {
-    AiException(:final message) => message,
-    StateError(:final message) => message,
-    FormatException(:final message) => message,
-    _ => '$error',
-  };
+  static String _message(Object error) => aiErrorMessage(error);
 }

@@ -15,7 +15,7 @@ const row = { id: classId, name: 'Library', description: null, created_at: 1, up
 const mutation = (data, revision = 0, table = 'classes', id = classId) => ({
   table, id, data, baseRevision: revision, mutationId: randomUUID(),
 });
-const batch = (mutations, expectedHead = 0) => ({ schemaVersion: 17, operationId: randomUUID(), expectedHead, mutations });
+const batch = (mutations, expectedHead = 0) => ({ schemaVersion: 18, operationId: randomUUID(), expectedHead, mutations });
 const request = (route, body, auth = token) => fetch(`${origin}${route}`, {
   method: body ? 'POST' : 'GET', headers: { ...(auth ? { authorization: `Bearer ${auth}` } : {}), 'content-type': 'application/json' },
   body: body ? JSON.stringify(body) : undefined,
@@ -45,7 +45,7 @@ after(async () => {
 test('v2 snapshots require authentication and start empty', async () => {
   assert.equal((await request('/v2/snapshot', null, null)).status, 401);
   const result = await (await request('/v2/snapshot')).json();
-  assert.deepEqual(result, { schemaVersion: 17, head: 0, records: [] });
+  assert.deepEqual(result, { schemaVersion: 18, head: 0, records: [] });
 });
 
 test('library commits are atomic and safely replayable', async () => {
@@ -98,4 +98,14 @@ test('multiple tables commit together and parent-only deletion cannot orphan a c
   const snapshot = await (await request('/v2/snapshot')).json();
   assert.equal(snapshot.records.filter((r) => r.data !== null).length, 0);
   assert.equal(snapshot.records.length, 2);
+});
+
+test('reference books require their uploaded PDF manifest', async () => {
+  const { head } = await (await request('/v2/snapshot')).json();
+  const id = randomUUID();
+  const book = { id, title: 'Book', author: null, original_file_name: 'b.pdf', stored_file_name: 'b.pdf',
+    page_count: 10, created_at: 1, updated_at: 1 };
+  const response = await request('/v2/sync', batch([mutation(book, 0, 'reference_books', id)], head));
+  assert.equal(response.status, 422);
+  assert.match((await response.json()).error, /Upload the PDF/);
 });

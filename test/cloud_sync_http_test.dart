@@ -166,6 +166,37 @@ void main() {
         part: 'examples',
         content: '### Example 1',
       );
+      final bookFile = File(p.join(first.filesRoot.path, 'books/bk/book.pdf'));
+      await bookFile.parent.create(recursive: true);
+      await bookFile.writeAsBytes(List.generate(4096, (i) => (i * 7) % 256));
+      await a
+          .into(a.referenceBooks)
+          .insert(
+            ReferenceBooksCompanion.insert(
+              id: 'bk',
+              title: 'Book',
+              originalFileName: 'book.pdf',
+              storedFileName: 'book.pdf',
+              pageCount: 3,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await a
+          .into(a.referenceBookAiItems)
+          .insert(
+            ReferenceBookAiItemsCompanion.insert(
+              id: 'bk-brief',
+              bookId: 'bk',
+              kind: 'brief',
+              scopeKey: 'pages:1-3',
+              startPage: 1,
+              endPage: 3,
+              content: 'Brief',
+              version: 1,
+              createdAt: now,
+            ),
+          );
       await a.setCourseReviewExcluded(
         id: 'review-exclusion',
         subjectId: 's',
@@ -196,6 +227,14 @@ void main() {
         isNull,
       );
       expect(await b.courseReviewExclusionsForSubject('s'), hasLength(1));
+      expect((await b.select(b.referenceBooks).get()).single.title, 'Book');
+      expect(await b.select(b.referenceBookAiItems).get(), hasLength(1));
+      expect(
+        await File(
+          p.join(second.filesRoot.path, 'books/bk/book.pdf'),
+        ).readAsBytes(),
+        await bookFile.readAsBytes(),
+      );
       expect(
         await File(
           p.join(second.filesRoot.path, 'lessons/l/test.pdf'),

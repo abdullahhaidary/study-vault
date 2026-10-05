@@ -40,9 +40,9 @@ void main() {
   });
 
   test('schema version is 16 with backup constants', () {
-    expect(db.schemaVersion, 17);
-    expect(kStudyVaultSchemaVersion, 17);
-    expect(BackupService().currentSchemaVersion, 17);
+    expect(db.schemaVersion, 18);
+    expect(kStudyVaultSchemaVersion, 18);
+    expect(BackupService().currentSchemaVersion, 18);
   });
 
   test('saving message indexes lesson + pdf refs once each', () async {

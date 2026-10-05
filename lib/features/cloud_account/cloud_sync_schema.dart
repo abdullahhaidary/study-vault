@@ -159,12 +159,9 @@ class CloudSyncSchema {
     if (duplicates(rows).isNotEmpty) {
       throw StateError('Cloud records violate a uniqueness constraint.');
     }
-    for (final material in rows.entries.where(
-      (e) => cloudTable(e.key) == 'lesson_materials',
-    )) {
-      final data = material.value;
-      final path = 'lessons/${data['lesson_id']}/${data['stored_file_name']}';
-      if (!rows.containsKey(cloudKey('material_files', path))) {
+    for (final entry in rows.entries) {
+      final path = cloudFilePath(cloudTable(entry.key), entry.value);
+      if (path != null && !rows.containsKey(cloudKey('material_files', path))) {
         throw StateError(
           'A PDF or image is missing. Restore its file before synchronizing.',
         );

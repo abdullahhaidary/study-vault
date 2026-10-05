@@ -5,7 +5,7 @@ import { sha256 } from './security.js';
 // The app-generated contract is the single source of synced tables.
 const librarySchema = JSON.parse(readFileSync(new URL('./library-schema.json', import.meta.url), 'utf8'));
 export const tables = new Set([...Object.keys(librarySchema.tables), 'material_files']);
-export const schemaVersion = 17;
+export const schemaVersion = 18;
 if (librarySchema.schemaVersion !== schemaVersion) {
   throw new Error(`library-schema.json is version ${librarySchema.schemaVersion}, expected ${schemaVersion}.`);
 }

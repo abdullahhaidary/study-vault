@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 17,
+  "schemaVersion": 18,
   "tables": {
     "classes": {
       "columns": {
@@ -1429,6 +1429,381 @@
       "unique": [
         [
           "material_id"
+        ]
+      ]
+    },
+    "reference_books": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "author": {
+          "type": "TEXT",
+          "required": false
+        },
+        "original_file_name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "stored_file_name": {
+          "type": "TEXT",
+          "required": true
+        },
+        "page_count": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [],
+      "unique": []
+    },
+    "reference_book_subjects": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "subject_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        },
+        {
+          "column": "subject_id",
+          "table": "subjects"
+        }
+      ],
+      "unique": [
+        [
+          "book_id",
+          "subject_id"
+        ]
+      ]
+    },
+    "reference_book_chapters": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "level": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "start_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "end_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "status": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        }
+      ],
+      "unique": []
+    },
+    "reference_book_ai_items": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "chapter_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "kind": {
+          "type": "TEXT",
+          "required": true
+        },
+        "scope_key": {
+          "type": "TEXT",
+          "required": true
+        },
+        "start_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "end_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "version": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        },
+        {
+          "column": "chapter_id",
+          "table": "reference_book_chapters"
+        }
+      ],
+      "unique": [
+        [
+          "book_id",
+          "kind",
+          "scope_key",
+          "version"
+        ]
+      ]
+    },
+    "reference_book_notes": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "page_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "title": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "selected_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        }
+      ],
+      "unique": []
+    },
+    "reference_book_messages": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "role": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "source_pages": {
+          "type": "TEXT",
+          "required": false
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        }
+      ],
+      "unique": []
+    },
+    "reference_book_links": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "material_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "start_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "end_page": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "priority": {
+          "type": "TEXT",
+          "required": true
+        },
+        "reason": {
+          "type": "TEXT",
+          "required": false
+        },
+        "done": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        },
+        {
+          "column": "material_id",
+          "table": "lesson_materials"
+        }
+      ],
+      "unique": []
+    },
+    "reference_book_quizzes": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "book_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "chapter_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "question_set_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "book_id",
+          "table": "reference_books"
+        },
+        {
+          "column": "chapter_id",
+          "table": "reference_book_chapters"
+        },
+        {
+          "column": "question_set_id",
+          "table": "question_sets"
+        }
+      ],
+      "unique": [
+        [
+          "question_set_id"
         ]
       ]
     }
