@@ -270,41 +270,56 @@ void main() {
         const AiStyleMemoryItem(id: '1', text: 'keep EN terms'),
         const AiStyleMemoryItem(id: '2', text: 'Q: scenario then theory'),
       ]);
-      expect(block, 'STYLE:\n- keep EN terms\n- Q: scenario then theory');
+      expect(block, 'STYLE:\nkeep EN terms\n\n---\n\nQ: scenario then theory');
       expect(block, isNot(contains('User study preference')));
     });
 
     test('blocks a send when hidden tokens exceed the uncached cap', () {
-      final items = [
-        for (var i = 0; i < 40; i++)
-          AiStyleMemoryItem(
-            id: '$i',
-            text: 'Use short scenario questions then theory $i',
-          ),
-      ];
+      final items = _notesOverBudget(AiStyleMemory.uncachedTokenBudget);
       expect(
         () => AiStyleMemory.forSend(items, prefixCacheLikely: false),
         throwsA(isA<AiStyleMemoryTooLargeException>()),
+      );
+      expect(
+        AiStyleMemory.forSend(const [
+          AiStyleMemoryItem(id: '1', text: 'keep EN terms'),
+        ], prefixCacheLikely: false),
+        isNotNull,
       );
     });
 
     test('save uses the cached cap and rejects over-long items', () {
       expect(
         () => AiStyleMemory.ensureFitsForSave([
-          AiStyleMemoryItem(id: 'x', text: 'a' * 97),
+          AiStyleMemoryItem(
+            id: 'x',
+            text: 'a' * (AiStyleMemory.maxItemChars + 1),
+          ),
         ]),
         throwsA(isA<AiStyleMemoryTooLargeException>()),
       );
       final store = MemoryAiSettingsStore();
       expectLater(
-        store.setStyleMemoryItems([
-          for (var i = 0; i < 80; i++)
-            AiStyleMemoryItem(
-              id: '$i',
-              text: 'Keep English terms in answers $i',
-            ),
-        ]),
+        store.setStyleMemoryItems(
+          _notesOverBudget(AiStyleMemory.cachedTokenBudget),
+        ),
         throwsA(isA<AiStyleMemoryTooLargeException>()),
+      );
+    });
+
+    test('keeps multi-sentence notes instead of collapsing them', () {
+      final note =
+          'I want explanations to start from a real scenario, then name the '
+          'theory. Questions should be exam-like, not one-word drills.\n\n'
+          'Keep English technical terms. Implementations should show steps.';
+      final block = AiStyleMemory.compact([
+        AiStyleMemoryItem(id: '1', text: note),
+      ]);
+      expect(block, contains('exam-like, not one-word drills.'));
+      expect(block, contains('Implementations should show steps.'));
+      expect(
+        AiStyleMemory.itemsFromStoredBlob(block).single.text,
+        contains('real scenario'),
       );
     });
 
@@ -316,4 +331,21 @@ void main() {
       expect(items.single.text, 'Explain simply and keep English terms');
     });
   });
+}
+
+List<AiStyleMemoryItem> _notesOverBudget(int budget) {
+  final items = <AiStyleMemoryItem>[];
+  var i = 0;
+  while (AiStyleMemory.estimateTokens(AiStyleMemory.compact(items) ?? '') <=
+      budget) {
+    items.add(
+      AiStyleMemoryItem(
+        id: '$i',
+        text: 'Use short scenario questions then theory $i',
+      ),
+    );
+    i++;
+    if (i > 400) break;
+  }
+  return items;
 }

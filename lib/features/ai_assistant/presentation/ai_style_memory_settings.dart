@@ -29,12 +29,13 @@ class AiStyleMemorySettings extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Hidden AI style notes', style: theme.textTheme.titleSmall),
+        Text('Overall AI style history', style: theme.textTheme.titleSmall),
         const SizedBox(height: 4),
         Text(
-          'Sent with every AI request as a short STYLE block (not shown in '
-          'the answer). Keep notes brief. Gemini / DeepSeek / Claude usually '
-          'cache this prefix after the first request.',
+          'This is not one chat’s transcript. It is the style you want across '
+          'summaries, explanations, quizzes, and chat. Write 10–20 sentences '
+          'per note (how you like answers, questions, and implementations). '
+          'The text is sent hidden with every request until you edit or delete it.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -62,7 +63,7 @@ class AiStyleMemorySettings extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'No hidden notes yet.',
+              'No overall style history yet.',
               style: theme.textTheme.bodyMedium,
             ),
           )
@@ -70,7 +71,12 @@ class AiStyleMemorySettings extends ConsumerWidget {
           for (final item in items)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(item.text),
+              isThreeLine: true,
+              title: Text(
+                item.text,
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -92,7 +98,7 @@ class AiStyleMemorySettings extends ConsumerWidget {
           child: TextButton.icon(
             onPressed: () => _edit(context, ref, null),
             icon: const Icon(Icons.add),
-            label: const Text('Add note'),
+            label: const Text('Add style history'),
           ),
         ),
       ],
@@ -108,14 +114,24 @@ class AiStyleMemorySettings extends ConsumerWidget {
     final saved = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(existing == null ? 'Add style note' : 'Edit style note'),
-        content: TextField(
-          controller: controller,
-          maxLength: AiStyleMemory.maxItemChars,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Q: scenario then theory',
-            border: OutlineInputBorder(),
+        title: Text(
+          existing == null ? 'Add overall style history' : 'Edit style history',
+        ),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: controller,
+            maxLength: AiStyleMemory.maxItemChars,
+            minLines: 10,
+            maxLines: 20,
+            decoration: const InputDecoration(
+              hintText:
+                  'Write 10–20 sentences about how you want answers, questions, '
+                  'and implementations. This applies to every chat and study '
+                  'material, not only this conversation.',
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
           ),
         ),
         actions: [

@@ -97,8 +97,9 @@ class AiStyleMemoryTooLargeException extends AiException {
     : tokens = 0,
       budget = 0,
       super(
-        'Each style note must be $maxChars characters or fewer. '
-        'Split it into shorter notes.',
+        'Each style note can be about 10–20 sentences '
+        '($maxChars characters or fewer). Split a longer write-up into '
+        'another note.',
       );
 
   final int tokens;
