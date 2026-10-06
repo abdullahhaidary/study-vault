@@ -12,6 +12,18 @@ import 'package:study_vault/features/ai_assistant/services/markdown_to_quill.dar
 import 'package:study_vault/features/ai_assistant/services/quill_to_markdown.dart';
 
 void main() {
+  group('GeminiApiKeys', () {
+    test('splits pasted keys and masks suffixes', () {
+      expect(GeminiApiKeys.split('  aaa  \nbbb,aaa;ccc  '), [
+        'aaa',
+        'bbb',
+        'ccc',
+      ]);
+      expect(GeminiApiKeys.suffix('abcd1234xyz'), '4xyz');
+      expect(GeminiApiKeys.parse('["one","two","one"]'), ['one', 'two']);
+    });
+  });
+
   group('MemoryAiCredentialStore', () {
     test('saves, replaces, and removes an API key', () async {
       final store = MemoryAiCredentialStore();
@@ -39,6 +51,33 @@ void main() {
       await store.saveApiKeyFor(AiProviderId.deepseek, 'd-key');
       expect(await store.readApiKeyFor(AiProviderId.gemini), 'g-key');
       expect(await store.readApiKeyFor(AiProviderId.deepseek), 'd-key');
+    });
+
+    test('Gemini can store many keys and skip duplicates', () async {
+      final store = MemoryAiCredentialStore();
+      await store.addApiKeyFor(AiProviderId.gemini, 'key-one');
+      await store.addApiKeyFor(
+        AiProviderId.gemini,
+        'key-two\nkey-one\nkey-three',
+      );
+
+      expect(await store.readApiKeysFor(AiProviderId.gemini), [
+        'key-one',
+        'key-two',
+        'key-three',
+      ]);
+      expect(await store.readApiKeyFor(AiProviderId.gemini), 'key-one');
+      expect(await store.readApiKeySuffixesFor(AiProviderId.gemini), [
+        '-one',
+        '-two',
+        'hree',
+      ]);
+
+      await store.removeApiKeyAt(AiProviderId.gemini, 1);
+      expect(await store.readApiKeysFor(AiProviderId.gemini), [
+        'key-one',
+        'key-three',
+      ]);
     });
   });
 

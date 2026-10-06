@@ -64,51 +64,51 @@ class HttpGeminiChatService implements AiChatTransport {
   Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    final key = await _requireKey();
-    try {
-      final uri = Uri.parse('$baseUrl/models');
-      final response = await _http
-          .get(uri, headers: {'x-goog-api-key': key})
-          .timeout(timeout);
+    final keys = await _requireKeys();
+    for (final key in keys) {
+      try {
+        final uri = Uri.parse('$baseUrl/models');
+        final response = await _http
+            .get(uri, headers: {'x-goog-api-key': key})
+            .timeout(timeout);
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return _fallbackModels();
-      }
-
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map) {
-        return _fallbackModels();
-      }
-      final models = decoded['models'];
-      if (models is! List) {
-        return _fallbackModels();
-      }
-
-      final ids = <String>{};
-      for (final item in models) {
-        if (item is! Map) continue;
-        final name = item['name'];
-        if (name is! String) continue;
-        final methods = item['supportedGenerationMethods'];
-        if (methods is List &&
-            !methods.contains('generateContent') &&
-            !methods.contains('streamGenerateContent')) {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
           continue;
         }
-        ids.add(name.contains('/') ? name.split('/').last : name);
+
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map) continue;
+        final models = decoded['models'];
+        if (models is! List) continue;
+
+        final ids = <String>{};
+        for (final item in models) {
+          if (item is! Map) continue;
+          final name = item['name'];
+          if (name is! String) continue;
+          final methods = item['supportedGenerationMethods'];
+          if (methods is List &&
+              !methods.contains('generateContent') &&
+              !methods.contains('streamGenerateContent')) {
+            continue;
+          }
+          ids.add(name.contains('/') ? name.split('/').last : name);
+        }
+        if (ids.isEmpty) continue;
+        return GeminiModelRegistry.resolveAvailable(
+          serverModelIds: ids,
+        ).map(AiSelectableModel.fromGemini).toList(growable: false);
+      } on TimeoutException {
+        continue;
+      } on SocketException {
+        return _fallbackModels();
+      } on http.ClientException {
+        return _fallbackModels();
+      } on Object {
+        continue;
       }
-      return GeminiModelRegistry.resolveAvailable(
-        serverModelIds: ids,
-      ).map(AiSelectableModel.fromGemini).toList(growable: false);
-    } on TimeoutException {
-      return _fallbackModels();
-    } on SocketException {
-      return _fallbackModels();
-    } on http.ClientException {
-      return _fallbackModels();
-    } on Object {
-      return _fallbackModels();
     }
+    return _fallbackModels();
   }
 
   List<AiSelectableModel> _fallbackModels() =>
@@ -122,7 +122,6 @@ class HttpGeminiChatService implements AiChatTransport {
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 90),
   }) async {
-    final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
@@ -136,7 +135,6 @@ class HttpGeminiChatService implements AiChatTransport {
     final started = DateTime.now();
     final result = await _postGenerate(
       model: model,
-      apiKey: key,
       body: body,
       timeout: timeout,
     );
@@ -158,7 +156,6 @@ class HttpGeminiChatService implements AiChatTransport {
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
   }) async* {
-    final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
@@ -174,15 +171,17 @@ class HttpGeminiChatService implements AiChatTransport {
     );
 
     final started = DateTime.now();
-    final response = await GeminiRetryPolicy.run(
+    final keys = await _requireKeys();
+    final response = await GeminiRetryPolicy.runWithKeys(
       settings: settings,
-      operation: () async {
+      keys: keys,
+      operation: (apiKey) async {
         late http.StreamedResponse attempt;
         try {
           final request = http.Request('POST', uri)
             ..headers.addAll({
               'Content-Type': 'application/json',
-              'x-goog-api-key': key,
+              'x-goog-api-key': apiKey,
             })
             ..body = jsonEncode(body);
           attempt = await _http.send(request).timeout(timeout);
@@ -321,25 +320,26 @@ class HttpGeminiChatService implements AiChatTransport {
     return kept.reversed.toList();
   }
 
-  Future<String> _requireKey() async {
-    final key = await credentials.readApiKeyFor(_provider);
-    if (key == null || key.isEmpty) {
+  Future<List<String>> _requireKeys() async {
+    final keys = await credentials.readApiKeysFor(_provider);
+    if (keys.isEmpty) {
       throw const AiNotConfiguredException(
         'Gemini is not configured yet. Add an API key in Settings.',
       );
     }
-    return key;
+    return keys;
   }
 
   Future<({String text, AiTokenUsage? usage})> _postGenerate({
     required String model,
-    required String apiKey,
     required Map<String, dynamic> body,
     required Duration timeout,
-  }) {
-    return GeminiRetryPolicy.run(
+  }) async {
+    final keys = await _requireKeys();
+    return GeminiRetryPolicy.runWithKeys(
       settings: settings,
-      operation: () => _postGenerateOnce(
+      keys: keys,
+      operation: (apiKey) => _postGenerateOnce(
         model: model,
         apiKey: apiKey,
         body: body,

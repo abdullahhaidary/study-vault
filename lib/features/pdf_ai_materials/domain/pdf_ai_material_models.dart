@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 
+import '../../../core/markdown/chart_spec.dart';
 import '../../ai_questions/domain/question_source.dart';
 
 enum PdfAiMaterialType {
@@ -136,6 +137,50 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     }
     return null;
   }
+}
+
+/// Preset regenerate choices shown before a new version is requested.
+enum PdfAiRegeneratePreset {
+  reformatOnly,
+  shorter,
+  moreDetailed,
+  focusFormulas,
+}
+
+extension PdfAiRegeneratePresetX on PdfAiRegeneratePreset {
+  String get label => switch (this) {
+    PdfAiRegeneratePreset.reformatOnly => 'Reformat only',
+    PdfAiRegeneratePreset.shorter => 'Shorter',
+    PdfAiRegeneratePreset.moreDetailed => 'More detailed',
+    PdfAiRegeneratePreset.focusFormulas => 'Focus on formulas',
+  };
+
+  String get description => switch (this) {
+    PdfAiRegeneratePreset.reformatOnly =>
+      'Keep every fact, example, and idea. Only fix Markdown, charts, '
+          'headings, and reading flow so pasted ChatGPT-style output matches '
+          'this study format.',
+    PdfAiRegeneratePreset.shorter =>
+      'Regenerate from the PDF, but make it more concise.',
+    PdfAiRegeneratePreset.moreDetailed =>
+      'Regenerate from the PDF with more explanation and examples.',
+    PdfAiRegeneratePreset.focusFormulas =>
+      'Regenerate from the PDF with more emphasis on formulas and notation.',
+  };
+
+  bool get usesCurrentContent => this == PdfAiRegeneratePreset.reformatOnly;
+
+  String? get pdfInstruction => switch (this) {
+    PdfAiRegeneratePreset.reformatOnly => null,
+    PdfAiRegeneratePreset.shorter =>
+      'Make it shorter and denser. Remove filler while keeping every '
+          'important concept, formula, and exam point.',
+    PdfAiRegeneratePreset.moreDetailed =>
+      'Add more explanation, worked examples, and connections between '
+          'topics without inventing content that is not in the source.',
+    PdfAiRegeneratePreset.focusFormulas =>
+      'Focus more on formulas, notation, and step-by-step calculations.',
+  };
 }
 
 abstract final class PdfAiSlideDeck {
@@ -309,6 +354,39 @@ abstract final class PdfAiPromptBuilder {
             'GENERATION REQUEST: ${type.displayName}\n\n'
             '${type.generationInstruction}'
             '${instruction == null || instruction.isEmpty ? '' : '\n\nAdditional regeneration instruction:\n$instruction'}',
+      },
+    ];
+  }
+
+  static List<Map<String, String>> reformatMessages({
+    required PdfAiMaterialType type,
+    required String currentMarkdown,
+    String? extraInstruction,
+  }) {
+    final extra = extraInstruction?.trim();
+    return [
+      {'role': 'system', 'content': systemMessage},
+      {
+        'role': 'user',
+        'content': 'CURRENT STUDY MATERIAL:\n${currentMarkdown.trim()}',
+      },
+      {
+        'role': 'user',
+        'content':
+            'REFORMAT REQUEST: ${type.displayName}\n\n'
+            'Keep every fact, example, formula, definition, and idea. Do not '
+            'add new topics, drop existing ones, or change meaning. Content '
+            'pasted from another AI should stay the same in substance.\n\n'
+            'Only reformat:\n'
+            '- Convert the material into polished Markdown that matches this '
+            'structure:\n${type.generationInstruction}\n'
+            '- Fix headings, lists, spacing, and reading flow so sections are '
+            'coherent and aligned.\n'
+            '- Convert mermaid, ASCII, HTML, or broken/misaligned charts and '
+            'numeric tables into Study Vault chart blocks.\n'
+            '${ChartSpec.promptInstruction}\n'
+            '${extra == null || extra.isEmpty ? '' : '\nAdditional formatting notes:\n$extra\n'}'
+            'Return polished Markdown only. Do not mention these instructions.',
       },
     ];
   }

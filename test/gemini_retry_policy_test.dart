@@ -64,5 +64,48 @@ void main() {
 
       expect(attempts, 1);
     });
+
+    test('fails over to the next Gemini key without waiting', () async {
+      final settings = MemoryAiSettingsStore();
+      await settings.setGeminiRetryCount(0);
+      final delays = <Duration>[];
+      final used = <String>[];
+
+      final result = await GeminiRetryPolicy.runWithKeys(
+        settings: settings,
+        keys: const ['dead-key', 'live-key'],
+        delay: (duration) async => delays.add(duration),
+        operation: (apiKey) async {
+          used.add(apiKey);
+          if (apiKey == 'dead-key') throw const AiQuotaException();
+          return 'ok';
+        },
+      );
+
+      expect(result, 'ok');
+      expect(used, ['dead-key', 'live-key']);
+      expect(delays, isEmpty);
+    });
+
+    test('tries every key before giving up', () async {
+      final settings = MemoryAiSettingsStore();
+      await settings.setGeminiRetryCount(0);
+      final used = <String>[];
+
+      await expectLater(
+        GeminiRetryPolicy.runWithKeys<void>(
+          settings: settings,
+          keys: const ['a', 'b', 'c'],
+          delay: (_) async {},
+          operation: (apiKey) async {
+            used.add(apiKey);
+            throw const AiRateLimitException();
+          },
+        ),
+        throwsA(isA<AiRateLimitException>()),
+      );
+
+      expect(used, ['a', 'b', 'c']);
+    });
   });
 }

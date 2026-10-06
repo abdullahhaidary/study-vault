@@ -11,6 +11,7 @@ import 'package:study_vault/features/pdf_ai_materials/presentation/pdf_ai_materi
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/core/markdown/chart_spec.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_token_usage.dart';
 import 'package:study_vault/features/ai_questions/domain/question_source.dart';
@@ -92,6 +93,31 @@ void main() {
     });
 
     test(
+      'reformat prompt keeps current text and asks only for format alignment',
+      () {
+        const pasted = '## Messy heading\n\n```mermaid\ngraph TD; A-->B;\n```';
+        final prompt = PdfAiPromptBuilder.reformatMessages(
+          type: PdfAiMaterialType.explanation,
+          currentMarkdown: pasted,
+          extraInstruction: 'Keep my heading names.',
+        );
+
+        expect(prompt[0]['content'], PdfAiPromptBuilder.systemMessage);
+        expect(prompt[1]['content'], startsWith('CURRENT STUDY MATERIAL:'));
+        expect(prompt[1]['content'], contains(pasted));
+        expect(prompt[1]['content'], isNot(contains('DOCUMENT:')));
+        expect(prompt[2]['content'], startsWith('REFORMAT REQUEST:'));
+        expect(prompt[2]['content'], contains('Keep every fact'));
+        expect(prompt[2]['content'], contains(ChartSpec.promptInstruction));
+        expect(prompt[2]['content'], contains('Keep my heading names.'));
+        expect(
+          prompt[2]['content'],
+          contains(PdfAiMaterialType.explanation.generationInstruction),
+        );
+      },
+    );
+
+    test(
       'document representation is ordered, deterministic, and fingerprinted',
       () {
         final first = PdfDocumentRepresentation.build(
@@ -153,10 +179,12 @@ void main() {
         List.generate(80, (i) => 'Summary paragraph $i.\n\n').join(),
         'A saved real-world example.',
       ]);
-      final materials = await tester.runAsync(() async => [
-        await _generate(service),
-        await _generate(service, type: PdfAiMaterialType.realWorldExamples),
-      ]);
+      final materials = await tester.runAsync(
+        () async => [
+          await _generate(service),
+          await _generate(service, type: PdfAiMaterialType.realWorldExamples),
+        ],
+      );
       await _pumpReader(tester, db, materials!);
       final summaryList = find.byType(ListView).first;
       await tester.drag(summaryList, const Offset(0, -400));
@@ -245,6 +273,29 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('regenerate dialog offers a reformat-only option', (
+      tester,
+    ) async {
+      client.outputs.add('A short summary.');
+      final summary = await tester.runAsync(() => _generate(service));
+      await _pumpReader(tester, db, [summary!]);
+      final regenerate = find.text('Regenerate');
+      await tester.ensureVisible(regenerate);
+      await tester.tap(regenerate);
+      await tester.pumpAndSettle();
+      expect(find.text('Reformat only'), findsOneWidget);
+      expect(find.text('Shorter'), findsOneWidget);
+      expect(find.text('More detailed'), findsOneWidget);
+      expect(find.text('Focus on formulas'), findsOneWidget);
+      await tester.tap(find.text('Reformat only'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Keep every fact'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
     test('regeneration preserves versions and newest loads first', () async {
       client.outputs.addAll(['Version one', 'Version two']);
       final first = await _generate(service);
@@ -261,6 +312,42 @@ void main() {
         'Version two',
         'Version one',
       ]);
+    });
+
+    test('reformat uses current content and skips a new PDF extract', () async {
+      client.outputs.addAll(['Original pasted notes', 'Aligned markdown']);
+      final original = await _generate(service);
+      final extractsAfterGenerate = source.extractCount;
+
+      final reformatted = await service.generate(
+        materialId: 'pdf-1',
+        title: 'PDF',
+        filePath: '/fake.pdf',
+        type: PdfAiMaterialType.summary,
+        selection: testDeepSeekSelection(),
+        customInstruction: 'Keep my heading names.',
+        storedInstruction: 'Reformat only\nKeep my heading names.',
+        reformatSource: original.content,
+        reuseSourceFingerprint: original.sourceFingerprint,
+      );
+
+      expect(source.extractCount, extractsAfterGenerate);
+      expect(reformatted.version, 2);
+      expect(reformatted.content, 'Aligned markdown');
+      expect(reformatted.sourceFingerprint, original.sourceFingerprint);
+      expect(
+        reformatted.customInstruction,
+        'Reformat only\nKeep my heading names.',
+      );
+      expect(client.messages.last[1]['content'], contains(original.content));
+      expect(
+        client.messages.last.last['content'],
+        startsWith('REFORMAT REQUEST:'),
+      );
+      expect(
+        client.messages.last.last['content'],
+        isNot(contains('DOCUMENT: PDF')),
+      );
     });
 
     test(
@@ -447,12 +534,12 @@ Future<void> _pumpReader(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
-        pdfAiMaterialsProvider('pdf-1').overrideWith(
-          (ref) => Stream.value(materials),
-        ),
-        materialsForLessonProvider('lesson-1').overrideWith(
-          (ref) => Stream.value([]),
-        ),
+        pdfAiMaterialsProvider(
+          'pdf-1',
+        ).overrideWith((ref) => Stream.value(materials)),
+        materialsForLessonProvider(
+          'lesson-1',
+        ).overrideWith((ref) => Stream.value([])),
         materialBookLinksProvider.overrideWith(
           (ref, id) => Stream.value(const []),
         ),
@@ -529,9 +616,13 @@ class _FakeTextSource implements PdfDocumentTextSource {
   _FakeTextSource(this.pages);
 
   List<SourcePageText> pages;
+  int extractCount = 0;
 
   @override
-  Future<List<SourcePageText>> extractAllPages(String filePath) async => pages;
+  Future<List<SourcePageText>> extractAllPages(String filePath) async {
+    extractCount++;
+    return pages;
+  }
 }
 
 class _FakeCompletionClient implements PdfAiCompletionClient {

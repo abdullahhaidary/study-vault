@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai_chat/data/ai_chat_providers.dart';
+import '../data/ai_credential_store.dart';
 import '../data/ai_providers.dart';
 import '../data/ai_model_catalog_providers.dart';
 import '../data/ai_settings_store.dart';
@@ -58,6 +59,53 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _addGeminiKeys() async {
+    final raw = _keyController.text;
+    if (GeminiApiKeys.split(raw).isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(aiCredentialStoreProvider)
+          .addApiKeyFor(AiProviderId.gemini, raw);
+      _keyController.clear();
+      await _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gemini API key saved securely.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _removeGeminiKeyAt(int index, String suffix) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove this Gemini key?'),
+        content: Text(
+          'Key ending in $suffix will be removed. Other Gemini keys stay.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref
+        .read(aiCredentialStoreProvider)
+        .removeApiKeyAt(AiProviderId.gemini, index);
+    await _refresh();
   }
 
   Future<void> _removeKey(AiProviderId provider) async {
@@ -361,11 +409,101 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 ],
                 const SizedBox(height: 16),
                 Text(
-                  '${provider.displayName} API Key',
+                  provider == AiProviderId.gemini
+                      ? 'Gemini API keys'
+                      : '${provider.displayName} API Key',
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
-                if (configured) ...[
+                if (provider == AiProviderId.gemini) ...[
+                  if (state.geminiKeyCount == 0)
+                    Text(
+                      'Gemini API key required',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      state.geminiKeyCount == 1
+                          ? '1 key configured. Add more free-account keys and '
+                                'requests will try the next one if this key '
+                                'hits quota or rate limits.'
+                          : '${state.geminiKeyCount} keys configured. Each '
+                                'request tries the next key if one fails.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < state.geminiKeySuffixes.length; i++)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.check_circle,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          'Key ${i + 1}  ••••${state.geminiKeySuffixes[i]}',
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Remove this key',
+                          onPressed: () =>
+                              _removeGeminiKeyAt(i, state.geminiKeySuffixes[i]),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.tonal(
+                          onPressed: _testing ? null : _test,
+                          child: _testing
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Test Connection'),
+                        ),
+                        TextButton(
+                          onPressed: () => _removeKey(provider),
+                          child: const Text('Remove all keys'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    controller: _keyController,
+                    obscureText: true,
+                    minLines: 1,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'Add Gemini API key',
+                      hintText: 'Paste one key, or several separated by lines',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: _saving ? null : _addGeminiKeys,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            state.geminiKeyCount == 0
+                                ? 'Add API Key'
+                                : 'Add another key',
+                          ),
+                  ),
+                ] else if (configured) ...[
                   Text('••••••••••••••••', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Row(
@@ -511,8 +649,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Retries Gemini rate-limit and quota responses with a '
-                  'short increasing delay. The initial request is not counted.',
+                  'If a Gemini key hits rate limits or quota, the next saved '
+                  'key is tried immediately. After every key has failed, this '
+                  'retry count repeats the whole list with a short delay.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -652,7 +791,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   const SizedBox(height: 4),
                   Text(
                     'Configured keys: '
-                    '${[if (state.geminiConfigured) 'Gemini', if (state.deepseekConfigured) 'DeepSeek', if (state.newApiConfigured) 'New API'].join(', ')}. Switching provider keeps each key.',
+                    '${[if (state.geminiConfigured) state.geminiKeyCount > 1 ? 'Gemini (${state.geminiKeyCount})' : 'Gemini', if (state.deepseekConfigured) 'DeepSeek', if (state.newApiConfigured) 'New API'].join(', ')}. Switching provider keeps each key.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

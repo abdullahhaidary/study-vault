@@ -122,6 +122,8 @@ class AiSettingsState {
     required this.geminiRetryCount,
     required this.privacyConsent,
     required this.geminiConfigured,
+    required this.geminiKeyCount,
+    required this.geminiKeySuffixes,
     required this.deepseekConfigured,
     required this.newApiConfigured,
     required this.newApiBaseUrl,
@@ -136,6 +138,8 @@ class AiSettingsState {
   final int geminiRetryCount;
   final bool privacyConsent;
   final bool geminiConfigured;
+  final int geminiKeyCount;
+  final List<String> geminiKeySuffixes;
   final bool deepseekConfigured;
   final bool newApiConfigured;
   final String newApiBaseUrl;
@@ -158,6 +162,8 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
     geminiRetryCount: await settings.getGeminiRetryCount(),
     privacyConsent: await settings.getPrivacyConsentAccepted(),
     geminiConfigured: await creds.hasApiKeyFor(AiProviderId.gemini),
+    geminiKeyCount: (await creds.readApiKeysFor(AiProviderId.gemini)).length,
+    geminiKeySuffixes: await creds.readApiKeySuffixesFor(AiProviderId.gemini),
     deepseekConfigured: await creds.hasApiKeyFor(AiProviderId.deepseek),
     newApiConfigured: await creds.hasApiKeyFor(AiProviderId.newApi),
     newApiBaseUrl: await settings.getNewApiBaseUrl(),

@@ -171,6 +171,9 @@ class PdfAiMaterialService {
     required PdfAiMaterialType type,
     required AiExecutionSelection selection,
     String? customInstruction,
+    String? storedInstruction,
+    String? reformatSource,
+    String? reuseSourceFingerprint,
   }) async {
     final operationKey = '$materialId:${type.storageValue}';
     if (!_inFlight.add(operationKey)) {
@@ -184,6 +187,9 @@ class PdfAiMaterialService {
         type: type,
         selection: selection,
         customInstruction: customInstruction,
+        storedInstruction: storedInstruction,
+        reformatSource: reformatSource,
+        reuseSourceFingerprint: reuseSourceFingerprint,
       );
     } finally {
       _inFlight.remove(operationKey);
@@ -197,11 +203,46 @@ class PdfAiMaterialService {
     required PdfAiMaterialType type,
     required AiExecutionSelection selection,
     String? customInstruction,
+    String? storedInstruction,
+    String? reformatSource,
+    String? reuseSourceFingerprint,
   }) async {
-    final document = await prepareDocument(title: title, filePath: filePath);
+    final currentMarkdown = reformatSource?.trim();
+    final reformatOnly = currentMarkdown != null && currentMarkdown.isNotEmpty;
     final stopwatch = Stopwatch()..start();
     final calls = <PdfAiCompletion>[];
 
+    if (reformatOnly) {
+      final fingerprint =
+          reuseSourceFingerprint ??
+          (await prepareDocument(
+            title: title,
+            filePath: filePath,
+          )).sourceFingerprint;
+      final finalCompletion = await _client.complete(
+        messages: PdfAiPromptBuilder.reformatMessages(
+          type: type,
+          currentMarkdown: currentMarkdown,
+          extraInstruction: customInstruction,
+        ),
+        maxOutputTokens: type.maxOutputTokens,
+        selection: selection,
+      );
+      calls.add(finalCompletion);
+      stopwatch.stop();
+      return _saveVersion(
+        materialId: materialId,
+        type: type,
+        completedMarkdown: finalCompletion.markdown.trim(),
+        finalCompletion: finalCompletion,
+        calls: calls,
+        durationMs: stopwatch.elapsedMilliseconds,
+        sourceFingerprint: fingerprint,
+        customInstruction: storedInstruction ?? customInstruction,
+      );
+    }
+
+    final document = await prepareDocument(title: title, filePath: filePath);
     late final PdfAiCompletion finalCompletion;
     if (document.stableDocument.length <= singleRequestSafeCharacters) {
       finalCompletion = await _client.complete(
@@ -254,14 +295,34 @@ class PdfAiMaterialService {
       calls.add(finalCompletion);
     }
     stopwatch.stop();
-    final completedMarkdown = finalCompletion.markdown.trim();
+    return _saveVersion(
+      materialId: materialId,
+      type: type,
+      completedMarkdown: finalCompletion.markdown.trim(),
+      finalCompletion: finalCompletion,
+      calls: calls,
+      durationMs: stopwatch.elapsedMilliseconds,
+      sourceFingerprint: document.sourceFingerprint,
+      customInstruction: storedInstruction ?? customInstruction,
+    );
+  }
+
+  Future<PdfAiMaterial> _saveVersion({
+    required String materialId,
+    required PdfAiMaterialType type,
+    required String completedMarkdown,
+    required PdfAiCompletion finalCompletion,
+    required List<PdfAiCompletion> calls,
+    required int durationMs,
+    required String sourceFingerprint,
+    String? customInstruction,
+  }) {
     if (completedMarkdown.isEmpty) {
       throw StateError('The AI returned an empty study material.');
     }
-
     final usage = AiTokenUsage.merge([
       for (final call in calls) call.usage,
-    ])?.copyWith(durationMs: stopwatch.elapsedMilliseconds);
+    ])?.copyWith(durationMs: durationMs);
     final now = DateTime.now();
     return _db.insertPdfAiMaterialVersion(
       materialId: materialId,
@@ -280,10 +341,8 @@ class PdfAiMaterialService {
         totalTokens: Value(usage?.totalTokens),
         cacheHitTokens: Value(usage?.cacheHitTokens),
         cacheMissTokens: Value(usage?.cacheMissTokens),
-        requestDurationMs: Value(
-          usage?.durationMs ?? stopwatch.elapsedMilliseconds,
-        ),
-        sourceFingerprint: document.sourceFingerprint,
+        requestDurationMs: Value(usage?.durationMs ?? durationMs),
+        sourceFingerprint: sourceFingerprint,
         customInstruction: Value(_nullableTrim(customInstruction)),
       ),
     );

@@ -41,7 +41,6 @@ class GeminiAiService implements AiService {
   Future<void> testConnection({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    final key = await _requireKey();
     final model = GeminiModelRegistry.normalize(
       await settings.getModelIdFor(_provider),
     );
@@ -59,12 +58,7 @@ class GeminiAiService implements AiService {
         'thinkingConfig': {'thinkingBudget': 0},
       },
     };
-    await _postGenerate(
-      model: model,
-      apiKey: key,
-      body: body,
-      timeout: timeout,
-    );
+    await _postGenerate(model: model, body: body, timeout: timeout);
   }
 
   @override
@@ -82,7 +76,6 @@ class GeminiAiService implements AiService {
         'Enter a question or custom prompt first.',
       );
     }
-    final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
@@ -124,7 +117,6 @@ class GeminiAiService implements AiService {
     final started = DateTime.now();
     final completion = await _postGenerate(
       model: model,
-      apiKey: key,
       body: body,
       timeout: timeout,
     );
@@ -221,7 +213,6 @@ class GeminiAiService implements AiService {
     if (messages.isEmpty) {
       throw const AiMalformedOutputException('The document prompt is empty.');
     }
-    final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
@@ -250,7 +241,6 @@ class GeminiAiService implements AiService {
     };
     final completion = await _postGenerate(
       model: model,
-      apiKey: key,
       body: body,
       timeout: timeout,
     );
@@ -271,14 +261,14 @@ class GeminiAiService implements AiService {
     };
   }
 
-  Future<String> _requireKey() async {
-    final key = await credentials.readApiKeyFor(_provider);
-    if (key == null || key.isEmpty) {
+  Future<List<String>> _requireKeys() async {
+    final keys = await credentials.readApiKeysFor(_provider);
+    if (keys.isEmpty) {
       throw const AiNotConfiguredException(
         'Gemini is not configured yet. Add an API key in Settings.',
       );
     }
-    return key;
+    return keys;
   }
 
   void _assertSource(AiStudyRequest request) {
@@ -308,13 +298,14 @@ class GeminiAiService implements AiService {
 
   Future<({String text, AiTokenUsage? usage})> _postGenerate({
     required String model,
-    required String apiKey,
     required Map<String, dynamic> body,
     required Duration timeout,
-  }) {
-    return GeminiRetryPolicy.run(
+  }) async {
+    final keys = await _requireKeys();
+    return GeminiRetryPolicy.runWithKeys(
       settings: settings,
-      operation: () => _postGenerateOnce(
+      keys: keys,
+      operation: (apiKey) => _postGenerateOnce(
         model: model,
         apiKey: apiKey,
         body: body,

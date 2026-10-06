@@ -36,17 +36,15 @@ class GeminiBookEmbeddingClient implements BookEmbeddingClient {
 
   @override
   Future<bool> get isAvailable async =>
-      ((await _credentials.readApiKeyFor(AiProviderId.gemini)) ?? '')
-          .trim()
-          .isNotEmpty;
+      (await _credentials.readApiKeysFor(AiProviderId.gemini)).isNotEmpty;
 
   @override
   Future<List<List<double>>> embed(
     List<String> texts, {
     required bool query,
   }) async {
-    final key = (await _credentials.readApiKeyFor(AiProviderId.gemini))?.trim();
-    if (key == null || key.isEmpty) {
+    final keys = await _credentials.readApiKeysFor(AiProviderId.gemini);
+    if (keys.isEmpty) {
       throw StateError('Add a Gemini API key in Settings to use smart search.');
     }
     final result = <List<double>>[];
@@ -55,48 +53,57 @@ class GeminiBookEmbeddingClient implements BookEmbeddingClient {
         i,
         i + batch > texts.length ? texts.length : i + batch,
       );
-      final http.Response response;
-      try {
-        response = await _http
-            .post(
-              Uri.parse('$baseUrl/models/$_modelId:batchEmbedContents'),
-              headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': key,
-              },
-              body: jsonEncode({
-                'requests': [
-                  for (final text in slice)
-                    {
-                      'model': 'models/$_modelId',
-                      'content': {
-                        'parts': [
-                          {
-                            'text': text.length > maxChars
-                                ? text.substring(0, maxChars)
-                                : (text.trim().isEmpty ? '(empty page)' : text),
-                          },
-                        ],
-                      },
-                      'taskType': query
-                          ? 'RETRIEVAL_QUERY'
-                          : 'RETRIEVAL_DOCUMENT',
-                      'outputDimensionality': 768,
-                    },
+      final body = jsonEncode({
+        'requests': [
+          for (final text in slice)
+            {
+              'model': 'models/$_modelId',
+              'content': {
+                'parts': [
+                  {
+                    'text': text.length > maxChars
+                        ? text.substring(0, maxChars)
+                        : (text.trim().isEmpty ? '(empty page)' : text),
+                  },
                 ],
-              }),
-            )
-            .timeout(const Duration(seconds: 90));
-      } on SocketException {
-        throw StateError('No internet connection for smart search.');
-      } on TimeoutException {
-        throw StateError('Gemini embeddings timed out. Try again.');
-      }
-      if (response.statusCode != 200) {
-        throw StateError(
+              },
+              'taskType': query ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
+              'outputDimensionality': 768,
+            },
+        ],
+      });
+      http.Response? response;
+      Object? lastError;
+      for (final key in keys) {
+        try {
+          response = await _http
+              .post(
+                Uri.parse('$baseUrl/models/$_modelId:batchEmbedContents'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-goog-api-key': key,
+                },
+                body: body,
+              )
+              .timeout(const Duration(seconds: 90));
+        } on SocketException {
+          throw StateError('No internet connection for smart search.');
+        } on TimeoutException {
+          lastError = StateError('Gemini embeddings timed out. Try again.');
+          continue;
+        }
+        if (response.statusCode == 200) break;
+        lastError = StateError(
           'Gemini embeddings failed (${response.statusCode}). '
           'Check your Gemini key and quota.',
         );
+        response = null;
+      }
+      if (response == null || response.statusCode != 200) {
+        throw lastError ??
+            StateError(
+              'Gemini embeddings failed. Check your Gemini key and quota.',
+            );
       }
       final embeddings =
           (jsonDecode(response.body) as Map<String, dynamic>)['embeddings']

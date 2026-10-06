@@ -31,6 +31,13 @@ import '../../selection_ai/presentation/selection_ai_area.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 
+class _PdfAiRegenerateChoice {
+  const _PdfAiRegenerateChoice({this.preset, this.customInstruction = ''});
+
+  final PdfAiRegeneratePreset? preset;
+  final String customInstruction;
+}
+
 class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
   const PdfAiMaterialReaderScreen({
     super.key,
@@ -287,10 +294,12 @@ class _PdfAiMaterialReaderScreenState
     return _markdownChunks;
   }
 
-  Future<void> _regenerate() async {
+  Future<void> _regenerate(PdfAiMaterial selected) async {
     if (_generating) return;
-    final instruction = await _showRegenerationDialog();
-    if (instruction == null || !mounted) return;
+    final choice = await _showRegenerationDialog(
+      hasCurrentContent: selected.content.trim().isNotEmpty,
+    );
+    if (choice == null || !mounted) return;
 
     if (!await AiAssistantController.ensureReady(context, ref)) return;
     if (!mounted) return;
@@ -308,6 +317,20 @@ class _PdfAiMaterialReaderScreenState
         ) ??
         selection;
 
+    final extra = choice.customInstruction.trim();
+    final preset = choice.preset;
+    final promptInstruction = [
+      if (preset?.pdfInstruction != null) preset!.pdfInstruction!,
+      if (extra.isNotEmpty) extra,
+    ].join('\n');
+    final storedInstruction = [
+      if (preset != null) preset.label,
+      if (extra.isNotEmpty) extra,
+    ].join('\n');
+    final reformatSource = preset != null && preset.usesCurrentContent
+        ? selected.content
+        : null;
+
     setState(() => _generating = true);
     try {
       final generated = await ref
@@ -318,7 +341,16 @@ class _PdfAiMaterialReaderScreenState
             filePath: widget.filePath,
             type: widget.type,
             selection: selection,
-            customInstruction: instruction,
+            customInstruction: promptInstruction.isEmpty
+                ? null
+                : promptInstruction,
+            storedInstruction: storedInstruction.isEmpty
+                ? null
+                : storedInstruction,
+            reformatSource: reformatSource,
+            reuseSourceFingerprint: reformatSource == null
+                ? null
+                : selected.sourceFingerprint,
           );
       if (!mounted) return;
       setState(() => _selectedId = generated.id);
@@ -334,47 +366,99 @@ class _PdfAiMaterialReaderScreenState
     }
   }
 
-  Future<String?> _showRegenerationDialog() async {
+  Future<_PdfAiRegenerateChoice?> _showRegenerationDialog({
+    required bool hasCurrentContent,
+  }) async {
     final controller = TextEditingController();
-    final instruction = await showDialog<String>(
+    PdfAiRegeneratePreset? selected;
+
+    final choice = await showDialog<_PdfAiRegenerateChoice>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Generate a new ${widget.type.shortName}?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'The current version will remain available in History. '
-              'Generating consumes API tokens.',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: controller,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Optional instructions',
-                hintText: 'For example: Focus more on formulas.',
-                border: OutlineInputBorder(),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final preset = selected;
+            final usesCurrent = preset?.usesCurrentContent ?? false;
+            return AlertDialog(
+              title: Text('Generate a new ${widget.type.shortName}?'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'The current version will remain available in History. '
+                      'Generating consumes API tokens.',
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        for (final option in PdfAiRegeneratePreset.values)
+                          ChoiceChip(
+                            label: Text(option.label),
+                            selected: preset == option,
+                            onSelected:
+                                option.usesCurrentContent && !hasCurrentContent
+                                ? null
+                                : (isSelected) {
+                                    setDialogState(() {
+                                      selected = isSelected ? option : null;
+                                    });
+                                  },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      preset?.description ??
+                          'Regenerate from the PDF using this study format. '
+                              'Choose Reformat only to keep the current text '
+                              'and fix Markdown, charts, and flow.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: controller,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: usesCurrent
+                            ? 'Optional formatting notes'
+                            : 'Optional extra instructions',
+                        hintText: usesCurrent
+                            ? 'For example: keep my heading names.'
+                            : 'For example: Focus more on formulas.',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Regenerate'),
-          ),
-        ],
-      ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(
+                    context,
+                    _PdfAiRegenerateChoice(
+                      preset: selected,
+                      customInstruction: controller.text,
+                    ),
+                  ),
+                  child: const Text('Regenerate'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
     controller.dispose();
-    return instruction;
+    return choice;
   }
 
   /// Opens the same full-screen rich editor used for notes; the result is
@@ -696,7 +780,9 @@ class _PdfAiMaterialReaderScreenState
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: FilledButton(
-                          onPressed: _generating ? null : _regenerate,
+                          onPressed: _generating
+                              ? null
+                              : () => _regenerate(selected),
                           child: Text(
                             _generating ? 'Generating…' : 'Regenerate',
                           ),
@@ -904,7 +990,7 @@ class _PdfAiMaterialReaderScreenState
                                           child: FilledButton.icon(
                                             onPressed: _generating
                                                 ? null
-                                                : _regenerate,
+                                                : () => _regenerate(selected),
                                             icon: _generating
                                                 ? const SizedBox.square(
                                                     dimension: 18,
