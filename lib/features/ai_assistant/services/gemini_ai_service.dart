@@ -80,7 +80,7 @@ class GeminiAiService implements AiService {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = request.selection.resolvedModelId;
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(provider: _provider);
     final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
     );

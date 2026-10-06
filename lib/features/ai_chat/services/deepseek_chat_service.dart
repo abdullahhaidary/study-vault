@@ -89,7 +89,9 @@ class HttpDeepSeekChatService implements AiChatTransport {
     }
     final model = DeepSeekModelRegistry.normalize(modelId);
     final thinking = await settings.getThinkingMode();
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: AiProviderId.deepseek,
+    );
     final messages = _buildMessages(history, preference);
     final result = await _postChat(
       apiKey: key,
@@ -118,7 +120,9 @@ class HttpDeepSeekChatService implements AiChatTransport {
     }
     final model = DeepSeekModelRegistry.normalize(modelId);
     final thinking = await settings.getThinkingMode();
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: AiProviderId.deepseek,
+    );
     final messages = _buildMessages(history, preference);
 
     final uri = Uri.parse('$baseUrl/chat/completions');
@@ -212,7 +216,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
             'Preserve formulas, code, variable names, and technical terminology.\n'
             'Keep responses useful for studying.\n'
             '${ChartSpec.promptInstruction}\n'
-            '${(studyPreference == null || studyPreference.trim().isEmpty) ? '' : 'User study preference: ${studyPreference.trim()}\n'}',
+            '${(studyPreference == null || studyPreference.trim().isEmpty) ? '' : '${studyPreference.trim()}\n'}',
       },
     ];
     for (final turn in trimmed) {

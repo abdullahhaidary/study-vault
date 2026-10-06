@@ -5,6 +5,7 @@ import '../data/ai_credential_store.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_provider.dart';
+import '../domain/ai_style_memory.dart';
 import '../domain/annotation_ai_history.dart';
 import '../services/ai_service.dart';
 import '../services/annotation_ai_history_service.dart';
@@ -118,7 +119,7 @@ class AiSettingsState {
     required this.modelId,
     required this.thinkingMode,
     required this.language,
-    required this.studyPreference,
+    required this.styleMemoryItems,
     required this.geminiRetryCount,
     required this.privacyConsent,
     required this.geminiConfigured,
@@ -134,7 +135,7 @@ class AiSettingsState {
   final String modelId;
   final AiThinkingMode thinkingMode;
   final AiLanguage language;
-  final String? studyPreference;
+  final List<AiStyleMemoryItem> styleMemoryItems;
   final int geminiRetryCount;
   final bool privacyConsent;
   final bool geminiConfigured;
@@ -158,7 +159,7 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
     modelId: await settings.getModelIdFor(provider),
     thinkingMode: await settings.getThinkingMode(),
     language: await settings.getLanguage(),
-    studyPreference: await settings.getStudyPreference(),
+    styleMemoryItems: await settings.getStyleMemoryItems(),
     geminiRetryCount: await settings.getGeminiRetryCount(),
     privacyConsent: await settings.getPrivacyConsentAccepted(),
     geminiConfigured: await creds.hasApiKeyFor(AiProviderId.gemini),

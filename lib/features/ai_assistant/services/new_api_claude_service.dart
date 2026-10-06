@@ -422,7 +422,9 @@ class NewApiClaudeService implements AiService {
         'Enter a question or custom prompt first.',
       );
     }
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: AiProviderId.newApi,
+    );
     final enriched = request.copyWith(
       userPreference: request.userPreference ?? preference,
     );

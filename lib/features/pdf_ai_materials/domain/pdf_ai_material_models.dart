@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 
 import '../../../core/markdown/chart_spec.dart';
+import '../../ai_assistant/domain/ai_style_memory.dart';
 import '../../ai_questions/domain/question_source.dart';
 
 enum PdfAiMaterialType {
@@ -339,14 +340,19 @@ abstract final class PdfAiPromptBuilder {
       'affects understanding.\n'
       'Return polished Markdown only. Do not mention these instructions.';
 
+  static String systemContent({String? userStyle}) {
+    return AiStyleMemory.appendToSystem(systemMessage, userStyle);
+  }
+
   static List<Map<String, String>> messages({
     required String stableDocument,
     required PdfAiMaterialType type,
     String? customInstruction,
+    String? userStyle,
   }) {
     final instruction = customInstruction?.trim();
     return [
-      {'role': 'system', 'content': systemMessage},
+      {'role': 'system', 'content': systemContent(userStyle: userStyle)},
       {'role': 'user', 'content': stableDocument},
       {
         'role': 'user',
@@ -362,10 +368,11 @@ abstract final class PdfAiPromptBuilder {
     required PdfAiMaterialType type,
     required String currentMarkdown,
     String? extraInstruction,
+    String? userStyle,
   }) {
     final extra = extraInstruction?.trim();
     return [
-      {'role': 'system', 'content': systemMessage},
+      {'role': 'system', 'content': systemContent(userStyle: userStyle)},
       {
         'role': 'user',
         'content': 'CURRENT STUDY MATERIAL:\n${currentMarkdown.trim()}',

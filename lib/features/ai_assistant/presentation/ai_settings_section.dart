@@ -9,6 +9,7 @@ import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
+import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
 import '../domain/deepseek_pricing_period.dart';
 
@@ -702,71 +703,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   },
                 ),
                 const SizedBox(height: 16),
-                Text('AI Study Preference', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 4),
-                TextFormField(
-                  initialValue: state.studyPreference ?? '',
-                  maxLength: 240,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    hintText:
-                        'Explain simply and preserve English technical terms…',
-                    border: OutlineInputBorder(),
-                  ),
-                  onFieldSubmitted: (value) async {
-                    await ref
-                        .read(aiSettingsStoreProvider)
-                        .setStudyPreference(value);
-                    await _refresh();
-                  },
-                  onChanged: (_) {},
-                  onSaved: (value) async {
-                    await ref
-                        .read(aiSettingsStoreProvider)
-                        .setStudyPreference(value);
-                  },
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () async {
-                      final controller = TextEditingController(
-                        text: state.studyPreference ?? '',
-                      );
-                      final saved = await showDialog<String>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('AI Study Preference'),
-                          content: TextField(
-                            controller: controller,
-                            maxLength: 240,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, controller.text),
-                              child: const Text('Save'),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (saved != null) {
-                        await ref
-                            .read(aiSettingsStoreProvider)
-                            .setStudyPreference(saved);
-                        await _refresh();
-                      }
-                    },
-                    child: const Text('Edit preference'),
-                  ),
+                AiStyleMemorySettings(
+                  items: state.styleMemoryItems,
+                  onChanged: _refresh,
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(

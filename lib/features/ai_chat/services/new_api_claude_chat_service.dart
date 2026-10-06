@@ -43,7 +43,7 @@ class NewApiClaudeChatService implements AiChatTransport {
             'You are Study Vault AI Assistant for university students. '
             'Ground answers in shared study material and preserve formulas, code and technical terminology.\n'
             '${ChartSpec.promptInstruction}'
-            '${preference == null || preference.trim().isEmpty ? '' : '\nUser study preference: ${preference.trim()}'}',
+            '${preference == null || preference.trim().isEmpty ? '' : '\n${preference.trim()}'}',
       },
       for (final turn in history)
         {
@@ -63,7 +63,10 @@ class NewApiClaudeChatService implements AiChatTransport {
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 90),
   }) async {
-    final messages = _messages(history, await settings.getStudyPreference());
+    final messages = _messages(
+      history,
+      await settings.styleForSend(provider: AiProviderId.newApi),
+    );
     final result = await service.completeMessages(
       model: modelId,
       messages: messages,
@@ -83,7 +86,10 @@ class NewApiClaudeChatService implements AiChatTransport {
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
   }) async* {
-    final messages = _messages(history, await settings.getStudyPreference());
+    final messages = _messages(
+      history,
+      await settings.styleForSend(provider: AiProviderId.newApi),
+    );
     await for (final event in service.streamMessages(
       model: modelId,
       messages: messages,

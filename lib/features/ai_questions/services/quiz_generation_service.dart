@@ -127,7 +127,9 @@ class QuizGenerationService {
     AiPageSendMode sendMode = AiPageSendMode.text,
   }) async {
     final language = await settings.getLanguage();
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: selection.provider,
+    );
 
     if (sendMode == AiPageSendMode.image) {
       final page = source.pageNumbers.first;

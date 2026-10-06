@@ -485,7 +485,7 @@ void main() {
 }
 
 /// Minimal in-memory settings for generation tests.
-class MemoryAiSettingsStore implements AiSettingsStore {
+class MemoryAiSettingsStore extends AiSettingsStore {
   AiProviderId _provider = AiProviderId.gemini;
   String _model = AiModelIds.recommended;
   String _deepseekModel = 'deepseek-flash';

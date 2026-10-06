@@ -126,7 +126,9 @@ class HttpGeminiChatService implements AiChatTransport {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = GeminiModelRegistry.normalize(modelId);
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: AiProviderId.gemini,
+    );
     final body = _buildRequestBody(
       history: history,
       modelId: model,
@@ -160,7 +162,9 @@ class HttpGeminiChatService implements AiChatTransport {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = GeminiModelRegistry.normalize(modelId);
-    final preference = await settings.getStudyPreference();
+    final preference = await settings.styleForSend(
+      provider: AiProviderId.gemini,
+    );
     final body = _buildRequestBody(
       history: history,
       modelId: model,
@@ -282,7 +286,7 @@ class HttpGeminiChatService implements AiChatTransport {
 
     final preferenceNote =
         (studyPreference != null && studyPreference.trim().isNotEmpty)
-        ? ' User study preference: ${studyPreference.trim()}.'
+        ? '\n${studyPreference.trim()}'
         : '';
 
     return {

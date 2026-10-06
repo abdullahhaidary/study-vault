@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/ai_actions.dart';
 import '../domain/ai_provider.dart';
+import '../domain/ai_style_memory.dart';
 import '../domain/deepseek_model_registry.dart';
 import '../domain/gemini_model_registry.dart';
 
@@ -32,6 +33,22 @@ abstract class AiSettingsStore {
   Future<void> setLanguage(AiLanguage language);
   Future<String?> getStudyPreference();
   Future<void> setStudyPreference(String? value);
+  Future<List<AiStyleMemoryItem>> getStyleMemoryItems() async {
+    return AiStyleMemory.itemsFromStoredBlob(await getStudyPreference());
+  }
+
+  Future<void> setStyleMemoryItems(List<AiStyleMemoryItem> items) async {
+    AiStyleMemory.ensureFitsForSave(items);
+    await setStudyPreference(AiStyleMemory.compact(items));
+  }
+
+  Future<String?> styleForSend({required AiProviderId provider}) async {
+    return AiStyleMemory.forSend(
+      await getStyleMemoryItems(),
+      prefixCacheLikely: AiStyleMemory.usesPrefixCache(provider),
+    );
+  }
+
   Future<int> getGeminiRetryCount();
   Future<void> setGeminiRetryCount(int count);
   Future<bool> getPrivacyConsentAccepted();
@@ -40,7 +57,7 @@ abstract class AiSettingsStore {
   Future<void> resetPrivacyConsent() => setPrivacyConsentAccepted(false);
 }
 
-class SharedPreferencesAiSettingsStore implements AiSettingsStore {
+class SharedPreferencesAiSettingsStore extends AiSettingsStore {
   SharedPreferencesAiSettingsStore({SharedPreferences? prefs})
     : _prefsOverride = prefs;
 
@@ -52,6 +69,7 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
   static const _thinkingKey = 'ai_deepseek_thinking';
   static const _languageKey = 'ai_default_language';
   static const _preferenceKey = 'ai_study_preference';
+  static const _styleItemsKey = 'ai_style_memory_items';
   static const _geminiRetryCountKey = 'ai_gemini_retry_count';
   static const _consentKey = 'ai_privacy_consent_v1';
 
@@ -163,21 +181,41 @@ class SharedPreferencesAiSettingsStore implements AiSettingsStore {
 
   @override
   Future<String?> getStudyPreference() async {
-    final prefs = await _prefs();
-    final value = prefs.getString(_preferenceKey)?.trim();
-    if (value == null || value.isEmpty) return null;
-    return value;
+    return AiStyleMemory.compact(await getStyleMemoryItems());
   }
 
   @override
   Future<void> setStudyPreference(String? value) async {
+    await setStyleMemoryItems(AiStyleMemory.itemsFromStoredBlob(value));
+  }
+
+  @override
+  Future<List<AiStyleMemoryItem>> getStyleMemoryItems() async {
     final prefs = await _prefs();
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
+    final stored = AiStyleMemory.decodeJson(prefs.getString(_styleItemsKey));
+    if (stored.isNotEmpty) return stored;
+    return AiStyleMemory.itemsFromStoredBlob(prefs.getString(_preferenceKey));
+  }
+
+  @override
+  Future<void> setStyleMemoryItems(List<AiStyleMemoryItem> items) async {
+    AiStyleMemory.ensureFitsForSave(items);
+    final prefs = await _prefs();
+    final cleaned = [
+      for (final item in items)
+        if (AiStyleMemory.normalizeItemText(item.text).isNotEmpty)
+          AiStyleMemoryItem(
+            id: item.id,
+            text: AiStyleMemory.normalizeItemText(item.text),
+          ),
+    ];
+    if (cleaned.isEmpty) {
+      await prefs.remove(_styleItemsKey);
       await prefs.remove(_preferenceKey);
-    } else {
-      await prefs.setString(_preferenceKey, trimmed);
+      return;
     }
+    await prefs.setString(_styleItemsKey, AiStyleMemory.encodeJson(cleaned));
+    await prefs.remove(_preferenceKey);
   }
 
   @override
@@ -239,7 +277,7 @@ String normalizeNewApiBaseUrl(String raw) {
 }
 
 /// In-memory settings for tests.
-class MemoryAiSettingsStore implements AiSettingsStore {
+class MemoryAiSettingsStore extends AiSettingsStore {
   AiProviderId _provider = AiProviderId.gemini;
   String _geminiModel = GeminiModelRegistry.defaultModelId;
   String _deepseekModel = DeepSeekModelRegistry.defaultModelId;
@@ -247,7 +285,7 @@ class MemoryAiSettingsStore implements AiSettingsStore {
   String _newApiBaseUrl = '';
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
-  String? _preference;
+  List<AiStyleMemoryItem> _items = const [];
   int _geminiRetryCount = AiSettingsStore.defaultGeminiRetryCount;
   bool _consent = false;
 
@@ -306,12 +344,28 @@ class MemoryAiSettingsStore implements AiSettingsStore {
   Future<void> setLanguage(AiLanguage language) async => _language = language;
 
   @override
-  Future<String?> getStudyPreference() async => _preference;
+  Future<String?> getStudyPreference() async => AiStyleMemory.compact(_items);
 
   @override
   Future<void> setStudyPreference(String? value) async {
-    final trimmed = value?.trim();
-    _preference = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    _items = AiStyleMemory.itemsFromStoredBlob(value);
+  }
+
+  @override
+  Future<List<AiStyleMemoryItem>> getStyleMemoryItems() async =>
+      List.of(_items);
+
+  @override
+  Future<void> setStyleMemoryItems(List<AiStyleMemoryItem> items) async {
+    AiStyleMemory.ensureFitsForSave(items);
+    _items = [
+      for (final item in items)
+        if (AiStyleMemory.normalizeItemText(item.text).isNotEmpty)
+          AiStyleMemoryItem(
+            id: item.id,
+            text: AiStyleMemory.normalizeItemText(item.text),
+          ),
+    ];
   }
 
   @override

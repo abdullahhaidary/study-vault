@@ -19,6 +19,7 @@ final pdfAiMaterialServiceProvider = Provider<PdfAiMaterialService>((ref) {
   return PdfAiMaterialService(
     ref.watch(databaseProvider),
     ref.watch(pdfAiCompletionClientProvider),
+    settings: ref.watch(aiSettingsStoreProvider),
   );
 });
 

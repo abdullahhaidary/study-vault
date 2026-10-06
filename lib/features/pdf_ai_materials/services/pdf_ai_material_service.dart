@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
@@ -103,6 +104,7 @@ class PdfAiMaterialService {
     this._client, {
     PdfDocumentTextSource? textSource,
     Uuid? uuid,
+    this._settings,
   }) : _textSource = textSource ?? LocalPdfDocumentTextSource(),
        _uuid = uuid ?? const Uuid();
 
@@ -110,6 +112,7 @@ class PdfAiMaterialService {
   final PdfAiCompletionClient _client;
   final PdfDocumentTextSource _textSource;
   final Uuid _uuid;
+  final AiSettingsStore? _settings;
   final Set<String> _inFlight = {};
 
   /// Conservative app-level budget below DeepSeek's current 1M-token context.
@@ -214,6 +217,9 @@ class PdfAiMaterialService {
     final reformatOnly = currentMarkdown != null && currentMarkdown.isNotEmpty;
     final stopwatch = Stopwatch()..start();
     final calls = <PdfAiCompletion>[];
+    final userStyle = await _settings?.styleForSend(
+      provider: selection.provider,
+    );
 
     if (reformatOnly) {
       final fingerprint =
@@ -227,6 +233,7 @@ class PdfAiMaterialService {
           type: type,
           currentMarkdown: currentMarkdown,
           extraInstruction: customInstruction,
+          userStyle: userStyle,
         ),
         maxOutputTokens: type.maxOutputTokens,
         selection: selection,
@@ -253,6 +260,7 @@ class PdfAiMaterialService {
           stableDocument: document.stableDocument,
           type: type,
           customInstruction: customInstruction,
+          userStyle: userStyle,
         ),
         maxOutputTokens: type.maxOutputTokens,
         selection: selection,
@@ -291,6 +299,7 @@ class PdfAiMaterialService {
           stableDocument: synthesis,
           type: type,
           customInstruction: customInstruction,
+          userStyle: userStyle,
         ),
         maxOutputTokens: type.maxOutputTokens,
         selection: selection,

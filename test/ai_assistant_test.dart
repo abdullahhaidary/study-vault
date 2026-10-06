@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
+import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_style_memory.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_output_validator.dart';
@@ -260,5 +262,58 @@ void main() {
     );
     expect(dividers.length, 2);
     expect(document.toPlainText(), isNot(contains('--')));
+  });
+
+  group('AI style memory', () {
+    test('compacts notes without a verbose preference sentence', () {
+      final block = AiStyleMemory.compact([
+        const AiStyleMemoryItem(id: '1', text: 'keep EN terms'),
+        const AiStyleMemoryItem(id: '2', text: 'Q: scenario then theory'),
+      ]);
+      expect(block, 'STYLE:\n- keep EN terms\n- Q: scenario then theory');
+      expect(block, isNot(contains('User study preference')));
+    });
+
+    test('blocks a send when hidden tokens exceed the uncached cap', () {
+      final items = [
+        for (var i = 0; i < 40; i++)
+          AiStyleMemoryItem(
+            id: '$i',
+            text: 'Use short scenario questions then theory $i',
+          ),
+      ];
+      expect(
+        () => AiStyleMemory.forSend(items, prefixCacheLikely: false),
+        throwsA(isA<AiStyleMemoryTooLargeException>()),
+      );
+    });
+
+    test('save uses the cached cap and rejects over-long items', () {
+      expect(
+        () => AiStyleMemory.ensureFitsForSave([
+          AiStyleMemoryItem(id: 'x', text: 'a' * 97),
+        ]),
+        throwsA(isA<AiStyleMemoryTooLargeException>()),
+      );
+      final store = MemoryAiSettingsStore();
+      expectLater(
+        store.setStyleMemoryItems([
+          for (var i = 0; i < 80; i++)
+            AiStyleMemoryItem(
+              id: '$i',
+              text: 'Keep English terms in answers $i',
+            ),
+        ]),
+        throwsA(isA<AiStyleMemoryTooLargeException>()),
+      );
+    });
+
+    test('migrates a legacy preference blob into editable notes', () {
+      final items = AiStyleMemory.itemsFromStoredBlob(
+        'Explain simply and keep English terms',
+      );
+      expect(items, hasLength(1));
+      expect(items.single.text, 'Explain simply and keep English terms');
+    });
   });
 }

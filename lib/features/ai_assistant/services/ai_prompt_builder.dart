@@ -1,5 +1,6 @@
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_style_memory.dart';
 
 /// Builds study-action prompts (provider-agnostic single source of truth).
 ///
@@ -45,13 +46,15 @@ Return concise but educational answers.
         'Respond in Persian/Dari, but keep English technical terms and formulas unchanged.',
     };
     final preference = (userPreference == null || userPreference.trim().isEmpty)
-        ? ''
-        : '\nUser study preference: ${userPreference.trim()}\n';
-    return 'You are Study Vault AI Assistant for university students.\n'
-        '$_annotationStudyRole'
-        '$lang\n'
-        '$_preserveRules'
-        '$preference';
+        ? null
+        : userPreference.trim();
+    return AiStyleMemory.appendToSystem(
+      'You are Study Vault AI Assistant for university students.\n'
+      '$_annotationStudyRole'
+      '$lang\n'
+      '$_preserveRules',
+      preference,
+    );
   }
 
   /// Formats selected text + optional surrounding page window + page number.

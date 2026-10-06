@@ -85,3 +85,22 @@ class AiEmptySelectionException extends AiException {
   const AiEmptySelectionException()
     : super('Select or provide text for AI first.');
 }
+
+class AiStyleMemoryTooLargeException extends AiException {
+  AiStyleMemoryTooLargeException({required this.tokens, required this.budget})
+    : super(
+        'Hidden AI style notes are $tokens tokens (limit $budget). '
+        'Edit or delete notes in Settings → AI before sending.',
+      );
+
+  AiStyleMemoryTooLargeException.itemTooLong(int maxChars)
+    : tokens = 0,
+      budget = 0,
+      super(
+        'Each style note must be $maxChars characters or fewer. '
+        'Split it into shorter notes.',
+      );
+
+  final int tokens;
+  final int budget;
+}

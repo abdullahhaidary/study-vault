@@ -52,6 +52,14 @@ void main() {
         PdfAiMaterialType.explanation.maxOutputTokens,
         lessThan(PdfAiMaterialType.deepExplanation.maxOutputTokens),
       );
+      expect(
+        PdfAiPromptBuilder.messages(
+          stableDocument: 'DOCUMENT: Test',
+          type: PdfAiMaterialType.summary,
+          userStyle: 'STYLE:\n- keep EN terms',
+        ).first['content'],
+        contains('STYLE:\n- keep EN terms'),
+      );
     });
 
     test('each type has a copiable external JSON instruction', () {
