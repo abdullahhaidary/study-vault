@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -388,6 +391,36 @@ class PdfAiMaterialService {
     required PdfAiMaterial original,
     required String content,
   }) => _db.updatePdfAiMaterialContent(id: original.id, content: content);
+
+  Future<PdfAiMaterial> importManual({
+    required String materialId,
+    required PdfAiMaterialType type,
+    required String content,
+    String? sourceFingerprint,
+  }) {
+    final markdown = content.trim();
+    if (markdown.isEmpty) {
+      throw ArgumentError.value(content, 'content');
+    }
+    return _db.insertPdfAiMaterialVersion(
+      materialId: materialId,
+      type: type.storageValue,
+      builder: (version) => PdfAiMaterialsCompanion.insert(
+        id: _uuid.v4(),
+        materialId: materialId,
+        type: type.storageValue,
+        content: markdown,
+        version: version,
+        generatedAt: DateTime.now(),
+        provider: const Value('manual'),
+        model: const Value('json_import'),
+        sourceFingerprint:
+            sourceFingerprint ??
+            sha256.convert(utf8.encode(markdown)).toString(),
+        customInstruction: const Value('Manual JSON'),
+      ),
+    );
+  }
 
   Future<void> deleteVersion(String id) => _db.deletePdfAiMaterial(id);
 

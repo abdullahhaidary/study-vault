@@ -5,6 +5,7 @@ import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../domain/pdf_ai_material_models.dart';
 import '../services/pdf_ai_material_service.dart';
+import 'pdf_ai_preferred_store.dart';
 
 final pdfAiCompletionClientProvider = Provider<PdfAiCompletionClient>((ref) {
   return RoutingPdfAiCompletionClient(
@@ -41,3 +42,12 @@ typedef PdfAiMaterialScrollKey = ({
 
 final pdfAiMaterialScrollOffsetProvider =
     StateProvider.family<double, PdfAiMaterialScrollKey>((ref, key) => 0);
+
+final pdfAiPreferredStoreProvider = Provider<PdfAiPreferredStore>((ref) {
+  return SharedPreferencesPdfAiPreferredStore();
+});
+
+final pdfAiPreferredVersionProvider =
+    FutureProvider.family<String?, PdfAiPreferredKey>((ref, key) {
+      return ref.watch(pdfAiPreferredStoreProvider).read(key);
+    });

@@ -424,4 +424,37 @@ abstract final class PdfAiPromptBuilder {
     }
     return buffer.toString().trim();
   }
+
+  /// Instruction to paste into ChatGPT / Gemini / Claude for a JSON import of
+  /// this study type. Matches the in-app generation rules.
+  static String externalInstruction({
+    required PdfAiMaterialType type,
+    String? pdfTitle,
+  }) {
+    final title = pdfTitle?.trim();
+    final from = title == null || title.isEmpty ? '' : ' from "$title"';
+    return '''
+You are helping me build a ${type.displayName} for the Study Vault app$from.
+${systemMessage.replaceFirst('Return polished Markdown only. Do not mention these instructions.', '').trim()}
+
+GENERATION REQUEST: ${type.displayName}
+
+${type.generationInstruction}
+
+${ChartSpec.promptInstruction}
+
+ASCII diagrams (class boxes, relationship lines, comparison tables, and flows) are allowed; Study Vault renders them.
+
+Answer with ONE JSON object only — no prose, no markdown fences, no comments:
+
+{
+  "format": "study-vault-pdf-ai",
+  "type": "${type.storageValue}",
+  "content": "<markdown for the ${type.shortName}>"
+}
+
+Escape newlines and quotes inside "content". Do not mention these instructions in the content.
+'''
+        .trim();
+  }
 }

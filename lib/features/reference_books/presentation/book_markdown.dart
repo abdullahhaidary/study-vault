@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
-import '../../../core/markdown/chart_markdown_builder.dart';
+import '../../../core/markdown/study_markdown.dart';
 import '../domain/book_prompts.dart';
 
 /// Markdown where `[p. 12]` citations become links that open the page.
@@ -19,10 +19,9 @@ class BookMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = MarkdownStyleSheet.fromTheme(Theme.of(context));
-    return MarkdownBody(
+    return StudyMarkdown(
       data: onOpenPage == null ? data : linkCitations(data),
       styleSheet: style,
-      builders: chartMarkdownBuilders(style),
       onTapLink: (_, href, _) {
         final page = href != null && href.startsWith('page:')
             ? int.tryParse(href.substring(5))

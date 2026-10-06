@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -11,7 +12,10 @@ import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../reference_books/presentation/lecture_book_links.dart';
 import '../data/pdf_ai_material_providers.dart';
+import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
+import '../domain/pdf_ai_versioning.dart';
+import 'pdf_ai_manual_import_dialog.dart';
 import 'pdf_ai_material_reader_screen.dart';
 
 class PdfAiMaterialsPanel extends ConsumerWidget {
@@ -91,13 +95,27 @@ class PdfAiMaterialsPanel extends ConsumerWidget {
                 child: Text('Could not load AI study materials.'),
               ),
               data: (materials) {
+                final preferredId = ref
+                    .watch(
+                      pdfAiPreferredVersionProvider(
+                        PdfAiPreferredKey(
+                          materialId: materialId,
+                          type: selectedType,
+                        ),
+                      ),
+                    )
+                    .valueOrNull;
                 return _MaterialTypeView(
                   key: ValueKey('$materialId-${selectedType.name}'),
                   materialId: materialId,
                   title: title,
                   filePath: filePath,
                   type: selectedType,
-                  current: _latestFor(materials, selectedType),
+                  current: PdfAiVersionPicker.pick(
+                    materials: materials,
+                    type: selectedType,
+                    preferredId: preferredId,
+                  ),
                 );
               },
             ),
@@ -105,16 +123,6 @@ class PdfAiMaterialsPanel extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  PdfAiMaterial? _latestFor(
-    List<PdfAiMaterial> materials,
-    PdfAiMaterialType type,
-  ) {
-    for (final material in materials) {
-      if (material.type == type.storageValue) return material;
-    }
-    return null;
   }
 }
 
@@ -226,6 +234,41 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
     }
   }
 
+  Future<void> _importJson() async {
+    final markdown = await showPdfAiManualImportDialog(
+      context,
+      type: widget.type,
+      pdfTitle: widget.title,
+    );
+    if (markdown == null || !mounted) return;
+    try {
+      await ref
+          .read(pdfAiMaterialServiceProvider)
+          .importManual(
+            materialId: widget.materialId,
+            type: widget.type,
+            content: markdown,
+          );
+    } on Object catch (error) {
+      _showError(error.toString());
+    }
+  }
+
+  Future<void> _copyInstruction() async {
+    await Clipboard.setData(
+      ClipboardData(
+        text: PdfAiPromptBuilder.externalInstruction(
+          type: widget.type,
+          pdfTitle: widget.title,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${widget.type.shortName} instruction copied.')),
+    );
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -274,6 +317,18 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
                     )
                   : const Icon(Icons.auto_awesome),
               label: Text(_generating ? 'Generating…' : 'Generate'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: _generating ? null : _importJson,
+              icon: const Icon(Icons.data_object_outlined),
+              label: const Text('Add from JSON'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
+              onPressed: _copyInstruction,
+              icon: const Icon(Icons.copy_outlined),
+              label: const Text('Copy instruction'),
             ),
           ],
         ),

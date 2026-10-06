@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/features/lessons/data/materials_providers.dart';
 import 'package:study_vault/features/pdf_ai_materials/data/pdf_ai_material_providers.dart';
+import 'package:study_vault/features/pdf_ai_materials/data/pdf_ai_preferred_store.dart';
+import 'package:study_vault/features/pdf_ai_materials/domain/pdf_ai_versioning.dart';
 import 'package:study_vault/features/pdf_ai_materials/presentation/pdf_ai_material_reader_screen.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'helpers/ai_selection_helpers.dart';
@@ -49,6 +51,89 @@ void main() {
       expect(
         PdfAiMaterialType.explanation.maxOutputTokens,
         lessThan(PdfAiMaterialType.deepExplanation.maxOutputTokens),
+      );
+    });
+
+    test('each type has a copiable external JSON instruction', () {
+      for (final type in PdfAiMaterialType.values) {
+        final instruction = PdfAiPromptBuilder.externalInstruction(
+          type: type,
+          pdfTitle: 'Lecture 1',
+        );
+        expect(instruction, contains(type.generationInstruction));
+        expect(instruction, contains(ChartSpec.promptInstruction));
+        expect(instruction, contains('"format": "study-vault-pdf-ai"'));
+        expect(instruction, contains('"type": "${type.storageValue}"'));
+        expect(instruction, contains('"content"'));
+        expect(instruction, contains('from "Lecture 1"'));
+      }
+    });
+
+    test('manual JSON extracts typed content and fenced payloads', () {
+      expect(
+        PdfAiManualJson.extractMarkdown(
+          '{"content":"# Summary"}',
+          PdfAiMaterialType.summary,
+        ),
+        '# Summary',
+      );
+      expect(
+        PdfAiManualJson.extractMarkdown('''
+```json
+{"study_materials":{"explanation":"Teach this."}}
+```
+''', PdfAiMaterialType.explanation),
+        'Teach this.',
+      );
+      expect(
+        PdfAiManualJson.extractMarkdown(
+          '{"format":"study-vault-pdf-ai","type":"summary","content":"Kept"}',
+          PdfAiMaterialType.summary,
+        ),
+        'Kept',
+      );
+    });
+
+    test('version picker opens the default instead of the latest', () {
+      PdfAiMaterial row({required String id, required int version}) {
+        return PdfAiMaterial(
+          id: id,
+          materialId: 'pdf-1',
+          type: PdfAiMaterialType.summary.storageValue,
+          content: id,
+          version: version,
+          generatedAt: DateTime(2026, 1, version),
+          sourceFingerprint: 'fp',
+        );
+      }
+
+      final materials = [
+        row(id: 'new', version: 2),
+        row(id: 'old', version: 1),
+      ];
+      expect(
+        PdfAiVersionPicker.pick(
+          materials: materials,
+          type: PdfAiMaterialType.summary,
+        )?.id,
+        'new',
+      );
+      expect(
+        PdfAiVersionPicker.pick(
+          materials: materials,
+          type: PdfAiMaterialType.summary,
+          preferredId: 'old',
+        )?.id,
+        'old',
+      );
+      expect(
+        PdfAiVersionPicker.pick(
+          materials: materials,
+          type: PdfAiMaterialType.summary,
+          selectedId: 'new',
+          preferredId: 'old',
+        )?.id,
+        'new',
       );
     });
 
@@ -296,6 +381,25 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('version menu can set a default and add JSON', (tester) async {
+      client.outputs.add('A short summary.');
+      final summary = await tester.runAsync(() => _generate(service));
+      await _pumpReader(tester, db, [summary!]);
+      await tester.tap(find.byTooltip('Version options'));
+      await tester.pumpAndSettle();
+      expect(find.text('Make this the default'), findsOneWidget);
+      expect(find.text('Add from JSON'), findsOneWidget);
+      expect(find.text('Delete this version'), findsOneWidget);
+      await tester.tap(find.text('Add from JSON'));
+      await tester.pumpAndSettle();
+      expect(find.text('Copy instruction'), findsOneWidget);
+      expect(find.text('Add Summary from JSON'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
     test('regeneration preserves versions and newest loads first', () async {
       client.outputs.addAll(['Version one', 'Version two']);
       final first = await _generate(service);
@@ -477,6 +581,22 @@ void main() {
       expect(history.single.version, 2);
     });
 
+    test(
+      'manual JSON import stores a new version without calling AI',
+      () async {
+        final saved = await service.importManual(
+          materialId: 'pdf-1',
+          type: PdfAiMaterialType.explanation,
+          content: '# From ChatGPT',
+        );
+        expect(saved.provider, 'manual');
+        expect(saved.model, 'json_import');
+        expect(saved.content, '# From ChatGPT');
+        expect(saved.version, 1);
+        expect(client.messages, isEmpty);
+      },
+    );
+
     test('deleting the source PDF cascades its generated materials', () async {
       client.outputs.add('One');
       await _generate(service);
@@ -534,6 +654,9 @@ Future<void> _pumpReader(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
+        pdfAiPreferredStoreProvider.overrideWithValue(
+          MemoryPdfAiPreferredStore(),
+        ),
         pdfAiMaterialsProvider(
           'pdf-1',
         ).overrideWith((ref) => Stream.value(materials)),

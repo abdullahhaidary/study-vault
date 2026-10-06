@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
-import '../../../core/markdown/chart_markdown_builder.dart';
+import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -29,7 +29,10 @@ import '../../selection_ai/domain/markdown_selection_editor.dart';
 import '../../selection_ai/domain/selection_ai_host.dart';
 import '../../selection_ai/presentation/selection_ai_area.dart';
 import '../data/pdf_ai_material_providers.dart';
+import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
+import '../domain/pdf_ai_versioning.dart';
+import 'pdf_ai_manual_import_dialog.dart';
 
 class _PdfAiRegenerateChoice {
   const _PdfAiRegenerateChoice({this.preset, this.customInstruction = ''});
@@ -509,11 +512,104 @@ class _PdfAiMaterialReaderScreenState
     if (confirmed != true || !mounted) return;
     setState(() => _deleting = true);
     await ref.read(pdfAiMaterialServiceProvider).deleteVersion(selected.id);
+    final key = _preferredKey;
+    final preferredId = await ref.read(pdfAiPreferredStoreProvider).read(key);
+    if (preferredId == selected.id) {
+      await ref.read(pdfAiPreferredStoreProvider).clear(key);
+      ref.invalidate(pdfAiPreferredVersionProvider(key));
+    }
     if (!mounted) return;
     setState(() {
       _selectedId = null;
       _deleting = false;
     });
+  }
+
+  PdfAiPreferredKey get _preferredKey =>
+      PdfAiPreferredKey(materialId: widget.materialId, type: widget.type);
+
+  Future<void> _makeDefault(PdfAiMaterial selected) async {
+    await ref
+        .read(pdfAiPreferredStoreProvider)
+        .write(_preferredKey, selected.id);
+    ref.invalidate(pdfAiPreferredVersionProvider(_preferredKey));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${widget.type.shortName} version ${selected.version} will open by default.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importJson([PdfAiMaterial? current]) async {
+    final markdown = await showPdfAiManualImportDialog(
+      context,
+      type: widget.type,
+      pdfTitle: widget.pdfTitle,
+    );
+    if (markdown == null || !mounted) return;
+    try {
+      final created = await ref
+          .read(pdfAiMaterialServiceProvider)
+          .importManual(
+            materialId: widget.materialId,
+            type: widget.type,
+            content: markdown,
+            sourceFingerprint: current?.sourceFingerprint,
+          );
+      if (!mounted) return;
+      setState(() => _selectedId = created.id);
+    } on Object catch (error) {
+      _showError(_friendlyError(error));
+    }
+  }
+
+  PopupMenuButton<String> _versionMenu(PdfAiMaterial selected) {
+    return PopupMenuButton<String>(
+      tooltip: 'Version options',
+      enabled: !_generating && !_editing && !_deleting,
+      onSelected: (value) {
+        switch (value) {
+          case 'default':
+            _makeDefault(selected);
+          case 'json':
+            _importJson(selected);
+          case 'delete':
+            _delete(selected);
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'default', child: Text('Make this the default')),
+        PopupMenuItem(value: 'json', child: Text('Add from JSON')),
+        PopupMenuItem(value: 'delete', child: Text('Delete this version')),
+      ],
+    );
+  }
+
+  Widget _embeddedVersionBar(
+    List<PdfAiMaterial> history,
+    PdfAiMaterial selected,
+  ) {
+    if (!widget.embedded) return const SizedBox.shrink();
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'History',
+            onPressed: () => _showHistory(history, selected),
+            icon: Badge(
+              label: Text('${history.length}'),
+              child: const Icon(Icons.history),
+            ),
+          ),
+          const Spacer(),
+          _versionMenu(selected),
+        ],
+      ),
+    );
   }
 
   Future<void> _askAboutThis() {
@@ -540,6 +636,9 @@ class _PdfAiMaterialReaderScreenState
     List<PdfAiMaterial> history,
     PdfAiMaterial selected,
   ) async {
+    final preferredId = ref
+        .read(pdfAiPreferredVersionProvider(_preferredKey))
+        .valueOrNull;
     final picked = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -568,7 +667,14 @@ class _PdfAiMaterialReaderScreenState
                     history[i].generatedAt.toLocal(),
                   ),
                 ),
-                trailing: i == 0 ? const Chip(label: Text('Current')) : null,
+                trailing: Wrap(
+                  spacing: 4,
+                  children: [
+                    if (i == 0) const Chip(label: Text('Latest')),
+                    if (history[i].id == preferredId)
+                      const Chip(label: Text('Default')),
+                  ],
+                ),
                 onTap: () => Navigator.pop(context, history[i].id),
               ),
           ],
@@ -644,6 +750,7 @@ class _PdfAiMaterialReaderScreenState
     PdfAiMaterial selected,
     List<String> slides,
     AiTokenUsage? usage,
+    List<PdfAiMaterial> history,
   ) {
     final theme = Theme.of(context);
     final slideStyle = MarkdownStyleSheet.fromTheme(theme).copyWith(
@@ -652,6 +759,7 @@ class _PdfAiMaterialReaderScreenState
     );
     return Column(
       children: [
+        _embeddedVersionBar(history, selected),
         if (!widget.embedded)
           MaterialBookLinksSection(materialId: widget.materialId),
         Expanded(
@@ -670,11 +778,10 @@ class _PdfAiMaterialReaderScreenState
                       host: _selectionHost(selected),
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: MarkdownBody(
+                        child: StudyMarkdown(
                           data: slides[index],
                           selectable: false,
                           styleSheet: slideStyle,
-                          builders: chartMarkdownBuilders(slideStyle),
                         ),
                       ),
                     ),
@@ -816,6 +923,9 @@ class _PdfAiMaterialReaderScreenState
         body: const Center(child: Text('Could not load saved generations.')),
       ),
       data: (all) {
+        final preferredId = ref
+            .watch(pdfAiPreferredVersionProvider(_preferredKey))
+            .valueOrNull;
         final history = [
           for (final material in all)
             if (material.type == widget.type.storageValue) material,
@@ -824,14 +934,41 @@ class _PdfAiMaterialReaderScreenState
           return Scaffold(
             appBar: widget.embedded
                 ? null
-                : AppBar(title: Text(widget.type.displayName)),
-            body: const Center(child: Text('This version no longer exists.')),
+                : AppBar(
+                    title: Text(widget.type.displayName),
+                    actions: [
+                      IconButton(
+                        tooltip: 'Add from JSON',
+                        onPressed: () => _importJson(),
+                        icon: const Icon(Icons.data_object_outlined),
+                      ),
+                    ],
+                  ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('This version no longer exists.'),
+                    const SizedBox(height: AppSpacing.md),
+                    OutlinedButton.icon(
+                      onPressed: () => _importJson(),
+                      icon: const Icon(Icons.data_object_outlined),
+                      label: const Text('Add from JSON'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
-        final selected = history.firstWhere(
-          (item) => item.id == _selectedId,
-          orElse: () => history.first,
-        );
+        final selected = PdfAiVersionPicker.pick(
+          materials: all,
+          type: widget.type,
+          selectedId: _selectedId,
+          preferredId: preferredId,
+        )!;
         final isSlideshow = widget.type == PdfAiMaterialType.slideshow;
         if (isSlideshow) {
           _syncSlideGeneration(selected.id);
@@ -869,24 +1006,14 @@ class _PdfAiMaterialReaderScreenState
                         child: const Icon(Icons.history),
                       ),
                     ),
-                    PopupMenuButton<String>(
-                      enabled: !_generating && !_editing && !_deleting,
-                      onSelected: (value) {
-                        if (value == 'delete') _delete(selected);
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Delete this version'),
-                        ),
-                      ],
-                    ),
+                    _versionMenu(selected),
                   ],
                 ),
           body: isSlideshow && slides.isNotEmpty
-              ? _slideshowBody(selected, slides, usage)
+              ? _slideshowBody(selected, slides, usage, history)
               : Column(
                   children: [
+                    _embeddedVersionBar(history, selected),
                     if (!widget.embedded)
                       MaterialBookLinksSection(materialId: widget.materialId),
                     Expanded(
@@ -903,11 +1030,10 @@ class _PdfAiMaterialReaderScreenState
                                   padding: const EdgeInsets.only(
                                     bottom: AppSpacing.sm,
                                   ),
-                                  child: MarkdownBody(
+                                  child: StudyMarkdown(
                                     data: markdownChunks[index],
                                     selectable: false,
                                     styleSheet: bodyStyle,
-                                    builders: chartMarkdownBuilders(bodyStyle),
                                   ),
                                 );
                               }

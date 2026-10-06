@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/markdown/chart_markdown_builder.dart';
+import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../selection_ai/domain/selection_ai_host.dart';
 import '../../selection_ai/presentation/selection_ai_area.dart';
@@ -23,7 +24,7 @@ class ManualEntryItemReader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final markdownStyle = MarkdownStyleSheet.fromTheme(theme);
+    final markdownStyle = studyMarkdownStyle(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -68,6 +69,7 @@ class ManualEntryItemReader extends ConsumerWidget {
               padding: AppSpacing.pageInsets(context),
               styleSheet: markdownStyle,
               builders: chartMarkdownBuilders(markdownStyle),
+              blockSyntaxes: const [RelationshipBlockSyntax()],
             ),
           ),
         ),

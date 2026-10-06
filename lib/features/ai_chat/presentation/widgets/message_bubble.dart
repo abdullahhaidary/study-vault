@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
-import '../../../../core/markdown/chart_markdown_builder.dart';
+import '../../../../core/markdown/study_markdown.dart';
 import '../../../../core/text/text_direction_utils.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../ai_assistant/domain/ai_token_usage.dart';
@@ -173,11 +173,10 @@ class MessageBubble extends StatelessWidget {
                           style: bodyStyle,
                           textDirection: direction,
                         )
-                      : MarkdownBody(
+                      : StudyMarkdown(
                           data: content.isEmpty && isStreaming ? '…' : content,
                           selectable: false,
                           styleSheet: markdownStyle,
-                          builders: chartMarkdownBuilders(markdownStyle),
                           onTapLink: (_, _, _) {},
                         ),
                 ),

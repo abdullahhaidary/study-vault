@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -12,7 +13,10 @@ import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
 import '../../reference_books/presentation/lecture_book_links.dart';
 import '../data/pdf_ai_material_providers.dart';
+import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
+import '../domain/pdf_ai_versioning.dart';
+import 'pdf_ai_manual_import_dialog.dart';
 import 'pdf_ai_material_reader_screen.dart';
 
 Future<void> showPdfAiMaterialsSheet(
@@ -61,6 +65,43 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
       return;
     }
     await _generate(type);
+  }
+
+  Future<void> _importJson(PdfAiMaterialType type) async {
+    final markdown = await showPdfAiManualImportDialog(
+      context,
+      type: type,
+      pdfTitle: widget.title,
+    );
+    if (markdown == null || !mounted) return;
+    try {
+      final created = await ref
+          .read(pdfAiMaterialServiceProvider)
+          .importManual(
+            materialId: widget.materialId,
+            type: type,
+            content: markdown,
+          );
+      if (!mounted) return;
+      await _open(type, created.id);
+    } on Object catch (error) {
+      _showError(error.toString());
+    }
+  }
+
+  Future<void> _copyInstruction(PdfAiMaterialType type) async {
+    await Clipboard.setData(
+      ClipboardData(
+        text: PdfAiPromptBuilder.externalInstruction(
+          type: type,
+          pdfTitle: widget.title,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${type.shortName} instruction copied.')),
+    );
   }
 
   Future<void> _generate(PdfAiMaterialType type) async {
@@ -181,11 +222,41 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: _MaterialTypeCard(
                           type: type,
-                          current: _latestFor(materials, type),
+                          current: PdfAiVersionPicker.pick(
+                            materials: materials,
+                            type: type,
+                            preferredId: ref
+                                .watch(
+                                  pdfAiPreferredVersionProvider(
+                                    PdfAiPreferredKey(
+                                      materialId: widget.materialId,
+                                      type: type,
+                                    ),
+                                  ),
+                                )
+                                .valueOrNull,
+                          ),
                           generating: _generating.contains(type),
                           stale: false,
-                          onTap: () =>
-                              _onTap(type, _latestFor(materials, type)),
+                          onTap: () => _onTap(
+                            type,
+                            PdfAiVersionPicker.pick(
+                              materials: materials,
+                              type: type,
+                              preferredId: ref
+                                  .read(
+                                    pdfAiPreferredVersionProvider(
+                                      PdfAiPreferredKey(
+                                        materialId: widget.materialId,
+                                        type: type,
+                                      ),
+                                    ),
+                                  )
+                                  .valueOrNull,
+                            ),
+                          ),
+                          onAddFromJson: () => _importJson(type),
+                          onCopyInstruction: () => _copyInstruction(type),
                         ),
                       ),
                     const SizedBox(height: AppSpacing.sm),
@@ -206,16 +277,6 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
       ),
     );
   }
-
-  PdfAiMaterial? _latestFor(
-    List<PdfAiMaterial> materials,
-    PdfAiMaterialType type,
-  ) {
-    for (final material in materials) {
-      if (material.type == type.storageValue) return material;
-    }
-    return null;
-  }
 }
 
 class _MaterialTypeCard extends StatelessWidget {
@@ -225,6 +286,8 @@ class _MaterialTypeCard extends StatelessWidget {
     required this.generating,
     required this.stale,
     required this.onTap,
+    required this.onAddFromJson,
+    required this.onCopyInstruction,
   });
 
   final PdfAiMaterialType type;
@@ -232,6 +295,8 @@ class _MaterialTypeCard extends StatelessWidget {
   final bool generating;
   final bool stale;
   final VoidCallback onTap;
+  final VoidCallback onAddFromJson;
+  final VoidCallback onCopyInstruction;
 
   @override
   Widget build(BuildContext context) {
@@ -245,84 +310,110 @@ class _MaterialTypeCard extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: generating ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(_iconFor(type), color: theme.colorScheme.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: generating ? null : onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(type.shortName, style: theme.textTheme.titleMedium),
-                    Text(
-                      type.description,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    if (generating)
-                      Text(
-                        'Generating…',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    else if (!generated)
-                      Text(
-                        'Tap to generate',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      )
-                    else
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.xs,
+                    Icon(_iconFor(type), color: theme.colorScheme.primary),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Generated ${DateFormat.yMMMd().format(current!.generatedAt.toLocal())}',
-                            style: theme.textTheme.bodySmall,
+                            type.shortName,
+                            style: theme.textTheme.titleMedium,
                           ),
                           Text(
-                            'Version ${current!.version}',
-                            style: theme.textTheme.bodySmall,
+                            type.description,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                          if (stale)
+                          const SizedBox(height: AppSpacing.xs),
+                          if (generating)
                             Text(
-                              'Older PDF version',
+                              'Generating…',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.error,
+                                color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,
                               ),
+                            )
+                          else if (!generated)
+                            Text(
+                              'Tap to generate',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            )
+                          else
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.xs,
+                              children: [
+                                Text(
+                                  'Generated ${DateFormat.yMMMd().format(current!.generatedAt.toLocal())}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                Text(
+                                  'Version ${current!.version}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                if (stale)
+                                  Text(
+                                    'Older PDF version',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.error,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
                             ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    if (generating)
+                      const SizedBox.square(
+                        dimension: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else if (!generated)
+                      Icon(Icons.auto_awesome, color: theme.colorScheme.primary)
+                    else
+                      Icon(
+                        Icons.chevron_right,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              if (generating)
-                const SizedBox.square(
-                  dimension: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else if (!generated)
-                Icon(Icons.auto_awesome, color: theme.colorScheme.primary)
-              else
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+            ),
+          ),
+          PopupMenuButton<String>(
+            enabled: !generating,
+            tooltip: 'More ${type.shortName} options',
+            onSelected: (value) {
+              switch (value) {
+                case 'json':
+                  onAddFromJson();
+                case 'copy':
+                  onCopyInstruction();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'json', child: Text('Add from JSON')),
+              PopupMenuItem(value: 'copy', child: Text('Copy instruction')),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

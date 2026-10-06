@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
-import '../../../core/markdown/chart_markdown_builder.dart';
+import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
@@ -508,11 +508,8 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
   GlobalKey _key(CourseReviewPart part, String materialId) => _sectionKeys
       .putIfAbsent('${part.storageValue}:$materialId', GlobalKey.new);
 
-  Widget _markdown(String content, MarkdownStyleSheet style) => MarkdownBody(
-    data: content,
-    styleSheet: style,
-    builders: chartMarkdownBuilders(style),
-  );
+  Widget _markdown(String content, MarkdownStyleSheet style) =>
+      StudyMarkdown(data: content, styleSheet: style);
 
   Widget _entryHeader({
     required String title,
