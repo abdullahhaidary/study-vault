@@ -370,11 +370,14 @@ Return concise but educational answers.
       AiQuestionType.trueFalse =>
         'All questions must be True/False (type "true_false") with boolean correctAnswer.',
       AiQuestionType.shortAnswer =>
-        'All questions must be short answer (type "short_answer") with a concise string correctAnswer.',
+        'All questions must be short answer (type "short_answer"): a realistic '
+            'scenario or conceptual prompt with a concise string correctAnswer.',
       AiQuestionType.fillBlank =>
         'All questions must be fill-in-the-blank (type "fill_blank") with the missing value as string correctAnswer.',
       AiQuestionType.mixed =>
-        'Produce a sensible mix of mcq, true_false, short_answer, and fill_blank. Total must equal $count.',
+        'Produce a mix of mcq and short_answer questions. Prefer conceptual '
+            'and scenario questions. Total must equal $count. Avoid true/false '
+            'trivia.',
     };
     final difficultyHint = switch (request.questionDifficulty) {
       AiQuestionDifficulty.easy => 'All questions difficulty "easy".',
@@ -399,7 +402,16 @@ Return concise but educational answers.
         '- True/False must contain a boolean correct answer.\n'
         '- Short-answer questions must include a concise expected answer.\n'
         '- Fill-in-the-blank questions must include the expected missing value/text.\n'
-        '- Every question must contain a short explanation.\n'
+        '- Every question must contain a short explanation that quotes or '
+        'closely paraphrases the passage in the source a student needs if they '
+        'answer wrong. Do not write generic "because that is correct" feedback.\n'
+        '- Ask about topics and ideas in the source: mechanisms, definitions, '
+        'relationships, and when to apply them.\n'
+        '- Include realistic scenario questions (a situation, then what concept '
+        'applies or what happens next) grounded in the source.\n'
+        '- Do not ask trivia: publication year, author, "who created/wrote '
+        'this", file names, or anything that does not test understanding of '
+        'the topic.\n'
         '- Preserve the source page number when available (see "--- Page N ---" markers or PAGE:).\n'
         '- Return JSON only.\n'
         '- Do not return markdown.\n\n'

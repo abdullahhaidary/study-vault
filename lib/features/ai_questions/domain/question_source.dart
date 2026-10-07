@@ -281,6 +281,29 @@ abstract final class QuestionSourceBuilder {
     );
   }
 
+  static QuestionSource fromAiStudyMaterial({
+    required QuestionSourceType type,
+    required String markdown,
+    String? materialId,
+    String? lessonId,
+    String? subjectId,
+    String? filePath,
+    String? referenceLabel,
+  }) {
+    final cleaned = _clean(markdown);
+    return QuestionSource(
+      type: type,
+      text: cleaned,
+      pageTexts: const [],
+      materialId: materialId,
+      lessonId: lessonId,
+      subjectId: subjectId,
+      referenceLabel: referenceLabel ?? type.label,
+      metadata: {'kind': type.storageValue},
+      filePath: filePath,
+    );
+  }
+
   static String _composeAnnotation(AnnotationSourceItem item) {
     final parts = <String>[
       if (item.shortText.trim().isNotEmpty) item.shortText.trim(),

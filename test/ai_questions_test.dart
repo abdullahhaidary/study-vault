@@ -63,6 +63,17 @@ void main() {
       expect(source.text, contains('Pin note'));
       expect(source.text, contains('Body'));
     });
+
+    test('fromAiStudyMaterial uses the explanation markdown as the source', () {
+      final source = QuestionSourceBuilder.fromAiStudyMaterial(
+        type: QuestionSourceType.aiExplanation,
+        markdown: '# Osmosis\nWater moves toward higher solute.',
+        materialId: 'pdf-1',
+      );
+      expect(source.type, QuestionSourceType.aiExplanation);
+      expect(source.text, contains('Osmosis'));
+      expect(source.referenceLabel, 'AI Explanation');
+    });
   });
 
   group('AiOutputValidator.parseQuestions', () {
@@ -251,6 +262,9 @@ void main() {
       expect(prompt, contains('Return JSON only'));
       expect(prompt, contains('Do not return markdown'));
       expect(prompt, contains('Source material about gradients.'));
+      expect(prompt, contains('Do not ask trivia'));
+      expect(prompt, contains('scenario questions'));
+      expect(prompt, contains('quotes or closely paraphrases'));
     });
 
     test('includes attached page image instructions', () {

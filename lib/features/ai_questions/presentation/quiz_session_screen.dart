@@ -128,7 +128,28 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
       isCorrect: correct,
     );
     if (!mounted) return;
+    if (correct && _index < _questions.length - 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Correct')));
+      setState(() {
+        _index++;
+        _restoreCurrentAnswer();
+      });
+      return;
+    }
     setState(() => _checkedCorrect = correct);
+  }
+
+  void _understoodAndContinue() {
+    if (_index < _questions.length - 1) {
+      setState(() {
+        _index++;
+        _restoreCurrentAnswer();
+      });
+      return;
+    }
+    _submitQuiz();
   }
 
   Future<void> _submitQuiz() async {
@@ -306,7 +327,7 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
             if ((q.explanation ?? '').isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                'Explanation',
+                _checkedCorrect == true ? 'Explanation' : 'From the source',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
@@ -350,6 +371,15 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
                 FilledButton(
                   onPressed: _checkAnswer,
                   child: const Text('Check'),
+                )
+              else if (_checkedCorrect == false)
+                FilledButton(
+                  onPressed: _understoodAndContinue,
+                  child: Text(
+                    _index < _questions.length - 1
+                        ? 'Understood'
+                        : 'Understood · finish',
+                  ),
                 )
               else if (_index < _questions.length - 1)
                 FilledButton(

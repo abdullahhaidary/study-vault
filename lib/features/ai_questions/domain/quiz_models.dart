@@ -13,6 +13,10 @@ enum QuestionSourceType {
   annotations,
   notes,
   annotationsAndNotes,
+  aiSummary,
+  aiExplanation,
+  aiDeepExplanation,
+  aiRealWorldExamples,
 }
 
 /// Supported quiz play modes. Exam Mode is reserved for a follow-up.
@@ -76,6 +80,10 @@ extension QuestionSourceTypeX on QuestionSourceType {
     QuestionSourceType.annotations => 'annotations',
     QuestionSourceType.notes => 'notes',
     QuestionSourceType.annotationsAndNotes => 'annotations_and_notes',
+    QuestionSourceType.aiSummary => 'ai_summary',
+    QuestionSourceType.aiExplanation => 'ai_explanation',
+    QuestionSourceType.aiDeepExplanation => 'ai_deep_explanation',
+    QuestionSourceType.aiRealWorldExamples => 'ai_real_world_examples',
   };
 
   String get label => switch (this) {
@@ -86,6 +94,10 @@ extension QuestionSourceTypeX on QuestionSourceType {
     QuestionSourceType.annotations => 'Annotations',
     QuestionSourceType.notes => 'Notes',
     QuestionSourceType.annotationsAndNotes => 'Annotations + notes',
+    QuestionSourceType.aiSummary => 'AI Summary',
+    QuestionSourceType.aiExplanation => 'AI Explanation',
+    QuestionSourceType.aiDeepExplanation => 'AI Deep Explanation',
+    QuestionSourceType.aiRealWorldExamples => 'AI Real-World Examples',
   };
 
   static QuestionSourceType fromStorage(String value) {

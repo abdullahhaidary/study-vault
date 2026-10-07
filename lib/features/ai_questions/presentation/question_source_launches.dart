@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../pdf_ai_materials/data/pdf_ai_material_providers.dart';
+import '../../pdf_ai_materials/data/pdf_ai_preferred_store.dart';
+import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
+import '../../pdf_ai_materials/domain/pdf_ai_versioning.dart';
 import '../domain/question_source.dart';
 import '../services/pdf_text_extractor.dart';
 import 'generate_questions_sheet.dart';
@@ -29,6 +33,10 @@ abstract final class QuestionSourceLaunches {
         QuestionSourceType.page,
         QuestionSourceType.pages,
         QuestionSourceType.material,
+        QuestionSourceType.aiSummary,
+        QuestionSourceType.aiExplanation,
+        QuestionSourceType.aiDeepExplanation,
+        QuestionSourceType.aiRealWorldExamples,
         QuestionSourceType.annotations,
         QuestionSourceType.notes,
         QuestionSourceType.annotationsAndNotes,
@@ -77,6 +85,10 @@ abstract final class QuestionSourceLaunches {
         QuestionSourceType.page,
         QuestionSourceType.pages,
         QuestionSourceType.material,
+        QuestionSourceType.aiSummary,
+        QuestionSourceType.aiExplanation,
+        QuestionSourceType.aiDeepExplanation,
+        QuestionSourceType.aiRealWorldExamples,
         QuestionSourceType.annotations,
         QuestionSourceType.notes,
         QuestionSourceType.annotationsAndNotes,
@@ -93,6 +105,45 @@ abstract final class QuestionSourceLaunches {
         selectedPages: selectedPages,
       ),
     );
+  }
+
+  static GenerateQuestionsLaunch forPdfAiMaterial({
+    required WidgetRef ref,
+    required String materialId,
+    required String filePath,
+    required PdfAiMaterialType type,
+    int? currentPage,
+  }) {
+    return GenerateQuestionsLaunch(
+      title: 'Questions from ${type.shortName}',
+      availableSources: const [
+        QuestionSourceType.aiSummary,
+        QuestionSourceType.aiExplanation,
+        QuestionSourceType.aiDeepExplanation,
+        QuestionSourceType.aiRealWorldExamples,
+        QuestionSourceType.page,
+        QuestionSourceType.material,
+      ],
+      initialSource: sourceTypeForPdfAi(type),
+      resolveSource: (sourceType) => _resolvePdfSource(
+        ref: ref,
+        type: sourceType,
+        materialId: materialId,
+        filePath: filePath,
+        currentPage: currentPage,
+      ),
+    );
+  }
+
+  static QuestionSourceType sourceTypeForPdfAi(PdfAiMaterialType type) {
+    return switch (type) {
+      PdfAiMaterialType.summary => QuestionSourceType.aiSummary,
+      PdfAiMaterialType.explanation => QuestionSourceType.aiExplanation,
+      PdfAiMaterialType.deepExplanation => QuestionSourceType.aiDeepExplanation,
+      PdfAiMaterialType.realWorldExamples =>
+        QuestionSourceType.aiRealWorldExamples,
+      PdfAiMaterialType.slideshow => QuestionSourceType.material,
+    };
   }
 
   static GenerateQuestionsLaunch forNoteText({
@@ -305,6 +356,63 @@ abstract final class QuestionSourceLaunches {
           lessonId: lessonId,
           subjectId: subjectId,
         );
+      case QuestionSourceType.aiSummary:
+      case QuestionSourceType.aiExplanation:
+      case QuestionSourceType.aiDeepExplanation:
+      case QuestionSourceType.aiRealWorldExamples:
+        return _resolvePdfAiSource(
+          ref: ref,
+          type: type,
+          materialId: materialId,
+          lessonId: lessonId,
+          subjectId: subjectId,
+          filePath: filePath,
+        );
     }
+  }
+
+  static Future<QuestionSource> _resolvePdfAiSource({
+    required WidgetRef ref,
+    required QuestionSourceType type,
+    required String materialId,
+    String? lessonId,
+    String? subjectId,
+    required String filePath,
+  }) async {
+    final kind = switch (type) {
+      QuestionSourceType.aiSummary => PdfAiMaterialType.summary,
+      QuestionSourceType.aiExplanation => PdfAiMaterialType.explanation,
+      QuestionSourceType.aiDeepExplanation => PdfAiMaterialType.deepExplanation,
+      QuestionSourceType.aiRealWorldExamples =>
+        PdfAiMaterialType.realWorldExamples,
+      _ => PdfAiMaterialType.explanation,
+    };
+    final db = ref.read(databaseProvider);
+    final versions = await db.listPdfAiMaterials(
+      materialId: materialId,
+      type: kind.storageValue,
+    );
+    final preferredId = await ref
+        .read(pdfAiPreferredStoreProvider)
+        .read(PdfAiPreferredKey(materialId: materialId, type: kind));
+    final picked = PdfAiVersionPicker.pick(
+      materials: versions,
+      type: kind,
+      preferredId: preferredId,
+    );
+    if (picked == null || picked.content.trim().isEmpty) {
+      throw StateError(
+        '${kind.shortName} has not been generated yet. Generate it first, then ask questions from it.',
+      );
+    }
+    return QuestionSourceBuilder.fromAiStudyMaterial(
+      type: type,
+      markdown: picked.content,
+      materialId: materialId,
+      lessonId: lessonId,
+      subjectId: subjectId,
+      filePath: filePath,
+      referenceLabel: kind.shortName,
+    );
   }
 }

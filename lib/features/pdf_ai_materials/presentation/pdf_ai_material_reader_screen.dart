@@ -22,6 +22,8 @@ import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
+import '../../ai_questions/presentation/generate_questions_sheet.dart';
+import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
 import '../../reference_books/presentation/lecture_book_links.dart';
@@ -612,6 +614,19 @@ class _PdfAiMaterialReaderScreenState
     );
   }
 
+  Future<void> _generateQuestions() {
+    return showGenerateQuestionsSheet(
+      context,
+      ref,
+      launch: QuestionSourceLaunches.forPdfAiMaterial(
+        ref: ref,
+        materialId: widget.materialId,
+        filePath: widget.filePath,
+        type: widget.type,
+      ),
+    );
+  }
+
   Future<void> _askAboutThis() {
     return AiChatNavigation.openNewWithAttachment(
       context,
@@ -876,23 +891,36 @@ class _PdfAiMaterialReaderScreenState
                 ),
                 if (usage != null) AiUsageIndicator(usage: usage),
                 if (!widget.embedded)
-                  Row(
+                  Column(
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _askAboutThis,
-                          child: const Text('Ask about this'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _generating
-                              ? null
-                              : () => _regenerate(selected),
-                          child: Text(
-                            _generating ? 'Generating…' : 'Regenerate',
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _askAboutThis,
+                              child: const Text('Ask about this'),
+                            ),
                           ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _generating
+                                  ? null
+                                  : () => _regenerate(selected),
+                              child: Text(
+                                _generating ? 'Generating…' : 'Regenerate',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _generateQuestions,
+                          icon: const Icon(Icons.quiz_outlined),
+                          label: const Text('Ask me questions'),
                         ),
                       ),
                     ],
@@ -1080,6 +1108,16 @@ class _PdfAiMaterialReaderScreenState
                                         ),
                                         label: const Text('Copy response'),
                                       ),
+                                      TextButton.icon(
+                                        onPressed: _generating
+                                            ? null
+                                            : _generateQuestions,
+                                        icon: const Icon(
+                                          Icons.quiz_outlined,
+                                          size: 18,
+                                        ),
+                                        label: const Text('Ask me questions'),
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: AppSpacing.md),
@@ -1134,6 +1172,17 @@ class _PdfAiMaterialReaderScreenState
                                           ),
                                         ),
                                       ],
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: _generating
+                                            ? null
+                                            : _generateQuestions,
+                                        icon: const Icon(Icons.quiz_outlined),
+                                        label: const Text('Ask me questions'),
+                                      ),
                                     ),
                                   ],
                                   const SizedBox(height: AppSpacing.lg),

@@ -80,6 +80,10 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   bool _showOutline = true;
   bool _showAiMaterials = false;
 
+  /// Width of the right side panel (outline/annotations or AI materials).
+  /// Null uses the default for whichever panel is open.
+  double? _sidePanelWidth;
+
   /// Active inline AI session over the PDF (selection or page).
   _InlineAiSession? _inlineAi;
 
@@ -997,198 +1001,294 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
             );
           }
 
-          return Row(
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    ListenableBuilder(
-                      listenable: _controller,
-                      builder: (context, child) {
-                        final ready = _controller.isReady;
-                        final page = _currentPage ?? 1;
-                        final count = _pageCount ?? 1;
-                        return EdgeArrowsOverlay(
-                          revealKey: ready ? _controller.value : null,
-                          canGoStart: ready && page > 1,
-                          canGoEnd: ready && page < count,
-                          startTooltip: 'First page',
-                          endTooltip: 'Last page',
-                          onGoStart: () => _controller.goToPage(pageNumber: 1),
-                          onGoEnd: () =>
-                              _controller.goToPage(pageNumber: count),
-                          child: child!,
-                        );
-                      },
-                      child: PdfViewer.file(
-                        widget.filePath,
-                        controller: _controller,
-                        params: PdfViewerParams(
-                          margin: 8,
-                          textSelectionParams: const PdfTextSelectionParams(
-                            enabled: true,
-                            showContextMenuAutomatically: true,
-                          ),
-                          buildContextMenu: _buildPdfContextMenu,
-                          onPageChanged: (pageNumber) {
-                            setState(() => _currentPage = pageNumber);
-                          },
-                          onViewerReady: (document, controller) {
-                            setState(() {
-                              _pageCount = document.pages.length;
-                              _currentPage = controller.pageNumber;
-                            });
-                            final page = widget.initialPage;
-                            if (page != null &&
-                                page >= 1 &&
-                                page <= document.pages.length) {
-                              controller.goToPage(pageNumber: page);
-                            }
-                          },
-                          onGeneralTap: (context, controller, details) {
-                            if (!annotate) return false;
-                            if (details.type != PdfViewerGeneralTapType.tap) {
-                              return false;
-                            }
-                            // Avoid creating a point pin under a text selection gesture.
-                            if (details.tapOn == PdfViewerPart.selectedText) {
-                              return false;
-                            }
-                            if (controller
-                                .textSelectionDelegate
-                                .hasSelectedText) {
-                              return false;
-                            }
-                            _handleAddPointPinTap(controller, details);
-                            return true;
-                          },
-                          pageOverlaysBuilder: (context, pageRect, page) {
-                            return buildPdfPagePinOverlays(
-                              pageRect: pageRect,
-                              page: page,
-                              pins: pinsByPage[page.pageNumber] ?? const [],
-                              textRanges:
-                                  rangesByPage[page.pageNumber] ?? const [],
-                              displayMode: displayMode,
-                              annotateMode: annotate,
-                              categoryMap: categoryMap,
-                              focusedPinId: _focusedPinId,
-                              onPinTap: (pin) {
-                                setState(() => _focusedPinId = pin.id);
-                                _onAnnotationTap(pin, annotate: annotate);
-                              },
-                              onPointPinMoved: _onPointPinMoved,
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final showSidePanel =
+                  _isWide &&
+                  _controller.isReady &&
+                  (_showAiMaterials || _showOutline);
+              final handleWidth = 6.0;
+              final minSide = 280.0;
+              final minPdf = 320.0;
+              final maxSide = (constraints.maxWidth - minPdf - handleWidth)
+                  .clamp(minSide, constraints.maxWidth);
+              final defaultSide = (_showAiMaterials ? 460.0 : 340.0).clamp(
+                minSide,
+                maxSide,
+              );
+              final sideWidth = (_sidePanelWidth ?? defaultSide).clamp(
+                minSide,
+                maxSide,
+              );
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        ListenableBuilder(
+                          listenable: _controller,
+                          builder: (context, child) {
+                            final ready = _controller.isReady;
+                            final page = _currentPage ?? 1;
+                            final count = _pageCount ?? 1;
+                            return EdgeArrowsOverlay(
+                              revealKey: ready ? _controller.value : null,
+                              canGoStart: ready && page > 1,
+                              canGoEnd: ready && page < count,
+                              startTooltip: 'First page',
+                              endTooltip: 'Last page',
+                              onGoStart: () =>
+                                  _controller.goToPage(pageNumber: 1),
+                              onGoEnd: () =>
+                                  _controller.goToPage(pageNumber: count),
+                              child: child!,
                             );
                           },
-                        ),
-                      ),
-                    ),
-                    if (_isWide && _readerPin != null)
-                      StudyPinReaderOverlay(
-                        pin: _readerPin!,
-                        onClose: () => setState(() => _readerPin = null),
-                      ),
-                    if (_inlineAi == null && !_showAiMaterials)
-                      Positioned.fill(
-                        child: PdfStudyDock(
-                          bookmarked: currentBookmark != null,
-                          bookmarkEnabled: _currentPage != null,
-                          annotating: annotate,
-                          pinDisplayMode: displayMode,
-                          onOpenNavigation: () {
-                            if (!_controller.isReady) return;
-                            if (_isWide) {
-                              setState(() => _showOutline = !_showOutline);
-                            } else {
-                              _openOutlineSheet(bookmarks, pins);
-                            }
-                          },
-                          onToggleBookmark: _toggleBookmark,
-                          onToggleAnnotating: () {
-                            ref
-                                    .read(
-                                      addPinModeProvider(resourceId).notifier,
-                                    )
-                                    .state =
-                                !annotate;
-                          },
-                          onOpenAi: _openAiTools,
-                          onAction: (action) {
-                            switch (action) {
-                              case PdfStudyDockAction.reviewPins:
-                                openReviewSetup(
-                                  context,
-                                  scope: ReviewScope(
-                                    type: ReviewScopeType.material,
-                                    id: widget.resourceId,
-                                    title: widget.title,
-                                  ),
+                          child: PdfViewer.file(
+                            widget.filePath,
+                            controller: _controller,
+                            params: PdfViewerParams(
+                              margin: 8,
+                              textSelectionParams: const PdfTextSelectionParams(
+                                enabled: true,
+                                showContextMenuAutomatically: true,
+                              ),
+                              buildContextMenu: _buildPdfContextMenu,
+                              onPageChanged: (pageNumber) {
+                                setState(() => _currentPage = pageNumber);
+                              },
+                              onViewerReady: (document, controller) {
+                                setState(() {
+                                  _pageCount = document.pages.length;
+                                  _currentPage = controller.pageNumber;
+                                });
+                                final page = widget.initialPage;
+                                if (page != null &&
+                                    page >= 1 &&
+                                    page <= document.pages.length) {
+                                  controller.goToPage(pageNumber: page);
+                                }
+                              },
+                              onGeneralTap: (context, controller, details) {
+                                if (!annotate) return false;
+                                if (details.type !=
+                                    PdfViewerGeneralTapType.tap) {
+                                  return false;
+                                }
+                                // Avoid creating a point pin under a text selection gesture.
+                                if (details.tapOn ==
+                                    PdfViewerPart.selectedText) {
+                                  return false;
+                                }
+                                if (controller
+                                    .textSelectionDelegate
+                                    .hasSelectedText) {
+                                  return false;
+                                }
+                                _handleAddPointPinTap(controller, details);
+                                return true;
+                              },
+                              pageOverlaysBuilder: (context, pageRect, page) {
+                                return buildPdfPagePinOverlays(
+                                  pageRect: pageRect,
+                                  page: page,
+                                  pins: pinsByPage[page.pageNumber] ?? const [],
+                                  textRanges:
+                                      rangesByPage[page.pageNumber] ?? const [],
+                                  displayMode: displayMode,
+                                  annotateMode: annotate,
+                                  categoryMap: categoryMap,
+                                  focusedPinId: _focusedPinId,
+                                  onPinTap: (pin) {
+                                    setState(() => _focusedPinId = pin.id);
+                                    _onAnnotationTap(pin, annotate: annotate);
+                                  },
+                                  onPointPinMoved: _onPointPinMoved,
                                 );
-                              case PdfStudyDockAction.hidePins:
-                                ref
-                                        .read(
-                                          pinDisplayModeProvider(
-                                            resourceId,
-                                          ).notifier,
-                                        )
-                                        .state =
-                                    PinDisplayMode.hidden;
-                              case PdfStudyDockAction.showPinDots:
-                                ref
-                                        .read(
-                                          pinDisplayModeProvider(
-                                            resourceId,
-                                          ).notifier,
-                                        )
-                                        .state =
-                                    PinDisplayMode.dotsOnly;
-                              case PdfStudyDockAction.showPinText:
-                                ref
-                                        .read(
-                                          pinDisplayModeProvider(
-                                            resourceId,
-                                          ).notifier,
-                                        )
-                                        .state =
-                                    PinDisplayMode.dotsAndText;
-                            }
-                          },
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                    if (_inlineAi != null)
-                      InlineAiOverlay(
-                        key: ValueKey(_inlineAi),
-                        mode: _inlineAi!.mode,
-                        aiContext: _inlineAi!.context,
-                        existingPin: _inlineAi!.existingPin,
-                        useBottomSheetLayout: !_isWide,
-                        initialAction: _inlineAi!.initialAction,
-                        initialTranslateTarget: _inlineAi!.translateTarget,
-                        callbacks: _inlineAiCallbacks(_inlineAi!),
-                      ),
-                    if (_showAiMaterials)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        bottom: 8,
-                        left: _isWide ? null : 8,
-                        width: _isWide ? 460 : null,
-                        child: PdfAiMaterialsPanel(
-                          materialId: widget.resourceId,
-                          title: widget.title,
-                          filePath: widget.filePath,
-                          onClose: () =>
-                              setState(() => _showAiMaterials = false),
-                        ),
-                      ),
+                        if (_isWide && _readerPin != null)
+                          StudyPinReaderOverlay(
+                            pin: _readerPin!,
+                            onClose: () => setState(() => _readerPin = null),
+                          ),
+                        if (_inlineAi == null &&
+                            !(_showAiMaterials && !_isWide))
+                          Positioned.fill(
+                            child: PdfStudyDock(
+                              bookmarked: currentBookmark != null,
+                              bookmarkEnabled: _currentPage != null,
+                              annotating: annotate,
+                              pinDisplayMode: displayMode,
+                              onOpenNavigation: () {
+                                if (!_controller.isReady) return;
+                                if (_isWide) {
+                                  setState(() => _showOutline = !_showOutline);
+                                } else {
+                                  _openOutlineSheet(bookmarks, pins);
+                                }
+                              },
+                              onToggleBookmark: _toggleBookmark,
+                              onToggleAnnotating: () {
+                                ref
+                                        .read(
+                                          addPinModeProvider(
+                                            resourceId,
+                                          ).notifier,
+                                        )
+                                        .state =
+                                    !annotate;
+                              },
+                              onOpenAi: _openAiTools,
+                              onAction: (action) {
+                                switch (action) {
+                                  case PdfStudyDockAction.reviewPins:
+                                    openReviewSetup(
+                                      context,
+                                      scope: ReviewScope(
+                                        type: ReviewScopeType.material,
+                                        id: widget.resourceId,
+                                        title: widget.title,
+                                      ),
+                                    );
+                                  case PdfStudyDockAction.hidePins:
+                                    ref
+                                            .read(
+                                              pinDisplayModeProvider(
+                                                resourceId,
+                                              ).notifier,
+                                            )
+                                            .state =
+                                        PinDisplayMode.hidden;
+                                  case PdfStudyDockAction.showPinDots:
+                                    ref
+                                            .read(
+                                              pinDisplayModeProvider(
+                                                resourceId,
+                                              ).notifier,
+                                            )
+                                            .state =
+                                        PinDisplayMode.dotsOnly;
+                                  case PdfStudyDockAction.showPinText:
+                                    ref
+                                            .read(
+                                              pinDisplayModeProvider(
+                                                resourceId,
+                                              ).notifier,
+                                            )
+                                            .state =
+                                        PinDisplayMode.dotsAndText;
+                                }
+                              },
+                            ),
+                          ),
+                        if (_inlineAi != null)
+                          InlineAiOverlay(
+                            key: ValueKey(_inlineAi),
+                            mode: _inlineAi!.mode,
+                            aiContext: _inlineAi!.context,
+                            existingPin: _inlineAi!.existingPin,
+                            useBottomSheetLayout: !_isWide,
+                            initialAction: _inlineAi!.initialAction,
+                            initialTranslateTarget: _inlineAi!.translateTarget,
+                            callbacks: _inlineAiCallbacks(_inlineAi!),
+                          ),
+                        if (_showAiMaterials && !_isWide)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            bottom: 8,
+                            left: 8,
+                            child: PdfAiMaterialsPanel(
+                              materialId: widget.resourceId,
+                              title: widget.title,
+                              filePath: widget.filePath,
+                              onClose: () =>
+                                  setState(() => _showAiMaterials = false),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (showSidePanel) ...[
+                    _SidePanelResizeHandle(
+                      onDragDx: (dx) {
+                        setState(() {
+                          _sidePanelWidth = (sideWidth - dx).clamp(
+                            minSide,
+                            maxSide,
+                          );
+                        });
+                      },
+                      onDoubleTap: () {
+                        setState(() {
+                          _sidePanelWidth =
+                              (constraints.maxWidth - handleWidth) / 2;
+                        });
+                      },
+                    ),
+                    SizedBox(
+                      width: sideWidth,
+                      child: _showAiMaterials
+                          ? PdfAiMaterialsPanel(
+                              materialId: widget.resourceId,
+                              title: widget.title,
+                              filePath: widget.filePath,
+                              onClose: () =>
+                                  setState(() => _showAiMaterials = false),
+                            )
+                          : _outlinePanel(bookmarks, pins),
+                    ),
                   ],
-                ),
-              ),
-              if (_isWide && _showOutline && _controller.isReady)
-                SizedBox(width: 340, child: _outlinePanel(bookmarks, pins)),
-            ],
+                ],
+              );
+            },
           );
         },
+      ),
+    );
+  }
+}
+
+/// Drag handle between the PDF (slides) and the right side panel.
+class _SidePanelResizeHandle extends StatelessWidget {
+  const _SidePanelResizeHandle({
+    required this.onDragDx,
+    required this.onDoubleTap,
+  });
+
+  final ValueChanged<double> onDragDx;
+  final VoidCallback onDoubleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: (details) => onDragDx(details.delta.dx),
+        onDoubleTap: onDoubleTap,
+        child: Tooltip(
+          message: 'Drag to resize · Double-click for half / half',
+          waitDuration: const Duration(milliseconds: 600),
+          child: SizedBox(
+            width: 6,
+            child: Center(
+              child: Container(
+                width: 2,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -527,7 +527,8 @@ class QuestionSets extends Table {
   TextColumn get title => text().withLength(min: 1, max: 300)();
 
   /// `selected_text` | `page` | `pages` | `material` | `annotations` |
-  /// `notes` | `annotations_and_notes`
+  /// `notes` | `annotations_and_notes` | `ai_summary` | `ai_explanation` |
+  /// `ai_deep_explanation` | `ai_real_world_examples`
   TextColumn get sourceType => text()();
   TextColumn get sourceReference => text().nullable()();
   IntColumn get questionCount => integer()();
