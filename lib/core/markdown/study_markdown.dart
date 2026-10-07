@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../theme/app_spacing.dart';
 import 'chart_markdown_builder.dart';
 import 'notation_spec.dart';
 
@@ -40,6 +41,7 @@ MarkdownStyleSheet studyMarkdownStyle(
 }) {
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
+  final codeBg = scheme.surfaceContainerHigh;
   return (base ?? MarkdownStyleSheet.fromTheme(theme)).copyWith(
     tableBorder: TableBorder.all(color: scheme.outlineVariant),
     tableHead: theme.textTheme.titleSmall?.copyWith(
@@ -51,6 +53,18 @@ MarkdownStyleSheet studyMarkdownStyle(
     tableCellsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     tableCellsDecoration: BoxDecoration(color: scheme.surface),
     blockSpacing: 12,
+    code: theme.textTheme.bodySmall?.copyWith(
+      fontFamily: 'monospace',
+      color: scheme.onSurface,
+      backgroundColor: codeBg,
+      height: 1.45,
+    ),
+    codeblockPadding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+    codeblockDecoration: BoxDecoration(
+      color: codeBg,
+      borderRadius: AppRadii.smAll,
+      border: Border.all(color: scheme.outlineVariant),
+    ),
   );
 }
 

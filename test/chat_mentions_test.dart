@@ -41,13 +41,28 @@ void main() {
       expect(decoded.first.pageNumbers, [1, 2]);
     });
 
-    test('draft encode omits packedText', () {
+    test('draft encode keeps pre-packed text when supplied', () {
       final items = [
         const AiContextItem(
           kind: AiContextKind.note,
           id: 'n1',
           title: 'My note',
           packedText: 'secret body',
+        ),
+      ];
+      final draft = AiContextItem.decodeList(
+        AiContextItem.encodeList(items, draft: true),
+      );
+      expect(draft.first.packedText, 'secret body');
+      expect(draft.first.title, 'My note');
+    });
+
+    test('draft encode stays metadata-only without packedText', () {
+      final items = [
+        const AiContextItem(
+          kind: AiContextKind.note,
+          id: 'n1',
+          title: 'My note',
         ),
       ];
       final draft = AiContextItem.decodeList(
@@ -229,6 +244,19 @@ void main() {
       expect(item.packedText, contains('--- Page 1 ---'));
       expect(item.packedText, contains('Page one content'));
       expect(item.pageNumbers, [1, 2]);
+    });
+
+    test('keeps pre-packed AI material text without re-extracting PDF', () async {
+      final item = await resolver.resolveOne(
+        const AiContextItem(
+          kind: AiContextKind.material,
+          id: 'mat-pdf',
+          title: 'Explanation · Midterm slides',
+          packedText: 'AI explanation body the student is reading',
+        ),
+      );
+      expect(item.packedText, 'AI explanation body the student is reading');
+      expect(item.emptyReason, isNull);
     });
 
     test('image material reports no extractable text', () async {
@@ -438,7 +466,7 @@ void main() {
             kind: AiContextKind.note,
             id: 'note-1',
             title: 'Revision note',
-            packedText: 'should not persist in draft',
+            packedText: 'AI explanation to keep for send',
           ),
         ],
       );
@@ -447,7 +475,7 @@ void main() {
       final chips = AiContextItem.decodeList(updated.draftContextJson);
       expect(chips, hasLength(1));
       expect(chips.first.id, 'note-1');
-      expect(chips.first.packedText, isNull);
+      expect(chips.first.packedText, 'AI explanation to keep for send');
     });
   });
 

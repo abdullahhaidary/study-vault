@@ -292,6 +292,7 @@ void main() {
   test('streams only text deltas, ignoring thinking blocks', () async {
     final client = MockClient((request) async {
       expect(jsonDecode(request.body)['stream'], true);
+      expect(request.headers['accept'], 'text/event-stream');
       return http.Response(
         'data: {"type":"message_start","message":{"usage":{"input_tokens":5}}}\n\n'
         'data: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"secret"}}\n\n'
@@ -315,5 +316,60 @@ void main() {
         .toList();
     expect(events.where((e) => e.text != null).map((e) => e.text), ['Hello']);
     expect(events.last.usage?.completionTokens, 2);
+  });
+
+  test('streams OpenAI-compatible deltas from New API proxies', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        'data: {"choices":[{"delta":{"content":"I\'m "}}]}\n'
+        'data: {"choices":[{"delta":{"content":"happy"}}]}\n'
+        'data: [DONE]\n',
+        200,
+      );
+    });
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      httpClient: client,
+    );
+    final texts = await service
+        .streamMessages(
+          model: 'newapi:claude-example',
+          messages: const [
+            {'role': 'user', 'content': 'Hi'},
+          ],
+        )
+        .where((e) => e.text != null)
+        .map((e) => e.text!)
+        .toList();
+    expect(texts, ["I'm ", 'happy']);
+  });
+
+  test('accepts non-SSE JSON body when stream is buffered by proxy', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode({
+          'content': [
+            {'type': 'text', 'text': 'Send me the text.'},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      httpClient: client,
+    );
+    final events = await service
+        .streamMessages(
+          model: 'newapi:claude-example',
+          messages: const [
+            {'role': 'user', 'content': 'Translate'},
+          ],
+        )
+        .toList();
+    expect(events.single.text, 'Send me the text.');
   });
 }

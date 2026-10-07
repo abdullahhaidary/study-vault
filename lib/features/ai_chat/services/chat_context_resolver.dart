@@ -81,6 +81,16 @@ class ChatContextResolver {
       0,
       maxCharsPerAttachment,
     );
+    // Pre-packed bodies (e.g. AI Summary/Explanation opened via Ask) skip
+    // re-extraction so the model sees the text the student is looking at.
+    if (draft.hasUsableText) {
+      final clipped = _clip(draft.packedText!.trim(), cap);
+      return draft.copyWith(
+        packedText: clipped.text,
+        truncated: draft.truncated || clipped.truncated,
+        clearEmptyReason: true,
+      );
+    }
     return switch (draft.kind) {
       AiContextKind.material => _resolveMaterial(draft, cap),
       AiContextKind.lesson => _resolveLesson(draft, cap),

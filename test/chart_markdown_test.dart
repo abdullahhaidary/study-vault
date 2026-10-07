@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/markdown/chart_block.dart';
 import 'package:study_vault/core/markdown/chart_markdown_builder.dart';
 import 'package:study_vault/core/markdown/chart_spec.dart';
+import 'package:study_vault/core/markdown/study_markdown.dart';
 
 const _bar =
     '{"type":"bar","title":"Scores","labels":["L1","L2","L3"],'
@@ -108,6 +109,35 @@ void main() {
       await tester.pumpWidget(_markdown('```dart\nvoid main() {}\n```\n'));
       expect(find.byType(ChartBlock), findsNothing);
       expect(find.text('void main() {}'), findsOneWidget);
+      expect(find.text('dart'), findsOneWidget);
+    });
+
+    testWidgets('StudyMarkdown styles fenced code as a code panel', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StudyMarkdown(
+                data: 'Before\n\n```python\nprint("hi")\n```\n',
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('python'), findsOneWidget);
+      expect(find.text('print("hi")'), findsOneWidget);
+      expect(find.text('Before'), findsOneWidget);
+      final panel = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.text('print("hi")'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(panel.decoration, isA<BoxDecoration>());
     });
   });
 }

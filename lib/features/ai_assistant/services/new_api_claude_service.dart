@@ -123,10 +123,11 @@ class NewApiClaudeService implements AiService {
     return name;
   }
 
-  Map<String, String> headers(String key) => {
+  Map<String, String> headers(String key, {bool stream = false}) => {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
     'Authorization': 'Bearer $key',
+    if (stream) 'Accept': 'text/event-stream',
   };
 
   Map<String, Object> payload({
@@ -220,7 +221,7 @@ class NewApiClaudeService implements AiService {
     try {
       final request = http.Request('POST', conn.uri)
         ..followRedirects = false
-        ..headers.addAll(headers(conn.key))
+        ..headers.addAll(headers(conn.key, stream: false))
         ..body = jsonEncode(
           payload(
             model: model,
@@ -278,7 +279,7 @@ class NewApiClaudeService implements AiService {
     try {
       final request = http.Request('POST', conn.uri)
         ..followRedirects = false
-        ..headers.addAll(headers(conn.key))
+        ..headers.addAll(headers(conn.key, stream: true))
         ..body = jsonEncode(
           payload(
             model: model,
@@ -302,9 +303,87 @@ class NewApiClaudeService implements AiService {
         model,
       );
     }
+
+    final contentType = response.headers['content-type'] ?? '';
+    if (contentType.contains('application/json') &&
+        !contentType.contains('event-stream')) {
+      final body = await response.stream.bytesToString();
+      final completed = _parseCompletedMessage(body, model);
+      yield (text: completed.text, usage: completed.usage);
+      return;
+    }
+
     var buffer = '';
     var hasText = false;
     AiTokenUsage? combinedUsage;
+
+    ({String? text, AiTokenUsage? usage})? interpretEvent(Object? event) {
+      if (event is! Map) return null;
+      if (event['type'] == 'error') {
+        throw const AiServerException(
+          'New API interrupted the response. Please try again.',
+        );
+      }
+      if (event['type'] == 'message_delta' &&
+          event['delta'] is Map &&
+          (event['delta'] as Map)['stop_reason'] == 'max_tokens') {
+        throw const AiMalformedOutputException(
+          'New API reached the output limit. Try a shorter request.',
+        );
+      }
+
+      final anthropicText = _anthropicStreamText(event);
+      if (anthropicText != null && anthropicText.isNotEmpty) {
+        return (text: anthropicText, usage: null);
+      }
+      final openAiText = _openAiStreamText(event);
+      if (openAiText != null && openAiText.isNotEmpty) {
+        return (text: openAiText, usage: null);
+      }
+
+      if (event['type'] == 'message_start' ||
+          event['type'] == 'message_delta') {
+        final data = event['message'] is Map ? event['message'] : event;
+        final tokens = usage(data, model);
+        if (tokens == null) return null;
+        final input = tokens.promptTokens ?? combinedUsage?.promptTokens;
+        final output =
+            tokens.completionTokens ?? combinedUsage?.completionTokens;
+        combinedUsage = AiTokenUsage(
+          promptTokens: input,
+          completionTokens: output,
+          totalTokens: input != null && output != null ? input + output : null,
+          cacheHitTokens:
+              tokens.cacheHitTokens ?? combinedUsage?.cacheHitTokens,
+          cacheMissTokens:
+              tokens.cacheMissTokens ?? combinedUsage?.cacheMissTokens,
+          model: model,
+          provider: AiProviderId.newApi.storageValue,
+        );
+        return (text: null, usage: combinedUsage);
+      }
+      return null;
+    }
+
+    Iterable<({String? text, AiTokenUsage? usage})> eventsFromPayload(
+      String payload,
+    ) sync* {
+      final trimmed = payload.trim();
+      if (trimmed.isEmpty || trimmed == '[DONE]') return;
+      Object? event;
+      try {
+        event = jsonDecode(trimmed);
+      } on FormatException {
+        return;
+      }
+      final handled = interpretEvent(event);
+      if (handled == null) return;
+      if (handled.text != null && handled.text!.isNotEmpty) {
+        hasText = true;
+      }
+      yield handled;
+    }
+
     await for (final chunk
         in response.stream
             .transform(utf8.decoder)
@@ -313,73 +392,98 @@ class NewApiClaudeService implements AiService {
               onTimeout: (sink) => sink.addError(const AiTimeoutException()),
             )) {
       buffer += chunk.replaceAll('\r', '');
-      while (buffer.contains('\n\n')) {
-        final end = buffer.indexOf('\n\n');
-        final frame = buffer.substring(0, end);
-        buffer = buffer.substring(end + 2);
-        final dataLines = frame
-            .split('\n')
-            .where((line) => line.startsWith('data:'))
-            .map((line) => line.substring(5).trim())
-            .toList();
-        if (dataLines.isEmpty) continue;
-        Object? event;
-        try {
-          event = jsonDecode(dataLines.join('\n'));
-        } on FormatException {
-          continue;
-        }
-        if (event is! Map) continue;
-        if (event['type'] == 'error') {
-          throw const AiServerException(
-            'New API interrupted the response. Please try again.',
-          );
-        }
-        if (event['type'] == 'message_delta' &&
-            event['delta'] is Map &&
-            (event['delta'] as Map)['stop_reason'] == 'max_tokens') {
-          throw const AiMalformedOutputException(
-            'New API reached the output limit. Try a shorter request.',
-          );
-        }
-        final delta = event['delta'];
-        if (event['type'] == 'content_block_delta' &&
-            delta is Map &&
-            delta['type'] == 'text_delta' &&
-            delta['text'] is String) {
-          final text = delta['text'] as String;
-          if (text.isNotEmpty) {
-            hasText = true;
-            yield (text: text, usage: null);
-          }
-        }
-        if (event['type'] == 'message_start' ||
-            event['type'] == 'message_delta') {
-          final data = event['message'] is Map ? event['message'] : event;
-          final tokens = usage(data, model);
-          if (tokens != null) {
-            final input = tokens.promptTokens ?? combinedUsage?.promptTokens;
-            final output =
-                tokens.completionTokens ?? combinedUsage?.completionTokens;
-            combinedUsage = AiTokenUsage(
-              promptTokens: input,
-              completionTokens: output,
-              totalTokens: input != null && output != null
-                  ? input + output
-                  : null,
-              cacheHitTokens:
-                  tokens.cacheHitTokens ?? combinedUsage?.cacheHitTokens,
-              cacheMissTokens:
-                  tokens.cacheMissTokens ?? combinedUsage?.cacheMissTokens,
-              model: model,
-              provider: AiProviderId.newApi.storageValue,
-            );
-            yield (text: null, usage: combinedUsage);
-          }
+      while (true) {
+        final lineEnd = buffer.indexOf('\n');
+        if (lineEnd < 0) break;
+        final line = buffer.substring(0, lineEnd).trimRight();
+        buffer = buffer.substring(lineEnd + 1);
+        if (line.isEmpty || !line.startsWith('data:')) continue;
+        for (final event in eventsFromPayload(line.substring(5))) {
+          yield event;
         }
       }
     }
+
+    final trailing = buffer.trim();
+    if (trailing.startsWith('data:')) {
+      for (final event in eventsFromPayload(trailing.substring(5))) {
+        yield event;
+      }
+    } else if (trailing.startsWith('{')) {
+      try {
+        final completed = _parseCompletedMessage(trailing, model);
+        hasText = true;
+        yield (text: completed.text, usage: completed.usage);
+      } on AiException {
+        // Fall through to empty check.
+      }
+    }
+
     if (!hasText) throw const AiEmptyResultException();
+  }
+
+  String? _anthropicStreamText(Map event) {
+    if (event['type'] == 'content_block_delta' &&
+        event['delta'] is Map &&
+        (event['delta'] as Map)['type'] == 'text_delta' &&
+        (event['delta'] as Map)['text'] is String) {
+      return (event['delta'] as Map)['text'] as String;
+    }
+    if (event['type'] == 'content_block_start' &&
+        event['content_block'] is Map) {
+      final block = event['content_block'] as Map;
+      if (block['type'] == 'text' &&
+          block['text'] is String &&
+          (block['text'] as String).isNotEmpty) {
+        return block['text'] as String;
+      }
+    }
+    return null;
+  }
+
+  String? _openAiStreamText(Map event) {
+    final choices = event['choices'];
+    if (choices is! List || choices.isEmpty || choices.first is! Map) {
+      return null;
+    }
+    final delta = (choices.first as Map)['delta'];
+    if (delta is Map && delta['content'] is String) {
+      return delta['content'] as String;
+    }
+    final message = (choices.first as Map)['message'];
+    if (message is Map && message['content'] is String) {
+      return message['content'] as String;
+    }
+    return null;
+  }
+
+  ({String text, AiTokenUsage? usage}) _parseCompletedMessage(
+    String body,
+    String model,
+  ) {
+    try {
+      final data = jsonDecode(body);
+      if (data is! Map) throw const AiMalformedOutputException();
+      if (data['content'] is List) {
+        final text = (data['content'] as List)
+            .whereType<Map>()
+            .where((b) => b['type'] == 'text' && b['text'] is String)
+            .map((b) => b['text'] as String)
+            .join('\n')
+            .trim();
+        if (text.isEmpty) throw const AiEmptyResultException();
+        return (text: text, usage: usage(data, model));
+      }
+      final openAi = _openAiStreamText(data);
+      if (openAi != null && openAi.trim().isNotEmpty) {
+        return (text: openAi.trim(), usage: usage(data, model));
+      }
+      throw const AiMalformedOutputException();
+    } on AiException {
+      rethrow;
+    } on Object {
+      throw const AiMalformedOutputException();
+    }
   }
 
   @override

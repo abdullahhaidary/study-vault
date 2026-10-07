@@ -277,6 +277,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       }
 
       var lastPaint = DateTime.fromMillisecondsSinceEpoch(0);
+      String? latestPartial;
       await for (final partial
           in ref
               .read(aiChatServiceProvider)
@@ -286,10 +287,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 attachments: pendingAttachments,
               )) {
         if (!mounted) return;
+        latestPartial = partial;
         final now = DateTime.now();
         if (now.difference(lastPaint).inMilliseconds < 50) continue;
         lastPaint = now;
         setState(() => _streamingText = partial);
+        _scrollToBottom();
+      }
+      // Paint the final cumulative text even if the last deltas were throttled.
+      final finalPartial = latestPartial;
+      if (mounted && finalPartial != null && finalPartial.isNotEmpty) {
+        setState(() => _streamingText = finalPartial);
         _scrollToBottom();
       }
       if (mounted) {

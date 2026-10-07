@@ -129,13 +129,15 @@ class AiContextItem {
     if (packedText != null) 'packedText': packedText,
   };
 
-  /// Metadata-only JSON for draft chips (omit packed extract).
+  /// Draft-chip JSON. Omits packed extract unless it was supplied already
+  /// (e.g. AI material text from Ask about this).
   Map<String, Object?> toDraftJson() => {
     'kind': kind.storageValue,
     'id': id,
     'title': title,
     if (lessonId != null) 'lessonId': lessonId,
     if (materialId != null) 'materialId': materialId,
+    if (packedText != null) 'packedText': packedText,
   };
 
   factory AiContextItem.fromJson(Map<String, Object?> json) {

@@ -50,7 +50,7 @@ class ChartCodeBlockBuilder extends MarkdownElementBuilder {
     }
     final notation = NotationSpec.tryParse(source, language: language);
     if (notation != null) return NotationBlock(spec: notation);
-    return _defaultCodeBlock(source);
+    return _defaultCodeBlock(source, language: language);
   }
 
   /// `language-xyz` class → `xyz`.
@@ -61,13 +61,51 @@ class ChartCodeBlockBuilder extends MarkdownElementBuilder {
     return cls.startsWith(prefix) ? cls.substring(prefix.length).trim() : cls;
   }
 
-  Widget _defaultCodeBlock(String source) {
+  Widget _defaultCodeBlock(String source, {String? language}) {
     final text = source.endsWith('\n')
         ? source.substring(0, source.length - 1)
         : source;
-    return _HorizontalScroll(
-      padding: styleSheet.codeblockPadding,
-      child: Text(text, style: styleSheet.code),
+    final lang = language?.trim();
+    final padding =
+        styleSheet.codeblockPadding ??
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+    final decoration =
+        styleSheet.codeblockDecoration ??
+        BoxDecoration(
+          color: Colors.black12,
+          borderRadius: BorderRadius.circular(8),
+        );
+    final codeStyle =
+        styleSheet.code ??
+        const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.45);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: decoration,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (lang != null && lang.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Text(
+                lang,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: codeStyle.color?.withValues(alpha: 0.7),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          _HorizontalScroll(
+            padding: padding,
+            child: Text(text, style: codeStyle),
+          ),
+        ],
+      ),
     );
   }
 }

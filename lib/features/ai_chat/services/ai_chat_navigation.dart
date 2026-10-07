@@ -30,8 +30,9 @@ abstract final class AiChatNavigation {
 
   /// Starts a new chat with one Study Vault reference in the draft.
   ///
-  /// Only reference metadata is saved here. The resolver packs source text
-  /// once when the user explicitly sends the message.
+  /// Reference metadata is always saved. When [attachment] already includes
+  /// [AiContextItem.packedText], that body is kept so send-time resolution
+  /// does not replace it with a different extract.
   static Future<void> openNewWithAttachment(
     BuildContext context,
     WidgetRef ref, {

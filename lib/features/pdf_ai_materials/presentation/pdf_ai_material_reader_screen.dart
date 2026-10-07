@@ -627,22 +627,38 @@ class _PdfAiMaterialReaderScreenState
     );
   }
 
-  Future<void> _askAboutThis() {
+  Future<void> _askAboutThis() async {
+    final all =
+        await ref.read(pdfAiMaterialsProvider(widget.materialId).future);
+    final preferredId = await ref.read(
+      pdfAiPreferredVersionProvider(_preferredKey).future,
+    );
+    final selected = PdfAiVersionPicker.pick(
+      materials: all,
+      type: widget.type,
+      selectedId: _selectedId,
+      preferredId: preferredId,
+    );
+    final body = selected?.content.trim() ?? '';
+    if (!mounted) return;
     return AiChatNavigation.openNewWithAttachment(
       context,
       ref,
       attachment: AiContextItem(
         kind: AiContextKind.material,
-        id: widget.materialId,
+        id: selected?.id ?? widget.materialId,
         materialId: widget.materialId,
-        title: widget.pdfTitle,
+        title: '${widget.type.shortName} · ${widget.pdfTitle}',
+        // Pack the on-screen AI material so Claude sees that text (not only
+        // a PDF extract that may be empty or unrelated to "translate this").
+        packedText: body.isEmpty ? null : body,
       ),
       draftText: switch (widget.type) {
         PdfAiMaterialType.realWorldExamples =>
           'Let\'s practice with real-world examples from this PDF. Pick one '
               'topic, give me a new realistic scenario, and then ask me how '
               'the theory maps to it before you reveal the answer.',
-        _ => 'I have a question about this PDF.',
+        _ => 'I have a question about this ${widget.type.shortName}.',
       },
     );
   }
