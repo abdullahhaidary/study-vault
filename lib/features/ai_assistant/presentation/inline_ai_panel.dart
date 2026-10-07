@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
-import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/presentation/widgets/study_rich_text_viewer.dart';
@@ -90,9 +90,21 @@ class InlineAiOverlay extends ConsumerStatefulWidget {
 }
 
 class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
+  static const _minWidth = 300.0;
+  static const _minHeight = 260.0;
+  static const _defaultWidth = 400.0;
+  static const _defaultHeight = 520.0;
+  static const _edge = 12.0;
+  static const _chipSize = 48.0;
+
   late final InlineAiController _controller;
   final _askController = TextEditingController();
   final _askFocus = FocusNode();
+  double? _left;
+  double? _top;
+  double? _width;
+  double? _height;
+  bool _minimized = false;
 
   @override
   void initState() {
@@ -535,11 +547,18 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final narrow = media.size.width < 720 || widget.useBottomSheetLayout;
+    final size = media.size;
+    final keyboard = media.viewInsets.bottom;
+    final usableHeight = (size.height - keyboard).clamp(1.0, size.height);
+    final geometry = _geometryFor(size, usableHeight);
+
     final panel = _InlineAiPanelCard(
       state: _controller.state,
       askController: _askController,
       askFocus: _askFocus,
+      fillParent: true,
+      onHeaderDrag: _minimized ? null : (delta) => _move(delta, size, usableHeight),
+      onMinimize: () => setState(() => _minimized = true),
       onRun: _run,
       onAskFocusChip: () {
         _controller.requestAskFocus();
@@ -590,41 +609,219 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       onChangeContext: widget.callbacks.onChangeContext,
     );
 
-    if (narrow) {
-      return Align(
-        alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            bottom: SystemBottomInset.of(context, extra: 12),
+    return _PassThroughOverlay(
+      child: Stack(
+      children: [
+        if (!_minimized)
+          Positioned(
+            left: geometry.left,
+            top: geometry.top,
+            width: geometry.width,
+            height: geometry.height,
+            child: Stack(
+              children: [
+                Positioned.fill(child: panel),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  width: 28,
+                  height: 28,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeDownRight,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onPanUpdate: (details) =>
+                          _resize(details.delta, size, usableHeight),
+                      child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.drag_handle,
+                            size: 18,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: panel,
-        ),
-      );
-    }
+        if (_minimized)
+          Positioned(
+            left: geometry.left,
+            top: geometry.top,
+            child: _MinimizedAiChip(
+              label: _controller.state.action?.menuLabel ?? 'AI',
+              onDrag: (delta) => _move(delta, size, usableHeight),
+              onRestore: () => setState(() => _minimized = false),
+              onClose: widget.callbacks.onDismiss,
+            ),
+            ),
+      ],
+      ),
+    );
+  }
+
+  _PanelGeometry _geometryFor(Size size, double usableHeight) {
+    final maxWidth = (size.width - _edge * 2).clamp(1.0, size.width);
+    final maxHeight = (usableHeight - _edge * 2).clamp(1.0, usableHeight);
+    final minW = _minWidth.clamp(1.0, maxWidth);
+    final minH = _minHeight.clamp(1.0, maxHeight);
+    final width = (_width ?? _defaultWidth.clamp(minW, maxWidth)).clamp(
+      minW,
+      maxWidth,
+    );
+    final height = _minimized
+        ? _chipSize
+        : (_height ?? _defaultHeight.clamp(minH, maxHeight)).clamp(minH, maxHeight);
 
     final anchor = widget.anchorGlobal;
-    final size = media.size;
-    double left = 24;
-    double top = 72;
-    if (anchor != null) {
-      left = (anchor.dx - 160).clamp(12.0, size.width - 380);
-      top = (anchor.dy + 12).clamp(56.0, size.height - 420);
-    }
+    final dockBottom =
+        widget.useBottomSheetLayout || size.width < 720 && anchor == null;
+    final defaultLeft = anchor != null
+        ? (anchor.dx - width / 2)
+        : dockBottom
+        ? (size.width - width) / 2
+        : size.width - width - _edge;
+    final defaultTop = anchor != null
+        ? (anchor.dy + 16)
+        : dockBottom
+        ? usableHeight - height - _edge
+        : (usableHeight - height) / 2;
+    final maxLeft = (size.width - width - _edge).clamp(_edge, size.width);
+    final maxTop = (usableHeight - height - _edge).clamp(_edge, usableHeight);
+    return _PanelGeometry(
+      left: (_left ?? defaultLeft).clamp(_edge, maxLeft).toDouble(),
+      top: (_top ?? defaultTop).clamp(_edge, maxTop).toDouble(),
+      width: width.toDouble(),
+      height: height.toDouble(),
+    );
+  }
 
-    return Stack(
-      children: [
-        Positioned(
-          left: left,
-          top: top,
-          width: 360,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: SystemBottomInset.of(context)),
-            child: panel,
+  void _move(Offset delta, Size size, double usableHeight) {
+    final current = _geometryFor(size, usableHeight);
+    setState(() {
+      _width = current.width;
+      _height = _minimized ? (_height ?? _defaultHeight) : current.height;
+      _left = (current.left + delta.dx)
+          .clamp(_edge, size.width - current.width - _edge)
+          .toDouble();
+      _top = (current.top + delta.dy)
+          .clamp(_edge, usableHeight - current.height - _edge)
+          .toDouble();
+    });
+  }
+
+  void _resize(Offset delta, Size size, double usableHeight) {
+    if (_minimized) return;
+    final current = _geometryFor(size, usableHeight);
+    final maxWidth = size.width - current.left - _edge;
+    final maxHeight = usableHeight - current.top - _edge;
+    final minW = _minWidth.clamp(1.0, maxWidth);
+    final minH = _minHeight.clamp(1.0, maxHeight);
+    setState(() {
+      _left = current.left;
+      _top = current.top;
+      _width = (current.width + delta.dx).clamp(minW, maxWidth).toDouble();
+      _height = (current.height + delta.dy).clamp(minH, maxHeight).toDouble();
+    });
+  }
+}
+
+/// Lets clicks outside the panel reach the document underneath.
+class _PassThroughOverlay extends SingleChildRenderObjectWidget {
+  const _PassThroughOverlay({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _PassThroughOverlayRender();
+  }
+}
+
+class _PassThroughOverlayRender extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    return hitTestChildren(result, position: position);
+  }
+}
+
+class _PanelGeometry {
+  const _PanelGeometry({
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+}
+
+class _MinimizedAiChip extends StatelessWidget {
+  const _MinimizedAiChip({
+    required this.label,
+    required this.onDrag,
+    required this.onRestore,
+    required this.onClose,
+  });
+
+  final String label;
+  final ValueChanged<Offset> onDrag;
+  final VoidCallback onRestore;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      elevation: 8,
+      color: theme.colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(24),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: (details) => onDrag(details.delta),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 10, end: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Show AI panel',
+                visualDensity: VisualDensity.compact,
+                onPressed: onRestore,
+                icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+              ),
+              IconButton(
+                tooltip: 'Close',
+                visualDensity: VisualDensity.compact,
+                onPressed: onClose,
+                icon: const Icon(Icons.close, size: 18),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -652,6 +849,9 @@ class _InlineAiPanelCard extends StatelessWidget {
     this.onInsertBelow,
     this.onAppend,
     this.onChangeContext,
+    this.onMinimize,
+    this.onHeaderDrag,
+    this.fillParent = false,
   });
 
   final InlineAiViewState state;
@@ -675,6 +875,9 @@ class _InlineAiPanelCard extends StatelessWidget {
   final Future<void> Function()? onInsertBelow;
   final Future<void> Function()? onAppend;
   final VoidCallback? onChangeContext;
+  final VoidCallback? onMinimize;
+  final ValueChanged<Offset>? onHeaderDrag;
+  final bool fillParent;
 
   @override
   Widget build(BuildContext context) {
@@ -690,42 +893,64 @@ class _InlineAiPanelCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       color: theme.colorScheme.surface,
       clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 420, maxWidth: 420),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Column(
+          mainAxisSize: fillParent ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 4, 0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.auto_awesome,
-                    size: 18,
-                    color: theme.colorScheme.primary,
+            MouseRegion(
+              cursor: onHeaderDrag == null
+                  ? MouseCursor.defer
+                  : SystemMouseCursors.move,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: onHeaderDrag == null
+                    ? null
+                    : (details) => onHeaderDrag!(details.delta),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 4, 0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.drag_indicator,
+                        size: 18,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.action?.menuLabel ?? 'AI',
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      if (state.hasResponse)
+                        IconButton(
+                          tooltip: 'Expand',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: busy ? null : onExpand,
+                          icon: const Icon(Icons.open_in_full, size: 18),
+                        ),
+                      if (onMinimize != null)
+                        IconButton(
+                          tooltip: 'Hide',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: onMinimize,
+                          icon: const Icon(Icons.minimize, size: 18),
+                        ),
+                      IconButton(
+                        tooltip: 'Close',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onIgnore,
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      state.action?.menuLabel ?? 'AI',
-                      style: theme.textTheme.titleSmall,
-                    ),
-                  ),
-                  if (state.hasResponse)
-                    IconButton(
-                      tooltip: 'Expand',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: busy ? null : onExpand,
-                      icon: const Icon(Icons.open_in_full, size: 18),
-                    ),
-                  IconButton(
-                    tooltip: 'Ignore',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: onIgnore,
-                    icon: const Icon(Icons.close, size: 18),
-                  ),
-                ],
+                ),
               ),
             ),
             Padding(
@@ -977,7 +1202,6 @@ class _InlineAiPanelCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
     );
   }
 

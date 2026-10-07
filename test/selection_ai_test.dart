@@ -48,6 +48,27 @@ void main() {
       expect(MarkdownSelectionEditor.locate(_md, 'not in document'), isNull);
       expect(MarkdownSelectionEditor.locate(_md, '   '), isNull);
     });
+
+    test('maps list items selected with rendered bullets', () {
+      final r = MarkdownSelectionEditor.locate(
+        _md,
+        '• Delivery asks whether the project was managed well.',
+      );
+      expect(r, isNotNull);
+      expect(_md.substring(r!.start, r.end), contains('Delivery asks'));
+    });
+
+    test('maps a multi-item list selection across markdown markers', () {
+      final r = MarkdownSelectionEditor.locate(
+        _md,
+        'Delivery asks whether the project was managed well.\n'
+        'System asks whether the product works.',
+      );
+      expect(r, isNotNull);
+      final hit = _md.substring(r!.start, r.end);
+      expect(hit, contains('Delivery asks'));
+      expect(hit, contains('product works'));
+    });
   });
 
   group('MarkdownSelectionEditor apply', () {
@@ -70,6 +91,20 @@ void main() {
       final idx = out.indexOf('> Note');
       expect(idx, greaterThan(out.indexOf('organizational change.')));
       expect(idx, lessThan(out.indexOf('- Delivery')));
+    });
+
+    test('insertBelow finds text when selection includes list bullets', () {
+      final out = MarkdownSelectionEditor.insertBelow(
+        _md,
+        '• Delivery asks whether the project was managed well.',
+        'Inserted note.',
+      );
+      expect(out, isNotNull);
+      expect(out, contains('Inserted note.'));
+      expect(
+        out!.indexOf('Inserted note.'),
+        greaterThan(out.indexOf('managed well.')),
+      );
     });
 
     test('insertBelow at the last block appends', () {
