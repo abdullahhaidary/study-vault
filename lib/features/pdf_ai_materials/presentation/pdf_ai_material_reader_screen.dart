@@ -23,6 +23,7 @@ import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
+import '../../ai_questions/presentation/live_quiz_launch.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/services/ai_chat_navigation.dart';
@@ -614,8 +615,23 @@ class _PdfAiMaterialReaderScreenState
     );
   }
 
+  // Batch quiz-set builder. Ask me questions uses the live tutor instead.
+  // ignore: unused_element
   Future<void> _generateQuestions() {
     return showGenerateQuestionsSheet(
+      context,
+      ref,
+      launch: QuestionSourceLaunches.forPdfAiMaterial(
+        ref: ref,
+        materialId: widget.materialId,
+        filePath: widget.filePath,
+        type: widget.type,
+      ),
+    );
+  }
+
+  Future<void> _askMeQuestions() {
+    return showLiveQuizLaunch(
       context,
       ref,
       launch: QuestionSourceLaunches.forPdfAiMaterial(
@@ -934,7 +950,7 @@ class _PdfAiMaterialReaderScreenState
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: _generateQuestions,
+                          onPressed: _askMeQuestions,
                           icon: const Icon(Icons.quiz_outlined),
                           label: const Text('Ask me questions'),
                         ),
@@ -1127,7 +1143,7 @@ class _PdfAiMaterialReaderScreenState
                                       TextButton.icon(
                                         onPressed: _generating
                                             ? null
-                                            : _generateQuestions,
+                                            : _askMeQuestions,
                                         icon: const Icon(
                                           Icons.quiz_outlined,
                                           size: 18,
@@ -1195,7 +1211,7 @@ class _PdfAiMaterialReaderScreenState
                                       child: OutlinedButton.icon(
                                         onPressed: _generating
                                             ? null
-                                            : _generateQuestions,
+                                            : _askMeQuestions,
                                         icon: const Icon(Icons.quiz_outlined),
                                         label: const Text('Ask me questions'),
                                       ),

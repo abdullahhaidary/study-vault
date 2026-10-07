@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
+import '../services/live_quiz_service.dart';
 import '../services/quiz_generation_service.dart';
 import '../services/quiz_session_service.dart';
 
@@ -16,6 +17,17 @@ final quizGenerationServiceProvider = Provider<QuizGenerationService>((ref) {
 
 final quizSessionServiceProvider = Provider<QuizSessionService>((ref) {
   return QuizSessionService(ref.watch(databaseProvider));
+});
+
+final liveQuizServiceProvider = Provider<LiveQuizService>((ref) {
+  return LiveQuizService(
+    client: RoutingLiveQuizCompletionClient(
+      gemini: ref.watch(geminiAiServiceProvider),
+      deepSeek: ref.watch(deepseekAiServiceProvider),
+      newApi: ref.watch(newApiClaudeServiceProvider),
+    ),
+    settings: ref.watch(aiSettingsStoreProvider),
+  );
 });
 
 final questionSetsForLessonProvider =
