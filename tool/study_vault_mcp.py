@@ -1371,6 +1371,9 @@ def add_lesson(db, args):
 
 ATTACH_MIME = {
     ".pdf": "application/pdf",
+    ".md": "text/markdown",
+    ".markdown": "text/markdown",
+    ".txt": "text/plain",
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
@@ -1389,7 +1392,8 @@ def attach_file(db, args):
     mime = ATTACH_MIME.get(ext)
     if mime is None:
         raise ToolError(
-            "Only PDF and image files can be attached; convert it first.")
+            "Only PDF, markdown/text, and image files can be attached; "
+            "convert it first.")
     title = (args.get("title") or os.path.basename(path)).strip()[:300]
     if not title:
         raise ToolError("title is empty.")

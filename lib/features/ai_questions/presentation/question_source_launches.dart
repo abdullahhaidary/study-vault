@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../lessons/data/material_mime.dart';
 import '../../pdf_ai_materials/data/pdf_ai_material_providers.dart';
 import '../../pdf_ai_materials/data/pdf_ai_preferred_store.dart';
 import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
@@ -273,7 +276,7 @@ abstract final class QuestionSourceLaunches {
         );
       case QuestionSourceType.page:
         final page = currentPage ?? pageNumber ?? 1;
-        final pages = await PdfTextExtractor.extractPages(
+        final pages = await _extractDocumentPages(
           filePath: filePath,
           pageNumbers: {page},
         );
@@ -292,7 +295,7 @@ abstract final class QuestionSourceLaunches {
           if (currentPage != null) wanted = {currentPage};
           if (pageNumber != null) wanted = {...wanted, pageNumber};
         }
-        final pages = await PdfTextExtractor.extractPages(
+        final pages = await _extractDocumentPages(
           filePath: filePath,
           pageNumbers: wanted.isEmpty ? null : wanted,
         );
@@ -304,7 +307,7 @@ abstract final class QuestionSourceLaunches {
           filePath: filePath,
         );
       case QuestionSourceType.material:
-        final pages = await PdfTextExtractor.extractPages(filePath: filePath);
+        final pages = await _extractDocumentPages(filePath: filePath);
         return QuestionSourceBuilder.fromMaterial(
           pages: pages,
           materialId: materialId,
@@ -413,6 +416,26 @@ abstract final class QuestionSourceLaunches {
       subjectId: subjectId,
       filePath: filePath,
       referenceLabel: kind.shortName,
+    );
+  }
+
+  static Future<List<SourcePageText>> _extractDocumentPages({
+    required String filePath,
+    Set<int>? pageNumbers,
+  }) async {
+    if (isTextDocumentPath(filePath)) {
+      final text = await File(filePath).readAsString();
+      final page = SourcePageText(pageNumber: 1, text: text);
+      if (pageNumbers != null &&
+          pageNumbers.isNotEmpty &&
+          !pageNumbers.contains(1)) {
+        return const [];
+      }
+      return [page];
+    }
+    return PdfTextExtractor.extractPages(
+      filePath: filePath,
+      pageNumbers: pageNumbers,
     );
   }
 }

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// Local file storage for lesson materials (PDFs and images).
+/// Local file storage for lesson materials (PDFs, images, and text documents).
 ///
 /// Files live under:
 /// `{documents}/study_vault_files/lessons/{lessonId}/{storedFileName}`
@@ -42,6 +42,21 @@ class MaterialStorage {
     return File(sourcePath).copy(targetPath);
   }
 
+  /// Writes UTF-8 [contents] into the lesson folder as [storedFileName].
+  static Future<File> writeText({
+    required String lessonId,
+    required String storedFileName,
+    required String contents,
+  }) async {
+    final targetPath = await absolutePath(
+      lessonId: lessonId,
+      storedFileName: storedFileName,
+    );
+    final file = File(targetPath);
+    await file.writeAsString(contents, flush: true);
+    return file;
+  }
+
   /// Legacy alias used by older call sites.
   static Future<File> importPdf({
     required String lessonId,
@@ -69,7 +84,7 @@ class MaterialStorage {
     }
   }
 
-  /// Removes the whole lesson folder (all attached PDFs / images).
+  /// Removes the whole lesson folder (all attached materials).
   static Future<void> deleteLessonDir(String lessonId) async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory(

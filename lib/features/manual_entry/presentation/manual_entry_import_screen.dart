@@ -7,7 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
-import '../../lessons/data/materials_providers.dart' show isPdfMimeType;
+import '../../lessons/data/materials_providers.dart' show isDocumentMimeType;
 import '../data/manual_entry_providers.dart';
 import '../domain/manual_entry_models.dart';
 import '../domain/manual_entry_plan.dart';
@@ -129,7 +129,7 @@ class _ManualEntryImportScreenState
       _lessonId = id;
       _pdfs = [
         for (final m in materials)
-          if (isPdfMimeType(m.mimeType)) m,
+          if (isDocumentMimeType(m.mimeType)) m,
       ];
       _pdfId = _pdfs.length == 1 ? _pdfs.first.id : null;
     });

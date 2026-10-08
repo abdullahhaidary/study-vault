@@ -6,6 +6,7 @@ import '../features/classes/presentation/class_details_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/lesson_images_screen.dart';
+import '../features/lessons/presentation/markdown_study_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/manual_entry/presentation/manual_entry_import_screen.dart';
 import '../features/ai_questions/presentation/question_sets_screen.dart';
@@ -30,6 +31,7 @@ abstract final class AppRoutes {
   static const lessonDetails = '/lesson';
   static const pdfStudy = '/pdf-study';
   static const imageStudy = '/image-study';
+  static const markdownStudy = '/markdown-study';
   static const search = '/search';
   static const aiChat = '/ai-chat';
   static const favorites = '/favorites';
@@ -209,6 +211,17 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
           title: args['title']!,
           filePath: args['filePath']!,
           focusPinId: args['focusPinId'],
+        ),
+      );
+
+    case AppRoutes.markdownStudy:
+      final args = settings.arguments as Map<String, String>;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => MarkdownStudyScreen(
+          resourceId: args['resourceId']!,
+          title: args['title']!,
+          filePath: args['filePath']!,
         ),
       );
 

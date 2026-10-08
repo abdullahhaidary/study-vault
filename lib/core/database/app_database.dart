@@ -1562,6 +1562,12 @@ class AppDatabase extends _$AppDatabase {
     return into(lessonMaterials).insert(entry);
   }
 
+  Future<void> touchLessonMaterial(String id, {DateTime? updatedAt}) {
+    return (update(lessonMaterials)..where((t) => t.id.equals(id))).write(
+      LessonMaterialsCompanion(updatedAt: Value(updatedAt ?? DateTime.now())),
+    );
+  }
+
   Future<void> deleteLessonMaterial(String id) async {
     final pinIds = await (select(
       studyPins,

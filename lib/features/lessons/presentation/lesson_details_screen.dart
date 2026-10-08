@@ -23,12 +23,14 @@ import '../data/lesson_progress_providers.dart';
 import '../domain/lesson_progress.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_entry_button.dart';
+import '../../../core/navigation/study_navigator.dart';
 import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
+import 'create_markdown_material_dialog.dart';
 import 'lesson_images_screen.dart';
 
-/// Lesson page — attach and open local PDF / image study materials.
+/// Lesson page — attach and open local PDF / text / image study materials.
 class LessonDetailsScreen extends ConsumerWidget {
   const LessonDetailsScreen({super.key, required this.lessonId});
 
@@ -51,6 +53,59 @@ class LessonDetailsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _attachMarkdown(BuildContext context, WidgetRef ref) async {
+    try {
+      final material = await showCreateMarkdownMaterialDialog(
+        context,
+        lessonId: lessonId,
+      );
+      if (material != null && context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Added ${material.title}')));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not add text document: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showAttachOptions(BuildContext context, WidgetRef ref) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Attach PDF'),
+              subtitle: const Text('Import a PDF file'),
+              onTap: () => Navigator.pop(context, 'pdf'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.article_outlined),
+              title: const Text('Add text document'),
+              subtitle: const Text('Paste markdown or plain text'),
+              onTap: () => Navigator.pop(context, 'markdown'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted || choice == null) return;
+    if (choice == 'pdf') {
+      await _attachPdf(context, ref);
+    } else if (choice == 'markdown') {
+      await _attachMarkdown(context, ref);
+    }
+  }
+
   Future<void> _openMaterial(
     BuildContext context,
     LessonMaterial material,
@@ -58,20 +113,8 @@ class LessonDetailsScreen extends ConsumerWidget {
     final path = await materialAbsolutePath(material);
     if (!context.mounted) return;
 
-    if (isImageMimeType(material.mimeType)) {
-      await Navigator.of(context).pushNamed(
-        AppRoutes.imageStudy,
-        arguments: {
-          'resourceId': material.id,
-          'title': material.title,
-          'filePath': path,
-        },
-      );
-      return;
-    }
-
     await Navigator.of(context).pushNamed(
-      AppRoutes.pdfStudy,
+      StudyNavigator.studyRouteForMime(material.mimeType),
       arguments: {
         'resourceId': material.id,
         'title': material.title,
@@ -85,10 +128,10 @@ class LessonDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     LessonMaterial material,
   ) async {
-    final isImage = isImageMimeType(material.mimeType);
+    final kind = materialKindLabel(material.mimeType);
     final confirmed = await confirmDelete(
       context,
-      title: isImage ? 'Remove image?' : 'Remove PDF?',
+      title: 'Remove $kind?',
       message:
           '"${material.title}" will be removed from this lesson and deleted '
           'from local Study Vault storage. Study Pins, AI materials, and '
@@ -107,8 +150,8 @@ class LessonDetailsScreen extends ConsumerWidget {
       context,
       title: 'Delete lesson?',
       message:
-          '"${lesson.name}" and all of its PDFs, images, notes, pins, '
-          'flashcards, and quizzes will be permanently deleted.',
+          '"${lesson.name}" and all of its PDFs, text documents, images, '
+          'notes, pins, flashcards, and quizzes will be permanently deleted.',
     );
     if (!confirmed || !context.mounted) return;
     Navigator.of(context).pop();
@@ -120,23 +163,23 @@ class LessonDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     List<LessonMaterial> materials,
   ) async {
-    final pdfs = [
+    final documents = [
       for (final material in materials)
-        if (isPdfMimeType(material.mimeType)) material,
+        if (isDocumentMimeType(material.mimeType)) material,
     ];
-    if (pdfs.isEmpty) {
+    if (documents.isEmpty) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Attach a PDF to this chapter to use AI Study Materials.',
+            'Attach a PDF or text document to use AI Study Materials.',
           ),
         ),
       );
       return;
     }
 
-    LessonMaterial? selected = pdfs.length == 1 ? pdfs.first : null;
+    LessonMaterial? selected = documents.length == 1 ? documents.first : null;
     selected ??= await showModalBottomSheet<LessonMaterial>(
       context: context,
       showDragHandle: true,
@@ -148,15 +191,20 @@ class LessonDetailsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Text(
-                'Choose a PDF',
+                'Choose a document',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            for (final pdf in pdfs)
+            for (final doc in documents)
               ListTile(
-                leading: const Icon(Icons.picture_as_pdf_outlined),
-                title: Text(pdf.title),
-                onTap: () => Navigator.pop(context, pdf),
+                leading: Icon(
+                  isTextDocumentMimeType(doc.mimeType)
+                      ? Icons.article_outlined
+                      : Icons.picture_as_pdf_outlined,
+                ),
+                title: Text(doc.title),
+                subtitle: Text(materialKindLabel(doc.mimeType)),
+                onTap: () => Navigator.pop(context, doc),
               ),
             const SizedBox(height: 8),
           ],
@@ -270,9 +318,9 @@ class LessonDetailsScreen extends ConsumerWidget {
             ),
           ],
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _attachPdf(context, ref),
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('Attach PDF'),
+            onPressed: () => _showAttachOptions(context, ref),
+            icon: const Icon(Icons.attach_file),
+            label: const Text('Add attachment'),
           ),
           bodySlivers: [
             SliverToBoxAdapter(
@@ -448,13 +496,13 @@ class LessonDetailsScreen extends ConsumerWidget {
       error: (error, _) =>
           const AppErrorState(message: 'Could not load materials.'),
       data: (materials) {
-        final pdfs = [
+        final documents = [
           for (final material in materials)
-            if (isPdfMimeType(material.mimeType)) material,
+            if (isDocumentMimeType(material.mimeType)) material,
         ];
-        if (pdfs.isEmpty) {
+        if (documents.isEmpty) {
           return Text(
-            'No PDFs yet. Attach a PDF to study here.',
+            'No documents yet. Attach a PDF or add a text document to study here.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -463,13 +511,15 @@ class LessonDetailsScreen extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final material in pdfs)
+            for (final material in documents)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: GroupedItemTile(
                   title: material.title,
-                  subtitle: 'PDF',
-                  icon: Icons.picture_as_pdf_outlined,
+                  subtitle: materialKindLabel(material.mimeType),
+                  icon: isTextDocumentMimeType(material.mimeType)
+                      ? Icons.article_outlined
+                      : Icons.picture_as_pdf_outlined,
                   onTap: () => _openMaterial(context, material),
                   onDelete: () => _confirmDelete(context, ref, material),
                   deleteLabel: 'Remove',

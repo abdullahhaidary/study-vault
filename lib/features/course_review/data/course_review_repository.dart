@@ -4,7 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
-import '../../lessons/data/materials_providers.dart' show isPdfMimeType;
+import '../../lessons/data/materials_providers.dart' show isDocumentMimeType;
 import '../domain/course_review_models.dart';
 
 /// Reads a subject's Course Review and the state of every source PDF.
@@ -55,7 +55,7 @@ class CourseReviewRepository {
                   (t) => OrderingTerm.asc(t.createdAt),
                 ]))
               .get();
-    final pdfs = materials.where((m) => isPdfMimeType(m.mimeType)).toList();
+    final pdfs = materials.where((m) => isDocumentMimeType(m.mimeType)).toList();
     final pdfIds = [for (final m in pdfs) m.id];
 
     final lessonMaterials = pdfIds.isEmpty

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/routes.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/navigation/study_navigator.dart';
 import '../../../core/storage/material_storage.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../flashcards/data/flashcards_providers.dart';
-import '../../lessons/data/materials_providers.dart';
 import '../data/quiz_providers.dart';
 import '../domain/quiz_models.dart';
 import 'quiz_results_screen.dart';
@@ -208,9 +207,7 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
       storedFileName: material.storedFileName,
     );
     if (!mounted) return;
-    final route = isImageMimeType(material.mimeType)
-        ? AppRoutes.imageStudy
-        : AppRoutes.pdfStudy;
+    final route = StudyNavigator.studyRouteForMime(material.mimeType);
     await Navigator.of(context).pushNamed(
       route,
       arguments: <String, String>{

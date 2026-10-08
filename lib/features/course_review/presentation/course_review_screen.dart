@@ -199,8 +199,9 @@ class _CourseReviewScreenState extends ConsumerState<CourseReviewScreen> {
     if (state.sources.isEmpty) {
       return const EmptyState(
         icon: Icons.picture_as_pdf_outlined,
-        title: 'No PDFs in this subject yet',
-        message: 'Attach lecture PDFs to lessons, then build the review here.',
+        title: 'No documents in this subject yet',
+        message:
+            'Attach lecture PDFs or text documents to lessons, then build the review here.',
       );
     }
     final missing = state.sources

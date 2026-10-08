@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/storage/material_storage.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/services/pdf_text_extractor.dart';
+import '../../lessons/data/material_mime.dart';
 import '../../search/domain/study_search_result.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../domain/ai_chat_models.dart';
@@ -275,8 +276,7 @@ class ChatContextResolver {
     required String id,
     required int cap,
   }) async {
-    final mime = material.mimeType.toLowerCase();
-    if (!mime.contains('pdf')) {
+    if (!isDocumentMimeType(material.mimeType)) {
       return AiContextItem(
         kind: kind,
         id: id,
@@ -304,7 +304,9 @@ class ChatContextResolver {
     }
 
     try {
-      final pages = await extractPages(filePath: path);
+      final pages = isTextDocumentPath(path)
+          ? [SourcePageText(pageNumber: 1, text: await File(path).readAsString())]
+          : await extractPages(filePath: path);
       if (pages.isEmpty) {
         return AiContextItem(
           kind: kind,
@@ -349,7 +351,7 @@ class ChatContextResolver {
         title: title,
         lessonId: material.lessonId,
         materialId: material.id,
-        emptyReason: 'Could not read this PDF.',
+        emptyReason: 'Could not read this document.',
       );
     }
   }

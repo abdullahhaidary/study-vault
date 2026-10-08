@@ -36,7 +36,9 @@ class CourseReviewEntryCard extends ConsumerWidget {
 
   static String _subtitle(CourseReviewState state) {
     final total = state.included.length;
-    if (total == 0) return 'Add PDFs to lessons to build a Course Review';
+    if (total == 0) {
+      return 'Add PDFs or text documents to lessons to build a Course Review';
+    }
     final added = state.withSections.length;
     final pending =
         state.count(CourseReviewSourceStatus.notAdded) +

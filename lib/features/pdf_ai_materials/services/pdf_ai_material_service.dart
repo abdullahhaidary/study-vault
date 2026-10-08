@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
@@ -14,6 +15,7 @@ import '../../ai_assistant/services/deepseek_ai_service.dart';
 import '../../ai_assistant/services/gemini_ai_service.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/services/pdf_text_extractor.dart';
+import '../../lessons/data/material_mime.dart';
 import '../domain/pdf_ai_material_models.dart';
 
 class PdfAiCompletion {
@@ -142,9 +144,11 @@ class PdfAiMaterialService {
     required String title,
     required String filePath,
   }) async {
-    final pages = await _textSource.extractAllPages(filePath);
+    final pages = isTextDocumentPath(filePath)
+        ? await _pagesFromTextFile(filePath)
+        : await _textSource.extractAllPages(filePath);
     if (pages.isEmpty) {
-      throw StateError('The PDF has no pages that can be processed.');
+      throw StateError('The document has no pages that can be processed.');
     }
     final document = PdfDocumentRepresentation.build(
       title: title,
@@ -152,10 +156,21 @@ class PdfAiMaterialService {
     );
     if (document.extractedCharacterCount == 0) {
       throw StateError(
-        'This PDF has no extractable text. OCR is not available yet.',
+        isTextDocumentPath(filePath)
+            ? 'This text document is empty.'
+            : 'This PDF has no extractable text. OCR is not available yet.',
       );
     }
     return document;
+  }
+
+  Future<List<SourcePageText>> _pagesFromTextFile(String filePath) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw StateError('File is missing on this device.');
+    }
+    final text = await file.readAsString();
+    return [SourcePageText(pageNumber: 1, text: text)];
   }
 
   Future<String> sourceFingerprint({

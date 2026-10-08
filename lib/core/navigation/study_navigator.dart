@@ -214,10 +214,14 @@ abstract final class StudyNavigator {
       'initialPage': ?initialPage?.toString(),
     };
 
-    final route = isImageMimeType(mimeType ?? material.mimeType)
-        ? AppRoutes.imageStudy
-        : AppRoutes.pdfStudy;
+    final route = studyRouteForMime(mimeType ?? material.mimeType);
 
     await Navigator.of(context).pushNamed(route, arguments: args);
+  }
+
+  static String studyRouteForMime(String mimeType) {
+    if (isImageMimeType(mimeType)) return AppRoutes.imageStudy;
+    if (isTextDocumentMimeType(mimeType)) return AppRoutes.markdownStudy;
+    return AppRoutes.pdfStudy;
   }
 }
