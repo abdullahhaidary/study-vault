@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
@@ -85,35 +86,33 @@ class LessonDetailsScreen extends ConsumerWidget {
     LessonMaterial material,
   ) async {
     final isImage = isImageMimeType(material.mimeType);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isImage ? 'Remove image?' : 'Remove PDF?'),
-        content: Text(
+    final confirmed = await confirmDelete(
+      context,
+      title: isImage ? 'Remove image?' : 'Remove PDF?',
+      message:
           '"${material.title}" will be removed from this lesson and deleted '
-          'from local Study Vault storage. Study Pins on this resource will '
-          'also be removed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+          'from local Study Vault storage. Study Pins, AI materials, and '
+          'quizzes for this attachment will also be removed.',
+      confirmLabel: 'Remove',
     );
+    if (confirmed) await deleteLessonMaterial(ref, material: material);
+  }
 
-    if (confirmed == true) {
-      await deleteLessonMaterial(ref, material: material);
-    }
+  Future<void> _confirmDeleteLesson(
+    BuildContext context,
+    WidgetRef ref,
+    Lesson lesson,
+  ) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete lesson?',
+      message:
+          '"${lesson.name}" and all of its PDFs, images, notes, pins, '
+          'flashcards, and quizzes will be permanently deleted.',
+    );
+    if (!confirmed || !context.mounted) return;
+    Navigator.of(context).pop();
+    await deleteLesson(ref, lessonId: lesson.id);
   }
 
   Future<void> _openAiStudyMaterials(
@@ -250,11 +249,23 @@ class LessonDetailsScreen extends ConsumerWidget {
                   Navigator.of(
                     context,
                   ).pushNamed(AppRoutes.manualEntry, arguments: lessonId);
+                } else if (value == 'delete') {
+                  _confirmDeleteLesson(context, ref, lesson);
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit lesson')),
-                PopupMenuItem(value: 'import', child: Text('Import from JSON')),
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'edit', child: Text('Edit lesson')),
+                const PopupMenuItem(
+                  value: 'import',
+                  child: Text('Import from JSON'),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(
+                    'Delete lesson',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
               ],
             ),
           ],

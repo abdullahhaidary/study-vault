@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/desktop_frame.dart';
 import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -28,34 +29,47 @@ class ClassDetailsScreen extends ConsumerWidget {
     WidgetRef ref,
     SubjectGroup group,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete group?'),
-        content: Text(
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete group?',
+      message:
           '"${group.name}" will be deleted. Subjects inside it will become '
           'ungrouped — they will not be deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
     );
+    if (confirmed) await deleteSubjectGroup(ref, group.id);
+  }
 
-    if (confirmed == true) {
-      await deleteSubjectGroup(ref, group.id);
-    }
+  Future<void> _confirmDeleteSubject(
+    BuildContext context,
+    WidgetRef ref,
+    Subject subject,
+  ) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete subject?',
+      message:
+          '"${subject.name}" and every lesson, attachment, note, pin, '
+          'flashcard, quiz, and course review under it will be permanently '
+          'deleted.',
+    );
+    if (confirmed) await deleteSubject(ref, subjectId: subject.id);
+  }
+
+  Future<void> _confirmDeleteClass(
+    BuildContext context,
+    WidgetRef ref,
+    StudyClass classItem,
+  ) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete class?',
+      message:
+          '"${classItem.name}" and every subject, lesson, and attachment '
+          'inside it will be permanently deleted.',
+    );
+    if (!confirmed || !context.mounted) return;
+    Navigator.of(context).pop();
+    await deleteClass(ref, classId: classItem.id);
   }
 
   @override
@@ -91,10 +105,22 @@ class ClassDetailsScreen extends ConsumerWidget {
               onSelected: (value) {
                 if (value == 'group') {
                   SubjectGroupDialog.show(context, classId: classId);
+                } else if (value == 'delete') {
+                  _confirmDeleteClass(context, ref, classItem);
                 }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'group', child: Text('Add Subject Group')),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'group',
+                  child: Text('Add Subject Group'),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(
+                    'Delete class',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
               ],
             ),
           ],
@@ -179,6 +205,7 @@ class ClassDetailsScreen extends ConsumerWidget {
         classId: classId,
         existing: subject,
       ),
+      onDelete: () => _confirmDeleteSubject(context, ref, subject),
     );
 
     for (final group in groupList) {

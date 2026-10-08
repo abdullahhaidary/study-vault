@@ -23,6 +23,7 @@ import 'ai_assistant_controller.dart';
 import 'widgets/ai_model_picker.dart';
 import 'ai_flashcards_preview.dart';
 import 'widgets/ai_usage_indicator.dart';
+import 'widgets/deepseek_pricing_banner.dart';
 import 'widgets/voice_input_button.dart';
 
 /// Result of the annotation AI response screen.
@@ -713,14 +714,38 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                     if (selected?.modelName != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          'Model: ${AiModels.displayBadge(provider: selected!.provider, modelName: selected.modelName)}',
-                          style: Theme.of(context).textTheme.labelSmall,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Model: ${AiModels.displayBadge(provider: selected!.provider, modelName: selected.modelName)}',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                            DeepSeekPricingBanner(
+                              visible:
+                                  AiProviderIdX.fromStorage(
+                                    selected.provider,
+                                  ) ==
+                                  AiProviderId.deepseek,
+                              style: DeepSeekPricingBannerStyle.chip,
+                            ),
+                          ],
                         ),
                       ),
                   ],
                 ),
               ),
+            DeepSeekPricingBanner(
+              visible:
+                  AiProviderIdX.fromStorage(
+                    selected?.provider ??
+                        widget.request.selection.providerStorage,
+                  ) ==
+                  AiProviderId.deepseek,
+              style: DeepSeekPricingBannerStyle.compact,
+            ),
             if (_busy && _generatingLabel.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(

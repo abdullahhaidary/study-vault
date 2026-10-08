@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
@@ -13,6 +14,17 @@ class NoteReaderScreen extends ConsumerWidget {
   const NoteReaderScreen({super.key, required this.noteId});
 
   final String noteId;
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, String title) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete note?',
+      message: '"$title" will be permanently deleted.',
+    );
+    if (!confirmed || !context.mounted) return;
+    Navigator.of(context).pop();
+    await deleteStudyNote(ref, noteId: noteId);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,6 +49,14 @@ class NoteReaderScreen extends ConsumerWidget {
                 onPressed: () => Navigator.of(
                   context,
                 ).pushNamed(AppRoutes.noteEditor, arguments: item.id),
+              ),
+              IconButton(
+                tooltip: 'Delete note',
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () => _delete(context, ref, item.title),
               ),
             ],
           ),

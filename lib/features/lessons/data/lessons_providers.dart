@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/storage/material_storage.dart';
 
 const _uuid = Uuid();
 
@@ -70,4 +71,10 @@ Future<void> updateLessonDetails(
       updatedAt: DateTime.now(),
     ),
   );
+}
+
+Future<void> deleteLesson(WidgetRef ref, {required String lessonId}) async {
+  final db = ref.read(databaseProvider);
+  await db.deleteLesson(lessonId);
+  await MaterialStorage.deleteLessonDir(lessonId);
 }

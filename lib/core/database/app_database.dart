@@ -1336,6 +1336,63 @@ class AppDatabase extends _$AppDatabase {
     return update(subjects).replace(subject);
   }
 
+  /// Deletes a subject and every lesson / note / review row under it.
+  ///
+  /// Returns lesson ids whose local material folders should be removed.
+  Future<List<String>> deleteSubject(String subjectId) {
+    return transaction(() async {
+      final lessonIds = await (select(
+        lessons,
+      )..where((t) => t.subjectId.equals(subjectId))).map((r) => r.id).get();
+      for (final lessonId in lessonIds) {
+        await _deleteLessonRows(lessonId);
+      }
+      await (delete(
+        lessonGroups,
+      )..where((t) => t.subjectId.equals(subjectId))).go();
+
+      final noteIds = await (select(
+        studyNotes,
+      )..where((t) => t.subjectId.equals(subjectId))).map((r) => r.id).get();
+      if (noteIds.isNotEmpty) {
+        await deleteFavoritesForEntities(FavoriteEntityType.note, noteIds);
+        await (delete(studyNotes)..where((t) => t.id.isIn(noteIds))).go();
+      }
+
+      final flashcardIds = await (select(
+        flashcards,
+      )..where((t) => t.subjectId.equals(subjectId))).map((r) => r.id).get();
+      if (flashcardIds.isNotEmpty) {
+        await deleteFavoritesForEntities(
+          FavoriteEntityType.flashcard,
+          flashcardIds,
+        );
+        await (delete(flashcards)..where((t) => t.id.isIn(flashcardIds))).go();
+      }
+
+      final quizIds = await (select(
+        questionSets,
+      )..where((t) => t.subjectId.equals(subjectId))).map((r) => r.id).get();
+      for (final id in quizIds) {
+        await deleteQuestionSet(id);
+      }
+
+      await (delete(
+        courseReviewExclusions,
+      )..where((t) => t.subjectId.equals(subjectId))).go();
+      await (delete(
+        courseReviewEntries,
+      )..where((t) => t.subjectId.equals(subjectId))).go();
+      await (delete(
+        referenceBookSubjects,
+      )..where((t) => t.subjectId.equals(subjectId))).go();
+
+      await deleteFavoritesForEntities(FavoriteEntityType.subject, [subjectId]);
+      await (delete(subjects)..where((t) => t.id.equals(subjectId))).go();
+      return lessonIds;
+    });
+  }
+
   // ── Lesson Groups ────────────────────────────────────────
 
   Stream<List<LessonGroup>> watchLessonGroupsForSubject(String subjectId) {
@@ -1409,6 +1466,74 @@ class AppDatabase extends _$AppDatabase {
     return (select(lessons)..where((t) => t.id.equals(id))).watchSingleOrNull();
   }
 
+  /// Deletes a lesson and its materials / notes / flashcards / quizzes.
+  Future<void> deleteLesson(String lessonId) {
+    return transaction(() => _deleteLessonRows(lessonId));
+  }
+
+  Future<void> _deleteLessonRows(String lessonId) async {
+    final materials = await (select(
+      lessonMaterials,
+    )..where((t) => t.lessonId.equals(lessonId))).get();
+    for (final material in materials) {
+      await deleteLessonMaterial(material.id);
+    }
+
+    final noteIds = await (select(
+      studyNotes,
+    )..where((t) => t.lessonId.equals(lessonId))).map((r) => r.id).get();
+    if (noteIds.isNotEmpty) {
+      await deleteFavoritesForEntities(FavoriteEntityType.note, noteIds);
+      await (delete(studyNotes)..where((t) => t.id.isIn(noteIds))).go();
+    }
+
+    final flashcardIds = await (select(
+      flashcards,
+    )..where((t) => t.lessonId.equals(lessonId))).map((r) => r.id).get();
+    if (flashcardIds.isNotEmpty) {
+      await deleteFavoritesForEntities(
+        FavoriteEntityType.flashcard,
+        flashcardIds,
+      );
+      await (delete(flashcards)..where((t) => t.id.isIn(flashcardIds))).go();
+    }
+
+    final quizIds = await (select(
+      questionSets,
+    )..where((t) => t.lessonId.equals(lessonId))).map((r) => r.id).get();
+    for (final id in quizIds) {
+      await deleteQuestionSet(id);
+    }
+
+    await (delete(
+      annotationAiGenerations,
+    )..where((t) => t.lessonId.equals(lessonId))).go();
+
+    await deleteFavoritesForEntities(FavoriteEntityType.lesson, [lessonId]);
+    await (delete(lessons)..where((t) => t.id.equals(lessonId))).go();
+  }
+
+  /// Deletes a class and every subject under it.
+  ///
+  /// Returns lesson ids whose local material folders should be removed.
+  Future<List<String>> deleteClass(String classId) {
+    return transaction(() async {
+      final subjectIds = await (select(
+        subjects,
+      )..where((t) => t.classId.equals(classId))).map((r) => r.id).get();
+      final lessonIds = <String>[];
+      for (final subjectId in subjectIds) {
+        lessonIds.addAll(await deleteSubject(subjectId));
+      }
+      await (delete(
+        subjectGroups,
+      )..where((t) => t.classId.equals(classId))).go();
+      await deleteFavoritesForEntities(FavoriteEntityType.class_, [classId]);
+      await (delete(classes)..where((t) => t.id.equals(classId))).go();
+      return lessonIds;
+    });
+  }
+
   // ── Lesson Materials ─────────────────────────────────────
 
   Stream<List<LessonMaterial>> watchMaterialsForLesson(String lessonId) {
@@ -1451,6 +1576,21 @@ class AppDatabase extends _$AppDatabase {
     await (delete(studyPins)..where((t) => t.resourceId.equals(id))).go();
     await (delete(
       materialBookmarks,
+    )..where((t) => t.materialId.equals(id))).go();
+    await (delete(
+      courseReviewExclusions,
+    )..where((t) => t.materialId.equals(id))).go();
+    await (delete(
+      courseReviewEntries,
+    )..where((t) => t.materialId.equals(id))).go();
+    final quizIds = await (select(
+      questionSets,
+    )..where((t) => t.materialId.equals(id))).map((r) => r.id).get();
+    for (final quizId in quizIds) {
+      await deleteQuestionSet(quizId);
+    }
+    await (delete(
+      annotationAiGenerations,
     )..where((t) => t.materialId.equals(id))).go();
     await deleteFavoritesForEntities(FavoriteEntityType.material, [id]);
     await (delete(lessonMaterials)..where((t) => t.id.equals(id))).go();

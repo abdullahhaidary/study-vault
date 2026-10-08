@@ -55,14 +55,14 @@ MarkdownStyleSheet studyMarkdownStyle(
     blockSpacing: 12,
     code: theme.textTheme.bodySmall?.copyWith(
       fontFamily: 'monospace',
-      color: scheme.onSurface,
-      backgroundColor: codeBg,
-      height: 1.45,
+      color: scheme.primary,
+      backgroundColor: scheme.primary.withValues(alpha: 0.08),
+      height: 1.4,
     ),
     codeblockPadding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
     codeblockDecoration: BoxDecoration(
       color: codeBg,
-      borderRadius: AppRadii.smAll,
+      borderRadius: AppRadii.mdAll,
       border: Border.all(color: scheme.outlineVariant),
     ),
   );

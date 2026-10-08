@@ -6,22 +6,21 @@ import 'chart_block.dart';
 import 'chart_spec.dart';
 import 'notation_block.dart';
 import 'notation_spec.dart';
+import 'study_code_block.dart';
 
-/// Renders fenced ```chart blocks as charts; other code blocks keep the
-/// default flutter_markdown look.
+/// Renders fenced ```chart blocks as charts; other code blocks use the
+/// ChatGPT-style highlighted [StudyCodeBlock].
 ///
 /// Usage: `MarkdownBody(builders: chartMarkdownBuilders(styleSheet), ...)`.
-Map<String, MarkdownElementBuilder> chartMarkdownBuilders(
-  MarkdownStyleSheet styleSheet,
-) => {
-  'pre': ChartCodeBlockBuilder(styleSheet),
+Map<String, MarkdownElementBuilder> chartMarkdownBuilders([
+  MarkdownStyleSheet? styleSheet,
+]) => {
+  'pre': ChartCodeBlockBuilder(),
   'notation': NotationElementBuilder(),
 };
 
 class ChartCodeBlockBuilder extends MarkdownElementBuilder {
-  ChartCodeBlockBuilder(this.styleSheet);
-
-  final MarkdownStyleSheet styleSheet;
+  ChartCodeBlockBuilder();
 
   @override
   bool isBlockElement() => true;
@@ -50,7 +49,7 @@ class ChartCodeBlockBuilder extends MarkdownElementBuilder {
     }
     final notation = NotationSpec.tryParse(source, language: language);
     if (notation != null) return NotationBlock(spec: notation);
-    return _defaultCodeBlock(source, language: language);
+    return StudyCodeBlock(source: source, language: language);
   }
 
   /// `language-xyz` class → `xyz`.
@@ -59,86 +58,5 @@ class ChartCodeBlockBuilder extends MarkdownElementBuilder {
     if (cls == null) return null;
     const prefix = 'language-';
     return cls.startsWith(prefix) ? cls.substring(prefix.length).trim() : cls;
-  }
-
-  Widget _defaultCodeBlock(String source, {String? language}) {
-    final text = source.endsWith('\n')
-        ? source.substring(0, source.length - 1)
-        : source;
-    final lang = language?.trim();
-    final padding =
-        styleSheet.codeblockPadding ??
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
-    final decoration =
-        styleSheet.codeblockDecoration ??
-        BoxDecoration(
-          color: Colors.black12,
-          borderRadius: BorderRadius.circular(8),
-        );
-    final codeStyle =
-        styleSheet.code ??
-        const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.45);
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: decoration,
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (lang != null && lang.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: Text(
-                lang,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: codeStyle.color?.withValues(alpha: 0.7),
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ),
-          _HorizontalScroll(
-            padding: padding,
-            child: Text(text, style: codeStyle),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HorizontalScroll extends StatefulWidget {
-  const _HorizontalScroll({required this.child, this.padding});
-
-  final Widget child;
-  final EdgeInsets? padding;
-
-  @override
-  State<_HorizontalScroll> createState() => _HorizontalScrollState();
-}
-
-class _HorizontalScrollState extends State<_HorizontalScroll> {
-  final _controller = ScrollController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scrollbar(
-      controller: _controller,
-      child: SingleChildScrollView(
-        controller: _controller,
-        scrollDirection: Axis.horizontal,
-        padding: widget.padding,
-        child: widget.child,
-      ),
-    );
   }
 }

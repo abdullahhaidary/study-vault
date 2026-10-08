@@ -10,6 +10,7 @@ import '../../domain/ai_provider.dart';
 import '../../domain/ai_selectable_model.dart';
 import '../../domain/deepseek_model_registry.dart';
 import '../../domain/gemini_model_registry.dart';
+import 'deepseek_pricing_banner.dart';
 
 /// Opens the shared provider/model picker and returns an execution selection.
 Future<AiExecutionSelection?> showAiModelSelector(
@@ -59,31 +60,45 @@ class AiModelPickerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final label = _displayName(selection);
+    final isDeepSeek = selection.provider == AiProviderId.deepseek;
 
-    return OutlinedButton.icon(
-      onPressed: () async {
-        final next = await showAiModelSelector(
-          context,
-          selected: selection,
-          action: action,
-          constraints: constraints,
-        );
-        if (next != null) onChanged(next);
-      },
-      icon: Icon(
-        selection.provider == AiProviderId.gemini
-            ? Icons.auto_awesome
-            : Icons.psychology_outlined,
-        size: compact ? 16 : 18,
-      ),
-      label: Text(
-        compact ? label : '${selection.provider.displayName} · $label',
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
-        textStyle: theme.textTheme.labelMedium,
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        OutlinedButton.icon(
+          onPressed: () async {
+            final next = await showAiModelSelector(
+              context,
+              selected: selection,
+              action: action,
+              constraints: constraints,
+            );
+            if (next != null) onChanged(next);
+          },
+          icon: Icon(
+            selection.provider == AiProviderId.gemini
+                ? Icons.auto_awesome
+                : Icons.psychology_outlined,
+            size: compact ? 16 : 18,
+          ),
+          label: Text(
+            compact ? label : '${selection.provider.displayName} · $label',
+            overflow: TextOverflow.ellipsis,
+          ),
+          style: OutlinedButton.styleFrom(
+            visualDensity: compact
+                ? VisualDensity.compact
+                : VisualDensity.standard,
+            textStyle: theme.textTheme.labelMedium,
+          ),
+        ),
+        DeepSeekPricingBanner(
+          visible: isDeepSeek,
+          style: DeepSeekPricingBannerStyle.chip,
+        ),
+      ],
     );
   }
 }
@@ -225,6 +240,12 @@ class _ModelList extends StatelessWidget {
                 ),
               ),
             ),
+            if (provider == AiProviderId.deepseek) ...[
+              const DeepSeekPricingBanner(
+                style: DeepSeekPricingBannerStyle.full,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             for (final model in items)
               ListTile(
                 enabled: model.enabled,

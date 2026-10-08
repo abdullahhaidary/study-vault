@@ -11,7 +11,7 @@ import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
 import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
-import '../domain/deepseek_pricing_period.dart';
+import 'widgets/deepseek_pricing_banner.dart';
 
 /// Settings → AI Assistant section (multi-provider).
 class AiSettingsSection extends ConsumerStatefulWidget {
@@ -406,7 +406,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 ],
                 if (provider == AiProviderId.deepseek) ...[
                   const SizedBox(height: 12),
-                  const _DeepSeekPricingPeriodBanner(),
+                  const DeepSeekPricingBanner(
+                    style: DeepSeekPricingBannerStyle.full,
+                  ),
                 ],
                 const SizedBox(height: 16),
                 Text(
@@ -792,61 +794,3 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   }
 }
 
-/// Live DeepSeek peak / off-peak pricing indicator (Afghanistan-friendly copy).
-class _DeepSeekPricingPeriodBanner extends StatelessWidget {
-  const _DeepSeekPricingPeriodBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final period = DeepSeekPricingSchedule.now();
-    final isPeak = period == DeepSeekPricingPeriod.peak;
-    final scheme = theme.colorScheme;
-    final accent = isPeak ? scheme.tertiary : scheme.primary;
-    final bg = accent.withValues(alpha: 0.12);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isPeak ? Icons.trending_up : Icons.savings_outlined,
-                  size: 18,
-                  color: accent,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'DeepSeek pricing: ${period.label}',
-                    style: theme.textTheme.titleSmall?.copyWith(color: accent),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              period.shortHint,
-              style: theme.textTheme.labelMedium?.copyWith(color: accent),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              DeepSeekPricingSchedule.afghanistanPeakHint,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -100,6 +101,24 @@ class FlashcardsListScreen extends ConsumerWidget {
                       FavoriteStarButton(
                         entityType: 'flashcard',
                         entityId: card.id,
+                      ),
+                      IconButton(
+                        tooltip: 'Delete flashcard',
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        onPressed: () async {
+                          final confirmed = await confirmDelete(
+                            context,
+                            title: 'Delete flashcard?',
+                            message:
+                                '"${card.front}" will be permanently deleted.',
+                          );
+                          if (confirmed) {
+                            await deleteFlashcard(ref, id: card.id);
+                          }
+                        },
                       ),
                     ],
                   ),

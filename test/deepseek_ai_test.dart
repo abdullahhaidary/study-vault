@@ -87,6 +87,16 @@ void main() {
         DeepSeekPricingPeriod.offPeak,
       ); // 2:30 PM AFT
     });
+
+    test('labels distinguish peak as higher rates', () {
+      expect(DeepSeekPricingPeriod.peak.label, 'Peak');
+      expect(DeepSeekPricingPeriod.peak.shortHint, contains('Higher'));
+      expect(DeepSeekPricingPeriod.offPeak.shortHint, contains('Cheaper'));
+      expect(
+        DeepSeekPricingSchedule.afghanistanPeakHint,
+        contains('Afghanistan'),
+      );
+    });
   });
 
   group('DeepSeekModelRegistry', () {

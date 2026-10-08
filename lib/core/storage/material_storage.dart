@@ -68,4 +68,15 @@ class MaterialStorage {
       await file.delete();
     }
   }
+
+  /// Removes the whole lesson folder (all attached PDFs / images).
+  static Future<void> deleteLessonDir(String lessonId) async {
+    final docs = await getApplicationDocumentsDirectory();
+    final dir = Directory(
+      p.join(docs.path, 'study_vault_files', 'lessons', lessonId),
+    );
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
 }

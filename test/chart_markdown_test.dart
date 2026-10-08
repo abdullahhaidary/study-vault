@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/markdown/chart_block.dart';
 import 'package:study_vault/core/markdown/chart_markdown_builder.dart';
 import 'package:study_vault/core/markdown/chart_spec.dart';
+import 'package:study_vault/core/markdown/study_code_block.dart';
 import 'package:study_vault/core/markdown/study_markdown.dart';
 
 const _bar =
@@ -102,14 +103,17 @@ void main() {
     ) async {
       await tester.pumpWidget(_markdown('```chart\n{oops\n```\n'));
       expect(find.byType(ChartBlock), findsNothing);
+      expect(find.byType(StudyCodeBlock), findsOneWidget);
       expect(find.text('{oops'), findsOneWidget);
     });
 
-    testWidgets('leaves ordinary code blocks untouched', (tester) async {
+    testWidgets('renders ordinary code with highlight panel', (tester) async {
       await tester.pumpWidget(_markdown('```dart\nvoid main() {}\n```\n'));
       expect(find.byType(ChartBlock), findsNothing);
+      expect(find.byType(StudyCodeBlock), findsOneWidget);
       expect(find.text('void main() {}'), findsOneWidget);
-      expect(find.text('dart'), findsOneWidget);
+      expect(find.text('Dart'), findsOneWidget);
+      expect(find.text('Copy'), findsOneWidget);
     });
 
     testWidgets('StudyMarkdown styles fenced code as a code panel', (
@@ -126,18 +130,21 @@ void main() {
           ),
         ),
       );
-      expect(find.text('python'), findsOneWidget);
+      expect(find.byType(StudyCodeBlock), findsOneWidget);
+      expect(find.text('Python'), findsOneWidget);
       expect(find.text('print("hi")'), findsOneWidget);
       expect(find.text('Before'), findsOneWidget);
-      final panel = tester.widget<Container>(
-        find
-            .ancestor(
-              of: find.text('print("hi")'),
-              matching: find.byType(Container),
-            )
-            .first,
-      );
-      expect(panel.decoration, isA<BoxDecoration>());
+      expect(find.text('Copy'), findsOneWidget);
+    });
+  });
+
+  group('StudyCodeBlock language aliases', () {
+    test('normalizes common fence aliases', () {
+      expect(StudyCodeBlock.normalizeLanguage('js'), 'javascript');
+      expect(StudyCodeBlock.normalizeLanguage('py'), 'python');
+      expect(StudyCodeBlock.normalizeLanguage('sh'), 'bash');
+      expect(StudyCodeBlock.displayLanguage('ts'), 'TypeScript');
+      expect(StudyCodeBlock.displayLanguage(null), 'Code');
     });
   });
 }

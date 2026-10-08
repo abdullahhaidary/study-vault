@@ -592,4 +592,99 @@ void main() {
     expect(StudyPinType.fromDb(pin.pinType), StudyPinType.text);
     expect(StudyPinType.fromDb(pin.pinType) == StudyPinType.point, isFalse);
   });
+
+  test('deleteSubject cascades lessons and materials', () async {
+    final now = DateTime.now();
+    await db.insertClass(
+      ClassesCompanion.insert(
+        id: 'class-1',
+        name: 'Class',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertSubject(
+      SubjectsCompanion.insert(
+        id: 'subject-1',
+        classId: 'class-1',
+        name: 'ML',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLesson(
+      LessonsCompanion.insert(
+        id: 'lesson-1',
+        subjectId: 'subject-1',
+        name: 'Intro',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLessonMaterial(
+      LessonMaterialsCompanion.insert(
+        id: 'mat-1',
+        lessonId: 'lesson-1',
+        title: 'Slides',
+        originalFileName: 'slides.pdf',
+        storedFileName: 'slides.pdf',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertStudyNote(
+      StudyNotesCompanion.insert(
+        id: 'note-1',
+        subjectId: const Value('subject-1'),
+        lessonId: const Value('lesson-1'),
+        title: 'Note',
+        content: '[]',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final lessonIds = await db.deleteSubject('subject-1');
+    expect(lessonIds, ['lesson-1']);
+    expect(await db.getSubjectById('subject-1'), isNull);
+    expect(await db.getLessonById('lesson-1'), isNull);
+    expect(await db.getMaterialById('mat-1'), isNull);
+    expect(await db.getStudyNoteById('note-1'), isNull);
+    expect(await db.watchSubjectsForClass('class-1').first, isEmpty);
+  });
+
+  test('deleteClass cascades subjects', () async {
+    final now = DateTime.now();
+    await db.insertClass(
+      ClassesCompanion.insert(
+        id: 'class-1',
+        name: 'Class',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertSubject(
+      SubjectsCompanion.insert(
+        id: 'subject-1',
+        classId: 'class-1',
+        name: 'ML',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await db.insertLesson(
+      LessonsCompanion.insert(
+        id: 'lesson-1',
+        subjectId: 'subject-1',
+        name: 'Intro',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    await db.deleteClass('class-1');
+    expect(await db.watchAllClasses().first, isEmpty);
+    expect(await db.getSubjectById('subject-1'), isNull);
+    expect(await db.getLessonById('lesson-1'), isNull);
+  });
 }

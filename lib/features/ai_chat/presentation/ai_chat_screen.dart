@@ -26,7 +26,9 @@ import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import 'ai_chat_history_screen.dart';
 import 'chat_appearance_sheet.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
+import '../../ai_assistant/presentation/widgets/deepseek_pricing_banner.dart';
 import 'gemini_model_selector.dart';
 import 'widgets/chat_composer.dart';
 import 'widgets/chat_mention_picker.dart';
@@ -460,6 +462,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         GeminiModelRegistry.defaultModelId;
     final modelKnown = AiModels.isKnown(modelId);
     final modelLabel = AiModels.chatDisplayName(modelId);
+    final isDeepSeek =
+        AiProviderIdX.fromModelId(modelId) == AiProviderId.deepseek;
 
     if (chatId == null) {
       _draftHydrated = false;
@@ -569,6 +573,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           size: 20,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
+                        if (isDeepSeek) ...[
+                          const SizedBox(width: 8),
+                          const DeepSeekPricingBanner(
+                            style: DeepSeekPricingBannerStyle.chip,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -619,6 +629,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         appearance: appearance,
         child: Column(
           children: [
+            DeepSeekPricingBanner(
+              visible: isDeepSeek,
+              style: DeepSeekPricingBannerStyle.compact,
+            ),
             if (_errorBanner != null)
               Material(
                 color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),

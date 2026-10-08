@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../data/notes_providers.dart';
 
 /// Reusable compact note list for subject and lesson detail screens.
@@ -28,6 +29,20 @@ class NotesListSection extends ConsumerWidget {
         context,
       ).pushNamed(AppRoutes.noteEditor, arguments: note.id);
     }
+  }
+
+  Future<void> _deleteNote(
+    BuildContext context,
+    WidgetRef ref,
+    String noteId,
+    String title,
+  ) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Delete note?',
+      message: '"$title" will be permanently deleted.',
+    );
+    if (confirmed) await deleteStudyNote(ref, noteId: noteId);
   }
 
   @override
@@ -86,9 +101,32 @@ class NotesListSection extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.outline,
+                trailing: PopupMenuButton<String>(
+                  tooltip: 'Note options',
+                  onSelected: (value) {
+                    if (value == 'open') {
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.noteReader, arguments: note.id);
+                    } else if (value == 'edit') {
+                      Navigator.of(
+                        context,
+                      ).pushNamed(AppRoutes.noteEditor, arguments: note.id);
+                    } else if (value == 'delete') {
+                      _deleteNote(context, ref, note.id, note.title);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'open', child: Text('Open')),
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
+                    ),
+                  ],
                 ),
                 onTap: () => Navigator.of(
                   context,
