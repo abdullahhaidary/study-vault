@@ -72,9 +72,27 @@ void main() {
         expect(instruction, contains(ChartSpec.promptInstruction));
         expect(instruction, contains('"format": "study-vault-pdf-ai"'));
         expect(instruction, contains('"type": "${type.storageValue}"'));
+        expect(instruction, contains('"type":"${type.storageValue}"'));
+        expect(instruction, isNot(contains('<type>')));
         expect(instruction, contains('"content"'));
         expect(instruction, contains('from "Lecture 1"'));
+        expect(instruction, contains('OUTPUT CONTRACT'));
+        expect(instruction, contains('Never an object, array, or nested tree'));
+        expect(instruction, contains(r'every " as \"'));
+        expect(
+          instruction,
+          contains('controls factual claims and topic scope'),
+        );
+        expect(
+          instruction,
+          contains('clearly hypothetical examples are allowed'),
+        );
       }
+      expect(PdfAiPromptBuilder.systemMessage, contains('Avoid fluff'));
+      expect(
+        PdfAiMaterialType.deepExplanation.generationInstruction,
+        contains('do not invent a new curriculum'),
+      );
     });
 
     test('manual JSON extracts typed content and fenced payloads', () {
@@ -100,6 +118,57 @@ void main() {
         ),
         'Kept',
       );
+    });
+
+    test('manual JSON recovers broken escaping and paste wrappers', () {
+      expect(
+        PdfAiManualJson.extractMarkdown(
+          '{"format":"study-vault-pdf-ai","type":"deep_explanation",'
+          '"content":"# Title\\n\\nSay \\"hi\\" and use "raw quotes" safely."}',
+          PdfAiMaterialType.deepExplanation,
+        ),
+        '# Title\n\nSay "hi" and use "raw quotes" safely.',
+      );
+      expect(
+        PdfAiManualJson.extractMarkdown(
+          'From: ai@example.com\n\n'
+          '```json\n'
+          '{"type":"summary","content":"Line one\\nLine "two" done.",}\n'
+          '```\n',
+          PdfAiMaterialType.summary,
+        ),
+        'Line one\nLine "two" done.',
+      );
+      expect(
+        () => PdfAiManualJson.extractMarkdown(
+          '{"format":"study-vault-pdf-ai","type":"deep_explanation",'
+          '"content":{"nested":true}}',
+          PdfAiMaterialType.deepExplanation,
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('manual JSON recovery preserves code fences and LaTeX', () {
+      final recovered = PdfAiManualJson.extractMarkdown(r'''
+Email header
+{"format":"study-vault-pdf-ai","type":"deep_explanation","content":"# Formula
+
+\beta + \frac{a}{b} explains "the result".
+
+```dart
+void main() { print("kept"); }
+```
+
+The token ,} must remain.",}
+Email footer
+''', PdfAiMaterialType.deepExplanation);
+
+      expect(recovered, contains(r'\beta + \frac{a}{b}'));
+      expect(recovered, contains('"the result"'));
+      expect(recovered, contains('```dart'));
+      expect(recovered, contains('void main() { print("kept"); }'));
+      expect(recovered, contains('The token ,} must remain.'));
     });
 
     test('version picker opens the default instead of the latest', () {

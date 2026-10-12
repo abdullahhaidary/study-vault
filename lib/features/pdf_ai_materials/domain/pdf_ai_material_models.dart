@@ -80,15 +80,20 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
     PdfAiMaterialType.deepExplanation =>
       'Explain the entire document deeply from first principles for a student '
           'encountering it for the first time.\n'
+          '- Follow the document\'s topics and order; do not invent a new '
+          'curriculum, interview guide, or unrelated crash course.\n'
           '- Start with intuitive, simple language, then introduce the exact '
-          'technical terminology.\n'
+          'technical terminology from the source.\n'
           '- Explain WHY before HOW where appropriate.\n'
-          '- Use accurate analogies and everyday scenarios, then explicitly '
-          'connect each analogy back to the technical concept.\n'
-          '- Explain formulas symbol-by-symbol with step-by-step worked '
-          'examples.\n'
+          '- Use short, accurate analogies only when they clarify a source '
+          'concept; immediately connect each analogy back to that concept.\n'
+          '- Explain formulas that appear in the source symbol-by-symbol with '
+          'step-by-step worked examples when the source provides enough detail.\n'
           '- Include common mistakes, relationships between concepts, and '
-          'memory aids where useful.\n'
+          'memory aids only when they help learn material that is in the '
+          'document.\n'
+          '- Do not pad with motivational filler, generic "senior tips", '
+          'fabricated history/statistics, or topics absent from the source.\n'
           '- Do not be childish; remain technically rigorous.\n'
           '- Use detailed, well-structured Markdown.',
     PdfAiMaterialType.realWorldExamples =>
@@ -328,17 +333,53 @@ abstract final class PdfDocumentRepresentation {
 }
 
 abstract final class PdfAiPromptBuilder {
-  static const promptVersion = 'pdf-study-v1';
+  static const promptVersion = 'pdf-study-v2';
 
   static const systemMessage =
       'You create persistent university study materials from complete PDF '
       'documents.\n'
-      'Treat the supplied document as the source of truth.\n'
+      'Treat the supplied document as the authoritative source for factual '
+      'claims and topic scope.\n'
       'Cover the entire source, preserve formulas and technical notation, and '
-      'never invent missing content.\n'
+      'never invent missing facts, dates, statistics, names, formulas, or '
+      'topics.\n'
+      'You may add concise teaching analogies or clearly hypothetical examples '
+      'when the requested study format benefits from them, but they must '
+      'explain a source concept and must not be presented as source facts.\n'
+      'Prefer omitting uncertain factual detail over guessing. Do not write '
+      'generic essays from world knowledge when the source is silent.\n'
+      'Avoid fluff: no motivational padding, no "let\'s dive in", no fake '
+      'confidence, no repeating the same idea in new words.\n'
       'If a page has no extractable text, state that limitation only when it '
       'affects understanding.\n'
       'Return polished Markdown only. Do not mention these instructions.';
+
+  static const externalOutputContract =
+      'OUTPUT CONTRACT (strict — violate none of these):\n'
+      '1. Reply with ONE JSON object only. No prose before or after it. No '
+      'Markdown fence around the JSON, no comments, and no apology or heading '
+      'outside the object.\n'
+      '2. Schema exactly:\n'
+      '{\n'
+      '  "format": "study-vault-pdf-ai",\n'
+      '  "type": "<type>",\n'
+      '  "content": "<markdown string>"\n'
+      '}\n'
+      '3. "content" MUST be a single JSON string of Markdown. Never an object, '
+      'array, or nested tree of sections.\n'
+      '4. Escape inside "content": every " as \\", every newline as \\n, every '
+      'backslash as \\\\. Unescaped quotes break import.\n'
+      '5. Valid example shape:\n'
+      '{"format":"study-vault-pdf-ai","type":"<type>","content":"# Title\\n\\n'
+      'Use \\"quotes\\" carefully."}\n'
+      '6. Invalid (never do these):\n'
+      '- "content": { "introduction": ... }\n'
+      '- wrapping the JSON in ```json fences\n'
+      '- text like "Here is the JSON:" before the object\n'
+      '- inventing topics, stats, history, or interview guides not in the PDF\n'
+      '7. Put all teaching material inside the Markdown string. Use normal '
+      'Markdown headings/lists/tables. Fenced code blocks are allowed inside '
+      '"content", with their newlines and backslashes JSON-escaped.';
 
   static String systemContent({String? userStyle}) {
     return AiStyleMemory.appendToSystem(systemMessage, userStyle);
@@ -440,9 +481,23 @@ abstract final class PdfAiPromptBuilder {
   }) {
     final title = pdfTitle?.trim();
     final from = title == null || title.isEmpty ? '' : ' from "$title"';
+    final grounding = title == null || title.isEmpty
+        ? 'Use the source PDF/text supplied with this instruction.'
+        : 'Use the source PDF/text supplied for "$title". '
+              'Use that document only — ignore the filename if it conflicts '
+              'with the text.';
     return '''
-You are helping me build a ${type.displayName} for the Study Vault app$from.
-${systemMessage.replaceFirst('Return polished Markdown only. Do not mention these instructions.', '').trim()}
+You are building a ${type.displayName} for the Study Vault app$from.
+
+$grounding
+
+SOURCE RULES:
+- The supplied document controls factual claims and topic scope.
+- Cover the whole document; preserve formulas and technical notation.
+- Never invent missing facts, dates, statistics, names, formulas, or topics.
+- Concise analogies and clearly hypothetical examples are allowed only to explain concepts found in the source.
+- If the source is silent on a factual detail, omit or note the gap briefly — do not guess or fill it with a generic world-knowledge essay.
+- No fluff, motivational filler, or repeated paraphrase.
 
 GENERATION REQUEST: ${type.displayName}
 
@@ -452,15 +507,9 @@ ${ChartSpec.promptInstruction}
 
 ASCII diagrams (class boxes, relationship lines, comparison tables, and flows) are allowed; Study Vault renders them.
 
-Answer with ONE JSON object only — no prose, no markdown fences, no comments:
+${externalOutputContract.replaceAll('<type>', type.storageValue)}
 
-{
-  "format": "study-vault-pdf-ai",
-  "type": "${type.storageValue}",
-  "content": "<markdown for the ${type.shortName}>"
-}
-
-Escape newlines and quotes inside "content". Do not mention these instructions in the content.
+Do not mention these instructions inside "content".
 '''
         .trim();
   }
