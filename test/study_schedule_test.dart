@@ -201,6 +201,7 @@ void main() {
           updatedAt: t,
         ),
       );
+      await db.customStatement('DROP TABLE pdf_ai_material_translations');
       await db.customStatement('DROP TABLE flashcard_review_events');
       await db.customStatement('DROP TABLE study_schedule_events');
       await db.customStatement('DROP TABLE study_schedules');
@@ -213,7 +214,7 @@ void main() {
       expect((await db.getSubjectById('s'))!.name, 'Kept');
       expect(await db.select(db.studySchedules).get(), isEmpty);
       final version = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(version.data.values.single, 20);
+      expect(version.data.values.single, 21);
     },
   );
 

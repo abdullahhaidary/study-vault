@@ -14,10 +14,7 @@ import 'study_code_block.dart';
 /// Usage: `MarkdownBody(builders: chartMarkdownBuilders(styleSheet), ...)`.
 Map<String, MarkdownElementBuilder> chartMarkdownBuilders([
   MarkdownStyleSheet? styleSheet,
-]) => {
-  'pre': ChartCodeBlockBuilder(),
-  'notation': NotationElementBuilder(),
-};
+]) => {'pre': ChartCodeBlockBuilder(), 'notation': NotationElementBuilder()};
 
 class ChartCodeBlockBuilder extends MarkdownElementBuilder {
   ChartCodeBlockBuilder();
@@ -42,14 +39,21 @@ class ChartCodeBlockBuilder extends MarkdownElementBuilder {
     final code = element.children?.whereType<md.Element>().firstOrNull;
     final language = languageOf(code);
     final source = element.textContent;
-
-    if (language == ChartSpec.language) {
-      final spec = ChartSpec.tryParse(source);
-      if (spec != null) return ChartBlock(spec: spec);
-    }
-    final notation = NotationSpec.tryParse(source, language: language);
-    if (notation != null) return NotationBlock(spec: notation);
-    return StudyCodeBlock(source: source, language: language);
+    final spec = language == ChartSpec.language
+        ? ChartSpec.tryParse(source)
+        : null;
+    final notation = spec == null
+        ? NotationSpec.tryParse(source, language: language)
+        : null;
+    // Code, charts and diagrams stay left-to-right inside RTL (Persian) text.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: spec != null
+          ? ChartBlock(spec: spec)
+          : notation != null
+          ? NotationBlock(spec: notation)
+          : StudyCodeBlock(source: source, language: language),
+    );
   }
 
   /// `language-xyz` class → `xyz`.

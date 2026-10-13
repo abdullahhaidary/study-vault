@@ -1,7 +1,14 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:study_vault/app/routes.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/core/database/database_provider.dart';
+import 'package:study_vault/features/flashcards/presentation/flashcard_study_screen.dart';
+import 'package:study_vault/features/flashcards/presentation/flashcards_list_screen.dart';
+import 'package:study_vault/features/favorites/data/favorites_providers.dart';
 import 'package:study_vault/features/flashcards/data/flashcards_providers.dart';
 import 'package:study_vault/features/study_review/domain/review_models.dart';
 import 'package:study_vault/features/study_schedule/domain/schedule_day.dart';
@@ -88,6 +95,105 @@ void main() {
       repository.rate('missing', ReviewRating.good),
       throwsStateError,
     );
+  });
+
+  testWidgets('subject-only card opens study without a lesson', (tester) async {
+    await tester.runAsync(() async {
+      await seed();
+      final now = DateTime.now();
+      await db.insertFlashcard(
+        FlashcardsCompanion.insert(
+          id: 'subject-card',
+          subjectId: const Value('s'),
+          front: 'Subject-only question',
+          back: 'Answer',
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    });
+    final cards = await tester.runAsync(() => db.watchAllFlashcards().first);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          allFlashcardsProvider.overrideWith((ref) => Stream.value(cards!)),
+          flashcardsForSubjectProvider(
+            's',
+          ).overrideWith((ref) => Stream.value(cards!)),
+          flashcardReviewEventsProvider.overrideWith((ref) => Stream.value([])),
+          isFavoriteProvider(
+            favoriteKey('flashcard', 'subject-card'),
+          ).overrideWith((ref) => Stream.value(false)),
+        ],
+        child: const MaterialApp(
+          onGenerateRoute: onGenerateRoute,
+          home: FlashcardsListScreen(scope: FlashcardsListScope.all()),
+        ),
+      ),
+    );
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Subject-only question'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FlashcardStudyScreen), findsOneWidget);
+    expect(find.text('Reveal'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('study session shows due cards and review ratings', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final now = DateTime.now();
+      for (final id in ['due', 'later']) {
+        await db.insertFlashcard(
+          FlashcardsCompanion.insert(
+            id: id,
+            front: '$id question',
+            back: 'Answer',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+      }
+      await FlashcardReviewRepository(
+        db,
+      ).rate('later', ReviewRating.good, now: now);
+    });
+    final cards = (await tester.runAsync(() => db.watchAllFlashcards().first))!;
+    final events = (await tester.runAsync(
+      () => db.select(db.flashcardReviewEvents).get(),
+    ))!;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          allFlashcardsProvider.overrideWith((ref) => Stream.value(cards)),
+          flashcardReviewEventsProvider.overrideWith(
+            (ref) => Stream.value(events),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FlashcardStudyScreen(scope: FlashcardsListScope.all()),
+        ),
+      ),
+    );
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('due question'), findsOneWidget);
+    expect(find.text('later question'), findsNothing);
+    await tester.tap(find.text('Reveal'));
+    await tester.pump();
+    for (final label in ['Again', 'Hard', 'Good', 'Easy']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    await tester.tap(find.text('All cards'));
+    await tester.pump();
+    expect(find.text('1 / 2'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   test('progress defaults and studying activity is queryable', () async {

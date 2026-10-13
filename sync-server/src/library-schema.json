@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "tables": {
     "classes": {
       "columns": {
@@ -1112,6 +1112,74 @@
           "material_id",
           "type",
           "version"
+        ]
+      ]
+    },
+    "pdf_ai_material_translations": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "source_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "language": {
+          "type": "TEXT",
+          "required": true
+        },
+        "content": {
+          "type": "TEXT",
+          "required": true
+        },
+        "source_hash": {
+          "type": "TEXT",
+          "required": true
+        },
+        "provider": {
+          "type": "TEXT",
+          "required": false
+        },
+        "model": {
+          "type": "TEXT",
+          "required": false
+        },
+        "prompt_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "completion_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "total_tokens": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "request_duration_ms": {
+          "type": "INTEGER",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "source_id",
+          "table": "pdf_ai_materials"
+        }
+      ],
+      "unique": [
+        [
+          "source_id",
+          "language"
         ]
       ]
     },

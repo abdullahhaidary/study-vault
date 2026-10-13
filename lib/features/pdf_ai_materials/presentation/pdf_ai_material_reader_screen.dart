@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
@@ -34,15 +34,25 @@ import '../../selection_ai/presentation/selection_ai_area.dart';
 import '../data/pdf_ai_material_providers.dart';
 import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
+import '../domain/pdf_ai_translation.dart';
 import '../domain/pdf_ai_versioning.dart';
+import '../services/pdf_ai_translation_service.dart';
 import 'pdf_ai_manual_import_dialog.dart';
+import 'pdf_ai_translation_actions.dart';
 
 class _PdfAiRegenerateChoice {
-  const _PdfAiRegenerateChoice({this.preset, this.customInstruction = ''});
+  const _PdfAiRegenerateChoice({
+    this.preset,
+    this.customInstruction = '',
+    this.alsoPersian = false,
+  });
 
   final PdfAiRegeneratePreset? preset;
   final String customInstruction;
+  final bool alsoPersian;
 }
+
+typedef _ScrollAnchor = ({int index, double fraction});
 
 class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
   const PdfAiMaterialReaderScreen({
@@ -78,12 +88,19 @@ class _PdfAiMaterialReaderScreenState
   bool _editing = false;
   bool _deleting = false;
   String? _restoredGenerationId;
+  PdfAiLanguage _restoredLanguage = PdfAiLanguage.original;
   bool _restoringScroll = false;
   Timer? _scrollSaveTimer;
   double? _pendingScrollOffset;
-  String? _chunkedGenerationId;
+  String? _chunkedContent;
   List<String> _markdownChunks = const [];
   String? _lessonId;
+
+  /// Section shown at the top when the language changed; restored after the
+  /// other language is laid out so the reader stays at the same place.
+  _ScrollAnchor? _anchor;
+  final GlobalKey _listKey = GlobalKey();
+  final Map<int, GlobalKey> _chunkKeys = {};
 
   @override
   void initState() {
@@ -95,7 +112,21 @@ class _PdfAiMaterialReaderScreenState
     });
   }
 
-  SelectionAiHost _selectionHost(PdfAiMaterial selected) {
+  /// [persianText] is set while the Persian translation is shown; AI edits
+  /// then stay disabled because they would change the original.
+  SelectionAiHost _selectionHost(
+    PdfAiMaterial selected, [
+    String? persianText,
+  ]) {
+    if (persianText != null) {
+      return SelectionAiHost(
+        title: '${widget.type.shortName} (فارسی)',
+        materialId: widget.materialId,
+        lessonId: _lessonId,
+        filePath: widget.filePath,
+        documentText: persianText,
+      );
+    }
     return SelectionAiHost(
       title: widget.type.shortName,
       materialId: widget.materialId,
@@ -214,10 +245,14 @@ class _PdfAiMaterialReaderScreenState
     super.dispose();
   }
 
-  PdfAiMaterialScrollKey _scrollKey(String generationId) => (
+  PdfAiMaterialScrollKey _scrollKey(
+    String generationId,
+    PdfAiLanguage language,
+  ) => (
     materialId: widget.materialId,
     type: widget.type,
     generationId: generationId,
+    language: language,
   );
 
   void _saveScrollOffset() {
@@ -243,19 +278,39 @@ class _PdfAiMaterialReaderScreenState
     ref
             .read(
               pdfAiMaterialScrollOffsetProvider(
-                _scrollKey(generationId),
+                _scrollKey(generationId, _restoredLanguage),
               ).notifier,
             )
             .state =
         offset;
   }
 
-  void _restoreScrollOffset(String generationId) {
-    if (_restoredGenerationId == generationId) return;
+  /// Restores the saved position of this version + language; after a
+  /// language toggle it keeps the same section on screen instead.
+  void _restoreScrollOffset(
+    String generationId,
+    PdfAiLanguage language,
+    int sectionCount,
+  ) {
+    if (_restoredGenerationId == generationId &&
+        _restoredLanguage == language) {
+      return;
+    }
+    final languageToggled =
+        _restoredGenerationId == generationId && _restoredLanguage != language;
     _scrollSaveTimer?.cancel();
     _persistScrollOffset();
+    // Layout still shows the previous language here (build runs before
+    // layout), so the visible section can be read before it is replaced.
+    final anchor = languageToggled ? _captureAnchor() : null;
     _restoredGenerationId = generationId;
+    _restoredLanguage = language;
     _restoringScroll = true;
+    if (anchor != null) {
+      _anchor = anchor;
+      _applyAnchor(sectionCount);
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) {
         _restoringScroll = false;
@@ -263,7 +318,7 @@ class _PdfAiMaterialReaderScreenState
       }
       final position = _scrollController.position;
       final saved = ref.read(
-        pdfAiMaterialScrollOffsetProvider(_scrollKey(generationId)),
+        pdfAiMaterialScrollOffsetProvider(_scrollKey(generationId, language)),
       );
       _scrollController.jumpTo(
         saved
@@ -274,29 +329,84 @@ class _PdfAiMaterialReaderScreenState
     });
   }
 
-  List<String> _chunksFor(PdfAiMaterial material) {
-    if (_chunkedGenerationId == material.id) return _markdownChunks;
-    _chunkedGenerationId = material.id;
+  RenderBox? _box(GlobalKey? key) {
+    final box = key?.currentContext?.findRenderObject();
+    return box is RenderBox && box.attached && box.hasSize ? box : null;
+  }
 
-    const targetCharacters = 3500;
-    final chunks = <String>[];
-    final buffer = StringBuffer();
-    var insideCodeFence = false;
-    for (final line in material.content.split('\n')) {
-      if (line.trimLeft().startsWith('```')) {
-        insideCodeFence = !insideCodeFence;
-      }
-      buffer.writeln(line);
-      final paragraphEnded = line.trim().isEmpty;
-      if (!insideCodeFence &&
-          buffer.length >= targetCharacters &&
-          paragraphEnded) {
-        chunks.add(buffer.toString());
-        buffer.clear();
+  _ScrollAnchor? _captureAnchor() {
+    final list = _box(_listKey);
+    if (list == null || !_scrollController.hasClients) return null;
+    final indexes = _chunkKeys.keys.toList()..sort();
+    for (final index in indexes) {
+      final box = _box(_chunkKeys[index]);
+      if (box == null) continue;
+      final top = box.localToGlobal(Offset.zero, ancestor: list).dy;
+      if (top + box.size.height > 0) {
+        return (
+          index: index,
+          fraction: (-top / box.size.height).clamp(0.0, 1.0),
+        );
       }
     }
-    if (buffer.isNotEmpty) chunks.add(buffer.toString());
-    _markdownChunks = List.unmodifiable(chunks);
+    return null;
+  }
+
+  /// Scrolls until section [_anchor] is back at the top. Sections below the
+  /// viewport are built lazily, so it may first jump to an estimate.
+  void _applyAnchor(int sectionCount, [int attempt = 0]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final anchor = _anchor;
+      if (!mounted || anchor == null || !_scrollController.hasClients) {
+        _restoringScroll = false;
+        return;
+      }
+      final position = _scrollController.position;
+      double clamp(double value) =>
+          value.clamp(position.minScrollExtent, position.maxScrollExtent);
+      final list = _box(_listKey);
+      // Sections currently laid out, with their top relative to the list.
+      final built = <({int index, double top, double height})>[];
+      for (final entry in _chunkKeys.entries) {
+        final box = _box(entry.value);
+        if (list == null || box == null || entry.key >= sectionCount) continue;
+        built.add((
+          index: entry.key,
+          top: box.localToGlobal(Offset.zero, ancestor: list).dy,
+          height: box.size.height,
+        ));
+      }
+      final target = built.where((b) => b.index == anchor.index).firstOrNull;
+      double? delta;
+      if (target != null) {
+        delta = target.top + anchor.fraction * target.height;
+      } else if (built.isNotEmpty) {
+        // Step from the nearest laid-out section using real section heights.
+        built.sort(
+          (a, b) => (a.index - anchor.index).abs().compareTo(
+            (b.index - anchor.index).abs(),
+          ),
+        );
+        final nearest = built.first;
+        final average =
+            built.fold<double>(0, (sum, b) => sum + b.height) / built.length;
+        delta = nearest.top + (anchor.index - nearest.index) * average;
+      }
+      if (delta != null && delta.abs() > 1 && attempt < 12) {
+        position.jumpTo(clamp(position.pixels + delta));
+        _applyAnchor(sectionCount, attempt + 1);
+        return;
+      }
+      _anchor = null;
+      _restoringScroll = false;
+    });
+  }
+
+  List<String> _chunksFor(PdfAiMaterial material) {
+    if (_chunkedContent != material.content) {
+      _chunkedContent = material.content;
+      _markdownChunks = PdfAiTranslation.segments(material.content);
+    }
     return _markdownChunks;
   }
 
@@ -363,6 +473,15 @@ class _PdfAiMaterialReaderScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Version ${generated.version} generated.')),
       );
+      if (choice.alsoPersian && mounted) {
+        setState(() => _generating = false);
+        await translatePdfAiVersion(
+          context,
+          ref,
+          generated,
+          selection: selection,
+        );
+      }
     } on AiException catch (error) {
       _showError(error.message);
     } on Object catch (error) {
@@ -377,6 +496,7 @@ class _PdfAiMaterialReaderScreenState
   }) async {
     final controller = TextEditingController();
     PdfAiRegeneratePreset? selected;
+    var alsoPersian = ref.read(pdfAiAlsoPersianProvider).valueOrNull ?? false;
 
     final choice = await showDialog<_PdfAiRegenerateChoice>(
       context: context,
@@ -439,6 +559,16 @@ class _PdfAiMaterialReaderScreenState
                         border: const OutlineInputBorder(),
                       ),
                     ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: alsoPersian,
+                      onChanged: (value) =>
+                          setDialogState(() => alsoPersian = value ?? false),
+                      title: const Text('Also create Persian (فارسی)'),
+                      subtitle: const Text(
+                        'Same structure, section by section. Uses more tokens.',
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -453,6 +583,7 @@ class _PdfAiMaterialReaderScreenState
                     _PdfAiRegenerateChoice(
                       preset: selected,
                       customInstruction: controller.text,
+                      alsoPersian: alsoPersian,
                     ),
                   ),
                   child: const Text('Regenerate'),
@@ -464,6 +595,7 @@ class _PdfAiMaterialReaderScreenState
       },
     );
     controller.dispose();
+    if (choice != null) await setPdfAiAlsoPersian(ref, choice.alsoPersian);
     return choice;
   }
 
@@ -569,7 +701,12 @@ class _PdfAiMaterialReaderScreenState
     }
   }
 
-  PopupMenuButton<String> _versionMenu(PdfAiMaterial selected) {
+  PopupMenuButton<String> _versionMenu(
+    PdfAiMaterial selected,
+    PdfAiMaterialTranslation? translation,
+  ) {
+    final translating =
+        ref.watch(pdfAiTranslationProgressProvider(selected.id)) != null;
     return PopupMenuButton<String>(
       tooltip: 'Version options',
       enabled: !_generating && !_editing && !_deleting,
@@ -579,21 +716,167 @@ class _PdfAiMaterialReaderScreenState
             _makeDefault(selected);
           case 'json':
             _importJson(selected);
+          case 'translate':
+            translatePdfAiVersion(context, ref, selected);
           case 'delete':
             _delete(selected);
         }
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'default', child: Text('Make this the default')),
-        PopupMenuItem(value: 'json', child: Text('Add from JSON')),
-        PopupMenuItem(value: 'delete', child: Text('Delete this version')),
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'default',
+          child: Text('Make this the default'),
+        ),
+        const PopupMenuItem(value: 'json', child: Text('Add from JSON')),
+        PopupMenuItem(
+          value: 'translate',
+          enabled: !translating,
+          child: Text(
+            translation == null
+                ? 'Translate to Persian (فارسی)'
+                : 'Retranslate Persian (فارسی)',
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete this version'),
+        ),
       ],
+    );
+  }
+
+  Future<void> _setLanguage(
+    PdfAiMaterial selected,
+    PdfAiMaterialTranslation? translation,
+    PdfAiLanguage next,
+  ) async {
+    if (next == PdfAiLanguage.persian && translation == null) {
+      if (ref.read(pdfAiTranslationProgressProvider(selected.id)) != null) {
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Create a Persian version?'),
+          content: Text(
+            'The ${widget.type.shortName.toLowerCase()} is translated section by '
+            'section with the same headings, lists, formulas and code, so you '
+            'can switch between both at the same place. This uses API tokens.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Translate'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await translatePdfAiVersion(context, ref, selected);
+      return;
+    }
+    ref.read(pdfAiLanguageProvider(widget.materialId).notifier).state = next;
+  }
+
+  /// EN | فا switch. Selecting فا without a translation offers to create it.
+  Widget _languageToggle(
+    PdfAiMaterial selected,
+    PdfAiMaterialTranslation? translation,
+    PdfAiLanguage showing,
+  ) {
+    final progress = ref.watch(pdfAiTranslationProgressProvider(selected.id));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+      child: SegmentedButton<PdfAiLanguage>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        segments: [
+          const ButtonSegment(
+            value: PdfAiLanguage.original,
+            label: Text('EN'),
+            tooltip: 'Original',
+          ),
+          ButtonSegment(
+            value: PdfAiLanguage.persian,
+            tooltip: translation == null
+                ? 'Translate to Persian'
+                : 'Persian (فارسی)',
+            icon: progress != null
+                ? const SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : translation == null
+                ? const Icon(Icons.translate, size: 16)
+                : null,
+            label: Text(progress == null ? 'فا' : 'فا $progress'),
+          ),
+        ],
+        selected: {showing},
+        onSelectionChanged: (value) =>
+            _setLanguage(selected, translation, value.first),
+      ),
+    );
+  }
+
+  /// Hint shown above the text when Persian is wanted but missing or stale.
+  Widget _translationNotice(
+    PdfAiMaterial selected,
+    PdfAiMaterialTranslation? translation,
+    PdfAiLanguage wanted,
+  ) {
+    final missing = wanted == PdfAiLanguage.persian && translation == null;
+    final stale =
+        translation != null &&
+        wanted == PdfAiLanguage.persian &&
+        PdfAiTranslationService.isStale(translation, selected);
+    if (!missing && !stale) return const SizedBox.shrink();
+    final translating =
+        ref.watch(pdfAiTranslationProgressProvider(selected.id)) != null;
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.6),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xxs,
+          AppSpacing.xs,
+          AppSpacing.xxs,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                missing
+                    ? 'This version has no Persian translation yet.'
+                    : 'The original changed after this translation.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            TextButton(
+              onPressed: translating
+                  ? null
+                  : () => translatePdfAiVersion(context, ref, selected),
+              child: Text(missing ? 'Translate' : 'Retranslate'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _embeddedVersionBar(
     List<PdfAiMaterial> history,
     PdfAiMaterial selected,
+    PdfAiMaterialTranslation? translation,
+    PdfAiLanguage showing,
   ) {
     if (!widget.embedded) return const SizedBox.shrink();
     return Material(
@@ -609,7 +892,8 @@ class _PdfAiMaterialReaderScreenState
             ),
           ),
           const Spacer(),
-          _versionMenu(selected),
+          _languageToggle(selected, translation, showing),
+          _versionMenu(selected, translation),
         ],
       ),
     );
@@ -644,8 +928,9 @@ class _PdfAiMaterialReaderScreenState
   }
 
   Future<void> _askAboutThis() async {
-    final all =
-        await ref.read(pdfAiMaterialsProvider(widget.materialId).future);
+    final all = await ref.read(
+      pdfAiMaterialsProvider(widget.materialId).future,
+    );
     final preferredId = await ref.read(
       pdfAiPreferredVersionProvider(_preferredKey).future,
     );
@@ -798,15 +1083,31 @@ class _PdfAiMaterialReaderScreenState
     List<String> slides,
     AiTokenUsage? usage,
     List<PdfAiMaterial> history,
+    PdfAiMaterialTranslation? translation,
+    PdfAiLanguage wanted,
+    String? persianText,
   ) {
     final theme = Theme.of(context);
     final slideStyle = MarkdownStyleSheet.fromTheme(theme).copyWith(
       h1: theme.textTheme.headlineMedium,
       h2: theme.textTheme.titleLarge,
     );
+    final showing = persianText == null
+        ? PdfAiLanguage.original
+        : PdfAiLanguage.persian;
+    // The same slide stays open when switching languages.
+    if (_slideIndex >= slides.length) {
+      _slideIndex = slides.length - 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _slideController.hasClients) {
+          _slideController.jumpToPage(_slideIndex);
+        }
+      });
+    }
     return Column(
       children: [
-        _embeddedVersionBar(history, selected),
+        _embeddedVersionBar(history, selected, translation, showing),
+        _translationNotice(selected, translation, wanted),
         if (!widget.embedded)
           MaterialBookLinksSection(materialId: widget.materialId),
         Expanded(
@@ -822,13 +1123,18 @@ class _PdfAiMaterialReaderScreenState
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 850),
                     child: SelectionAiArea(
-                      host: _selectionHost(selected),
+                      host: _selectionHost(selected, persianText),
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: StudyMarkdown(
-                          data: slides[index],
-                          selectable: false,
-                          styleSheet: slideStyle,
+                        child: Directionality(
+                          textDirection: persianText == null
+                              ? Directionality.of(context)
+                              : TextDirection.rtl,
+                          child: StudyMarkdown(
+                            data: slides[index],
+                            selectable: false,
+                            styleSheet: slideStyle,
+                          ),
                         ),
                       ),
                     ),
@@ -882,7 +1188,11 @@ class _PdfAiMaterialReaderScreenState
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton.icon(
-                        onPressed: _editing || _generating || _deleting
+                        onPressed:
+                            _editing ||
+                                _generating ||
+                                _deleting ||
+                                persianText != null
                             ? null
                             : () => _edit(selected),
                         icon: const Icon(Icons.edit_outlined),
@@ -897,7 +1207,7 @@ class _PdfAiMaterialReaderScreenState
                       ),
                       TextButton.icon(
                         onPressed: () => Clipboard.setData(
-                          ClipboardData(text: selected.content),
+                          ClipboardData(text: persianText ?? selected.content),
                         ),
                         icon: const Icon(Icons.copy_all_outlined),
                         label: const Text('Copy all'),
@@ -1029,18 +1339,37 @@ class _PdfAiMaterialReaderScreenState
           selectedId: _selectedId,
           preferredId: preferredId,
         )!;
+        // Loaded early so the Regenerate dialog opens with the saved choice.
+        ref.watch(pdfAiAlsoPersianProvider);
+        final wanted = ref.watch(pdfAiLanguageProvider(widget.materialId));
+        final translation = ref
+            .watch(pdfAiTranslationsProvider(widget.materialId))
+            .valueOrNull?[selected.id];
+        final persianStored = wanted == PdfAiLanguage.persian
+            ? translation?.content
+            : null;
+        final showing = persianStored == null
+            ? PdfAiLanguage.original
+            : PdfAiLanguage.persian;
+        final persianText = persianStored == null
+            ? null
+            : PdfAiTranslation.plain(persianStored);
+        final shownText = persianText ?? selected.content;
         final isSlideshow = widget.type == PdfAiMaterialType.slideshow;
-        if (isSlideshow) {
-          _syncSlideGeneration(selected.id);
-        } else {
-          _restoreScrollOffset(selected.id);
-        }
         final slides = isSlideshow
-            ? PdfAiSlideDeck.parse(selected.content)
+            ? PdfAiSlideDeck.parse(shownText)
             : const <String>[];
         final markdownChunks = isSlideshow
             ? const <String>[]
+            : persianStored != null
+            ? PdfAiTranslation.split(persianStored)
             : _chunksFor(selected);
+        if (isSlideshow) {
+          _syncSlideGeneration(selected.id);
+        } else {
+          _restoreScrollOffset(selected.id, showing, markdownChunks.length);
+        }
+        final rtl = persianStored != null;
         final bodyStyle = MarkdownStyleSheet.fromTheme(Theme.of(context));
         final usage = aiTokenUsageFromColumns(
           promptTokens: selected.promptTokens,
@@ -1058,6 +1387,7 @@ class _PdfAiMaterialReaderScreenState
               : AppBar(
                   title: Text(widget.type.displayName),
                   actions: [
+                    _languageToggle(selected, translation, showing),
                     IconButton(
                       tooltip: 'History',
                       onPressed: () => _showHistory(history, selected),
@@ -1066,34 +1396,58 @@ class _PdfAiMaterialReaderScreenState
                         child: const Icon(Icons.history),
                       ),
                     ),
-                    _versionMenu(selected),
+                    _versionMenu(selected, translation),
                   ],
                 ),
           body: isSlideshow && slides.isNotEmpty
-              ? _slideshowBody(selected, slides, usage, history)
+              ? _slideshowBody(
+                  selected,
+                  slides,
+                  usage,
+                  history,
+                  translation,
+                  wanted,
+                  persianText,
+                )
               : Column(
                   children: [
-                    _embeddedVersionBar(history, selected),
+                    _embeddedVersionBar(
+                      history,
+                      selected,
+                      translation,
+                      showing,
+                    ),
+                    _translationNotice(selected, translation, wanted),
                     if (!widget.embedded)
                       MaterialBookLinksSection(materialId: widget.materialId),
                     Expanded(
                       child: ScrollEdgeArrows(
                         child: SelectionAiArea(
-                          host: _selectionHost(selected),
+                          host: _selectionHost(selected, persianText),
                           child: ListView.builder(
+                            key: _listKey,
                             controller: _scrollController,
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             itemCount: markdownChunks.length + 1,
                             itemBuilder: (context, index) {
                               if (index < markdownChunks.length) {
                                 return Padding(
+                                  key: _chunkKeys.putIfAbsent(
+                                    index,
+                                    GlobalKey.new,
+                                  ),
                                   padding: const EdgeInsets.only(
                                     bottom: AppSpacing.sm,
                                   ),
-                                  child: StudyMarkdown(
-                                    data: markdownChunks[index],
-                                    selectable: false,
-                                    styleSheet: bodyStyle,
+                                  child: Directionality(
+                                    textDirection: rtl
+                                        ? TextDirection.rtl
+                                        : Directionality.of(context),
+                                    child: StudyMarkdown(
+                                      data: markdownChunks[index],
+                                      selectable: false,
+                                      styleSheet: bodyStyle,
+                                    ),
                                   ),
                                 );
                               }
@@ -1105,7 +1459,10 @@ class _PdfAiMaterialReaderScreenState
                                     children: [
                                       TextButton.icon(
                                         onPressed:
-                                            _editing || _generating || _deleting
+                                            _editing ||
+                                                _generating ||
+                                                _deleting ||
+                                                rtl
                                             ? null
                                             : () => _edit(selected),
                                         icon: const Icon(
@@ -1115,13 +1472,12 @@ class _PdfAiMaterialReaderScreenState
                                         label: const Text('Edit'),
                                       ),
                                       TextButton.icon(
-                                        onPressed:
-                                            selected.content.trim().isEmpty
+                                        onPressed: shownText.trim().isEmpty
                                             ? null
                                             : () async {
                                                 await Clipboard.setData(
                                                   ClipboardData(
-                                                    text: selected.content,
+                                                    text: shownText,
                                                   ),
                                                 );
                                                 if (context.mounted) {

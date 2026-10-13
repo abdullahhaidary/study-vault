@@ -528,6 +528,37 @@ class PdfAiMaterials extends Table {
   ];
 }
 
+/// Translation of one exact [PdfAiMaterials] version, stored as the same
+/// reading segments as the original so the reader can toggle in place.
+class PdfAiMaterialTranslations extends Table {
+  TextColumn get id => text()();
+  TextColumn get sourceId =>
+      text().references(PdfAiMaterials, #id, onDelete: KeyAction.cascade)();
+
+  /// `fa`
+  TextColumn get language => text()();
+  TextColumn get content => text()();
+
+  /// SHA-256 of the source content; a mismatch marks the translation stale.
+  TextColumn get sourceHash => text()();
+  TextColumn get provider => text().nullable()();
+  TextColumn get model => text().nullable()();
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  IntColumn get totalTokens => integer().nullable()();
+  IntColumn get requestDurationMs => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {sourceId, language},
+  ];
+}
+
 /// AI-generated quiz sets (first-class study objects).
 class QuestionSets extends Table {
   TextColumn get id => text()();
@@ -942,6 +973,7 @@ class StudyScheduleEvents extends Table {
     AiMessageContextRefs,
     AnnotationAiGenerations,
     PdfAiMaterials,
+    PdfAiMaterialTranslations,
     QuestionSets,
     QuizQuestions,
     QuizQuestionOptions,
@@ -1002,7 +1034,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1167,6 +1199,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 20) {
         await m.createTable(flashcardReviewEvents);
         await _createFlashcardReviewIndexes();
+      }
+      if (from < 21) {
+        await m.createTable(pdfAiMaterialTranslations);
       }
     },
   );

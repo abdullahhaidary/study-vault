@@ -13361,6 +13361,806 @@ class PdfAiMaterialsCompanion extends UpdateCompanion<PdfAiMaterial> {
   }
 }
 
+class $PdfAiMaterialTranslationsTable extends PdfAiMaterialTranslations
+    with TableInfo<$PdfAiMaterialTranslationsTable, PdfAiMaterialTranslation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PdfAiMaterialTranslationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceId = GeneratedColumn<String>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pdf_ai_materials (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceHashMeta = const VerificationMeta(
+    'sourceHash',
+  );
+  @override
+  late final GeneratedColumn<String> sourceHash = GeneratedColumn<String>(
+    'source_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _promptTokensMeta = const VerificationMeta(
+    'promptTokens',
+  );
+  @override
+  late final GeneratedColumn<int> promptTokens = GeneratedColumn<int>(
+    'prompt_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTokensMeta = const VerificationMeta(
+    'completionTokens',
+  );
+  @override
+  late final GeneratedColumn<int> completionTokens = GeneratedColumn<int>(
+    'completion_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalTokensMeta = const VerificationMeta(
+    'totalTokens',
+  );
+  @override
+  late final GeneratedColumn<int> totalTokens = GeneratedColumn<int>(
+    'total_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _requestDurationMsMeta = const VerificationMeta(
+    'requestDurationMs',
+  );
+  @override
+  late final GeneratedColumn<int> requestDurationMs = GeneratedColumn<int>(
+    'request_duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sourceId,
+    language,
+    content,
+    sourceHash,
+    provider,
+    model,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    requestDurationMs,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pdf_ai_material_translations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PdfAiMaterialTranslation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_languageMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('source_hash')) {
+      context.handle(
+        _sourceHashMeta,
+        sourceHash.isAcceptableOrUnknown(data['source_hash']!, _sourceHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceHashMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('prompt_tokens')) {
+      context.handle(
+        _promptTokensMeta,
+        promptTokens.isAcceptableOrUnknown(
+          data['prompt_tokens']!,
+          _promptTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_tokens')) {
+      context.handle(
+        _completionTokensMeta,
+        completionTokens.isAcceptableOrUnknown(
+          data['completion_tokens']!,
+          _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_tokens')) {
+      context.handle(
+        _totalTokensMeta,
+        totalTokens.isAcceptableOrUnknown(
+          data['total_tokens']!,
+          _totalTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('request_duration_ms')) {
+      context.handle(
+        _requestDurationMsMeta,
+        requestDurationMs.isAcceptableOrUnknown(
+          data['request_duration_ms']!,
+          _requestDurationMsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {sourceId, language},
+  ];
+  @override
+  PdfAiMaterialTranslation map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PdfAiMaterialTranslation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_id'],
+      )!,
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      sourceHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_hash'],
+      )!,
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      promptTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prompt_tokens'],
+      ),
+      completionTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_tokens'],
+      ),
+      totalTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_tokens'],
+      ),
+      requestDurationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}request_duration_ms'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PdfAiMaterialTranslationsTable createAlias(String alias) {
+    return $PdfAiMaterialTranslationsTable(attachedDatabase, alias);
+  }
+}
+
+class PdfAiMaterialTranslation extends DataClass
+    implements Insertable<PdfAiMaterialTranslation> {
+  final String id;
+  final String sourceId;
+
+  /// `fa`
+  final String language;
+  final String content;
+
+  /// SHA-256 of the source content; a mismatch marks the translation stale.
+  final String sourceHash;
+  final String? provider;
+  final String? model;
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+  final int? requestDurationMs;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PdfAiMaterialTranslation({
+    required this.id,
+    required this.sourceId,
+    required this.language,
+    required this.content,
+    required this.sourceHash,
+    this.provider,
+    this.model,
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+    this.requestDurationMs,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['source_id'] = Variable<String>(sourceId);
+    map['language'] = Variable<String>(language);
+    map['content'] = Variable<String>(content);
+    map['source_hash'] = Variable<String>(sourceHash);
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    if (!nullToAbsent || promptTokens != null) {
+      map['prompt_tokens'] = Variable<int>(promptTokens);
+    }
+    if (!nullToAbsent || completionTokens != null) {
+      map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || totalTokens != null) {
+      map['total_tokens'] = Variable<int>(totalTokens);
+    }
+    if (!nullToAbsent || requestDurationMs != null) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PdfAiMaterialTranslationsCompanion toCompanion(bool nullToAbsent) {
+    return PdfAiMaterialTranslationsCompanion(
+      id: Value(id),
+      sourceId: Value(sourceId),
+      language: Value(language),
+      content: Value(content),
+      sourceHash: Value(sourceHash),
+      provider: provider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(provider),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      promptTokens: promptTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptTokens),
+      completionTokens: completionTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completionTokens),
+      totalTokens: totalTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalTokens),
+      requestDurationMs: requestDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(requestDurationMs),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PdfAiMaterialTranslation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PdfAiMaterialTranslation(
+      id: serializer.fromJson<String>(json['id']),
+      sourceId: serializer.fromJson<String>(json['sourceId']),
+      language: serializer.fromJson<String>(json['language']),
+      content: serializer.fromJson<String>(json['content']),
+      sourceHash: serializer.fromJson<String>(json['sourceHash']),
+      provider: serializer.fromJson<String?>(json['provider']),
+      model: serializer.fromJson<String?>(json['model']),
+      promptTokens: serializer.fromJson<int?>(json['promptTokens']),
+      completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      totalTokens: serializer.fromJson<int?>(json['totalTokens']),
+      requestDurationMs: serializer.fromJson<int?>(json['requestDurationMs']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sourceId': serializer.toJson<String>(sourceId),
+      'language': serializer.toJson<String>(language),
+      'content': serializer.toJson<String>(content),
+      'sourceHash': serializer.toJson<String>(sourceHash),
+      'provider': serializer.toJson<String?>(provider),
+      'model': serializer.toJson<String?>(model),
+      'promptTokens': serializer.toJson<int?>(promptTokens),
+      'completionTokens': serializer.toJson<int?>(completionTokens),
+      'totalTokens': serializer.toJson<int?>(totalTokens),
+      'requestDurationMs': serializer.toJson<int?>(requestDurationMs),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PdfAiMaterialTranslation copyWith({
+    String? id,
+    String? sourceId,
+    String? language,
+    String? content,
+    String? sourceHash,
+    Value<String?> provider = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    Value<int?> promptTokens = const Value.absent(),
+    Value<int?> completionTokens = const Value.absent(),
+    Value<int?> totalTokens = const Value.absent(),
+    Value<int?> requestDurationMs = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => PdfAiMaterialTranslation(
+    id: id ?? this.id,
+    sourceId: sourceId ?? this.sourceId,
+    language: language ?? this.language,
+    content: content ?? this.content,
+    sourceHash: sourceHash ?? this.sourceHash,
+    provider: provider.present ? provider.value : this.provider,
+    model: model.present ? model.value : this.model,
+    promptTokens: promptTokens.present ? promptTokens.value : this.promptTokens,
+    completionTokens: completionTokens.present
+        ? completionTokens.value
+        : this.completionTokens,
+    totalTokens: totalTokens.present ? totalTokens.value : this.totalTokens,
+    requestDurationMs: requestDurationMs.present
+        ? requestDurationMs.value
+        : this.requestDurationMs,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PdfAiMaterialTranslation copyWithCompanion(
+    PdfAiMaterialTranslationsCompanion data,
+  ) {
+    return PdfAiMaterialTranslation(
+      id: data.id.present ? data.id.value : this.id,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      language: data.language.present ? data.language.value : this.language,
+      content: data.content.present ? data.content.value : this.content,
+      sourceHash: data.sourceHash.present
+          ? data.sourceHash.value
+          : this.sourceHash,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      promptTokens: data.promptTokens.present
+          ? data.promptTokens.value
+          : this.promptTokens,
+      completionTokens: data.completionTokens.present
+          ? data.completionTokens.value
+          : this.completionTokens,
+      totalTokens: data.totalTokens.present
+          ? data.totalTokens.value
+          : this.totalTokens,
+      requestDurationMs: data.requestDurationMs.present
+          ? data.requestDurationMs.value
+          : this.requestDurationMs,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PdfAiMaterialTranslation(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('language: $language, ')
+          ..write('content: $content, ')
+          ..write('sourceHash: $sourceHash, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sourceId,
+    language,
+    content,
+    sourceHash,
+    provider,
+    model,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    requestDurationMs,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PdfAiMaterialTranslation &&
+          other.id == this.id &&
+          other.sourceId == this.sourceId &&
+          other.language == this.language &&
+          other.content == this.content &&
+          other.sourceHash == this.sourceHash &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.promptTokens == this.promptTokens &&
+          other.completionTokens == this.completionTokens &&
+          other.totalTokens == this.totalTokens &&
+          other.requestDurationMs == this.requestDurationMs &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PdfAiMaterialTranslationsCompanion
+    extends UpdateCompanion<PdfAiMaterialTranslation> {
+  final Value<String> id;
+  final Value<String> sourceId;
+  final Value<String> language;
+  final Value<String> content;
+  final Value<String> sourceHash;
+  final Value<String?> provider;
+  final Value<String?> model;
+  final Value<int?> promptTokens;
+  final Value<int?> completionTokens;
+  final Value<int?> totalTokens;
+  final Value<int?> requestDurationMs;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PdfAiMaterialTranslationsCompanion({
+    this.id = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.language = const Value.absent(),
+    this.content = const Value.absent(),
+    this.sourceHash = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PdfAiMaterialTranslationsCompanion.insert({
+    required String id,
+    required String sourceId,
+    required String language,
+    required String content,
+    required String sourceHash,
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.totalTokens = const Value.absent(),
+    this.requestDurationMs = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sourceId = Value(sourceId),
+       language = Value(language),
+       content = Value(content),
+       sourceHash = Value(sourceHash),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PdfAiMaterialTranslation> custom({
+    Expression<String>? id,
+    Expression<String>? sourceId,
+    Expression<String>? language,
+    Expression<String>? content,
+    Expression<String>? sourceHash,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<int>? promptTokens,
+    Expression<int>? completionTokens,
+    Expression<int>? totalTokens,
+    Expression<int>? requestDurationMs,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceId != null) 'source_id': sourceId,
+      if (language != null) 'language': language,
+      if (content != null) 'content': content,
+      if (sourceHash != null) 'source_hash': sourceHash,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (promptTokens != null) 'prompt_tokens': promptTokens,
+      if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (totalTokens != null) 'total_tokens': totalTokens,
+      if (requestDurationMs != null) 'request_duration_ms': requestDurationMs,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PdfAiMaterialTranslationsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sourceId,
+    Value<String>? language,
+    Value<String>? content,
+    Value<String>? sourceHash,
+    Value<String?>? provider,
+    Value<String?>? model,
+    Value<int?>? promptTokens,
+    Value<int?>? completionTokens,
+    Value<int?>? totalTokens,
+    Value<int?>? requestDurationMs,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return PdfAiMaterialTranslationsCompanion(
+      id: id ?? this.id,
+      sourceId: sourceId ?? this.sourceId,
+      language: language ?? this.language,
+      content: content ?? this.content,
+      sourceHash: sourceHash ?? this.sourceHash,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
+      totalTokens: totalTokens ?? this.totalTokens,
+      requestDurationMs: requestDurationMs ?? this.requestDurationMs,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (sourceHash.present) {
+      map['source_hash'] = Variable<String>(sourceHash.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (promptTokens.present) {
+      map['prompt_tokens'] = Variable<int>(promptTokens.value);
+    }
+    if (completionTokens.present) {
+      map['completion_tokens'] = Variable<int>(completionTokens.value);
+    }
+    if (totalTokens.present) {
+      map['total_tokens'] = Variable<int>(totalTokens.value);
+    }
+    if (requestDurationMs.present) {
+      map['request_duration_ms'] = Variable<int>(requestDurationMs.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PdfAiMaterialTranslationsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('language: $language, ')
+          ..write('content: $content, ')
+          ..write('sourceHash: $sourceHash, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('totalTokens: $totalTokens, ')
+          ..write('requestDurationMs: $requestDurationMs, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $QuestionSetsTable extends QuestionSets
     with TableInfo<$QuestionSetsTable, QuestionSet> {
   @override
@@ -22720,6 +23520,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AnnotationAiGenerationsTable annotationAiGenerations =
       $AnnotationAiGenerationsTable(this);
   late final $PdfAiMaterialsTable pdfAiMaterials = $PdfAiMaterialsTable(this);
+  late final $PdfAiMaterialTranslationsTable pdfAiMaterialTranslations =
+      $PdfAiMaterialTranslationsTable(this);
   late final $QuestionSetsTable questionSets = $QuestionSetsTable(this);
   late final $QuizQuestionsTable quizQuestions = $QuizQuestionsTable(this);
   late final $QuizQuestionOptionsTable quizQuestionOptions =
@@ -22774,6 +23576,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     aiMessageContextRefs,
     annotationAiGenerations,
     pdfAiMaterials,
+    pdfAiMaterialTranslations,
     questionSets,
     quizQuestions,
     quizQuestionOptions,
@@ -22911,6 +23714,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('pdf_ai_materials', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'pdf_ai_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('pdf_ai_material_translations', kind: UpdateKind.delete),
+      ],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -35546,6 +36358,32 @@ final class $$PdfAiMaterialsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<
+    $PdfAiMaterialTranslationsTable,
+    List<PdfAiMaterialTranslation>
+  >
+  _pdfAiMaterialTranslationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.pdfAiMaterialTranslations,
+        aliasName:
+            'pdf_ai_materials__id__pdf_ai_material_translations__source_id',
+      );
+
+  $$PdfAiMaterialTranslationsTableProcessedTableManager
+  get pdfAiMaterialTranslationsRefs {
+    final manager = $$PdfAiMaterialTranslationsTableTableManager(
+      $_db,
+      $_db.pdfAiMaterialTranslations,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _pdfAiMaterialTranslationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PdfAiMaterialsTableFilterComposer
@@ -35653,6 +36491,33 @@ class $$PdfAiMaterialsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> pdfAiMaterialTranslationsRefs(
+    Expression<bool> Function($$PdfAiMaterialTranslationsTableFilterComposer f)
+    f,
+  ) {
+    final $$PdfAiMaterialTranslationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.pdfAiMaterialTranslations,
+          getReferencedColumn: (t) => t.sourceId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PdfAiMaterialTranslationsTableFilterComposer(
+                $db: $db,
+                $table: $db.pdfAiMaterialTranslations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
   }
 }
 
@@ -35858,6 +36723,33 @@ class $$PdfAiMaterialsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> pdfAiMaterialTranslationsRefs<T extends Object>(
+    Expression<T> Function($$PdfAiMaterialTranslationsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$PdfAiMaterialTranslationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.pdfAiMaterialTranslations,
+          getReferencedColumn: (t) => t.sourceId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PdfAiMaterialTranslationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.pdfAiMaterialTranslations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$PdfAiMaterialsTableTableManager
@@ -35873,7 +36765,10 @@ class $$PdfAiMaterialsTableTableManager
           $$PdfAiMaterialsTableUpdateCompanionBuilder,
           (PdfAiMaterial, $$PdfAiMaterialsTableReferences),
           PdfAiMaterial,
-          PrefetchHooks Function({bool materialId})
+          PrefetchHooks Function({
+            bool materialId,
+            bool pdfAiMaterialTranslationsRefs,
+          })
         > {
   $$PdfAiMaterialsTableTableManager(
     _$AppDatabase db,
@@ -35972,7 +36867,545 @@ class $$PdfAiMaterialsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({materialId = false}) {
+          prefetchHooksCallback:
+              ({materialId = false, pdfAiMaterialTranslationsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (pdfAiMaterialTranslationsRefs)
+                      db.pdfAiMaterialTranslations,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (materialId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.materialId,
+                                    referencedTable:
+                                        $$PdfAiMaterialsTableReferences
+                                            ._materialIdTable(db),
+                                    referencedColumn:
+                                        $$PdfAiMaterialsTableReferences
+                                            ._materialIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (pdfAiMaterialTranslationsRefs)
+                        await $_getPrefetchedData<
+                          PdfAiMaterial,
+                          $PdfAiMaterialsTable,
+                          PdfAiMaterialTranslation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PdfAiMaterialsTableReferences
+                              ._pdfAiMaterialTranslationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PdfAiMaterialsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pdfAiMaterialTranslationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$PdfAiMaterialsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PdfAiMaterialsTable,
+      PdfAiMaterial,
+      $$PdfAiMaterialsTableFilterComposer,
+      $$PdfAiMaterialsTableOrderingComposer,
+      $$PdfAiMaterialsTableAnnotationComposer,
+      $$PdfAiMaterialsTableCreateCompanionBuilder,
+      $$PdfAiMaterialsTableUpdateCompanionBuilder,
+      (PdfAiMaterial, $$PdfAiMaterialsTableReferences),
+      PdfAiMaterial,
+      PrefetchHooks Function({
+        bool materialId,
+        bool pdfAiMaterialTranslationsRefs,
+      })
+    >;
+typedef $$PdfAiMaterialTranslationsTableCreateCompanionBuilder =
+    PdfAiMaterialTranslationsCompanion Function({
+      required String id,
+      required String sourceId,
+      required String language,
+      required String content,
+      required String sourceHash,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> requestDurationMs,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PdfAiMaterialTranslationsTableUpdateCompanionBuilder =
+    PdfAiMaterialTranslationsCompanion Function({
+      Value<String> id,
+      Value<String> sourceId,
+      Value<String> language,
+      Value<String> content,
+      Value<String> sourceHash,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<int?> totalTokens,
+      Value<int?> requestDurationMs,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$PdfAiMaterialTranslationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PdfAiMaterialTranslationsTable,
+          PdfAiMaterialTranslation
+        > {
+  $$PdfAiMaterialTranslationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PdfAiMaterialsTable _sourceIdTable(_$AppDatabase db) =>
+      db.pdfAiMaterials.createAlias(
+        'pdf_ai_material_translations__source_id__pdf_ai_materials__id',
+      );
+
+  $$PdfAiMaterialsTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<String>('source_id')!;
+
+    final manager = $$PdfAiMaterialsTableTableManager(
+      $_db,
+      $_db.pdfAiMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PdfAiMaterialTranslationsTableFilterComposer
+    extends Composer<_$AppDatabase, $PdfAiMaterialTranslationsTable> {
+  $$PdfAiMaterialTranslationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PdfAiMaterialsTableFilterComposer get sourceId {
+    final $$PdfAiMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.pdfAiMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PdfAiMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.pdfAiMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PdfAiMaterialTranslationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PdfAiMaterialTranslationsTable> {
+  $$PdfAiMaterialTranslationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PdfAiMaterialsTableOrderingComposer get sourceId {
+    final $$PdfAiMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.pdfAiMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PdfAiMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.pdfAiMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PdfAiMaterialTranslationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PdfAiMaterialTranslationsTable> {
+  $$PdfAiMaterialTranslationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceHash => $composableBuilder(
+    column: $table.sourceHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalTokens => $composableBuilder(
+    column: $table.totalTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get requestDurationMs => $composableBuilder(
+    column: $table.requestDurationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$PdfAiMaterialsTableAnnotationComposer get sourceId {
+    final $$PdfAiMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.pdfAiMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PdfAiMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pdfAiMaterials,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PdfAiMaterialTranslationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PdfAiMaterialTranslationsTable,
+          PdfAiMaterialTranslation,
+          $$PdfAiMaterialTranslationsTableFilterComposer,
+          $$PdfAiMaterialTranslationsTableOrderingComposer,
+          $$PdfAiMaterialTranslationsTableAnnotationComposer,
+          $$PdfAiMaterialTranslationsTableCreateCompanionBuilder,
+          $$PdfAiMaterialTranslationsTableUpdateCompanionBuilder,
+          (
+            PdfAiMaterialTranslation,
+            $$PdfAiMaterialTranslationsTableReferences,
+          ),
+          PdfAiMaterialTranslation,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$PdfAiMaterialTranslationsTableTableManager(
+    _$AppDatabase db,
+    $PdfAiMaterialTranslationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PdfAiMaterialTranslationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PdfAiMaterialTranslationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PdfAiMaterialTranslationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sourceId = const Value.absent(),
+                Value<String> language = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> sourceHash = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PdfAiMaterialTranslationsCompanion(
+                id: id,
+                sourceId: sourceId,
+                language: language,
+                content: content,
+                sourceHash: sourceHash,
+                provider: provider,
+                model: model,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                requestDurationMs: requestDurationMs,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sourceId,
+                required String language,
+                required String content,
+                required String sourceHash,
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<int?> totalTokens = const Value.absent(),
+                Value<int?> requestDurationMs = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PdfAiMaterialTranslationsCompanion.insert(
+                id: id,
+                sourceId: sourceId,
+                language: language,
+                content: content,
+                sourceHash: sourceHash,
+                provider: provider,
+                model: model,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                requestDurationMs: requestDurationMs,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $PdfAiMaterialTranslationsTable,
+                    PdfAiMaterialTranslation
+                  >(table),
+                  $$PdfAiMaterialTranslationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -35992,16 +37425,17 @@ class $$PdfAiMaterialsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (materialId) {
+                    if (sourceId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.materialId,
-                                referencedTable: $$PdfAiMaterialsTableReferences
-                                    ._materialIdTable(db),
+                                currentColumn: table.sourceId,
+                                referencedTable:
+                                    $$PdfAiMaterialTranslationsTableReferences
+                                        ._sourceIdTable(db),
                                 referencedColumn:
-                                    $$PdfAiMaterialsTableReferences
-                                        ._materialIdTable(db)
+                                    $$PdfAiMaterialTranslationsTableReferences
+                                        ._sourceIdTable(db)
                                         .id,
                               )
                               as T;
@@ -36018,19 +37452,19 @@ class $$PdfAiMaterialsTableTableManager
       );
 }
 
-typedef $$PdfAiMaterialsTableProcessedTableManager =
+typedef $$PdfAiMaterialTranslationsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $PdfAiMaterialsTable,
-      PdfAiMaterial,
-      $$PdfAiMaterialsTableFilterComposer,
-      $$PdfAiMaterialsTableOrderingComposer,
-      $$PdfAiMaterialsTableAnnotationComposer,
-      $$PdfAiMaterialsTableCreateCompanionBuilder,
-      $$PdfAiMaterialsTableUpdateCompanionBuilder,
-      (PdfAiMaterial, $$PdfAiMaterialsTableReferences),
-      PdfAiMaterial,
-      PrefetchHooks Function({bool materialId})
+      $PdfAiMaterialTranslationsTable,
+      PdfAiMaterialTranslation,
+      $$PdfAiMaterialTranslationsTableFilterComposer,
+      $$PdfAiMaterialTranslationsTableOrderingComposer,
+      $$PdfAiMaterialTranslationsTableAnnotationComposer,
+      $$PdfAiMaterialTranslationsTableCreateCompanionBuilder,
+      $$PdfAiMaterialTranslationsTableUpdateCompanionBuilder,
+      (PdfAiMaterialTranslation, $$PdfAiMaterialTranslationsTableReferences),
+      PdfAiMaterialTranslation,
+      PrefetchHooks Function({bool sourceId})
     >;
 typedef $$QuestionSetsTableCreateCompanionBuilder =
     QuestionSetsCompanion Function({
@@ -45226,6 +46660,11 @@ class $AppDatabaseManager {
       );
   $$PdfAiMaterialsTableTableManager get pdfAiMaterials =>
       $$PdfAiMaterialsTableTableManager(_db, _db.pdfAiMaterials);
+  $$PdfAiMaterialTranslationsTableTableManager get pdfAiMaterialTranslations =>
+      $$PdfAiMaterialTranslationsTableTableManager(
+        _db,
+        _db.pdfAiMaterialTranslations,
+      );
   $$QuestionSetsTableTableManager get questionSets =>
       $$QuestionSetsTableTableManager(_db, _db.questionSets);
   $$QuizQuestionsTableTableManager get quizQuestions =>

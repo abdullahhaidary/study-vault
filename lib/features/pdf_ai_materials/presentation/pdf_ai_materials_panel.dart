@@ -17,6 +17,7 @@ import '../domain/pdf_ai_material_models.dart';
 import '../domain/pdf_ai_versioning.dart';
 import 'pdf_ai_manual_import_dialog.dart';
 import 'pdf_ai_material_reader_screen.dart';
+import 'pdf_ai_translation_actions.dart';
 
 class PdfAiMaterialsPanel extends ConsumerWidget {
   const PdfAiMaterialsPanel({
@@ -208,9 +209,10 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
         ) ??
         selection;
 
+    final alsoPersian = ref.read(pdfAiAlsoPersianProvider).valueOrNull ?? false;
     setState(() => _generating = true);
     try {
-      await ref
+      final generated = await ref
           .read(pdfAiMaterialServiceProvider)
           .generate(
             materialId: widget.materialId,
@@ -220,6 +222,14 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
             selection: selection,
             customInstruction: '',
           );
+      if (alsoPersian && mounted) {
+        await translatePdfAiVersion(
+          context,
+          ref,
+          generated,
+          selection: selection,
+        );
+      }
     } on AiException catch (error) {
       _showError(error.message);
     } on Object catch (error) {
@@ -318,7 +328,18 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
                   : const Icon(Icons.auto_awesome),
               label: Text(_generating ? 'Generating…' : 'Generate'),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: CheckboxListTile(
+                dense: true,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: ref.watch(pdfAiAlsoPersianProvider).valueOrNull ?? false,
+                onChanged: _generating
+                    ? null
+                    : (value) => setPdfAiAlsoPersian(ref, value ?? false),
+                title: const Text('Also create Persian (فارسی)'),
+              ),
+            ),
             OutlinedButton.icon(
               onPressed: _generating ? null : _importJson,
               icon: const Icon(Icons.data_object_outlined),
