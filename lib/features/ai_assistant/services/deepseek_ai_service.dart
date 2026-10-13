@@ -63,7 +63,7 @@ class DeepSeekAiService implements AiService {
   Future<AiStudyResult> run(
     AiStudyRequest request, {
     Map<String, String> categoryNameToId = const {},
-    Duration timeout = const Duration(seconds: 60),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     if (request.image != null) {
       throw const AiMalformedOutputException(
@@ -173,7 +173,7 @@ class DeepSeekAiService implements AiService {
   @override
   Future<AiQuestionsResult> generateQuestions(
     AiQuestionGenerationRequest request, {
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     final result = await run(request.toStudyRequest(), timeout: timeout);
     if (result is! AiQuestionsResult) {

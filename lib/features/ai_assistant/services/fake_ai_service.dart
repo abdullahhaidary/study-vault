@@ -40,7 +40,7 @@ class FakeAiService implements AiService {
   Future<AiStudyResult> run(
     AiStudyRequest request, {
     Map<String, String> categoryNameToId = const {},
-    Duration timeout = const Duration(seconds: 60),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     if (!configured) throw const AiNotConfiguredException();
     if (handler != null) return handler!(request);
@@ -114,7 +114,7 @@ class FakeAiService implements AiService {
   @override
   Future<AiQuestionsResult> generateQuestions(
     AiQuestionGenerationRequest request, {
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     if (!configured) throw const AiNotConfiguredException();
     if (handler != null) {

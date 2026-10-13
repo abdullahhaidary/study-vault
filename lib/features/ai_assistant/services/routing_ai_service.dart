@@ -64,7 +64,7 @@ class RoutingAiService implements AiService {
   Future<AiStudyResult> run(
     AiStudyRequest request, {
     Map<String, String> categoryNameToId = const {},
-    Duration timeout = const Duration(seconds: 60),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     final effective = request.hasPageImage
         ? _ensureGeminiSelection(request)
@@ -82,7 +82,7 @@ class RoutingAiService implements AiService {
   @override
   Future<AiQuestionsResult> generateQuestions(
     AiQuestionGenerationRequest request, {
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     final effective = request.image != null
         ? _ensureGeminiQuestionSelection(request)

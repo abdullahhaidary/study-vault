@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/ai_providers.dart';
+import '../data/failed_ai_requests_provider.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../services/markdown_to_quill.dart';
+import 'ai_annotation_preview.dart';
+import 'ai_flashcards_preview.dart';
 import 'ai_missing_key_dialog.dart';
 import 'ai_privacy_dialog.dart';
+import 'ai_questions_preview.dart';
+import 'ai_response_screen.dart';
+import 'failed_ai_requests_screen.dart';
 
 /// Shared entry point for user-initiated AI actions.
 abstract final class AiAssistantController {
@@ -182,21 +188,79 @@ abstract final class AiAssistantController {
     } on AiException catch (e) {
       if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ref.read(failedAiRequestsProvider.notifier).add(
+          request: request,
+          errorMessage: e.message,
+        );
+        _showFailureSnackBar(context, e.message);
       }
       return null;
     } catch (_) {
       if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI request failed. Please try again.')),
+        ref.read(failedAiRequestsProvider.notifier).add(
+          request: request,
+          errorMessage: 'AI request failed. Please try again.',
         );
+        _showFailureSnackBar(context, 'AI request failed. Please try again.');
       }
       return null;
     } finally {
       _requestInFlight = false;
+    }
+  }
+
+  static void _showFailureSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(
+          label: 'View',
+          onPressed: () => showFailedAiRequestsScreen(context),
+        ),
+      ),
+    );
+  }
+
+  static Future<void> retry(
+    BuildContext context,
+    WidgetRef ref,
+    FailedAiRequest failed,
+  ) async {
+    if (!context.mounted) return;
+    final result = await runWithLoading(
+      context,
+      ref,
+      request: failed.request,
+    );
+    if (result == null || !context.mounted) return;
+
+    ref.read(failedAiRequestsProvider.notifier).remove(failed.id);
+
+    switch (result) {
+      case AiTextResult text:
+        await showAiResponseScreen(
+          context,
+          ref,
+          result: text,
+          action: failed.request.action,
+          request: failed.request,
+        );
+      case AiFlashcardsResult flash:
+        await showAiFlashcardsPreview(
+          context,
+          cards: flash.cards,
+          usage: flash.usage,
+        );
+      case AiQuestionsResult questions:
+        await showAiQuestionsPreview(context, questions: questions);
+      case AiAnnotationDraft draft:
+        await showAiAnnotationPreview(
+          context,
+          ref,
+          draft: draft,
+          selectedText: failed.request.selectedText ?? failed.request.sourceText,
+        );
     }
   }
 

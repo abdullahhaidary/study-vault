@@ -10,12 +10,12 @@ abstract class AiService {
   Future<AiStudyResult> run(
     AiStudyRequest request, {
     Map<String, String> categoryNameToId = const {},
-    Duration timeout = const Duration(seconds: 60),
+    Duration timeout = const Duration(minutes: 5),
   });
 
   /// First-class quiz generation — provider returns structured question JSON.
   Future<AiQuestionsResult> generateQuestions(
     AiQuestionGenerationRequest request, {
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   });
 }

@@ -43,7 +43,7 @@ class AnnotationAiService {
     AiLanguage? translateTarget,
     AiLanguage? languageOverride,
     Map<String, String> categoryNameToId = const {},
-    Duration timeout = const Duration(seconds: 60),
+    Duration timeout = const Duration(minutes: 5),
     bool useCache = true,
     AiPageSendMode sendMode = AiPageSendMode.text,
     AiStudyImage? image,

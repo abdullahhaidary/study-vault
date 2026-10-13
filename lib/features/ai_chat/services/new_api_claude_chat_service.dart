@@ -61,7 +61,7 @@ class NewApiClaudeChatService implements AiChatTransport {
   Future<AiChatCompletion> complete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     final messages = _messages(
       history,
@@ -84,7 +84,7 @@ class NewApiClaudeChatService implements AiChatTransport {
   Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 120),
+    Duration timeout = const Duration(minutes: 5),
   }) async* {
     final messages = _messages(
       history,

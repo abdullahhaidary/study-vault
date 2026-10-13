@@ -81,7 +81,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
   Future<AiChatCompletion> complete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
@@ -112,7 +112,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
   Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 120),
+    Duration timeout = const Duration(minutes: 5),
   }) async* {
     final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
@@ -540,7 +540,7 @@ class RoutingAiChatTransport implements AiChatTransport {
   Future<AiChatCompletion> complete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 90),
+    Duration timeout = const Duration(minutes: 5),
   }) async {
     return (await _forModel(
       modelId,
@@ -551,7 +551,7 @@ class RoutingAiChatTransport implements AiChatTransport {
   Stream<AiChatStreamEvent> streamComplete({
     required String modelId,
     required List<AiChatTurn> history,
-    Duration timeout = const Duration(seconds: 120),
+    Duration timeout = const Duration(minutes: 5),
   }) async* {
     yield* (await _forModel(
       modelId,
