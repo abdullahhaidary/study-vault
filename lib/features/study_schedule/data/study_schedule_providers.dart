@@ -23,8 +23,7 @@ abstract final class ScheduleDailyLimit {
   static const defaultValue = 10;
   static const options = [5, 10, 15, 20, 30, 0];
 
-  static String label(int value) =>
-      value == 0 ? 'No limit' : '$value per day';
+  static String label(int value) => value == 0 ? 'No limit' : '$value per day';
 }
 
 final scheduleDailyLimitProvider = FutureProvider<int>((ref) async {
@@ -67,11 +66,11 @@ final lessonScheduleEntryProvider = Provider.family<ScheduleEntry?, String>((
 });
 
 /// Lessons marked Reviewed/Mastered before they were scheduled.
-final unscheduledReviewedLessonsProvider = FutureProvider<List<Lesson>>((
-  ref,
-) {
+final unscheduledReviewedLessonsProvider = FutureProvider<List<Lesson>>((ref) {
   ref.watch(scheduleEntriesProvider);
-  return ref.watch(studyScheduleRepositoryProvider).unscheduledReviewedLessons();
+  return ref
+      .watch(studyScheduleRepositoryProvider)
+      .unscheduledReviewedLessons();
 });
 
 final lessonSummariesProvider =

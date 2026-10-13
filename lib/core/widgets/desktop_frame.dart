@@ -69,6 +69,12 @@ class DesktopFrame extends ConsumerWidget {
     ),
     (AppRoutes.books, Icons.menu_book_outlined, Icons.menu_book, 'Books'),
     (AppRoutes.search, Icons.search, Icons.search, 'Search'),
+    (
+      AppRoutes.studySchedule,
+      Icons.event_repeat_outlined,
+      Icons.event_repeat,
+      'Schedule',
+    ),
     (AppRoutes.favorites, Icons.star_outline, Icons.star, 'Favorites'),
     (AppRoutes.reviews, Icons.history_outlined, Icons.history, 'Reviews'),
     (AppRoutes.settings, Icons.settings_outlined, Icons.settings, 'Settings'),

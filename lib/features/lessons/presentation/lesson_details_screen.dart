@@ -23,6 +23,10 @@ import '../data/lesson_progress_providers.dart';
 import '../domain/lesson_progress.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_entry_button.dart';
+import '../../study_schedule/data/study_schedule_providers.dart';
+import '../../study_schedule/domain/schedule_day.dart';
+import '../../study_schedule/presentation/lesson_schedule_tile.dart';
+import '../../study_schedule/presentation/study_schedule_screen.dart';
 import '../../../core/navigation/study_navigator.dart';
 import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
@@ -277,8 +281,31 @@ class LessonDetailsScreen extends ConsumerWidget {
           actions: [
             _LessonProgressBadge(
               status: LessonProgressStatus.fromStorage(lesson.progressStatus),
-              onSelected: (status) =>
-                  setLessonProgress(ref, lesson: lesson, status: status),
+              onSelected: (status) async {
+                final added = await setLessonProgress(
+                  ref,
+                  lesson: lesson,
+                  status: status,
+                );
+                if (!added) return;
+                final entry = await ref
+                    .read(studyScheduleRepositoryProvider)
+                    .entryFor(lesson.id);
+                if (entry == null || !context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Added to your Study Schedule. First review '
+                      '${ScheduleDay.relative(entry.dueOn).toLowerCase()} '
+                      '(${ScheduleDay.short(entry.dueOn)}).',
+                    ),
+                    action: SnackBarAction(
+                      label: 'View',
+                      onPressed: () => StudyScheduleScreen.open(context),
+                    ),
+                  ),
+                );
+              },
             ),
             FavoriteStarButton(
               entityType: FavoriteEntityType.lesson,
@@ -311,7 +338,9 @@ class LessonDetailsScreen extends ConsumerWidget {
                   value: 'delete',
                   child: Text(
                     'Delete lesson',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ],
@@ -333,6 +362,12 @@ class LessonDetailsScreen extends ConsumerWidget {
                     title: lesson.name,
                   ),
                 ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: DetailContent(
+                bottom: 0,
+                child: LessonScheduleTile(lessonId: lessonId),
               ),
             ),
             SliverToBoxAdapter(

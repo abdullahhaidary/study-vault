@@ -81,7 +81,8 @@ class StudyScheduleRepository {
   Stream<List<ScheduleEntry>> watchEntries() =>
       _entriesQuery().watch().map(_map);
 
-  Future<List<ScheduleEntry>> entries() async => _map(await _entriesQuery().get());
+  Future<List<ScheduleEntry>> entries() async =>
+      _map(await _entriesQuery().get());
 
   Future<ScheduleEntry?> entryFor(String lessonId) async {
     for (final entry in await entries()) {
@@ -155,8 +156,7 @@ class StudyScheduleRepository {
     final entry = await entryFor(lessonId);
     if (entry == null) return const {};
     return {
-      for (final rating in ReviewRating.values)
-        rating: _decide(entry, rating),
+      for (final rating in ReviewRating.values) rating: _decide(entry, rating),
     };
   }
 
@@ -222,8 +222,7 @@ class StudyScheduleRepository {
   ) async {
     final lesson = await _db.getLessonById(lessonId);
     if (lesson == null) return;
-    final success =
-        rating == ReviewRating.good || rating == ReviewRating.easy;
+    final success = rating == ReviewRating.good || rating == ReviewRating.easy;
     final keepMastered =
         rating != ReviewRating.again &&
         lesson.progressStatus == LessonProgressStatus.storageMastered;
@@ -270,15 +269,40 @@ class StudyScheduleRepository {
     )..where((t) => t.lessonId.equals(lessonId))).go();
   }
 
-  Future<void> setExamDate(String subjectId, DateTime? day) {
-    return (_db.update(
-      _db.subjects,
-    )..where((t) => t.id.equals(subjectId))).write(
-      SubjectsCompanion(
-        examDate: Value(day == null ? null : ScheduleDay.format(day)),
-        updatedAt: Value(_clock()),
-      ),
-    );
+  /// Sets or clears a subject's exam day and pulls reviews scheduled past
+  /// the exam forward so each lesson is seen before it. Returns how many
+  /// reviews moved.
+  Future<int> setExamDate(String subjectId, DateTime? day) {
+    return _db.transaction(() async {
+      await (_db.update(
+        _db.subjects,
+      )..where((t) => t.id.equals(subjectId))).write(
+        SubjectsCompanion(
+          examDate: Value(day == null ? null : ScheduleDay.format(day)),
+          updatedAt: Value(_clock()),
+        ),
+      );
+      final deadline = ReviewScheduler.examDeadline(_today, day);
+      if (deadline == null) return 0;
+      var moved = 0;
+      for (final entry in await entries()) {
+        if (entry.subjectId != subjectId ||
+            entry.paused ||
+            !entry.dueOn.isAfter(deadline)) {
+          continue;
+        }
+        await _addEvent(
+          entry.lessonId,
+          kind: ScheduleEventKind.reschedule,
+          decision: (
+            dueOn: deadline,
+            intervalDays: ScheduleDay.between(_today, deadline),
+          ),
+        );
+        moved++;
+      }
+      return moved;
+    });
   }
 
   /// Latest AI or Course Review summary for each document in the lesson.
@@ -323,10 +347,9 @@ class StudyScheduleRepository {
     return result;
   }
 
-  Future<StudySchedule?> _scheduleRow(String lessonId) =>
-      (_db.select(
-        _db.studySchedules,
-      )..where((t) => t.lessonId.equals(lessonId))).getSingleOrNull();
+  Future<StudySchedule?> _scheduleRow(String lessonId) => (_db.select(
+    _db.studySchedules,
+  )..where((t) => t.lessonId.equals(lessonId))).getSingleOrNull();
 
   Future<void> _insertSchedule(String lessonId, ScheduleDecision first) async {
     final now = _clock();
@@ -340,11 +363,7 @@ class StudyScheduleRepository {
             updatedAt: now,
           ),
         );
-    await _addEvent(
-      lessonId,
-      kind: ScheduleEventKind.start,
-      decision: first,
-    );
+    await _addEvent(lessonId, kind: ScheduleEventKind.start, decision: first);
   }
 
   Future<DateTime?> _examFor(String lessonId) async {

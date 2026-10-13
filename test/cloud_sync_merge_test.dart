@@ -71,6 +71,41 @@ void main() {
     },
   );
 
+  test('two devices scheduling the same lesson offline merge cleanly', () {
+    final base = {
+      'classes/c': row('classes', 'c'),
+      'subjects/s': row('subjects', 's', {'class_id': 'c'}),
+      'lessons/l': row('lessons', 'l', {'subject_id': 's'}),
+    };
+    Map<String, dynamic> schedule(String id, int at) => row(
+      'study_schedules',
+      id,
+      {'lesson_id': 'l', 'paused': 0, 'created_at': at, 'updated_at': at},
+    );
+    Map<String, dynamic> event(String id) =>
+        row('study_schedule_events', id, {'lesson_id': 'l'});
+    final plan = CloudMerge.plan(
+      schema: schema,
+      base: base,
+      device: {
+        ...base,
+        'study_schedules/a': schedule('a', 100),
+        'study_schedule_events/e1': event('e1'),
+      },
+      server: {
+        ...base,
+        'study_schedules/b': schedule('b', 200),
+        'study_schedule_events/e2': event('e2'),
+      },
+    );
+    expect(plan.conflicts, isEmpty);
+    expect(plan.rows.keys.where((k) => k.startsWith('study_schedules/')), [
+      'study_schedules/b',
+    ]);
+    expect(plan.rows, contains('study_schedule_events/e1'));
+    expect(plan.rows, contains('study_schedule_events/e2'));
+  });
+
   test(
     'new child versus deleted parent is detected instead of silently discarded',
     () {

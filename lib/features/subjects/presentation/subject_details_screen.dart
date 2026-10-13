@@ -21,6 +21,8 @@ import '../../lessons/presentation/create_lesson_dialog.dart';
 import '../../lessons/presentation/lesson_group_dialog.dart';
 import '../../study_review/domain/review_models.dart';
 import '../../study_review/presentation/review_entry_button.dart';
+import '../../study_schedule/domain/schedule_day.dart';
+import '../../study_schedule/presentation/schedule_actions.dart';
 import '../../notes/presentation/notes_list_section.dart';
 import '../data/subjects_providers.dart';
 
@@ -111,6 +113,14 @@ class SubjectDetailsScreen extends ConsumerWidget {
               onSelected: (value) {
                 if (value == 'group') {
                   LessonGroupDialog.show(context, subjectId: subjectId);
+                } else if (value == 'exam') {
+                  editExamDate(
+                    context,
+                    ref,
+                    subjectId: subjectId,
+                    subjectName: subject.name,
+                    current: ScheduleDay.tryParse(subject.examDate),
+                  );
                 } else if (value == 'delete') {
                   _confirmDeleteSubject(context, ref, subject);
                 }
@@ -121,10 +131,19 @@ class SubjectDetailsScreen extends ConsumerWidget {
                   child: Text('Add Lesson Group'),
                 ),
                 PopupMenuItem(
+                  value: 'exam',
+                  child: Text(switch (ScheduleDay.tryParse(subject.examDate)) {
+                    null => 'Set exam date…',
+                    final exam => 'Exam date: ${ScheduleDay.short(exam)}',
+                  }),
+                ),
+                PopupMenuItem(
                   value: 'delete',
                   child: Text(
                     'Delete subject',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ],

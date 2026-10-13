@@ -13,6 +13,8 @@ import '../../../core/widgets/section_header.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
 import '../../study_workspace/data/study_workspace_providers.dart';
 import '../../study_review/presentation/recent_reviews_screen.dart';
+import '../../study_schedule/data/study_schedule_providers.dart';
+import '../../study_schedule/presentation/study_schedule_screen.dart';
 import '../data/classes_providers.dart';
 import 'create_class_dialog.dart';
 
@@ -26,6 +28,7 @@ class HomeScreen extends ConsumerWidget {
     final counts =
         ref.watch(subjectCountsProvider).valueOrNull ?? const <String, int>{};
     final continueAsync = ref.watch(continueStudyingLessonsProvider);
+    final dueCount = ref.watch(scheduleDueCountProvider);
     final theme = Theme.of(context);
     final desktop = AppSpacing.isDesktopLayout(context);
 
@@ -70,6 +73,8 @@ class HomeScreen extends ConsumerWidget {
                               CreateClassDialog.show(context);
                             case 'books':
                               Navigator.of(context).pushNamed(AppRoutes.books);
+                            case 'schedule':
+                              StudyScheduleScreen.open(context);
                             case 'reviews':
                               RecentReviewsScreen.open(context);
                             case 'favorites':
@@ -88,6 +93,10 @@ class HomeScreen extends ConsumerWidget {
                             child: Text('Reference Books'),
                           ),
                           PopupMenuItem(
+                            value: 'schedule',
+                            child: Text('Study Schedule'),
+                          ),
+                          PopupMenuItem(
                             value: 'reviews',
                             child: Text('Recent Reviews'),
                           ),
@@ -103,6 +112,27 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
             ),
+            if (dueCount > 0)
+              SliverToBoxAdapter(
+                child: ContentHomePadding(
+                  bottom: AppSpacing.md,
+                  child: Card(
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.event_repeat,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        '$dueCount lesson${dueCount == 1 ? '' : 's'} due for '
+                        'review',
+                      ),
+                      subtitle: const Text('Open your Study Schedule'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => StudyScheduleScreen.open(context),
+                    ),
+                  ),
+                ),
+              ),
             continueAsync.when(
               loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
               error: (_, _) =>

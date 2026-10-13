@@ -109,9 +109,9 @@ void main() {
   );
 
   test('schema version is 16 and matches backup constants', () {
-    expect(db.schemaVersion, 18);
-    expect(kStudyVaultSchemaVersion, 18);
-    expect(BackupService().currentSchemaVersion, 18);
+    expect(db.schemaVersion, 19);
+    expect(kStudyVaultSchemaVersion, 19);
+    expect(BackupService().currentSchemaVersion, 19);
   });
 
   test('source fingerprints prefer annotation id and separate selections', () {

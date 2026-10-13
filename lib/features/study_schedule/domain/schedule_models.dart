@@ -39,8 +39,7 @@ class ScheduleEntry {
 
   bool isDue(DateTime today) => !paused && !dueOn.isAfter(today);
 
-  int overdueDays(DateTime today) =>
-      max(0, ScheduleDay.between(dueOn, today));
+  int overdueDays(DateTime today) => max(0, ScheduleDay.between(dueOn, today));
 }
 
 /// The Study Schedule list for one day.

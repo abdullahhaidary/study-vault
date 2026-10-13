@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "tables": {
     "classes": {
       "columns": {
@@ -91,6 +91,10 @@
         "sort_order": {
           "type": "INTEGER",
           "required": true
+        },
+        "exam_date": {
+          "type": "TEXT",
+          "required": false
         },
         "created_at": {
           "type": "INTEGER",
@@ -1806,6 +1810,92 @@
           "question_set_id"
         ]
       ]
+    },
+    "study_schedules": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "paused": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        }
+      ],
+      "unique": [
+        [
+          "lesson_id"
+        ]
+      ]
+    },
+    "study_schedule_events": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "kind": {
+          "type": "TEXT",
+          "required": true
+        },
+        "rating": {
+          "type": "TEXT",
+          "required": false
+        },
+        "recall_text": {
+          "type": "TEXT",
+          "required": false
+        },
+        "event_on": {
+          "type": "TEXT",
+          "required": true
+        },
+        "due_on": {
+          "type": "TEXT",
+          "required": true
+        },
+        "interval_days": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "sequence_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        }
+      ],
+      "unique": []
     }
   }
 }

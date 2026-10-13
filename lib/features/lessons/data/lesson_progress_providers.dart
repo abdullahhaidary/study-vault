@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../study_schedule/data/study_schedule_providers.dart';
 import '../domain/lesson_progress.dart';
 
 /// Watches lessons marked Studying, newest activity first.
@@ -10,7 +11,9 @@ final continueStudyingLessonsProvider = StreamProvider<List<Lesson>>((ref) {
   return db.watchStudyingLessons();
 });
 
-Future<void> setLessonProgress(
+/// Marking a lesson Reviewed or Mastered adds it to the Study Schedule.
+/// Returns true when it was newly scheduled.
+Future<bool> setLessonProgress(
   WidgetRef ref, {
   required Lesson lesson,
   required LessonProgressStatus status,
@@ -21,6 +24,13 @@ Future<void> setLessonProgress(
     progressStatus: status.storageValue,
     touchLastStudied: status == LessonProgressStatus.studying,
   );
+  if (status != LessonProgressStatus.reviewed &&
+      status != LessonProgressStatus.mastered) {
+    return false;
+  }
+  return ref
+      .read(studyScheduleRepositoryProvider)
+      .enroll(lesson.id, mastered: status == LessonProgressStatus.mastered);
 }
 
 /// Call when the user performs meaningful study activity for a lesson.

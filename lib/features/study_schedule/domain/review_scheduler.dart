@@ -49,8 +49,7 @@ abstract final class ReviewScheduler {
     final scheduled = max(1, intervalDays);
     final elapsed = max(1, ScheduleDay.between(lastOn, today));
     final early = today.isBefore(dueOn);
-    final success =
-        rating == ReviewRating.good || rating == ReviewRating.easy;
+    final success = rating == ReviewRating.good || rating == ReviewRating.easy;
     final credited = early ? elapsed : max(scheduled, elapsed);
 
     final interval = switch (rating) {
@@ -79,15 +78,18 @@ abstract final class ReviewScheduler {
     return ladder[min(index + skip, ladder.length - 1)];
   }
 
-  static DateTime _capForExam(DateTime due, DateTime today, DateTime? examOn) {
-    if (examOn == null) return due;
+  /// Latest day the next review may fall on before [examOn], or null when
+  /// the exam is past or too close to plan around.
+  static DateTime? examDeadline(DateTime today, DateTime? examOn) {
+    if (examOn == null) return null;
     final left = ScheduleDay.between(today, examOn);
-    if (left < 2) return due;
-    final latest = ScheduleDay.add(
-      today,
-      max(1, (left * examGapFraction).floor()),
-    );
-    return due.isAfter(latest) ? latest : due;
+    if (left < 2) return null;
+    return ScheduleDay.add(today, max(1, (left * examGapFraction).floor()));
+  }
+
+  static DateTime _capForExam(DateTime due, DateTime today, DateTime? examOn) {
+    final latest = examDeadline(today, examOn);
+    return latest != null && due.isAfter(latest) ? latest : due;
   }
 
   /// Moves a long gap by a few days when its day is already full.

@@ -18,6 +18,7 @@ import '../features/notes/presentation/note_reader_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/study_review/presentation/recent_reviews_screen.dart';
+import '../features/study_schedule/presentation/study_schedule_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 import '../features/course_review/presentation/course_review_screen.dart';
 import '../features/reference_books/presentation/book_details_screen.dart';
@@ -44,6 +45,7 @@ abstract final class AppRoutes {
   static const questionSets = '/ai-questions';
   static const manualEntry = '/manual-entry';
   static const reviews = '/reviews';
+  static const studySchedule = '/schedule';
   static const courseReview = '/course-review';
   static const books = '/books';
   static const bookDetails = '/book';
@@ -134,6 +136,12 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => const RecentReviewsScreen(),
+      );
+
+    case AppRoutes.studySchedule:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const StudyScheduleScreen(),
       );
 
     case AppRoutes.manualEntry:

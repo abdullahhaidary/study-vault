@@ -1,5 +1,10 @@
+import 'dart:io';
+
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/study_review/domain/review_models.dart';
+import 'package:study_vault/features/study_schedule/data/study_schedule_repository.dart';
 import 'package:study_vault/features/study_schedule/domain/review_scheduler.dart';
 import 'package:study_vault/features/study_schedule/domain/schedule_day.dart';
 import 'package:study_vault/features/study_schedule/domain/schedule_models.dart';
@@ -119,8 +124,11 @@ void main() {
       final exam = _day(20);
       expect(_onTime(7, ReviewRating.good, examOn: exam).intervalDays, 8);
       expect(
-        ReviewScheduler.start(today: _today, mastered: true, examOn: _day(5))
-            .intervalDays,
+        ReviewScheduler.start(
+          today: _today,
+          mastered: true,
+          examOn: _day(5),
+        ).intervalDays,
         2,
       );
       expect(_onTime(3, ReviewRating.good, examOn: _day(2)).intervalDays, 1);
@@ -170,6 +178,166 @@ void main() {
       expect(plan.upcoming.map((e) => e.lessonId), ['upcoming']);
       expect(plan.paused.map((e) => e.lessonId), ['paused']);
       expect(plan.dueCount, 4);
+    });
+  });
+
+  test(
+    'upgrading a version 18 database keeps data and adds the schedule',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('schedule_migration');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/vault.sqlite');
+      final t = DateTime(2026);
+      var db = AppDatabase.forTesting(NativeDatabase(file));
+      await db.insertClass(
+        ClassesCompanion.insert(id: 'c', name: 'C', createdAt: t, updatedAt: t),
+      );
+      await db.insertSubject(
+        SubjectsCompanion.insert(
+          id: 's',
+          classId: 'c',
+          name: 'Kept',
+          createdAt: t,
+          updatedAt: t,
+        ),
+      );
+      await db.customStatement('DROP TABLE study_schedule_events');
+      await db.customStatement('DROP TABLE study_schedules');
+      await db.customStatement('ALTER TABLE subjects DROP COLUMN exam_date');
+      await db.customStatement('PRAGMA user_version = 18');
+      await db.close();
+
+      db = AppDatabase.forTesting(NativeDatabase(file));
+      addTearDown(db.close);
+      expect((await db.getSubjectById('s'))!.name, 'Kept');
+      expect(await db.select(db.studySchedules).get(), isEmpty);
+      final version = await db.customSelect('PRAGMA user_version').getSingle();
+      expect(version.data.values.single, 19);
+    },
+  );
+
+  group('StudyScheduleRepository', () {
+    late AppDatabase db;
+    late DateTime now;
+    late StudyScheduleRepository repo;
+
+    setUp(() async {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      now = DateTime(2026, 10, 13, 22, 30);
+      repo = StudyScheduleRepository(db, clock: () => now);
+      final t = DateTime(2026);
+      await db.insertClass(
+        ClassesCompanion.insert(id: 'c', name: 'C', createdAt: t, updatedAt: t),
+      );
+      await db.insertSubject(
+        SubjectsCompanion.insert(
+          id: 's',
+          classId: 'c',
+          name: 'Biology',
+          createdAt: t,
+          updatedAt: t,
+        ),
+      );
+      for (final id in ['l1', 'l2', 'l3']) {
+        await db.insertLesson(
+          LessonsCompanion.insert(
+            id: id,
+            subjectId: 's',
+            name: 'Lesson $id',
+            createdAt: t,
+            updatedAt: t,
+          ),
+        );
+      }
+    });
+    tearDown(() => db.close());
+
+    test('enrolling is idempotent and schedules tomorrow', () async {
+      expect(await repo.enroll('l1'), isTrue);
+      expect(await repo.enroll('l1'), isFalse);
+      final entry = (await repo.entryFor('l1'))!;
+      expect(entry.dueOn, _day(1));
+      expect(entry.subjectName, 'Biology');
+      expect(entry.reviewCount, 0);
+    });
+
+    test('reviews climb the ladder and promote lesson progress', () async {
+      await repo.enroll('l1');
+      now = DateTime(2026, 10, 14, 9);
+      final first = await repo.recordReview(
+        'l1',
+        rating: ReviewRating.good,
+        recallText: '  mitosis phases  ',
+      );
+      expect(first.intervalDays, 3);
+      expect((await db.getLessonById('l1'))!.progressStatus, 'reviewed');
+
+      now = DateTime(2026, 10, 17, 9);
+      expect(
+        (await repo.recordReview('l1', rating: ReviewRating.easy)).intervalDays,
+        21,
+      );
+      now = DateTime(2026, 11, 7, 9);
+      expect(
+        (await repo.recordReview('l1', rating: ReviewRating.good)).intervalDays,
+        60,
+      );
+      expect((await db.getLessonById('l1'))!.progressStatus, 'mastered');
+
+      final entry = (await repo.entryFor('l1'))!;
+      expect(entry.reviewCount, 3);
+      final events = await db.select(db.studyScheduleEvents).get();
+      expect(events.map((e) => e.recallText), contains('mitosis phases'));
+
+      await repo.recordReview('l1', rating: ReviewRating.again);
+      expect((await db.getLessonById('l1'))!.progressStatus, 'reviewed');
+    });
+
+    test('a manual date change does not reset the credited gap', () async {
+      await repo.enroll('l1');
+      await repo.reschedule('l1', _day(5));
+      final entry = (await repo.entryFor('l1'))!;
+      expect(entry.dueOn, _day(5));
+      expect(entry.lastOn, _today);
+      expect(entry.intervalDays, 5);
+    });
+
+    test('exam dates cap new gaps and pull later reviews forward', () async {
+      await repo.enroll('l2');
+      await repo.reschedule('l2', _day(40));
+      await repo.enroll('l3');
+      expect(await repo.setExamDate('s', _day(10)), 1);
+      expect((await repo.entryFor('l2'))!.dueOn, _day(4));
+      expect((await repo.entryFor('l3'))!.dueOn, _day(1));
+      await repo.enroll('l1', mastered: true);
+      expect((await repo.entryFor('l1'))!.dueOn, _day(4));
+      expect(await repo.setExamDate('s', null), 0);
+      expect((await db.getSubjectById('s'))!.examDate, isNull);
+    });
+
+    test('pause, remove and lesson deletion', () async {
+      await repo.enroll('l1');
+      await repo.enroll('l2');
+      await repo.setPaused('l1', true);
+      expect((await repo.entryFor('l1'))!.paused, isTrue);
+      await repo.remove('l1');
+      expect(await repo.entryFor('l1'), isNull);
+      await db.deleteLesson('l2');
+      expect(await repo.entries(), isEmpty);
+      expect(await db.select(db.studyScheduleEvents).get(), hasLength(1));
+    });
+
+    test('existing reviewed lessons are added in daily batches', () async {
+      await db.updateLessonProgress(lessonId: 'l1', progressStatus: 'reviewed');
+      await db.updateLessonProgress(lessonId: 'l2', progressStatus: 'mastered');
+      await db.updateLessonProgress(lessonId: 'l3', progressStatus: 'reviewed');
+      await repo.enroll('l3');
+      final pending = await repo.unscheduledReviewedLessons();
+      expect(pending.map((l) => l.id), ['l1', 'l2']);
+      expect(await repo.enrollMany(pending, dailyLimit: 1), 2);
+      expect((await repo.entryFor('l1'))!.dueOn, _day(1));
+      expect((await repo.entryFor('l2'))!.dueOn, _day(8));
+      expect(await repo.unscheduledReviewedLessons(), isEmpty);
     });
   });
 }
