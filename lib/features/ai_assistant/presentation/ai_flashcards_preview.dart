@@ -167,7 +167,14 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                               (c) => c.front.isNotEmpty && c.back.isNotEmpty,
                             )
                             .toList();
-                        if (selected.isEmpty) return;
+                        if (selected.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Select a card with both a front and an answer.'),
+                            ),
+                          );
+                          return;
+                        }
                         setState(() => _saving = true);
                         try {
                           await widget.onCreate!(selected);

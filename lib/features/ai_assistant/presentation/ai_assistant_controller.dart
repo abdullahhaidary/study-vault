@@ -252,14 +252,11 @@ abstract final class AiAssistantController {
           onCreate: failed.request.lessonId == null
               ? null
               : (cards) async {
-                  for (final card in cards) {
-                    await createFlashcard(
-                      ref,
-                      lessonId: failed.request.lessonId,
-                      front: card.front,
-                      back: MarkdownToQuill.toDeltaJson(card.back),
-                    );
-                  }
+                  await createAiFlashcards(
+                    ref,
+                    lessonId: failed.request.lessonId,
+                    cards: cards,
+                  );
                 },
         );
       case AiQuestionsResult questions:

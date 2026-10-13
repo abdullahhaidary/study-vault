@@ -84,14 +84,11 @@ abstract final class SelectionAiLauncher {
             selectedText: selected,
           ),
           onFlashcardsCreate: (cards) async {
-            for (final card in cards) {
-              await createFlashcard(
-                ref,
-                lessonId: host.lessonId,
-                front: card.front,
-                back: MarkdownToQuill.toDeltaJson(card.back),
-              );
-            }
+            await createAiFlashcards(
+              ref,
+              lessonId: host.lessonId,
+              cards: cards,
+            );
           },
           onReplaceSelection: host.onReplaceSelection == null
               ? null

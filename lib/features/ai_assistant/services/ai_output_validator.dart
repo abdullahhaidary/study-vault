@@ -49,12 +49,16 @@ abstract final class AiOutputValidator {
       throw const AiMalformedOutputException('No flashcards in AI response.');
     }
     final cards = <AiFlashcardDraft>[];
+    final fronts = <String>{};
     for (final item in list) {
       if (item is! Map) continue;
       final front = ('${item['front'] ?? ''}').trim();
       final back = ('${item['back'] ?? ''}').trim();
       if (front.isEmpty || back.isEmpty) continue;
-      cards.add(AiFlashcardDraft(front: front, back: back));
+      final key = front.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+      if (fronts.add(key)) {
+        cards.add(AiFlashcardDraft(front: front, back: back));
+      }
     }
     if (cards.isEmpty) {
       throw const AiMalformedOutputException('Flashcards were invalid.');

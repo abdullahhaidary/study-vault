@@ -884,14 +884,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       onFlashcardsCreate: lessonId == null
           ? null
           : (cards) async {
-              for (final card in cards) {
-                await createFlashcard(
-                  ref,
-                  lessonId: lessonId,
-                  front: card.front,
-                  back: MarkdownToQuill.toDeltaJson(card.back),
-                );
-              }
+              await createAiFlashcards(ref, lessonId: lessonId, cards: cards);
             },
     );
   }

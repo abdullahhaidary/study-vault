@@ -274,13 +274,13 @@ Return concise but educational answers.
             'CUSTOM INSTRUCTION:\n${(request.customPrompt ?? '').trim()}',
       AiStudyAction.createAnnotation => _annotationTask(request),
       AiStudyAction.generateFlashcards =>
-        'Task: Generate exactly ${request.flashcardCount.clamp(1, 20)} flashcards from the selected study material.\n'
+        'Task: Generate up to ${request.flashcardCount.clamp(1, 20)} flashcards from the selected study material.\n'
             'Requirements:\n'
-            '- Base cards only on the selected content and surrounding context.\n'
-            '- Avoid duplicate or near-duplicate cards.\n'
-            '- Front = clear concise question/prompt.\n'
-            '- Back = concise accurate answer (markdown ok).\n'
-            '- Preserve source page when useful.\n'
+            '- Use only facts supported by the selected content and surrounding context; never invent missing details.\n'
+            '- One testable fact per card; avoid duplicate or near-duplicate cards.\n'
+            '- Front = a specific, self-contained question that makes sense without seeing the source.\n'
+            '- Back = a short, unambiguous answer (markdown ok), not a whole paragraph.\n'
+            '- If the source lacks enough distinct facts, return fewer cards rather than padding or guessing.\n'
             'Return JSON only matching the schema.',
       AiStudyAction.generateQuestions => _questionsTask(request),
     };

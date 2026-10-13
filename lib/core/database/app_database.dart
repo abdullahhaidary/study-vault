@@ -333,6 +333,21 @@ class Flashcards extends Table {
   ];
 }
 
+class FlashcardReviewEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get flashcardId =>
+      text().references(Flashcards, #id, onDelete: KeyAction.cascade)();
+  TextColumn get rating => text()();
+  TextColumn get reviewedOn => text()();
+  TextColumn get dueOn => text()();
+  IntColumn get intervalDays => integer()();
+  IntColumn get sequenceNumber => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Gemini AI Chat conversations (local source of truth).
 class AiChats extends Table {
   TextColumn get id => text()();
@@ -921,6 +936,7 @@ class StudyScheduleEvents extends Table {
     MaterialBookmarks,
     StudyNotes,
     Flashcards,
+    FlashcardReviewEvents,
     AiChats,
     AiChatMessages,
     AiMessageContextRefs,
@@ -986,7 +1002,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1006,6 +1022,7 @@ class AppDatabase extends _$AppDatabase {
       await _createPdfAiMaterialIndexes();
       await _createCourseReviewIndexes();
       await _createStudyScheduleIndexes();
+      await _createFlashcardReviewIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -1147,8 +1164,19 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(studyScheduleEvents);
         await _createStudyScheduleIndexes();
       }
+      if (from < 20) {
+        await m.createTable(flashcardReviewEvents);
+        await _createFlashcardReviewIndexes();
+      }
     },
   );
+
+  Future<void> _createFlashcardReviewIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_flashcard_review_events_card '
+      'ON flashcard_review_events (flashcard_id, sequence_number DESC)',
+    );
+  }
 
   Future<void> _createStudyScheduleIndexes() async {
     await customStatement(

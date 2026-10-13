@@ -1,4 +1,6 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
@@ -15,6 +17,9 @@ import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart'
 import 'package:study_vault/features/ai_assistant/services/markdown_to_quill.dart';
 import 'package:study_vault/features/ai_assistant/services/quill_to_markdown.dart';
 import 'package:study_vault/features/study_pins/domain/study_note_codec.dart';
+import 'package:study_vault/features/flashcards/data/flashcards_providers.dart';
+import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/core/database/database_provider.dart';
 
 void main() {
   group('GeminiApiKeys', () {
@@ -120,6 +125,15 @@ void main() {
       );
     });
 
+    test('drops duplicate generated fronts while preserving valid cards', () {
+      final result = AiOutputValidator.parseFlashcards(
+        '{"cards":[{"front":"What is DNA?","back":"A molecule"},'
+        '{"front":" what  IS dna? ","back":"Duplicate"},'
+        '{"front":"What is RNA?","back":"A related molecule"}]}',
+      );
+      expect(result.cards.map((c) => c.front), ['What is DNA?', 'What is RNA?']);
+    });
+
     test('uses no category for an unknown annotation category', () {
       final annotation = AiOutputValidator.parseAnnotation(
         '{"shortDescription":"Term","fullNote":"Definition",'
@@ -148,6 +162,17 @@ void main() {
       expect(prompt, contains('strictly preserving meaning'));
     },
   );
+
+  test('flashcard prompt avoids padding unsupported cards', () {
+    final prompt = AiPromptBuilder.forRequest(AiStudyRequest(
+      selection: testGeminiSelection(),
+      action: AiStudyAction.generateFlashcards,
+      sourceText: 'DNA stores genetic information.',
+      flashcardCount: 10,
+    ));
+    expect(prompt, contains('return fewer cards rather than padding'));
+    expect(prompt, contains('One testable fact per card'));
+  });
 
   test(
     'FakeAiService returns deterministic explain, organize, and flashcards',
@@ -222,6 +247,29 @@ void main() {
       expect(hasBold, isTrue);
     },
   );
+
+  testWidgets('AI flashcard batch rolls back if a card is invalid', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    late WidgetRef ref;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(home: Consumer(builder: (context, widgetRef, _) {
+          ref = widgetRef;
+          return const Scaffold();
+        })),
+      ),
+    );
+    await expectLater(
+      createAiFlashcards(ref, cards: const [
+        AiFlashcardDraft(front: 'First', back: 'Answer'),
+        AiFlashcardDraft(front: 'Second', back: ' '),
+      ]),
+      throwsArgumentError,
+    );
+    expect(await db.watchAllFlashcards().first, isEmpty);
+  });
 
   testWidgets('flashcard preview sends markdown for one storage conversion', (
     tester,

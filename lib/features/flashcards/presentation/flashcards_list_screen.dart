@@ -124,10 +124,17 @@ class FlashcardsListScreen extends ConsumerWidget {
                   ),
                   onTap: () => Navigator.of(context).pushNamed(
                     AppRoutes.flashcardStudy,
-                    arguments: FlashcardsListScope.lesson(
-                      id: card.lessonId!,
-                      title: scope.title,
-                    ),
+                    arguments: card.lessonId != null
+                        ? FlashcardsListScope.lesson(
+                            id: card.lessonId!,
+                            title: scope.title,
+                          )
+                        : card.subjectId != null
+                        ? FlashcardsListScope.subject(
+                            id: card.subjectId!,
+                            title: scope.title,
+                          )
+                        : const FlashcardsListScope.all(),
                   ),
                 );
               },

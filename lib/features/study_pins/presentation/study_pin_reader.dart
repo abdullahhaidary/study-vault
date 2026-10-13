@@ -398,14 +398,11 @@ class StudyPinReaderPanel extends ConsumerWidget {
             },
       onFlashcardsCreate: (cards) async {
         if (material == null) return;
-        for (final card in cards) {
-          await createFlashcard(
-            ref,
-            lessonId: material.lessonId,
-            front: card.front,
-            back: MarkdownToQuill.toDeltaJson(card.back),
-          );
-        }
+        await createAiFlashcards(
+          ref,
+          lessonId: material.lessonId,
+          cards: cards,
+        );
       },
     );
   }

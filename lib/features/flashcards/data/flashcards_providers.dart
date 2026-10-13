@@ -5,9 +5,14 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
+import '../../ai_assistant/domain/ai_models.dart';
+import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/domain/study_note_codec.dart';
+import '../../study_review/domain/review_models.dart';
+import '../../study_schedule/domain/review_scheduler.dart';
+import '../../study_schedule/domain/schedule_day.dart';
 
 const _uuid = Uuid();
 
@@ -43,6 +48,87 @@ final flashcardBySourcePinProvider = StreamProvider.family<Flashcard?, String>((
   final db = ref.watch(databaseProvider);
   return db.watchFlashcardBySourcePinId(pinId);
 });
+
+final flashcardReviewEventsProvider =
+    StreamProvider<List<FlashcardReviewEvent>>((ref) {
+      final db = ref.watch(databaseProvider);
+      return (db.select(db.flashcardReviewEvents)
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.sequenceNumber),
+              (t) => OrderingTerm.desc(t.createdAt),
+              (t) => OrderingTerm.desc(t.id),
+            ]))
+          .watch();
+    });
+
+final flashcardReviewRepositoryProvider = Provider<FlashcardReviewRepository>(
+  (ref) => FlashcardReviewRepository(ref.watch(databaseProvider)),
+);
+
+class FlashcardReviewRepository {
+  FlashcardReviewRepository(this._db);
+
+  final AppDatabase _db;
+
+  Future<void> rate(String cardId, ReviewRating rating, {DateTime? now}) async {
+    final time = now ?? DateTime.now();
+    final today = ScheduleDay.of(time);
+    await _db.transaction(() async {
+      final card = await _db.getFlashcardById(cardId);
+      if (card == null || card.deletedAt != null) {
+        throw StateError('Flashcard not found.');
+      }
+      final previous = await (_db.select(_db.flashcardReviewEvents)
+            ..where((t) => t.flashcardId.equals(cardId))
+            ..orderBy([
+              (t) => OrderingTerm.desc(t.sequenceNumber),
+              (t) => OrderingTerm.desc(t.createdAt),
+              (t) => OrderingTerm.desc(t.id),
+            ])
+            ..limit(1))
+          .getSingleOrNull();
+      final decision = previous == null
+          ? ReviewScheduler.review(
+              today: today,
+              lastOn: ScheduleDay.add(today, -1),
+              dueOn: today,
+              intervalDays: 1,
+              rating: rating,
+            )
+          : ReviewScheduler.review(
+              today: today,
+              lastOn: ScheduleDay.parse(previous.reviewedOn),
+              dueOn: ScheduleDay.parse(previous.dueOn),
+              intervalDays: previous.intervalDays,
+              rating: rating,
+            );
+      await _db.into(_db.flashcardReviewEvents).insert(
+        FlashcardReviewEventsCompanion.insert(
+          id: _uuid.v4(),
+          flashcardId: cardId,
+          rating: rating.storageValue,
+          reviewedOn: ScheduleDay.format(today),
+          dueOn: ScheduleDay.format(decision.dueOn),
+          intervalDays: decision.intervalDays,
+          sequenceNumber: (previous?.sequenceNumber ?? 0) + 1,
+          createdAt: time,
+        ),
+      );
+    });
+  }
+}
+
+Map<String, FlashcardReviewEvent> latestFlashcardReviews(
+  List<FlashcardReviewEvent> events,
+) {
+  final sorted = [...events]..sort((a, b) {
+    final sequence = b.sequenceNumber.compareTo(a.sequenceNumber);
+    if (sequence != 0) return sequence;
+    final created = b.createdAt.compareTo(a.createdAt);
+    return created != 0 ? created : b.id.compareTo(a.id);
+  });
+  return {for (final event in sorted.reversed) event.flashcardId: event};
+}
 
 final flashcardCountForLessonProvider = FutureProvider.family<int, String>((
   ref,
@@ -147,6 +233,30 @@ Future<Flashcard> createFlashcard(
   );
 
   return (await db.getFlashcardById(id))!;
+}
+
+Future<void> createAiFlashcards(
+  WidgetRef ref, {
+  required List<AiFlashcardDraft> cards,
+  String? subjectId,
+  String? lessonId,
+}) async {
+  if (cards.isEmpty) return;
+  final db = ref.read(databaseProvider);
+  await db.transaction(() async {
+    for (final card in cards) {
+      if (card.front.trim().isEmpty || card.back.trim().isEmpty) {
+        throw ArgumentError('Flashcards need a front and back.');
+      }
+      await createFlashcard(
+        ref,
+        subjectId: subjectId,
+        lessonId: lessonId,
+        front: card.front,
+        back: MarkdownToQuill.toDeltaJson(card.back),
+      );
+    }
+  });
 }
 
 Future<void> updateFlashcardContent(

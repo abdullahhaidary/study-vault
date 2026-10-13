@@ -3,6 +3,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/features/flashcards/data/flashcards_providers.dart';
+import 'package:study_vault/features/study_review/domain/review_models.dart';
+import 'package:study_vault/features/study_schedule/domain/schedule_day.dart';
 import 'package:study_vault/features/study_pins/domain/pin_type.dart';
 
 void main() {
@@ -53,6 +55,33 @@ void main() {
       ),
     );
   }
+
+  test('flashcard reviews persist due dates and restart after Again', () async {
+    await seed();
+    final now = DateTime(2026, 10, 13, 14);
+    await db.insertFlashcard(FlashcardsCompanion.insert(
+      id: 'card',
+      front: 'Question',
+      back: 'Answer',
+      createdAt: now,
+      updatedAt: now,
+    ));
+    final repository = FlashcardReviewRepository(db);
+    await repository.rate('card', ReviewRating.good, now: now);
+    var events = await db.select(db.flashcardReviewEvents).get();
+    expect(events.single.dueOn, ScheduleDay.format(ScheduleDay.add(now, 3)));
+    expect(events.single.intervalDays, 3);
+    await repository.rate('card', ReviewRating.again,
+        now: DateTime(2026, 10, 16, 16));
+    events = await db.select(db.flashcardReviewEvents).get();
+    expect(events, hasLength(2));
+    final latest = latestFlashcardReviews(events)['card']!;
+    expect(latest.rating, 'again');
+    expect(latest.dueOn, '2026-10-17');
+    expect(latest.sequenceNumber, 2);
+    await expectLater(repository.rate('missing', ReviewRating.good),
+        throwsStateError);
+  });
 
   test('progress defaults and studying activity is queryable', () async {
     await seed();

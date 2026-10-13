@@ -15,7 +15,7 @@ const row = { id: classId, name: 'Library', description: null, created_at: 1, up
 const mutation = (data, revision = 0, table = 'classes', id = classId) => ({
   table, id, data, baseRevision: revision, mutationId: randomUUID(),
 });
-const batch = (mutations, expectedHead = 0) => ({ schemaVersion: 19, operationId: randomUUID(), expectedHead, mutations });
+const batch = (mutations, expectedHead = 0) => ({ schemaVersion: 20, operationId: randomUUID(), expectedHead, mutations });
 const request = (route, body, auth = token) => fetch(`${origin}${route}`, {
   method: body ? 'POST' : 'GET', headers: { ...(auth ? { authorization: `Bearer ${auth}` } : {}), 'content-type': 'application/json' },
   body: body ? JSON.stringify(body) : undefined,
@@ -45,7 +45,7 @@ after(async () => {
 test('v2 snapshots require authentication and start empty', async () => {
   assert.equal((await request('/v2/snapshot', null, null)).status, 401);
   const result = await (await request('/v2/snapshot')).json();
-  assert.deepEqual(result, { schemaVersion: 19, head: 0, records: [] });
+  assert.deepEqual(result, { schemaVersion: 20, head: 0, records: [] });
 });
 
 test('library commits are atomic and safely replayable', async () => {
