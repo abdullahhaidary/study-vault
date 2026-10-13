@@ -48,6 +48,10 @@ class Subjects extends Table {
   TextColumn get name => text().withLength(min: 1, max: 200)();
   TextColumn get description => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// Optional exam day (`yyyy-MM-dd`); the Study Schedule fits reviews
+  /// before it.
+  TextColumn get examDate => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -848,6 +852,58 @@ class ReferenceBookQuizzes extends Table {
   ];
 }
 
+/// Lessons enrolled in the spaced-review Study Schedule.
+///
+/// Deliberately minimal so two devices that add the same lesson produce
+/// equivalent rows that sync merges instead of reporting a conflict. The due
+/// date lives in [StudyScheduleEvents].
+class StudySchedules extends Table {
+  TextColumn get id => text()();
+  TextColumn get lessonId =>
+      text().references(Lessons, #id, onDelete: KeyAction.cascade)();
+  BoolColumn get paused => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {lessonId},
+  ];
+}
+
+/// Append-only schedule history: start, reviews and manual date changes.
+///
+/// The latest event (by [sequenceNumber], then [createdAt]) holds the
+/// current due date. Events are never edited, so reviews made on two
+/// devices both survive a sync.
+class StudyScheduleEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get lessonId =>
+      text().references(Lessons, #id, onDelete: KeyAction.cascade)();
+
+  /// `start` | `review` | `reschedule`
+  TextColumn get kind => text()();
+
+  /// `again` | `hard` | `good` | `easy` for reviews.
+  TextColumn get rating => text().nullable()();
+
+  /// What the student wrote from memory before checking the summary.
+  TextColumn get recallText => text().nullable()();
+
+  /// Local calendar days as `yyyy-MM-dd`.
+  TextColumn get eventOn => text()();
+  TextColumn get dueOn => text()();
+  IntColumn get intervalDays => integer()();
+  IntColumn get sequenceNumber => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Classes,
@@ -885,6 +941,8 @@ class ReferenceBookQuizzes extends Table {
     ReferenceBookMessages,
     ReferenceBookLinks,
     ReferenceBookQuizzes,
+    StudySchedules,
+    StudyScheduleEvents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -928,7 +986,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -947,6 +1005,7 @@ class AppDatabase extends _$AppDatabase {
       await _createAnnotationAiGenerationIndexes();
       await _createPdfAiMaterialIndexes();
       await _createCourseReviewIndexes();
+      await _createStudyScheduleIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -1082,8 +1141,21 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(referenceBookLinks);
         await m.createTable(referenceBookQuizzes);
       }
+      if (from < 19) {
+        await m.addColumn(subjects, subjects.examDate);
+        await m.createTable(studySchedules);
+        await m.createTable(studyScheduleEvents);
+        await _createStudyScheduleIndexes();
+      }
     },
   );
+
+  Future<void> _createStudyScheduleIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_study_schedule_events_lesson '
+      'ON study_schedule_events (lesson_id, sequence_number DESC)',
+    );
+  }
 
   /// Device-local, derivable book data. Deliberately not Drift tables so
   /// sync, schema contracts and backups-by-table never include them.
