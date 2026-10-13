@@ -19,6 +19,10 @@ sealed class NotationSpec {
       final mermaid = MappingNotation.tryParseMermaid(text);
       if (mermaid != null) return mermaid;
     }
+    if (lang.isEmpty || lang == 'flow' || lang == 'text') {
+      final flow = ArrowFlowNotation.tryParse(text);
+      if (flow != null) return flow;
+    }
 
     return ClassBoxNotation.tryParse(text) ??
         PipelineNotation.tryParse(text) ??
@@ -62,6 +66,22 @@ sealed class NotationSpec {
     'r',
     'chart',
   };
+}
+
+class ArrowFlowNotation extends NotationSpec {
+  const ArrowFlowNotation(this.steps);
+
+  final List<String> steps;
+
+  static ArrowFlowNotation? tryParse(String text) {
+    if (text.contains('\n') || RegExp(r'''[;{}"'`]''').hasMatch(text)) {
+      return null;
+    }
+    final steps = text.split(RegExp(r'\s+[→⇒]\s+'));
+    if (steps.length < 3 || steps.length > 12) return null;
+    if (steps.any((step) => step.isEmpty || step.length > 100)) return null;
+    return ArrowFlowNotation(List.unmodifiable(steps));
+  }
 }
 
 class NotationPair {

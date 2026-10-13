@@ -155,6 +155,7 @@ class NewApiClaudeService implements AiService {
   }
 
   void checkStatus(int status, String body, String model) {
+    if (status >= 200 && status < 300) return;
     if (status == 401 || status == 403) {
       throw const AiInvalidKeyException('The New API key was rejected.');
     }

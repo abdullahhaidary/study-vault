@@ -14,6 +14,10 @@ class NotationBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (spec) {
+      ArrowFlowNotation(:final steps) => _StackFlowView(
+        title: null,
+        items: [for (final step in steps) StackFlowItem(title: step)],
+      ),
       MappingNotation(:final pairs) => _MappingView(pairs: pairs),
       TreeNotation(:final root, :final subtitle, :final branches) => _TreeView(
         root: root,

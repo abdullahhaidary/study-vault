@@ -174,9 +174,26 @@ THE TWO PILLARS
       expect(mapping.pairs.first.to, 'Unaligned perspectives');
     });
 
-    test('does not swallow programming code', () {
+    test('parses a single line of arrow-separated steps', () {
+      final spec = NotationSpec.tryParse(
+        'dispatch(action) → reducer(state, action) → newState → notify',
+      );
+      expect(spec, isA<ArrowFlowNotation>());
+      expect((spec! as ArrowFlowNotation).steps, [
+        'dispatch(action)',
+        'reducer(state, action)',
+        'newState',
+        'notify',
+      ]);
+    });
+
+    test('does not swallow programming code or ordinary text', () {
       expect(NotationSpec.tryParse('void main() {}', language: 'dart'), isNull);
       expect(NotationSpec.tryParse('just a sentence'), isNull);
+      expect(NotationSpec.tryParse('A → B'), isNull);
+      expect(NotationSpec.tryParse('A → B → C', language: 'dart'), isNull);
+      expect(NotationSpec.tryParse('print("a → b → c")'), isNull);
+      expect(NotationSpec.tryParse('A → B\nnot a chain'), isNull);
     });
   });
 

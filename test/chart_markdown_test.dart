@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/markdown/chart_block.dart';
 import 'package:study_vault/core/markdown/chart_markdown_builder.dart';
 import 'package:study_vault/core/markdown/chart_spec.dart';
+import 'package:study_vault/core/markdown/notation_block.dart';
 import 'package:study_vault/core/markdown/study_code_block.dart';
 import 'package:study_vault/core/markdown/study_markdown.dart';
 
@@ -137,7 +138,7 @@ void main() {
       expect(find.text('Copy'), findsOneWidget);
     });
 
-    testWidgets('renders a single long arrow flow without a blank panel', (
+    testWidgets('renders a fenced arrow flow as stacked steps on mobile', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(360, 780);
@@ -157,8 +158,31 @@ void main() {
         ),
       );
       expect(tester.takeException(), isNull);
-      expect(find.textContaining('dispatch(action)'), findsWidgets);
-      expect(tester.getSize(find.byType(StudyCodeBlock)).height, lessThan(180));
+      expect(find.byType(NotationBlock), findsOneWidget);
+      expect(find.byType(StudyCodeBlock), findsNothing);
+      for (final step in [
+        'dispatch(action)',
+        'reducer(currentState, action)',
+        'newState',
+        'store updated',
+        'subscribers notified',
+      ]) {
+        expect(find.text(step), findsOneWidget);
+        expect(tester.getSize(find.text(step)).width, lessThan(360));
+      }
+    });
+
+    testWidgets('keeps unlabeled non-flow fences as code', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StudyMarkdown(data: '```\nA → B\n```'),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(StudyCodeBlock), findsOneWidget);
+      expect(find.byType(NotationBlock), findsNothing);
     });
   });
 

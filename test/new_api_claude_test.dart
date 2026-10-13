@@ -79,6 +79,58 @@ void main() {
     },
   );
 
+  test('accepts successful answers mentioning quota or balance', () async {
+    final client = MockClient((_) async {
+      return http.Response(
+        jsonEncode({
+          'content': [
+            {'type': 'text', 'text': 'Check your quota and balance.'},
+          ],
+          'usage': {'input_tokens': 10, 'output_tokens': 6},
+        }),
+        200,
+      );
+    });
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      httpClient: client,
+    );
+
+    final result = await service.completeMessages(
+      model: 'newapi:claude-example',
+      messages: const [
+        {'role': 'user', 'content': 'Explain quotas'},
+      ],
+      maxTokens: 32,
+    );
+    expect(result.text, 'Check your quota and balance.');
+    expect(result.usage?.completionTokens, 6);
+  });
+
+  test('classifies failed quota responses as quota errors', () async {
+    for (final response in [
+      http.Response('{"error":{"message":"quota exceeded"}}', 429),
+      http.Response('{"error":{"message":"payment required"}}', 402),
+    ]) {
+      final service = NewApiClaudeService(
+        credentials: credentials,
+        settings: settings,
+        httpClient: MockClient((_) async => response),
+      );
+      await expectLater(
+        service.completeMessages(
+          model: 'newapi:claude-example',
+          messages: const [
+            {'role': 'user', 'content': 'Hello'},
+          ],
+          maxTokens: 8,
+        ),
+        throwsA(isA<AiQuotaException>()),
+      );
+    }
+  });
+
   test('runs a study action using the selected New API model', () async {
     final client = MockClient((request) async {
       final body = jsonDecode(request.body) as Map;
