@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
+import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../flashcards/data/flashcards_providers.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
 import '../../selection_ai/presentation/quill_selection_apply.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -103,6 +105,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       onTextPreviewApplied: (preview) {
         applyPreviewToQuill(editor, preview, hadSelection: hadSelection);
       },
+      onFlashcardsCreate: note == null
+          ? null
+          : (cards) async {
+              for (final card in cards) {
+                await createFlashcard(
+                  ref,
+                  lessonId: note.lessonId,
+                  subjectId: note.subjectId,
+                  front: card.front,
+                  back: MarkdownToQuill.toDeltaJson(card.back),
+                );
+              }
+            },
     );
   }
 

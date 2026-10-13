@@ -5,7 +5,6 @@ import '../../../core/widgets/system_bottom_inset.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_token_usage.dart';
-import '../services/markdown_to_quill.dart';
 import 'widgets/ai_usage_indicator.dart';
 
 Future<void> showAiFlashcardsPreview(
@@ -153,7 +152,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                 label: const Text('Copy'),
               ),
               FilledButton(
-                onPressed: _saving
+                onPressed: _saving || widget.onCreate == null
                     ? null
                     : () async {
                         final selected = _cards
@@ -161,21 +160,30 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                             .map(
                               (c) => AiFlashcardDraft(
                                 front: c.front.text.trim(),
-                                back: MarkdownToQuill.toDeltaJson(
-                                  c.back.text.trim(),
-                                ),
+                                back: c.back.text.trim(),
                               ),
                             )
                             .where(
-                              (c) =>
-                                  c.front.isNotEmpty &&
-                                  c.back.trim().isNotEmpty,
+                              (c) => c.front.isNotEmpty && c.back.isNotEmpty,
                             )
                             .toList();
                         if (selected.isEmpty) return;
                         setState(() => _saving = true);
-                        await widget.onCreate?.call(selected);
-                        if (context.mounted) Navigator.pop(context);
+                        try {
+                          await widget.onCreate!(selected);
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (_) {
+                          if (context.mounted) {
+                            setState(() => _saving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not save flashcards. Please try again.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       },
                 child: const Text('Create Selected Flashcards'),
               ),

@@ -9,6 +9,7 @@ import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../services/markdown_to_quill.dart';
+import '../../flashcards/data/flashcards_providers.dart';
 import 'ai_annotation_preview.dart';
 import 'ai_flashcards_preview.dart';
 import 'ai_missing_key_dialog.dart';
@@ -188,20 +189,21 @@ abstract final class AiAssistantController {
     } on AiException catch (e) {
       if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ref.read(failedAiRequestsProvider.notifier).add(
-          request: request,
-          errorMessage: e.message,
-        );
+        ref
+            .read(failedAiRequestsProvider.notifier)
+            .add(request: request, errorMessage: e.message);
         _showFailureSnackBar(context, e.message);
       }
       return null;
     } catch (_) {
       if (!cancelled && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ref.read(failedAiRequestsProvider.notifier).add(
-          request: request,
-          errorMessage: 'AI request failed. Please try again.',
-        );
+        ref
+            .read(failedAiRequestsProvider.notifier)
+            .add(
+              request: request,
+              errorMessage: 'AI request failed. Please try again.',
+            );
         _showFailureSnackBar(context, 'AI request failed. Please try again.');
       }
       return null;
@@ -228,11 +230,7 @@ abstract final class AiAssistantController {
     FailedAiRequest failed,
   ) async {
     if (!context.mounted) return;
-    final result = await runWithLoading(
-      context,
-      ref,
-      request: failed.request,
-    );
+    final result = await runWithLoading(context, ref, request: failed.request);
     if (result == null || !context.mounted) return;
 
     ref.read(failedAiRequestsProvider.notifier).remove(failed.id);
@@ -251,6 +249,18 @@ abstract final class AiAssistantController {
           context,
           cards: flash.cards,
           usage: flash.usage,
+          onCreate: failed.request.lessonId == null
+              ? null
+              : (cards) async {
+                  for (final card in cards) {
+                    await createFlashcard(
+                      ref,
+                      lessonId: failed.request.lessonId,
+                      front: card.front,
+                      back: MarkdownToQuill.toDeltaJson(card.back),
+                    );
+                  }
+                },
         );
       case AiQuestionsResult questions:
         await showAiQuestionsPreview(context, questions: questions);
@@ -259,7 +269,8 @@ abstract final class AiAssistantController {
           context,
           ref,
           draft: draft,
-          selectedText: failed.request.selectedText ?? failed.request.sourceText,
+          selectedText:
+              failed.request.selectedText ?? failed.request.sourceText,
         );
     }
   }

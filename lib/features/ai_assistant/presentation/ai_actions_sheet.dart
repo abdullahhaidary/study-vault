@@ -53,7 +53,12 @@ Future<void> showAiActionsSheet(
       .getGenerationCounts(sourceFingerprint: fingerprint);
 
   if (!context.mounted) return;
-  final chosen = await _pickAction(context, actionContext, counts: counts);
+  final chosen = await _pickAction(
+    context,
+    actionContext,
+    counts: counts,
+    canCreateFlashcards: onFlashcardsCreate != null,
+  );
   if (chosen == null || !context.mounted) return;
 
   if (chosen == AiStudyAction.generateQuestions) {
@@ -332,6 +337,7 @@ Future<AiStudyAction?> _pickAction(
   BuildContext context,
   AiActionContext actionContext, {
   Map<AiStudyAction, int> counts = const {},
+  required bool canCreateFlashcards,
 }) async {
   final primary = switch (actionContext) {
     AiActionContext.pdfSelection => const [
@@ -400,7 +406,9 @@ Future<AiStudyAction?> _pickAction(
             ),
           ),
           for (final action in primary)
-            _ActionTile(action: action, count: counts[action] ?? 0),
+            if (canCreateFlashcards ||
+                action != AiStudyAction.generateFlashcards)
+              _ActionTile(action: action, count: counts[action] ?? 0),
           if (more.isNotEmpty)
             ListTile(
               leading: const Icon(Icons.more_horiz),

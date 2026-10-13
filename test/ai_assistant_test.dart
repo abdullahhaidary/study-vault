@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
@@ -7,11 +8,13 @@ import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_style_memory.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
+import 'package:study_vault/features/ai_assistant/presentation/ai_flashcards_preview.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_output_validator.dart';
 import 'package:study_vault/features/ai_assistant/services/ai_prompt_builder.dart';
 import 'package:study_vault/features/ai_assistant/services/fake_ai_service.dart';
 import 'package:study_vault/features/ai_assistant/services/markdown_to_quill.dart';
 import 'package:study_vault/features/ai_assistant/services/quill_to_markdown.dart';
+import 'package:study_vault/features/study_pins/domain/study_note_codec.dart';
 
 void main() {
   group('GeminiApiKeys', () {
@@ -217,6 +220,46 @@ void main() {
       expect(hasHeader, isTrue);
       expect(hasBullet, isTrue);
       expect(hasBold, isTrue);
+    },
+  );
+
+  testWidgets('flashcard preview sends markdown for one storage conversion', (
+    tester,
+  ) async {
+    String? storedBack;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AiFlashcardsPreviewScreen(
+          initialCards: const [
+            AiFlashcardDraft(front: 'What is a gradient?', back: '**Slope**'),
+          ],
+          onCreate: (cards) async {
+            storedBack = MarkdownToQuill.toDeltaJson(cards.single.back);
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Create Selected Flashcards'));
+    await tester.pumpAndSettle();
+    expect(StudyNoteCodec.plainTextPreview(storedBack), 'Slope');
+  });
+
+  testWidgets(
+    'flashcard preview cannot silently create without a save target',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AiFlashcardsPreviewScreen(
+            initialCards: [AiFlashcardDraft(front: 'Question', back: 'Answer')],
+          ),
+        ),
+      );
+
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Create Selected Flashcards'),
+      );
+      expect(button.onPressed, isNull);
     },
   );
 
