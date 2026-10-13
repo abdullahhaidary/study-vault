@@ -167,6 +167,9 @@ class StudyCodeBlock extends StatelessWidget {
     required String? language,
     required Map<String, TextStyle> theme,
   }) {
+    if (language == null) {
+      return [TextSpan(text: source)];
+    }
     final result = highlight.parse(source, language: language);
     final nodes = result.nodes;
     if (nodes == null || nodes.isEmpty) {

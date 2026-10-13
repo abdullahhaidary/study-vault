@@ -136,6 +136,30 @@ void main() {
       expect(find.text('Before'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
     });
+
+    testWidgets('renders a single long arrow flow without a blank panel', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const flow =
+          'dispatch(action) → reducer(currentState, action) → '
+          'newState → store updated → subscribers notified';
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StudyMarkdown(data: 'Flow:\n```\n$flow\n```\n'),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('dispatch(action)'), findsWidgets);
+      expect(tester.getSize(find.byType(StudyCodeBlock)).height, lessThan(180));
+    });
   });
 
   group('StudyCodeBlock language aliases', () {
