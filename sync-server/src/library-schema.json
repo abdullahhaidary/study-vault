@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 19,
+  "schemaVersion": 20,
   "tables": {
     "classes": {
       "columns": {
@@ -695,6 +695,49 @@
           "source_study_pin_id"
         ]
       ]
+    },
+    "flashcard_review_events": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "flashcard_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "rating": {
+          "type": "TEXT",
+          "required": true
+        },
+        "reviewed_on": {
+          "type": "TEXT",
+          "required": true
+        },
+        "due_on": {
+          "type": "TEXT",
+          "required": true
+        },
+        "interval_days": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "sequence_number": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "flashcard_id",
+          "table": "flashcards"
+        }
+      ],
+      "unique": []
     },
     "ai_chats": {
       "columns": {
