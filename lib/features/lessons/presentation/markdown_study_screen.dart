@@ -10,7 +10,7 @@ import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
-import '../../pdf_ai_materials/presentation/pdf_ai_materials_sheet.dart';
+import '../../pdf_ai_materials/presentation/pdf_ai_materials_panel.dart';
 import '../data/materials_providers.dart';
 
 /// Study view for markdown/text lesson attachments (PDF-like sources).
@@ -35,6 +35,8 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
   late Future<String> _load;
   bool _editing = false;
   bool _saving = false;
+  bool _showAiMaterials = false;
+  double? _sidePanelWidth;
   final _editController = TextEditingController();
 
   @override
@@ -70,7 +72,9 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
   }
 
   Future<void> _saveEdit() async {
-    final material = await ref.read(materialByIdProvider(widget.resourceId).future);
+    final material = await ref.read(
+      materialByIdProvider(widget.resourceId).future,
+    );
     if (material == null) return;
     setState(() => _saving = true);
     try {
@@ -97,29 +101,33 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
     }
   }
 
-  Future<void> _openAiMaterials() async {
-    await showPdfAiMaterialsSheet(
-      context,
-      materialId: widget.resourceId,
-      title: widget.title,
-      filePath: widget.filePath,
-    );
-  }
+  Widget _aiPanel() => PdfAiMaterialsPanel(
+    materialId: widget.resourceId,
+    title: widget.title,
+    filePath: widget.filePath,
+    onClose: () => setState(() => _showAiMaterials = false),
+  );
 
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= AppSpacing.wideBreakpoint;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+            tooltip: 'AI explanations',
+            onPressed: () =>
+                setState(() => _showAiMaterials = !_showAiMaterials),
+            icon: Icon(
+              _showAiMaterials
+                  ? Icons.auto_stories
+                  : Icons.auto_stories_outlined,
+            ),
+          ),
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
-          ),
-          IconButton(
-            tooltip: 'AI Study Materials',
-            icon: const Icon(Icons.library_books_outlined),
-            onPressed: _openAiMaterials,
           ),
           if (!_editing)
             IconButton(
@@ -151,62 +159,115 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
           ],
         ],
       ),
-      body: FutureBuilder<String>(
-        future: _load,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Could not open document: ${snapshot.error}'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: _reload,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          final content = snapshot.data ?? '';
-          if (_editing) {
-            return Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: TextField(
-                controller: _editController,
-                expands: true,
-                maxLines: null,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Markdown / text',
-                ),
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-              ),
-            );
-          }
-          return ScrollEdgeArrows(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final document = _document();
+          if (!_showAiMaterials) return document;
+          if (!wide) {
+            return Stack(
               children: [
-                StudyMarkdown(data: content),
-                const SizedBox(height: AppSpacing.xl),
-                AiDiscussionsSection(
-                  kind: AiContextKind.material,
-                  id: widget.resourceId,
+                document,
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    child: _aiPanel(),
+                  ),
                 ),
               ],
-            ),
+            );
+          }
+          const minSide = 280.0, minDocument = 320.0, handle = 6.0;
+          final maxSide = (constraints.maxWidth - minDocument - handle).clamp(
+            minSide,
+            constraints.maxWidth,
+          );
+          final side = (_sidePanelWidth ?? 460.0).clamp(minSide, maxSide);
+          return Row(
+            children: [
+              Expanded(child: document),
+              MouseRegion(
+                cursor: SystemMouseCursors.resizeColumn,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragUpdate: (details) => setState(
+                    () => _sidePanelWidth = (side - details.delta.dx).clamp(
+                      minSide,
+                      maxSide,
+                    ),
+                  ),
+                  onDoubleTap: () => setState(
+                    () => _sidePanelWidth = (constraints.maxWidth - handle) / 2,
+                  ),
+                  child: SizedBox(
+                    width: handle,
+                    child: VerticalDivider(
+                      width: handle,
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: side, child: _aiPanel()),
+            ],
           );
         },
       ),
+    );
+  }
+
+  Widget _document() {
+    return FutureBuilder<String>(
+      future: _load,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Could not open document: ${snapshot.error}'),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton(onPressed: _reload, child: const Text('Retry')),
+                ],
+              ),
+            ),
+          );
+        }
+        final content = snapshot.data ?? '';
+        if (_editing) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: TextField(
+              controller: _editController,
+              expands: true,
+              maxLines: null,
+              textAlignVertical: TextAlignVertical.top,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Markdown / text',
+              ),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+            ),
+          );
+        }
+        return ScrollEdgeArrows(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            children: [
+              StudyMarkdown(data: content),
+              const SizedBox(height: AppSpacing.xl),
+              AiDiscussionsSection(
+                kind: AiContextKind.material,
+                id: widget.resourceId,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -77,7 +77,7 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen> {
     };
     final reviews = ref.watch(flashcardReviewEventsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.scope.title)), 
+      appBar: AppBar(title: Text(widget.scope.title)),
       body: cards.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
@@ -100,16 +100,18 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen> {
             return const Center(child: Text('No flashcards to study.'));
           }
           if (items.isEmpty) {
-            return Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('All caught up for today.'),
-                TextButton(
-                  onPressed: () => setState(() => _dueOnly = false),
-                  child: const Text('Study all cards'),
-                ),
-              ],
-            ));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('All caught up for today.'),
+                  TextButton(
+                    onPressed: () => setState(() => _dueOnly = false),
+                    child: const Text('Study all cards'),
+                  ),
+                ],
+              ),
+            );
           }
           final card = items[_index % items.length];
           return Focus(

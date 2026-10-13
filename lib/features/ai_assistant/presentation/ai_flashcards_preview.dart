@@ -170,7 +170,9 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                         if (selected.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Select a card with both a front and an answer.'),
+                              content: Text(
+                                'Select a card with both a front and an answer.',
+                              ),
                             ),
                           );
                           return;

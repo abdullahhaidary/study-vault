@@ -131,7 +131,10 @@ void main() {
         '{"front":" what  IS dna? ","back":"Duplicate"},'
         '{"front":"What is RNA?","back":"A related molecule"}]}',
       );
-      expect(result.cards.map((c) => c.front), ['What is DNA?', 'What is RNA?']);
+      expect(result.cards.map((c) => c.front), [
+        'What is DNA?',
+        'What is RNA?',
+      ]);
     });
 
     test('uses no category for an unknown annotation category', () {
@@ -164,12 +167,14 @@ void main() {
   );
 
   test('flashcard prompt avoids padding unsupported cards', () {
-    final prompt = AiPromptBuilder.forRequest(AiStudyRequest(
-      selection: testGeminiSelection(),
-      action: AiStudyAction.generateFlashcards,
-      sourceText: 'DNA stores genetic information.',
-      flashcardCount: 10,
-    ));
+    final prompt = AiPromptBuilder.forRequest(
+      AiStudyRequest(
+        selection: testGeminiSelection(),
+        action: AiStudyAction.generateFlashcards,
+        sourceText: 'DNA stores genetic information.',
+        flashcardCount: 10,
+      ),
+    );
     expect(prompt, contains('return fewer cards rather than padding'));
     expect(prompt, contains('One testable fact per card'));
   });
@@ -248,27 +253,38 @@ void main() {
     },
   );
 
-  testWidgets('AI flashcard batch rolls back if a card is invalid', (tester) async {
+  testWidgets('AI flashcard batch rolls back if a card is invalid', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     late WidgetRef ref;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
-        child: MaterialApp(home: Consumer(builder: (context, widgetRef, _) {
-          ref = widgetRef;
-          return const Scaffold();
-        })),
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, widgetRef, _) {
+              ref = widgetRef;
+              return const Scaffold();
+            },
+          ),
+        ),
       ),
     );
-    await expectLater(
-      createAiFlashcards(ref, cards: const [
-        AiFlashcardDraft(front: 'First', back: 'Answer'),
-        AiFlashcardDraft(front: 'Second', back: ' '),
-      ]),
-      throwsArgumentError,
-    );
-    expect(await db.watchAllFlashcards().first, isEmpty);
+    await tester.runAsync(() async {
+      await expectLater(
+        createAiFlashcards(
+          ref,
+          cards: const [
+            AiFlashcardDraft(front: 'First', back: 'Answer'),
+            AiFlashcardDraft(front: 'Second', back: ' '),
+          ],
+        ),
+        throwsArgumentError,
+      );
+      expect(await db.watchAllFlashcards().first, isEmpty);
+    });
   });
 
   testWidgets('flashcard preview sends markdown for one storage conversion', (

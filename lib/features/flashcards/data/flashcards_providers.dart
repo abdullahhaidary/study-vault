@@ -52,12 +52,11 @@ final flashcardBySourcePinProvider = StreamProvider.family<Flashcard?, String>((
 final flashcardReviewEventsProvider =
     StreamProvider<List<FlashcardReviewEvent>>((ref) {
       final db = ref.watch(databaseProvider);
-      return (db.select(db.flashcardReviewEvents)
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.sequenceNumber),
-              (t) => OrderingTerm.desc(t.createdAt),
-              (t) => OrderingTerm.desc(t.id),
-            ]))
+      return (db.select(db.flashcardReviewEvents)..orderBy([
+            (t) => OrderingTerm.desc(t.sequenceNumber),
+            (t) => OrderingTerm.desc(t.createdAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
           .watch();
     });
 
@@ -78,15 +77,16 @@ class FlashcardReviewRepository {
       if (card == null || card.deletedAt != null) {
         throw StateError('Flashcard not found.');
       }
-      final previous = await (_db.select(_db.flashcardReviewEvents)
-            ..where((t) => t.flashcardId.equals(cardId))
-            ..orderBy([
-              (t) => OrderingTerm.desc(t.sequenceNumber),
-              (t) => OrderingTerm.desc(t.createdAt),
-              (t) => OrderingTerm.desc(t.id),
-            ])
-            ..limit(1))
-          .getSingleOrNull();
+      final previous =
+          await (_db.select(_db.flashcardReviewEvents)
+                ..where((t) => t.flashcardId.equals(cardId))
+                ..orderBy([
+                  (t) => OrderingTerm.desc(t.sequenceNumber),
+                  (t) => OrderingTerm.desc(t.createdAt),
+                  (t) => OrderingTerm.desc(t.id),
+                ])
+                ..limit(1))
+              .getSingleOrNull();
       final decision = previous == null
           ? ReviewScheduler.review(
               today: today,
@@ -102,18 +102,20 @@ class FlashcardReviewRepository {
               intervalDays: previous.intervalDays,
               rating: rating,
             );
-      await _db.into(_db.flashcardReviewEvents).insert(
-        FlashcardReviewEventsCompanion.insert(
-          id: _uuid.v4(),
-          flashcardId: cardId,
-          rating: rating.storageValue,
-          reviewedOn: ScheduleDay.format(today),
-          dueOn: ScheduleDay.format(decision.dueOn),
-          intervalDays: decision.intervalDays,
-          sequenceNumber: (previous?.sequenceNumber ?? 0) + 1,
-          createdAt: time,
-        ),
-      );
+      await _db
+          .into(_db.flashcardReviewEvents)
+          .insert(
+            FlashcardReviewEventsCompanion.insert(
+              id: _uuid.v4(),
+              flashcardId: cardId,
+              rating: rating.storageValue,
+              reviewedOn: ScheduleDay.format(today),
+              dueOn: ScheduleDay.format(decision.dueOn),
+              intervalDays: decision.intervalDays,
+              sequenceNumber: (previous?.sequenceNumber ?? 0) + 1,
+              createdAt: time,
+            ),
+          );
     });
   }
 }
@@ -121,12 +123,13 @@ class FlashcardReviewRepository {
 Map<String, FlashcardReviewEvent> latestFlashcardReviews(
   List<FlashcardReviewEvent> events,
 ) {
-  final sorted = [...events]..sort((a, b) {
-    final sequence = b.sequenceNumber.compareTo(a.sequenceNumber);
-    if (sequence != 0) return sequence;
-    final created = b.createdAt.compareTo(a.createdAt);
-    return created != 0 ? created : b.id.compareTo(a.id);
-  });
+  final sorted = [...events]
+    ..sort((a, b) {
+      final sequence = b.sequenceNumber.compareTo(a.sequenceNumber);
+      if (sequence != 0) return sequence;
+      final created = b.createdAt.compareTo(a.createdAt);
+      return created != 0 ? created : b.id.compareTo(a.id);
+    });
   return {for (final event in sorted.reversed) event.flashcardId: event};
 }
 
