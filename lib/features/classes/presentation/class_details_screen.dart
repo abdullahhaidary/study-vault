@@ -11,6 +11,7 @@ import '../../../core/widgets/detail_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/group_section.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../class_roadmap/presentation/class_roadmap_screen.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../subjects/data/subject_groups_providers.dart';
 import '../../subjects/data/subjects_providers.dart';
@@ -103,13 +104,19 @@ class ClassDetailsScreen extends ConsumerWidget {
             PopupMenuButton<String>(
               tooltip: 'More',
               onSelected: (value) {
-                if (value == 'group') {
+                if (value == 'roadmap') {
+                  ClassRoadmapScreen.open(context, classId);
+                } else if (value == 'group') {
                   SubjectGroupDialog.show(context, classId: classId);
                 } else if (value == 'delete') {
                   _confirmDeleteClass(context, ref, classItem);
                 }
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'roadmap',
+                  child: Text('Class Roadmap'),
+                ),
                 const PopupMenuItem(
                   value: 'group',
                   child: Text('Add Subject Group'),
@@ -134,7 +141,18 @@ class ClassDetailsScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: DetailContent(
                 bottom: 0,
-                child: const SectionHeader(title: 'Subjects'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => ClassRoadmapScreen.open(context, classId),
+                      icon: const Icon(Icons.route_outlined),
+                      label: const Text('Class Roadmap'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    const SectionHeader(title: 'Subjects'),
+                  ],
+                ),
               ),
             ),
             ..._buildSubjectContent(

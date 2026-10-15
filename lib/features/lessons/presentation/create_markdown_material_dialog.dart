@@ -82,7 +82,8 @@ class _CreateMarkdownMaterialDialogState
                 Text(
                   'Paste markdown (or plain text). It is stored with this '
                   'chapter like a PDF and works with AI Study Materials and '
-                  'Course Review.',
+                  r'Course Review. Write equations as $...$ inline or '
+                  r'between $$...$$ on separate lines.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -113,7 +114,11 @@ class _CreateMarkdownMaterialDialogState
                   decoration: const InputDecoration(
                     labelText: 'Markdown / text',
                     alignLabelWithHint: true,
-                    hintText: '# Heading\n\nPaste your notes or HTML notes here…',
+                    hintText:
+                        '# Heading\n\n'
+                        r'Inline: $y = wx + b$'
+                        '\n\n'
+                        r'$$\nabla L(\theta)=0$$',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {

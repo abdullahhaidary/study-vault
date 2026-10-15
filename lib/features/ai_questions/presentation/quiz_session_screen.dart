@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/markdown/study_markdown.dart';
 import '../../../core/navigation/study_navigator.dart';
 import '../../../core/storage/material_storage.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
@@ -264,7 +265,12 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(q.question, style: Theme.of(context).textTheme.titleMedium),
+          StudyMarkdown(
+            data: q.question,
+            styleSheet: studyMarkdownStyle(
+              context,
+            ).copyWith(p: Theme.of(context).textTheme.titleMedium),
+          ),
           const SizedBox(height: 20),
           if (q.type == QuizQuestionType.mcq ||
               q.type == QuizQuestionType.trueFalse)
@@ -286,7 +292,7 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
                   ),
-                  title: Text(o.text),
+                  title: StudyMarkdown(data: o.text),
                   onTap: checked
                       ? null
                       : () => setState(() => _selectedOptionId = o.id),
@@ -328,12 +334,17 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
-              Text(q.explanation!),
+              StudyMarkdown(data: q.explanation!),
             ],
             if (q.type == QuizQuestionType.shortAnswer ||
                 q.type == QuizQuestionType.fillBlank) ...[
               const SizedBox(height: 8),
-              Text('Expected: ${q.correctAnswer}'),
+              Text(
+                'Expected answer',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              StudyMarkdown(data: q.correctAnswer),
             ],
             if (q.sourcePage != null) ...[
               const SizedBox(height: 12),

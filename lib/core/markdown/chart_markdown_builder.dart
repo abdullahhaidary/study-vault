@@ -4,6 +4,7 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'chart_block.dart';
 import 'chart_spec.dart';
+import 'math_markdown.dart';
 import 'notation_block.dart';
 import 'notation_spec.dart';
 import 'study_code_block.dart';
@@ -14,7 +15,12 @@ import 'study_code_block.dart';
 /// Usage: `MarkdownBody(builders: chartMarkdownBuilders(styleSheet), ...)`.
 Map<String, MarkdownElementBuilder> chartMarkdownBuilders([
   MarkdownStyleSheet? styleSheet,
-]) => {'pre': ChartCodeBlockBuilder(), 'notation': NotationElementBuilder()};
+]) => {
+  'pre': ChartCodeBlockBuilder(),
+  'notation': NotationElementBuilder(),
+  'math-inline': MathElementBuilder(display: false),
+  'math-block': MathElementBuilder(display: true),
+};
 
 class ChartCodeBlockBuilder extends MarkdownElementBuilder {
   ChartCodeBlockBuilder();

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 22,
+  "schemaVersion": 23,
   "tables": {
     "classes": {
       "columns": {
@@ -1940,6 +1940,54 @@
       "unique": [
         [
           "question_set_id"
+        ]
+      ]
+    },
+    "class_roadmap_entries": {
+      "columns": {
+        "id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "class_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "lesson_id": {
+          "type": "TEXT",
+          "required": true
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "note": {
+          "type": "TEXT",
+          "required": false
+        },
+        "created_at": {
+          "type": "INTEGER",
+          "required": true
+        },
+        "updated_at": {
+          "type": "INTEGER",
+          "required": true
+        }
+      },
+      "foreignKeys": [
+        {
+          "column": "class_id",
+          "table": "classes"
+        },
+        {
+          "column": "lesson_id",
+          "table": "lessons"
+        }
+      ],
+      "unique": [
+        [
+          "class_id",
+          "lesson_id"
         ]
       ]
     },

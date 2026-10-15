@@ -16,6 +16,8 @@ Preserve-meaning rules (mandatory):
 - Do not invent unsupported facts or academic claims.
 - Do not remove important details.
 - Preserve equations, formulas, symbols (θ, α, ∇, etc.), and code.
+- In markdown responses, format mathematical notation as LaTeX using \$...\$
+  for inline math and \$\$...\$\$ for display math.
 - Preserve technical English terms (Gradient Descent, Learning Rate, Precision, Recall, Cost Function, API, etc.) — do not translate them unless explicitly asked.
 - Preserve the source language unless a language override is requested.
 - Preserve numbers, variable names, and code identifiers unchanged.
@@ -407,6 +409,12 @@ Return concise but educational answers.
         'answer wrong. Do not write generic "because that is correct" feedback.\n'
         '- Ask about topics and ideas in the source: mechanisms, definitions, '
         'relationships, and when to apply them.\n'
+        '- For mathematical material, include calculation, interpretation, and '
+        'application questions—not only definition recall. Explanations must '
+        'show the essential reasoning or calculation steps.\n'
+        r'- Write mathematical notation as LaTeX using $...$ for inline math '
+        r'and $$...$$ for display math. Keep the response valid JSON by '
+        'escaping every LaTeX backslash as a JSON backslash.\n'
         '- Include realistic scenario questions (a situation, then what concept '
         'applies or what happens next) grounded in the source.\n'
         '- Do not ask trivia: publication year, author, "who created/wrote '

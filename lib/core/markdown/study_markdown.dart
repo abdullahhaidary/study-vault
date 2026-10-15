@@ -4,9 +4,10 @@ import 'package:markdown/markdown.dart' as md;
 
 import '../theme/app_spacing.dart';
 import 'chart_markdown_builder.dart';
+import 'math_markdown.dart';
 import 'notation_spec.dart';
 
-/// Study-note markdown: charts, UML/ASCII diagrams, and cleaner tables.
+/// Study-note markdown: LaTeX math, charts, diagrams, and cleaner tables.
 class StudyMarkdown extends StatelessWidget {
   const StudyMarkdown({
     super.key,
@@ -29,7 +30,8 @@ class StudyMarkdown extends StatelessWidget {
       selectable: selectable,
       styleSheet: style,
       builders: chartMarkdownBuilders(style),
-      blockSyntaxes: const [RelationshipBlockSyntax()],
+      blockSyntaxes: const [MathBlockSyntax(), RelationshipBlockSyntax()],
+      inlineSyntaxes: [MathInlineSyntax()],
       onTapLink: onTapLink,
     );
   }

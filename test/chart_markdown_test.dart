@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:study_vault/core/markdown/chart_block.dart';
@@ -175,9 +176,7 @@ void main() {
     testWidgets('keeps unlabeled non-flow fences as code', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: StudyMarkdown(data: '```\nA → B\n```'),
-          ),
+          home: Scaffold(body: StudyMarkdown(data: '```\nA → B\n```')),
         ),
       );
       expect(tester.takeException(), isNull);
@@ -193,6 +192,42 @@ void main() {
       expect(StudyCodeBlock.normalizeLanguage('sh'), 'bash');
       expect(StudyCodeBlock.displayLanguage('ts'), 'TypeScript');
       expect(StudyCodeBlock.displayLanguage(null), 'Code');
+    });
+  });
+
+  group('math markdown', () {
+    testWidgets('renders inline and display LaTeX', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StudyMarkdown(
+                data:
+                    r'The gradient is $\nabla f(x)$.'
+                    '\n\n'
+                    r'$$\frac{\partial L}{\partial w}=2(wx-y)x$$',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Math), findsNWidgets(2));
+      expect(find.textContaining(r'\nabla f(x)'), findsNothing);
+    });
+
+    testWidgets('keeps dollar amounts as ordinary text', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StudyMarkdown(data: r'The book costs $20 today.'),
+          ),
+        ),
+      );
+
+      expect(find.byType(Math), findsNothing);
+      expect(find.textContaining(r'$20'), findsOneWidget);
     });
   });
 }

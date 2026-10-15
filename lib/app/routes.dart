@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/navigation/shell_tab.dart';
 import '../core/widgets/app_shell.dart';
+import '../features/class_roadmap/presentation/class_roadmap_screen.dart';
 import '../features/classes/presentation/class_details_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
@@ -28,6 +29,7 @@ import '../features/reference_books/presentation/books_shelf_screen.dart';
 abstract final class AppRoutes {
   static const home = '/';
   static const classDetails = '/class';
+  static const classRoadmap = '/class/roadmap';
   static const subjectDetails = '/subject';
   static const lessonDetails = '/lesson';
   static const pdfStudy = '/pdf-study';
@@ -181,6 +183,13 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => ClassDetailsScreen(classId: classId),
+      );
+
+    case AppRoutes.classRoadmap:
+      final classId = settings.arguments as String;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => ClassRoadmapScreen(classId: classId),
       );
 
     case AppRoutes.subjectDetails:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/markdown/study_markdown.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
 import '../services/markdown_to_quill.dart';
@@ -61,25 +62,35 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Q${qIndex + 1}. ${q.question}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    'Question ${qIndex + 1}',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  StudyMarkdown(
+                    data: q.question,
+                    styleSheet: studyMarkdownStyle(
+                      context,
+                    ).copyWith(p: Theme.of(context).textTheme.titleMedium),
                   ),
                   const SizedBox(height: 8),
-                  Text('Answer: ${q.answer}'),
+                  Text('Answer', style: Theme.of(context).textTheme.labelLarge),
+                  StudyMarkdown(data: q.answer),
                   if (q.choices != null) ...[
                     const SizedBox(height: 8),
                     for (var i = 0; i < q.choices!.length; i++)
-                      Text(
-                        '${String.fromCharCode(65 + i)}. ${q.choices![i]}'
-                        '${q.correctIndex == i ? ' ✓' : ''}',
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${String.fromCharCode(65 + i)}${q.correctIndex == i ? ' ✓' : ''}. ',
+                          ),
+                          Expanded(child: StudyMarkdown(data: q.choices![i])),
+                        ],
                       ),
                   ],
                   if (q.explanation != null && q.explanation!.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      q.explanation!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    StudyMarkdown(data: q.explanation!),
                   ],
                 ],
               ),

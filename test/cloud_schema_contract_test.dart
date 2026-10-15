@@ -17,7 +17,7 @@ void main() {
         '${const JsonEncoder.withIndent('  ').convert(schema.toJson())}\n',
       );
     }
-    expect(schema.tables, hasLength(39));
+    expect(schema.tables, hasLength(40));
     expect(
       cloudCanonical(jsonDecode(await file.readAsString())),
       cloudCanonical(schema.toJson()),

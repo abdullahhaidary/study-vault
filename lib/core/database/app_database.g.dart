@@ -22654,6 +22654,469 @@ class ReferenceBookQuizzesCompanion extends UpdateCompanion<ReferenceBookQuiz> {
   }
 }
 
+class $ClassRoadmapEntriesTable extends ClassRoadmapEntries
+    with TableInfo<$ClassRoadmapEntriesTable, ClassRoadmapEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ClassRoadmapEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _classIdMeta = const VerificationMeta(
+    'classId',
+  );
+  @override
+  late final GeneratedColumn<String> classId = GeneratedColumn<String>(
+    'class_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES classes (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _lessonIdMeta = const VerificationMeta(
+    'lessonId',
+  );
+  @override
+  late final GeneratedColumn<String> lessonId = GeneratedColumn<String>(
+    'lesson_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lessons (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    classId,
+    lessonId,
+    sortOrder,
+    note,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'class_roadmap_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ClassRoadmapEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('class_id')) {
+      context.handle(
+        _classIdMeta,
+        classId.isAcceptableOrUnknown(data['class_id']!, _classIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_classIdMeta);
+    }
+    if (data.containsKey('lesson_id')) {
+      context.handle(
+        _lessonIdMeta,
+        lessonId.isAcceptableOrUnknown(data['lesson_id']!, _lessonIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lessonIdMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {classId, lessonId},
+  ];
+  @override
+  ClassRoadmapEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ClassRoadmapEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      classId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}class_id'],
+      )!,
+      lessonId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lesson_id'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ClassRoadmapEntriesTable createAlias(String alias) {
+    return $ClassRoadmapEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class ClassRoadmapEntry extends DataClass
+    implements Insertable<ClassRoadmapEntry> {
+  final String id;
+  final String classId;
+  final String lessonId;
+  final int sortOrder;
+  final String? note;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ClassRoadmapEntry({
+    required this.id,
+    required this.classId,
+    required this.lessonId,
+    required this.sortOrder,
+    this.note,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['class_id'] = Variable<String>(classId);
+    map['lesson_id'] = Variable<String>(lessonId);
+    map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ClassRoadmapEntriesCompanion toCompanion(bool nullToAbsent) {
+    return ClassRoadmapEntriesCompanion(
+      id: Value(id),
+      classId: Value(classId),
+      lessonId: Value(lessonId),
+      sortOrder: Value(sortOrder),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ClassRoadmapEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ClassRoadmapEntry(
+      id: serializer.fromJson<String>(json['id']),
+      classId: serializer.fromJson<String>(json['classId']),
+      lessonId: serializer.fromJson<String>(json['lessonId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'classId': serializer.toJson<String>(classId),
+      'lessonId': serializer.toJson<String>(lessonId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ClassRoadmapEntry copyWith({
+    String? id,
+    String? classId,
+    String? lessonId,
+    int? sortOrder,
+    Value<String?> note = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ClassRoadmapEntry(
+    id: id ?? this.id,
+    classId: classId ?? this.classId,
+    lessonId: lessonId ?? this.lessonId,
+    sortOrder: sortOrder ?? this.sortOrder,
+    note: note.present ? note.value : this.note,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ClassRoadmapEntry copyWithCompanion(ClassRoadmapEntriesCompanion data) {
+    return ClassRoadmapEntry(
+      id: data.id.present ? data.id.value : this.id,
+      classId: data.classId.present ? data.classId.value : this.classId,
+      lessonId: data.lessonId.present ? data.lessonId.value : this.lessonId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClassRoadmapEntry(')
+          ..write('id: $id, ')
+          ..write('classId: $classId, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, classId, lessonId, sortOrder, note, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ClassRoadmapEntry &&
+          other.id == this.id &&
+          other.classId == this.classId &&
+          other.lessonId == this.lessonId &&
+          other.sortOrder == this.sortOrder &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ClassRoadmapEntriesCompanion extends UpdateCompanion<ClassRoadmapEntry> {
+  final Value<String> id;
+  final Value<String> classId;
+  final Value<String> lessonId;
+  final Value<int> sortOrder;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const ClassRoadmapEntriesCompanion({
+    this.id = const Value.absent(),
+    this.classId = const Value.absent(),
+    this.lessonId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ClassRoadmapEntriesCompanion.insert({
+    required String id,
+    required String classId,
+    required String lessonId,
+    this.sortOrder = const Value.absent(),
+    this.note = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       classId = Value(classId),
+       lessonId = Value(lessonId),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ClassRoadmapEntry> custom({
+    Expression<String>? id,
+    Expression<String>? classId,
+    Expression<String>? lessonId,
+    Expression<int>? sortOrder,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (classId != null) 'class_id': classId,
+      if (lessonId != null) 'lesson_id': lessonId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ClassRoadmapEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? classId,
+    Value<String>? lessonId,
+    Value<int>? sortOrder,
+    Value<String?>? note,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ClassRoadmapEntriesCompanion(
+      id: id ?? this.id,
+      classId: classId ?? this.classId,
+      lessonId: lessonId ?? this.lessonId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (classId.present) {
+      map['class_id'] = Variable<String>(classId.value);
+    }
+    if (lessonId.present) {
+      map['lesson_id'] = Variable<String>(lessonId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClassRoadmapEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('classId: $classId, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $StudySchedulesTable extends StudySchedules
     with TableInfo<$StudySchedulesTable, StudySchedule> {
   @override
@@ -23711,6 +24174,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ReferenceBookLinksTable(this);
   late final $ReferenceBookQuizzesTable referenceBookQuizzes =
       $ReferenceBookQuizzesTable(this);
+  late final $ClassRoadmapEntriesTable classRoadmapEntries =
+      $ClassRoadmapEntriesTable(this);
   late final $StudySchedulesTable studySchedules = $StudySchedulesTable(this);
   late final $StudyScheduleEventsTable studyScheduleEvents =
       $StudyScheduleEventsTable(this);
@@ -23756,6 +24221,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     referenceBookMessages,
     referenceBookLinks,
     referenceBookQuizzes,
+    classRoadmapEntries,
     studySchedules,
     studyScheduleEvents,
   ];
@@ -24069,6 +24535,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'classes',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('class_roadmap_entries', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'lessons',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('class_roadmap_entries', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'lessons',
         limitUpdateKind: UpdateKind.delete,
       ),
@@ -24139,6 +24619,27 @@ final class $$ClassesTableReferences
     ).filter((f) => f.classId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_subjectsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ClassRoadmapEntriesTable, List<ClassRoadmapEntry>>
+  _classRoadmapEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.classRoadmapEntries,
+        aliasName: 'classes__id__class_roadmap_entries__class_id',
+      );
+
+  $$ClassRoadmapEntriesTableProcessedTableManager get classRoadmapEntriesRefs {
+    final manager = $$ClassRoadmapEntriesTableTableManager(
+      $_db,
+      $_db.classRoadmapEntries,
+    ).filter((f) => f.classId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _classRoadmapEntriesRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -24220,6 +24721,31 @@ class $$ClassesTableFilterComposer
           }) => $$SubjectsTableFilterComposer(
             $db: $db,
             $table: $db.subjects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> classRoadmapEntriesRefs(
+    Expression<bool> Function($$ClassRoadmapEntriesTableFilterComposer f) f,
+  ) {
+    final $$ClassRoadmapEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.classRoadmapEntries,
+      getReferencedColumn: (t) => t.classId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ClassRoadmapEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.classRoadmapEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -24340,6 +24866,32 @@ class $$ClassesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> classRoadmapEntriesRefs<T extends Object>(
+    Expression<T> Function($$ClassRoadmapEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$ClassRoadmapEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.classRoadmapEntries,
+          getReferencedColumn: (t) => t.classId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ClassRoadmapEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.classRoadmapEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ClassesTableTableManager
@@ -24355,7 +24907,11 @@ class $$ClassesTableTableManager
           $$ClassesTableUpdateCompanionBuilder,
           (StudyClass, $$ClassesTableReferences),
           StudyClass,
-          PrefetchHooks Function({bool subjectGroupsRefs, bool subjectsRefs})
+          PrefetchHooks Function({
+            bool subjectGroupsRefs,
+            bool subjectsRefs,
+            bool classRoadmapEntriesRefs,
+          })
         > {
   $$ClassesTableTableManager(_$AppDatabase db, $ClassesTable table)
     : super(
@@ -24409,12 +24965,17 @@ class $$ClassesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({subjectGroupsRefs = false, subjectsRefs = false}) {
+              ({
+                subjectGroupsRefs = false,
+                subjectsRefs = false,
+                classRoadmapEntriesRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (subjectGroupsRefs) db.subjectGroups,
                     if (subjectsRefs) db.subjects,
+                    if (classRoadmapEntriesRefs) db.classRoadmapEntries,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -24461,6 +25022,27 @@ class $$ClassesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (classRoadmapEntriesRefs)
+                        await $_getPrefetchedData<
+                          StudyClass,
+                          $ClassesTable,
+                          ClassRoadmapEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ClassesTableReferences
+                              ._classRoadmapEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ClassesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).classRoadmapEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.classId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -24481,7 +25063,11 @@ typedef $$ClassesTableProcessedTableManager =
       $$ClassesTableUpdateCompanionBuilder,
       (StudyClass, $$ClassesTableReferences),
       StudyClass,
-      PrefetchHooks Function({bool subjectGroupsRefs, bool subjectsRefs})
+      PrefetchHooks Function({
+        bool subjectGroupsRefs,
+        bool subjectsRefs,
+        bool classRoadmapEntriesRefs,
+      })
     >;
 typedef $$SubjectGroupsTableCreateCompanionBuilder =
     SubjectGroupsCompanion Function({
@@ -26813,6 +27399,27 @@ final class $$LessonsTableReferences
     );
   }
 
+  static MultiTypedResultKey<$ClassRoadmapEntriesTable, List<ClassRoadmapEntry>>
+  _classRoadmapEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.classRoadmapEntries,
+        aliasName: 'lessons__id__class_roadmap_entries__lesson_id',
+      );
+
+  $$ClassRoadmapEntriesTableProcessedTableManager get classRoadmapEntriesRefs {
+    final manager = $$ClassRoadmapEntriesTableTableManager(
+      $_db,
+      $_db.classRoadmapEntries,
+    ).filter((f) => f.lessonId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _classRoadmapEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$StudySchedulesTable, List<StudySchedule>>
   _studySchedulesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.studySchedules,
@@ -27073,6 +27680,31 @@ class $$LessonsTableFilterComposer
           }) => $$QuestionSetsTableFilterComposer(
             $db: $db,
             $table: $db.questionSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> classRoadmapEntriesRefs(
+    Expression<bool> Function($$ClassRoadmapEntriesTableFilterComposer f) f,
+  ) {
+    final $$ClassRoadmapEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.classRoadmapEntries,
+      getReferencedColumn: (t) => t.lessonId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ClassRoadmapEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.classRoadmapEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -27451,6 +28083,32 @@ class $$LessonsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> classRoadmapEntriesRefs<T extends Object>(
+    Expression<T> Function($$ClassRoadmapEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$ClassRoadmapEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.classRoadmapEntries,
+          getReferencedColumn: (t) => t.lessonId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ClassRoadmapEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.classRoadmapEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> studySchedulesRefs<T extends Object>(
     Expression<T> Function($$StudySchedulesTableAnnotationComposer a) f,
   ) {
@@ -27524,6 +28182,7 @@ class $$LessonsTableTableManager
             bool flashcardsRefs,
             bool annotationAiGenerationsRefs,
             bool questionSetsRefs,
+            bool classRoadmapEntriesRefs,
             bool studySchedulesRefs,
             bool studyScheduleEventsRefs,
           })
@@ -27612,6 +28271,7 @@ class $$LessonsTableTableManager
                 flashcardsRefs = false,
                 annotationAiGenerationsRefs = false,
                 questionSetsRefs = false,
+                classRoadmapEntriesRefs = false,
                 studySchedulesRefs = false,
                 studyScheduleEventsRefs = false,
               }) {
@@ -27623,6 +28283,7 @@ class $$LessonsTableTableManager
                     if (flashcardsRefs) db.flashcards,
                     if (annotationAiGenerationsRefs) db.annotationAiGenerations,
                     if (questionSetsRefs) db.questionSets,
+                    if (classRoadmapEntriesRefs) db.classRoadmapEntries,
                     if (studySchedulesRefs) db.studySchedules,
                     if (studyScheduleEventsRefs) db.studyScheduleEvents,
                   ],
@@ -27778,6 +28439,27 @@ class $$LessonsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (classRoadmapEntriesRefs)
+                        await $_getPrefetchedData<
+                          Lesson,
+                          $LessonsTable,
+                          ClassRoadmapEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LessonsTableReferences
+                              ._classRoadmapEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LessonsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).classRoadmapEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.lessonId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (studySchedulesRefs)
                         await $_getPrefetchedData<
                           Lesson,
@@ -27848,6 +28530,7 @@ typedef $$LessonsTableProcessedTableManager =
         bool flashcardsRefs,
         bool annotationAiGenerationsRefs,
         bool questionSetsRefs,
+        bool classRoadmapEntriesRefs,
         bool studySchedulesRefs,
         bool studyScheduleEventsRefs,
       })
@@ -46170,6 +46853,470 @@ typedef $$ReferenceBookQuizzesTableProcessedTableManager =
       ReferenceBookQuiz,
       PrefetchHooks Function({bool bookId, bool chapterId, bool questionSetId})
     >;
+typedef $$ClassRoadmapEntriesTableCreateCompanionBuilder =
+    ClassRoadmapEntriesCompanion Function({
+      required String id,
+      required String classId,
+      required String lessonId,
+      Value<int> sortOrder,
+      Value<String?> note,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ClassRoadmapEntriesTableUpdateCompanionBuilder =
+    ClassRoadmapEntriesCompanion Function({
+      Value<String> id,
+      Value<String> classId,
+      Value<String> lessonId,
+      Value<int> sortOrder,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ClassRoadmapEntriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ClassRoadmapEntriesTable,
+          ClassRoadmapEntry
+        > {
+  $$ClassRoadmapEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ClassesTable _classIdTable(_$AppDatabase db) =>
+      db.classes.createAlias('class_roadmap_entries__class_id__classes__id');
+
+  $$ClassesTableProcessedTableManager get classId {
+    final $_column = $_itemColumn<String>('class_id')!;
+
+    final manager = $$ClassesTableTableManager(
+      $_db,
+      $_db.classes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_classIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonsTable _lessonIdTable(_$AppDatabase db) =>
+      db.lessons.createAlias('class_roadmap_entries__lesson_id__lessons__id');
+
+  $$LessonsTableProcessedTableManager get lessonId {
+    final $_column = $_itemColumn<String>('lesson_id')!;
+
+    final manager = $$LessonsTableTableManager(
+      $_db,
+      $_db.lessons,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_lessonIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ClassRoadmapEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $ClassRoadmapEntriesTable> {
+  $$ClassRoadmapEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ClassesTableFilterComposer get classId {
+    final $$ClassesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.classId,
+      referencedTable: $db.classes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ClassesTableFilterComposer(
+            $db: $db,
+            $table: $db.classes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableFilterComposer get lessonId {
+    final $$LessonsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ClassRoadmapEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ClassRoadmapEntriesTable> {
+  $$ClassRoadmapEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ClassesTableOrderingComposer get classId {
+    final $$ClassesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.classId,
+      referencedTable: $db.classes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ClassesTableOrderingComposer(
+            $db: $db,
+            $table: $db.classes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableOrderingComposer get lessonId {
+    final $$LessonsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ClassRoadmapEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ClassRoadmapEntriesTable> {
+  $$ClassRoadmapEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ClassesTableAnnotationComposer get classId {
+    final $$ClassesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.classId,
+      referencedTable: $db.classes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ClassesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.classes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonsTableAnnotationComposer get lessonId {
+    final $$LessonsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lessonId,
+      referencedTable: $db.lessons,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ClassRoadmapEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ClassRoadmapEntriesTable,
+          ClassRoadmapEntry,
+          $$ClassRoadmapEntriesTableFilterComposer,
+          $$ClassRoadmapEntriesTableOrderingComposer,
+          $$ClassRoadmapEntriesTableAnnotationComposer,
+          $$ClassRoadmapEntriesTableCreateCompanionBuilder,
+          $$ClassRoadmapEntriesTableUpdateCompanionBuilder,
+          (ClassRoadmapEntry, $$ClassRoadmapEntriesTableReferences),
+          ClassRoadmapEntry,
+          PrefetchHooks Function({bool classId, bool lessonId})
+        > {
+  $$ClassRoadmapEntriesTableTableManager(
+    _$AppDatabase db,
+    $ClassRoadmapEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ClassRoadmapEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ClassRoadmapEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ClassRoadmapEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> classId = const Value.absent(),
+                Value<String> lessonId = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ClassRoadmapEntriesCompanion(
+                id: id,
+                classId: classId,
+                lessonId: lessonId,
+                sortOrder: sortOrder,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String classId,
+                required String lessonId,
+                Value<int> sortOrder = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ClassRoadmapEntriesCompanion.insert(
+                id: id,
+                classId: classId,
+                lessonId: lessonId,
+                sortOrder: sortOrder,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ClassRoadmapEntriesTable, ClassRoadmapEntry>(
+                    table,
+                  ),
+                  $$ClassRoadmapEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({classId = false, lessonId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (classId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.classId,
+                                referencedTable:
+                                    $$ClassRoadmapEntriesTableReferences
+                                        ._classIdTable(db),
+                                referencedColumn:
+                                    $$ClassRoadmapEntriesTableReferences
+                                        ._classIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (lessonId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.lessonId,
+                                referencedTable:
+                                    $$ClassRoadmapEntriesTableReferences
+                                        ._lessonIdTable(db),
+                                referencedColumn:
+                                    $$ClassRoadmapEntriesTableReferences
+                                        ._lessonIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ClassRoadmapEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ClassRoadmapEntriesTable,
+      ClassRoadmapEntry,
+      $$ClassRoadmapEntriesTableFilterComposer,
+      $$ClassRoadmapEntriesTableOrderingComposer,
+      $$ClassRoadmapEntriesTableAnnotationComposer,
+      $$ClassRoadmapEntriesTableCreateCompanionBuilder,
+      $$ClassRoadmapEntriesTableUpdateCompanionBuilder,
+      (ClassRoadmapEntry, $$ClassRoadmapEntriesTableReferences),
+      ClassRoadmapEntry,
+      PrefetchHooks Function({bool classId, bool lessonId})
+    >;
 typedef $$StudySchedulesTableCreateCompanionBuilder =
     StudySchedulesCompanion Function({
       required String id,
@@ -47020,6 +48167,8 @@ class $AppDatabaseManager {
       $$ReferenceBookLinksTableTableManager(_db, _db.referenceBookLinks);
   $$ReferenceBookQuizzesTableTableManager get referenceBookQuizzes =>
       $$ReferenceBookQuizzesTableTableManager(_db, _db.referenceBookQuizzes);
+  $$ClassRoadmapEntriesTableTableManager get classRoadmapEntries =>
+      $$ClassRoadmapEntriesTableTableManager(_db, _db.classRoadmapEntries);
   $$StudySchedulesTableTableManager get studySchedules =>
       $$StudySchedulesTableTableManager(_db, _db.studySchedules);
   $$StudyScheduleEventsTableTableManager get studyScheduleEvents =>

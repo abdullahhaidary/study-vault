@@ -921,6 +921,31 @@ class ReferenceBookQuizzes extends Table {
   ];
 }
 
+/// Ordered class syllabus: which lessons to study, and in what order.
+///
+/// Teachers (or students following a teacher plan) pick existing lessons
+/// onto this roadmap. One row per lesson per class; [sortOrder] is the
+/// sequence to walk through.
+class ClassRoadmapEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get classId =>
+      text().references(Classes, #id, onDelete: KeyAction.cascade)();
+  TextColumn get lessonId =>
+      text().references(Lessons, #id, onDelete: KeyAction.cascade)();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {classId, lessonId},
+  ];
+}
+
 /// Lessons enrolled in the spaced-review Study Schedule.
 ///
 /// Deliberately minimal so two devices that add the same lesson produce
@@ -1012,6 +1037,7 @@ class StudyScheduleEvents extends Table {
     ReferenceBookMessages,
     ReferenceBookLinks,
     ReferenceBookQuizzes,
+    ClassRoadmapEntries,
     StudySchedules,
     StudyScheduleEvents,
   ],
@@ -1057,7 +1083,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1078,6 +1104,7 @@ class AppDatabase extends _$AppDatabase {
       await _createCourseReviewIndexes();
       await _createStudyScheduleIndexes();
       await _createFlashcardReviewIndexes();
+      await _createClassRoadmapIndexes();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -1231,8 +1258,19 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(lessonMaterials, lessonMaterials.variantOfId);
         await m.addColumn(lessonMaterials, lessonMaterials.pageOffset);
       }
+      if (from < 23) {
+        await m.createTable(classRoadmapEntries);
+        await _createClassRoadmapIndexes();
+      }
     },
   );
+
+  Future<void> _createClassRoadmapIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_class_roadmap_class_order '
+      'ON class_roadmap_entries (class_id, sort_order)',
+    );
+  }
 
   Future<void> _createFlashcardReviewIndexes() async {
     await customStatement(
@@ -1695,6 +1733,66 @@ class AppDatabase extends _$AppDatabase {
       await (delete(classes)..where((t) => t.id.equals(classId))).go();
       return lessonIds;
     });
+  }
+
+  // ── Class Roadmap ────────────────────────────────────────
+
+  Stream<List<ClassRoadmapEntry>> watchRoadmapEntries(String classId) {
+    return (select(classRoadmapEntries)
+          ..where((t) => t.classId.equals(classId))
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+        .watch();
+  }
+
+  Future<ClassRoadmapEntry?> getRoadmapEntry(String classId, String lessonId) {
+    return (select(classRoadmapEntries)..where(
+          (t) => t.classId.equals(classId) & t.lessonId.equals(lessonId),
+        ))
+        .getSingleOrNull();
+  }
+
+  Future<int> nextRoadmapSortOrder(String classId) async {
+    final maxExpr = classRoadmapEntries.sortOrder.max();
+    final query = selectOnly(classRoadmapEntries)
+      ..addColumns([maxExpr])
+      ..where(classRoadmapEntries.classId.equals(classId));
+    final row = await query.getSingle();
+    return (row.read(maxExpr) ?? -1) + 1;
+  }
+
+  Future<void> insertRoadmapEntry(ClassRoadmapEntriesCompanion entry) {
+    return into(classRoadmapEntries).insert(entry);
+  }
+
+  Future<void> updateRoadmapEntry(ClassRoadmapEntry entry) {
+    return update(classRoadmapEntries).replace(entry);
+  }
+
+  Future<void> deleteRoadmapEntry(String id) {
+    return (delete(classRoadmapEntries)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Lessons belonging to [classId] that are not yet on the roadmap.
+  Future<List<Lesson>> lessonsAvailableForRoadmap(String classId) {
+    return (select(lessons)
+          ..where(
+            (t) =>
+                t.subjectId.isInQuery(
+                  selectOnly(subjects)
+                    ..addColumns([subjects.id])
+                    ..where(subjects.classId.equals(classId)),
+                ) &
+                t.id.isNotInQuery(
+                  selectOnly(classRoadmapEntries)
+                    ..addColumns([classRoadmapEntries.lessonId])
+                    ..where(classRoadmapEntries.classId.equals(classId)),
+                ),
+          )
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.subjectId),
+            (t) => OrderingTerm.asc(t.sortOrder),
+          ]))
+        .get();
   }
 
   // ── Lesson Materials ─────────────────────────────────────
