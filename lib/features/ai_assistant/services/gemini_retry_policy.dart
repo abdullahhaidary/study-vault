@@ -69,14 +69,16 @@ abstract final class GeminiRetryPolicy {
         error is AiInvalidKeyException ||
         error is AiUnsupportedModelException ||
         error is AiServerException ||
-        error is AiTimeoutException;
+        error is AiTimeoutException ||
+        error is AiConnectionInterruptedException;
   }
 
   static bool _shouldRetryRound(AiException error) {
     return error is AiRateLimitException ||
         error is AiQuotaException ||
         error is AiServerException ||
-        error is AiTimeoutException;
+        error is AiTimeoutException ||
+        error is AiConnectionInterruptedException;
   }
 
   static Duration _delayFor(int failedAttempts) {

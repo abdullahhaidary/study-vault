@@ -40,8 +40,8 @@ void main() {
   });
 
   test('schema version is 16 with backup constants', () {
-    expect(db.schemaVersion, 21);
-    expect(kStudyVaultSchemaVersion, 21);
+    expect(db.schemaVersion, 22);
+    expect(kStudyVaultSchemaVersion, 22);
     expect(BackupService().currentSchemaVersion, 21);
   });
 

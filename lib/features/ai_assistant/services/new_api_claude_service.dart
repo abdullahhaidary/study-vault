@@ -48,6 +48,20 @@ class NewApiClaudeService implements AiService {
     );
   }
 
+  /// Maps low-level transport failures. [requestStarted] means bytes may already
+  /// have been billed upstream, so we must not call that a plain offline error.
+  static Never throwTransportError(
+    Object error, {
+    required bool requestStarted,
+  }) {
+    if (error is TimeoutException) throw const AiTimeoutException();
+    if (error is SocketException || error is http.ClientException) {
+      if (requestStarted) throw const AiConnectionInterruptedException();
+      throw const AiOfflineException();
+    }
+    throw error;
+  }
+
   Future<List<String>> listAvailableModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
@@ -63,12 +77,12 @@ class NewApiClaudeService implements AiService {
       response = await http.Response.fromStream(
         await _http.send(request).timeout(timeout),
       ).timeout(timeout);
-    } on TimeoutException {
-      throw const AiTimeoutException();
-    } on SocketException {
-      throw const AiOfflineException();
-    } on http.ClientException {
-      throw const AiOfflineException();
+    } on TimeoutException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on SocketException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on http.ClientException catch (error) {
+      throwTransportError(error, requestStarted: false);
     }
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw const AiInvalidKeyException('The New API key was rejected.');
@@ -231,26 +245,23 @@ class NewApiClaudeService implements AiService {
             stream: false,
           ),
         );
-      response = await http.Response.fromStream(
-        await _http.send(request).timeout(timeout),
-      ).timeout(timeout);
-    } on TimeoutException {
-      throw const AiTimeoutException();
-    } on SocketException {
-      throw const AiOfflineException();
-    } on http.ClientException {
-      throw const AiOfflineException();
+      // Connect timeout only; reading the body can take several minutes for
+      // long document generations, so do not wrap the whole download again.
+      final streamed = await _http.send(request).timeout(timeout);
+      response = await http.Response.fromStream(streamed);
+    } on TimeoutException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on SocketException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on http.ClientException catch (error) {
+      // Request likely reached the server; body download may have failed.
+      throwTransportError(error, requestStarted: true);
     }
     checkStatus(response.statusCode, response.body, model);
     try {
       final data = jsonDecode(response.body);
       if (data is! Map || data['content'] is! List) {
         throw const AiMalformedOutputException();
-      }
-      if (data['stop_reason'] == 'max_tokens') {
-        throw const AiMalformedOutputException(
-          'New API reached the output limit. Try a shorter request.',
-        );
       }
       final text = (data['content'] as List)
           .whereType<Map>()
@@ -259,6 +270,7 @@ class NewApiClaudeService implements AiService {
           .join('\n')
           .trim();
       if (text.isEmpty) throw const AiEmptyResultException();
+      // Hit max_tokens: still return usable text so billed work is not wasted.
       return (text: text, usage: usage(data, model));
     } on AiException {
       rethrow;
@@ -270,7 +282,9 @@ class NewApiClaudeService implements AiService {
   Stream<({String? text, AiTokenUsage? usage})> streamMessages({
     required String model,
     required List<Map<String, String>> messages,
-    Duration timeout = const Duration(seconds: 120),
+    int maxTokens = 4096,
+    /// Idle gap between stream events. SSE tokens keep middleboxes awake.
+    Duration timeout = const Duration(minutes: 3),
   }) async* {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
@@ -285,17 +299,17 @@ class NewApiClaudeService implements AiService {
           payload(
             model: model,
             messages: messages,
-            maxTokens: 4096,
+            maxTokens: maxTokens,
             stream: true,
           ),
         );
       response = await _http.send(request).timeout(timeout);
-    } on TimeoutException {
-      throw const AiTimeoutException();
-    } on SocketException {
-      throw const AiOfflineException();
-    } on http.ClientException {
-      throw const AiOfflineException();
+    } on TimeoutException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on SocketException catch (error) {
+      throwTransportError(error, requestStarted: false);
+    } on http.ClientException catch (error) {
+      throwTransportError(error, requestStarted: false);
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       checkStatus(
@@ -325,13 +339,8 @@ class NewApiClaudeService implements AiService {
           'New API interrupted the response. Please try again.',
         );
       }
-      if (event['type'] == 'message_delta' &&
-          event['delta'] is Map &&
-          (event['delta'] as Map)['stop_reason'] == 'max_tokens') {
-        throw const AiMalformedOutputException(
-          'New API reached the output limit. Try a shorter request.',
-        );
-      }
+      // max_tokens stop is handled by returning whatever text already streamed;
+      // throwing here would discard billed output.
 
       final anthropicText = _anthropicStreamText(event);
       if (anthropicText != null && anthropicText.isNotEmpty) {
@@ -385,24 +394,32 @@ class NewApiClaudeService implements AiService {
       yield handled;
     }
 
-    await for (final chunk
-        in response.stream
-            .transform(utf8.decoder)
-            .timeout(
-              timeout,
-              onTimeout: (sink) => sink.addError(const AiTimeoutException()),
-            )) {
-      buffer += chunk.replaceAll('\r', '');
-      while (true) {
-        final lineEnd = buffer.indexOf('\n');
-        if (lineEnd < 0) break;
-        final line = buffer.substring(0, lineEnd).trimRight();
-        buffer = buffer.substring(lineEnd + 1);
-        if (line.isEmpty || !line.startsWith('data:')) continue;
-        for (final event in eventsFromPayload(line.substring(5))) {
-          yield event;
+    try {
+      await for (final chunk
+          in response.stream
+              .transform(utf8.decoder)
+              .timeout(
+                timeout,
+                onTimeout: (sink) => sink.addError(const AiTimeoutException()),
+              )) {
+        buffer += chunk.replaceAll('\r', '');
+        while (true) {
+          final lineEnd = buffer.indexOf('\n');
+          if (lineEnd < 0) break;
+          final line = buffer.substring(0, lineEnd).trimRight();
+          buffer = buffer.substring(lineEnd + 1);
+          if (line.isEmpty || !line.startsWith('data:')) continue;
+          for (final event in eventsFromPayload(line.substring(5))) {
+            yield event;
+          }
         }
       }
+    } on TimeoutException catch (error) {
+      throwTransportError(error, requestStarted: hasText);
+    } on SocketException catch (error) {
+      throwTransportError(error, requestStarted: hasText);
+    } on http.ClientException catch (error) {
+      throwTransportError(error, requestStarted: hasText);
     }
 
     final trailing = buffer.trim();
@@ -578,6 +595,8 @@ class NewApiClaudeService implements AiService {
     return result;
   }
 
+  /// Long PDF study generations use SSE so proxies see continuous traffic
+  /// instead of one idle socket waiting for a giant JSON body.
   Future<AiTextResult> completeDocumentMessages({
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
@@ -587,12 +606,45 @@ class NewApiClaudeService implements AiService {
     if (messages.isEmpty) {
       throw const AiMalformedOutputException('The document prompt is empty.');
     }
-    final result = await completeMessages(
-      model: selection.resolvedModelId,
-      messages: messages,
-      maxTokens: maxOutputTokens,
-      timeout: timeout,
-    );
-    return AiTextResult(markdown: result.text, usage: result.usage);
+    final buffer = StringBuffer();
+    AiTokenUsage? combinedUsage;
+    try {
+      await for (final event in streamMessages(
+        model: selection.resolvedModelId,
+        messages: messages,
+        maxTokens: maxOutputTokens,
+        timeout: timeout,
+      )) {
+        final delta = event.text;
+        if (delta != null && delta.isNotEmpty) buffer.write(delta);
+        if (event.usage != null) combinedUsage = event.usage;
+      }
+    } on AiConnectionInterruptedException {
+      final partial = buffer.toString().trim();
+      // Keep billed partial output when the socket dies late in generation.
+      if (partial.length >= 400) {
+        return AiTextResult(
+          markdown:
+              '$partial\n\n> *(Connection interrupted — this is a partial '
+              'result. Regenerate if you need the rest.)*',
+          usage: combinedUsage,
+        );
+      }
+      rethrow;
+    } on AiTimeoutException {
+      final partial = buffer.toString().trim();
+      if (partial.length >= 400) {
+        return AiTextResult(
+          markdown:
+              '$partial\n\n> *(Timed out — this is a partial result. '
+              'Regenerate if you need the rest.)*',
+          usage: combinedUsage,
+        );
+      }
+      rethrow;
+    }
+    final text = buffer.toString().trim();
+    if (text.isEmpty) throw const AiEmptyResultException();
+    return AiTextResult(markdown: text, usage: combinedUsage);
   }
 }

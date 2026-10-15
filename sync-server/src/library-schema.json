@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "tables": {
     "classes": {
       "columns": {
@@ -245,6 +245,18 @@
           "type": "INTEGER",
           "required": true
         },
+        "language": {
+          "type": "TEXT",
+          "required": false
+        },
+        "variant_of_id": {
+          "type": "TEXT",
+          "required": false
+        },
+        "page_offset": {
+          "type": "INTEGER",
+          "required": true
+        },
         "created_at": {
           "type": "INTEGER",
           "required": true
@@ -258,9 +270,18 @@
         {
           "column": "lesson_id",
           "table": "lessons"
+        },
+        {
+          "column": "variant_of_id",
+          "table": "lesson_materials"
         }
       ],
-      "unique": []
+      "unique": [
+        [
+          "variant_of_id",
+          "language"
+        ]
+      ]
     },
     "study_pin_categories": {
       "columns": {

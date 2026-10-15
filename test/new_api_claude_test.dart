@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -424,4 +426,100 @@ void main() {
         .toList();
     expect(events.single.text, 'Send me the text.');
   });
+
+  test('document completion streams with the requested max tokens', () async {
+    Map<String, Object?>? body;
+    final client = MockClient((request) async {
+      body = jsonDecode(request.body) as Map<String, Object?>;
+      return http.Response(
+        'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"# Title\\n\\nBody"}}\n\n'
+        'data: {"type":"message_delta","usage":{"output_tokens":9}}\n\n',
+        200,
+        headers: {'content-type': 'text/event-stream'},
+      );
+    });
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      httpClient: client,
+    );
+    final result = await service.completeDocumentMessages(
+      messages: const [
+        {'role': 'user', 'content': 'DOCUMENT'},
+      ],
+      maxOutputTokens: 16384,
+      selection: const AiExecutionSelection(
+        provider: AiProviderId.newApi,
+        requestedModelId: 'newapi:claude-example',
+        resolvedModelId: 'newapi:claude-example',
+      ),
+    );
+    expect(body?['stream'], true);
+    expect(body?['max_tokens'], 16384);
+    expect(result.markdown, contains('# Title'));
+    expect(result.usage?.completionTokens, 9);
+  });
+
+  test('maps mid-request drops as interrupted, not offline', () {
+    expect(
+      () => NewApiClaudeService.throwTransportError(
+        http.ClientException('reset'),
+        requestStarted: true,
+      ),
+      throwsA(isA<AiConnectionInterruptedException>()),
+    );
+    expect(
+      () => NewApiClaudeService.throwTransportError(
+        const SocketException('Network is unreachable'),
+        requestStarted: false,
+      ),
+      throwsA(isA<AiOfflineException>()),
+    );
+  });
+
+  test('document completion keeps partial text after a mid-stream drop', () async {
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      httpClient: _DroppingStreamClient(partialText: 'p' * 450),
+    );
+    final result = await service.completeDocumentMessages(
+      messages: const [
+        {'role': 'user', 'content': 'DOCUMENT'},
+      ],
+      maxOutputTokens: 8192,
+      selection: const AiExecutionSelection(
+        provider: AiProviderId.newApi,
+        requestedModelId: 'newapi:claude-example',
+        resolvedModelId: 'newapi:claude-example',
+      ),
+    );
+    expect(result.markdown, contains('p' * 450));
+    expect(result.markdown, contains('partial result'));
+  });
+}
+
+class _DroppingStreamClient extends http.BaseClient {
+  _DroppingStreamClient({required this.partialText});
+
+  final String partialText;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final controller = StreamController<List<int>>();
+    final response = http.StreamedResponse(
+      controller.stream,
+      200,
+      headers: {'content-type': 'text/event-stream'},
+    );
+    scheduleMicrotask(() async {
+      final payload =
+          'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":${jsonEncode(partialText)}}}\n\n';
+      controller.add(utf8.encode(payload));
+      await Future<void>.delayed(Duration.zero);
+      controller.addError(http.ClientException('Connection closed'));
+      await controller.close();
+    });
+    return response;
+  }
 }

@@ -23,6 +23,16 @@ class AiOfflineException extends AiException {
     : super('AI Assistant requires an internet connection.');
 }
 
+/// The request reached the network, then the socket failed while waiting for
+/// or reading tokens. Upstream may still have billed for generation.
+class AiConnectionInterruptedException extends AiException {
+  const AiConnectionInterruptedException([
+    super.message =
+        'The AI connection was interrupted while generating. '
+        'Tokens may already have been used on the server. Please try again.',
+  ]);
+}
+
 class AiInvalidKeyException extends AiException {
   const AiInvalidKeyException([
     super.message = 'The AI API key appears to be invalid.',

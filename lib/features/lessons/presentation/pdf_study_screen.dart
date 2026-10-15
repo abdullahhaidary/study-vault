@@ -28,12 +28,15 @@ import '../../flashcards/data/flashcards_providers.dart';
 import '../../notes/data/notes_providers.dart';
 import '../../pdf_ai_materials/data/pdf_ai_material_providers.dart';
 import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
+import '../../pdf_ai_materials/domain/pdf_ai_translation.dart';
 import '../../pdf_ai_materials/presentation/pdf_ai_materials_panel.dart';
 import '../../selection_ai/domain/selection_ai_host.dart';
 import '../../selection_ai/presentation/selection_ai_launcher.dart';
 import '../../selection_ai/presentation/selection_ai_toolbar.dart';
 import '../data/bookmarks_providers.dart';
 import '../data/lesson_progress_providers.dart';
+import '../data/materials_providers.dart';
+import '../domain/material_language_variant.dart';
 import 'widgets/material_outline_panel.dart';
 import 'widgets/pdf_study_dock.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -70,8 +73,13 @@ class PdfStudyScreen extends ConsumerStatefulWidget {
 }
 
 class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
-  final PdfViewerController _controller = PdfViewerController();
-  late final Future<bool> _fileExists;
+  PdfViewerController _controller = PdfViewerController();
+  late Future<bool> _fileExists;
+  late String _activeFilePath;
+  late String _viewingMaterialId;
+  PdfAiLanguage _pdfLanguage = PdfAiLanguage.original;
+  int _viewerEpoch = 0;
+  int? _pendingPage;
   int? _currentPage;
   int? _pageCount;
   StudyPin? _readerPin;
@@ -90,11 +98,88 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   @override
   void initState() {
     super.initState();
-    _fileExists = File(widget.filePath).exists();
+    _activeFilePath = widget.filePath;
+    _viewingMaterialId = widget.resourceId;
+    _pendingPage = widget.initialPage;
+    _fileExists = File(_activeFilePath).exists();
     _focusedPinId = widget.focusPinId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       recordMaterialStudyActivity(ref, materialId: widget.resourceId);
     });
+  }
+
+  Future<void> _switchPdfLanguage(
+    PdfAiLanguage next, {
+    LessonMaterial? persian,
+  }) async {
+    if (next == _pdfLanguage) return;
+    if (next == PdfAiLanguage.persian && persian == null) return;
+
+    final fromOffset = _pdfLanguage == PdfAiLanguage.persian
+        ? (persian?.pageOffset ?? 0)
+        : 0;
+    final toOffset = next == PdfAiLanguage.persian
+        ? (persian?.pageOffset ?? 0)
+        : 0;
+    final current = _currentPage ?? 1;
+    final mapped = MaterialLanguageVariant.mapPage(
+      page: current,
+      fromOffset: fromOffset,
+      toOffset: toOffset,
+    );
+
+    final nextPath = next == PdfAiLanguage.persian
+        ? await materialAbsolutePath(persian!)
+        : widget.filePath;
+    if (!mounted) return;
+
+    setState(() {
+      _pdfLanguage = next;
+      _activeFilePath = nextPath;
+      _viewingMaterialId = next == PdfAiLanguage.persian
+          ? persian!.id
+          : widget.resourceId;
+      _pendingPage = mapped;
+      _currentPage = null;
+      _pageCount = null;
+      _viewerEpoch++;
+      _controller = PdfViewerController();
+      _fileExists = File(_activeFilePath).exists();
+      _readerPin = null;
+      _inlineAi = null;
+    });
+  }
+
+  Widget _pdfLanguageToggle(LessonMaterial? persian) {
+    if (persian == null && _pdfLanguage == PdfAiLanguage.original) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: SegmentedButton<PdfAiLanguage>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        segments: const [
+          ButtonSegment(
+            value: PdfAiLanguage.original,
+            label: Text('EN'),
+            tooltip: 'Original PDF',
+          ),
+          ButtonSegment(
+            value: PdfAiLanguage.persian,
+            label: Text('فا'),
+            tooltip: 'Persian PDF',
+          ),
+        ],
+        selected: {_pdfLanguage},
+        onSelectionChanged: persian == null
+            ? null
+            : (value) => _switchPdfLanguage(value.first, persian: persian),
+      ),
+    );
   }
 
   bool get _isWide => MediaQuery.sizeOf(context).width >= 720;
@@ -157,7 +242,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     if (page == null) return;
     final created = await toggleMaterialBookmark(
       ref,
-      materialId: widget.resourceId,
+      materialId: _viewingMaterialId,
       pageNumber: page,
     );
     if (created != null && mounted) {
@@ -265,7 +350,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     await createStudyPin(
       ref,
       CreateStudyPinInput(
-        resourceId: widget.resourceId,
+        resourceId: _viewingMaterialId,
         pageNumber: hit.page.pageNumber,
         point: point,
         shortText: result.shortText,
@@ -292,7 +377,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     await createTextStudyPin(
       ref,
       CreateTextStudyPinInput(
-        resourceId: widget.resourceId,
+        resourceId: _viewingMaterialId,
         selectedText: selectedText,
         ranges: rangeInputs,
         shortText: result.shortText,
@@ -589,19 +674,21 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     final pageNumber = ranges.first.pageNumber;
     final material = await ref
         .read(databaseProvider)
-        .getMaterialById(widget.resourceId);
+        .getMaterialById(_viewingMaterialId);
     final aiContext =
         await AnnotationAiContextBuilder.fromPdfSelectionWithPageLoad(
           selectedText: selectedText,
-          filePath: widget.filePath,
-          materialId: widget.resourceId,
+          filePath: _activeFilePath,
+          materialId: _viewingMaterialId,
           lessonId: material?.lessonId,
           pageNumber: pageNumber,
         );
     if (!mounted) return;
 
     final pins =
-        ref.read(studyPinsForResourceProvider(widget.resourceId)).valueOrNull ??
+        ref
+            .read(studyPinsForResourceProvider(_viewingMaterialId))
+            .valueOrNull ??
         const <StudyPin>[];
     final existing = InlineAiAnnotationSaver.findMatchingTextPin(
       pins: pins,
@@ -891,7 +978,18 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final resourceId = widget.resourceId;
+    final persian = ref
+        .watch(materialPersianVariantProvider(widget.resourceId))
+        .valueOrNull;
+    if (persian == null && _pdfLanguage == PdfAiLanguage.persian) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pdfLanguage == PdfAiLanguage.persian) {
+          _switchPdfLanguage(PdfAiLanguage.original);
+        }
+      });
+    }
+    // Pins/bookmarks follow the visible PDF; AI materials stay on the original.
+    final resourceId = _viewingMaterialId;
     final annotate = ref.watch(addPinModeProvider(resourceId));
     final displayMode = ref.watch(pinDisplayModeProvider(resourceId));
     final pinsAsync = ref.watch(studyPinsForResourceProvider(resourceId));
@@ -954,8 +1052,13 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(
+          _pdfLanguage == PdfAiLanguage.persian
+              ? '${widget.title} · فارسی'
+              : widget.title,
+        ),
         actions: [
+          _pdfLanguageToggle(persian),
           IconButton(
             tooltip: 'AI explanations',
             onPressed: () =>
@@ -983,6 +1086,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         ],
       ),
       body: FutureBuilder<bool>(
+        key: ValueKey('exists-$_viewerEpoch-$_activeFilePath'),
         future: _fileExists,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -1039,7 +1143,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                             );
                           },
                           child: PdfViewer.file(
-                            widget.filePath,
+                            _activeFilePath,
+                            key: ValueKey('pdf-$_viewerEpoch-$_activeFilePath'),
                             controller: _controller,
                             params: PdfViewerParams(
                               margin: 8,
@@ -1052,15 +1157,18 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                                 setState(() => _currentPage = pageNumber);
                               },
                               onViewerReady: (document, controller) {
+                                final pending = _pendingPage;
+                                final pageCount = document.pages.length;
                                 setState(() {
-                                  _pageCount = document.pages.length;
+                                  _pageCount = pageCount;
                                   _currentPage = controller.pageNumber;
+                                  _pendingPage = null;
                                 });
-                                final page = widget.initialPage;
-                                if (page != null &&
-                                    page >= 1 &&
-                                    page <= document.pages.length) {
+                                final raw = pending ?? widget.initialPage;
+                                if (raw != null && pageCount >= 1) {
+                                  final page = raw.clamp(1, pageCount);
                                   controller.goToPage(pageNumber: page);
+                                  setState(() => _currentPage = page);
                                 }
                               },
                               onGeneralTap: (context, controller, details) {

@@ -97,6 +97,10 @@ class Lessons extends Table {
 }
 
 /// Local study materials (PDFs / images) attached to a lesson.
+///
+/// A Persian PDF is a language variant of another material: [variantOfId]
+/// points at the original, [language] is `fa`, and [pageOffset] maps pages
+/// so `persianPage = originalPage + pageOffset`.
 class LessonMaterials extends Table {
   TextColumn get id => text()();
   TextColumn get lessonId => text().references(Lessons, #id)();
@@ -106,11 +110,30 @@ class LessonMaterials extends Table {
   TextColumn get mimeType =>
       text().withDefault(const Constant('application/pdf'))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// Null for the primary attachment; `fa` for a Persian companion PDF.
+  TextColumn get language => text().nullable()();
+
+  /// When set, this row is a language variant of another material.
+  TextColumn get variantOfId => text().nullable().references(
+    LessonMaterials,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+
+  /// Added to the original page number to reach the matching variant page.
+  IntColumn get pageOffset => integer().withDefault(const Constant(0))();
+
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {variantOfId, language},
+  ];
 }
 
 /// Optional study-meaning categories for pins (Definition, Formula, …).
@@ -1034,7 +1057,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1202,6 +1225,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 21) {
         await m.createTable(pdfAiMaterialTranslations);
+      }
+      if (from < 22) {
+        await m.addColumn(lessonMaterials, lessonMaterials.language);
+        await m.addColumn(lessonMaterials, lessonMaterials.variantOfId);
+        await m.addColumn(lessonMaterials, lessonMaterials.pageOffset);
       }
     },
   );
@@ -1673,7 +1701,7 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<LessonMaterial>> watchMaterialsForLesson(String lessonId) {
     return (select(lessonMaterials)
-          ..where((t) => t.lessonId.equals(lessonId))
+          ..where((t) => t.lessonId.equals(lessonId) & t.variantOfId.isNull())
           ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
         .watch();
   }
@@ -1682,6 +1710,41 @@ class AppDatabase extends _$AppDatabase {
     return (select(
       lessonMaterials,
     )..where((t) => t.id.equals(id))).getSingleOrNull();
+  }
+
+  Stream<LessonMaterial?> watchMaterialById(String id) {
+    return (select(
+      lessonMaterials,
+    )..where((t) => t.id.equals(id))).watchSingleOrNull();
+  }
+
+  /// Language companion of [originalId], e.g. Persian (`fa`).
+  Stream<LessonMaterial?> watchMaterialVariant(
+    String originalId,
+    String language,
+  ) {
+    return (select(lessonMaterials)..where(
+          (t) =>
+              t.variantOfId.equals(originalId) & t.language.equals(language),
+        ))
+        .watchSingleOrNull();
+  }
+
+  Future<LessonMaterial?> getMaterialVariant(
+    String originalId,
+    String language,
+  ) {
+    return (select(lessonMaterials)..where(
+          (t) =>
+              t.variantOfId.equals(originalId) & t.language.equals(language),
+        ))
+        .getSingleOrNull();
+  }
+
+  Future<List<LessonMaterial>> getMaterialVariants(String originalId) {
+    return (select(
+      lessonMaterials,
+    )..where((t) => t.variantOfId.equals(originalId))).get();
   }
 
   Future<int> nextMaterialSortOrder(String lessonId) async {
@@ -1704,6 +1767,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteLessonMaterial(String id) async {
+    // Remove language companions first so their pins/files can be cleaned up
+    // before the cascade would leave orphaned dependent rows.
+    final variants = await getMaterialVariants(id);
+    for (final variant in variants) {
+      await deleteLessonMaterial(variant.id);
+    }
+
     final pinIds = await (select(
       studyPins,
     )..where((t) => t.resourceId.equals(id))).map((row) => row.id).get();

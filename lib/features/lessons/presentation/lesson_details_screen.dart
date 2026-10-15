@@ -133,16 +133,67 @@ class LessonDetailsScreen extends ConsumerWidget {
     LessonMaterial material,
   ) async {
     final kind = materialKindLabel(material.mimeType);
+    final hasPersian =
+        ref.read(materialPersianVariantProvider(material.id)).valueOrNull !=
+        null;
     final confirmed = await confirmDelete(
       context,
       title: 'Remove $kind?',
       message:
           '"${material.title}" will be removed from this lesson and deleted '
           'from local Study Vault storage. Study Pins, AI materials, and '
-          'quizzes for this attachment will also be removed.',
+          'quizzes for this attachment will also be removed.'
+          '${hasPersian ? ' Its Persian PDF companion will be removed too.' : ''}',
       confirmLabel: 'Remove',
     );
     if (confirmed) await deleteLessonMaterial(ref, material: material);
+  }
+
+  Future<void> _attachPersianPdf(
+    BuildContext context,
+    WidgetRef ref,
+    LessonMaterial material,
+  ) async {
+    try {
+      final persian = await attachPersianPdfToMaterial(ref, original: material);
+      if (persian != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Persian PDF attached. Open the PDF and use EN | فا to switch.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not attach Persian PDF: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removePersianPdf(
+    BuildContext context,
+    WidgetRef ref,
+    LessonMaterial material,
+  ) async {
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Remove Persian PDF?',
+      message:
+          'The Persian companion for "${material.title}" will be deleted. '
+          'The original PDF stays.',
+      confirmLabel: 'Remove',
+    );
+    if (!confirmed) return;
+    await deletePersianVariant(ref, original: material);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Persian PDF removed.')));
+    }
   }
 
   Future<void> _confirmDeleteLesson(
@@ -549,20 +600,62 @@ class LessonDetailsScreen extends ConsumerWidget {
             for (final material in documents)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: GroupedItemTile(
-                  title: material.title,
-                  subtitle: materialKindLabel(material.mimeType),
-                  icon: isTextDocumentMimeType(material.mimeType)
-                      ? Icons.article_outlined
-                      : Icons.picture_as_pdf_outlined,
-                  onTap: () => _openMaterial(context, material),
+                child: _MaterialTile(
+                  material: material,
+                  onOpen: () => _openMaterial(context, material),
                   onDelete: () => _confirmDelete(context, ref, material),
-                  deleteLabel: 'Remove',
+                  onAttachPersian: isPdfMimeType(material.mimeType)
+                      ? () => _attachPersianPdf(context, ref, material)
+                      : null,
+                  onRemovePersian: isPdfMimeType(material.mimeType)
+                      ? () => _removePersianPdf(context, ref, material)
+                      : null,
                 ),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+class _MaterialTile extends ConsumerWidget {
+  const _MaterialTile({
+    required this.material,
+    required this.onOpen,
+    required this.onDelete,
+    this.onAttachPersian,
+    this.onRemovePersian,
+  });
+
+  final LessonMaterial material;
+  final VoidCallback onOpen;
+  final VoidCallback onDelete;
+  final VoidCallback? onAttachPersian;
+  final VoidCallback? onRemovePersian;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final persian = ref
+        .watch(materialPersianVariantProvider(material.id))
+        .valueOrNull;
+    final kind = materialKindLabel(material.mimeType);
+    final subtitle = persian == null ? kind : '$kind · فارسی';
+    final isPdf = isPdfMimeType(material.mimeType);
+
+    return GroupedItemTile(
+      title: material.title,
+      subtitle: subtitle,
+      icon: isTextDocumentMimeType(material.mimeType)
+          ? Icons.article_outlined
+          : Icons.picture_as_pdf_outlined,
+      onTap: onOpen,
+      onEdit: isPdf
+          ? (persian == null ? onAttachPersian : onRemovePersian)
+          : null,
+      editLabel: persian == null ? 'Add Persian PDF' : 'Remove Persian PDF',
+      onDelete: onDelete,
+      deleteLabel: 'Remove',
     );
   }
 }

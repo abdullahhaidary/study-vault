@@ -2689,6 +2689,43 @@ class $LessonMaterialsTable extends LessonMaterials
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _variantOfIdMeta = const VerificationMeta(
+    'variantOfId',
+  );
+  @override
+  late final GeneratedColumn<String> variantOfId = GeneratedColumn<String>(
+    'variant_of_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES lesson_materials (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _pageOffsetMeta = const VerificationMeta(
+    'pageOffset',
+  );
+  @override
+  late final GeneratedColumn<int> pageOffset = GeneratedColumn<int>(
+    'page_offset',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2720,6 +2757,9 @@ class $LessonMaterialsTable extends LessonMaterials
     storedFileName,
     mimeType,
     sortOrder,
+    language,
+    variantOfId,
+    pageOffset,
     createdAt,
     updatedAt,
   ];
@@ -2790,6 +2830,27 @@ class $LessonMaterialsTable extends LessonMaterials
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    }
+    if (data.containsKey('variant_of_id')) {
+      context.handle(
+        _variantOfIdMeta,
+        variantOfId.isAcceptableOrUnknown(
+          data['variant_of_id']!,
+          _variantOfIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('page_offset')) {
+      context.handle(
+        _pageOffsetMeta,
+        pageOffset.isAcceptableOrUnknown(data['page_offset']!, _pageOffsetMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2811,6 +2872,10 @@ class $LessonMaterialsTable extends LessonMaterials
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {variantOfId, language},
+  ];
   @override
   LessonMaterial map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2843,6 +2908,18 @@ class $LessonMaterialsTable extends LessonMaterials
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      ),
+      variantOfId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_of_id'],
+      ),
+      pageOffset: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_offset'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2868,6 +2945,15 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
   final String storedFileName;
   final String mimeType;
   final int sortOrder;
+
+  /// Null for the primary attachment; `fa` for a Persian companion PDF.
+  final String? language;
+
+  /// When set, this row is a language variant of another material.
+  final String? variantOfId;
+
+  /// Added to the original page number to reach the matching variant page.
+  final int pageOffset;
   final DateTime createdAt;
   final DateTime updatedAt;
   const LessonMaterial({
@@ -2878,6 +2964,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
     required this.storedFileName,
     required this.mimeType,
     required this.sortOrder,
+    this.language,
+    this.variantOfId,
+    required this.pageOffset,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2891,6 +2980,13 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
     map['stored_file_name'] = Variable<String>(storedFileName);
     map['mime_type'] = Variable<String>(mimeType);
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || language != null) {
+      map['language'] = Variable<String>(language);
+    }
+    if (!nullToAbsent || variantOfId != null) {
+      map['variant_of_id'] = Variable<String>(variantOfId);
+    }
+    map['page_offset'] = Variable<int>(pageOffset);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2905,6 +3001,13 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
       storedFileName: Value(storedFileName),
       mimeType: Value(mimeType),
       sortOrder: Value(sortOrder),
+      language: language == null && nullToAbsent
+          ? const Value.absent()
+          : Value(language),
+      variantOfId: variantOfId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(variantOfId),
+      pageOffset: Value(pageOffset),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2923,6 +3026,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
       storedFileName: serializer.fromJson<String>(json['storedFileName']),
       mimeType: serializer.fromJson<String>(json['mimeType']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      language: serializer.fromJson<String?>(json['language']),
+      variantOfId: serializer.fromJson<String?>(json['variantOfId']),
+      pageOffset: serializer.fromJson<int>(json['pageOffset']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2938,6 +3044,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
       'storedFileName': serializer.toJson<String>(storedFileName),
       'mimeType': serializer.toJson<String>(mimeType),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'language': serializer.toJson<String?>(language),
+      'variantOfId': serializer.toJson<String?>(variantOfId),
+      'pageOffset': serializer.toJson<int>(pageOffset),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2951,6 +3060,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
     String? storedFileName,
     String? mimeType,
     int? sortOrder,
+    Value<String?> language = const Value.absent(),
+    Value<String?> variantOfId = const Value.absent(),
+    int? pageOffset,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => LessonMaterial(
@@ -2961,6 +3073,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
     storedFileName: storedFileName ?? this.storedFileName,
     mimeType: mimeType ?? this.mimeType,
     sortOrder: sortOrder ?? this.sortOrder,
+    language: language.present ? language.value : this.language,
+    variantOfId: variantOfId.present ? variantOfId.value : this.variantOfId,
+    pageOffset: pageOffset ?? this.pageOffset,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -2977,6 +3092,13 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
           : this.storedFileName,
       mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      language: data.language.present ? data.language.value : this.language,
+      variantOfId: data.variantOfId.present
+          ? data.variantOfId.value
+          : this.variantOfId,
+      pageOffset: data.pageOffset.present
+          ? data.pageOffset.value
+          : this.pageOffset,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2992,6 +3114,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
           ..write('storedFileName: $storedFileName, ')
           ..write('mimeType: $mimeType, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('language: $language, ')
+          ..write('variantOfId: $variantOfId, ')
+          ..write('pageOffset: $pageOffset, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3007,6 +3132,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
     storedFileName,
     mimeType,
     sortOrder,
+    language,
+    variantOfId,
+    pageOffset,
     createdAt,
     updatedAt,
   );
@@ -3021,6 +3149,9 @@ class LessonMaterial extends DataClass implements Insertable<LessonMaterial> {
           other.storedFileName == this.storedFileName &&
           other.mimeType == this.mimeType &&
           other.sortOrder == this.sortOrder &&
+          other.language == this.language &&
+          other.variantOfId == this.variantOfId &&
+          other.pageOffset == this.pageOffset &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3033,6 +3164,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
   final Value<String> storedFileName;
   final Value<String> mimeType;
   final Value<int> sortOrder;
+  final Value<String?> language;
+  final Value<String?> variantOfId;
+  final Value<int> pageOffset;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -3044,6 +3178,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
     this.storedFileName = const Value.absent(),
     this.mimeType = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.language = const Value.absent(),
+    this.variantOfId = const Value.absent(),
+    this.pageOffset = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3056,6 +3193,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
     required String storedFileName,
     this.mimeType = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.language = const Value.absent(),
+    this.variantOfId = const Value.absent(),
+    this.pageOffset = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -3074,6 +3214,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
     Expression<String>? storedFileName,
     Expression<String>? mimeType,
     Expression<int>? sortOrder,
+    Expression<String>? language,
+    Expression<String>? variantOfId,
+    Expression<int>? pageOffset,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3086,6 +3229,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
       if (storedFileName != null) 'stored_file_name': storedFileName,
       if (mimeType != null) 'mime_type': mimeType,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (language != null) 'language': language,
+      if (variantOfId != null) 'variant_of_id': variantOfId,
+      if (pageOffset != null) 'page_offset': pageOffset,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3100,6 +3246,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
     Value<String>? storedFileName,
     Value<String>? mimeType,
     Value<int>? sortOrder,
+    Value<String?>? language,
+    Value<String?>? variantOfId,
+    Value<int>? pageOffset,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -3112,6 +3261,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
       storedFileName: storedFileName ?? this.storedFileName,
       mimeType: mimeType ?? this.mimeType,
       sortOrder: sortOrder ?? this.sortOrder,
+      language: language ?? this.language,
+      variantOfId: variantOfId ?? this.variantOfId,
+      pageOffset: pageOffset ?? this.pageOffset,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3142,6 +3294,15 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (variantOfId.present) {
+      map['variant_of_id'] = Variable<String>(variantOfId.value);
+    }
+    if (pageOffset.present) {
+      map['page_offset'] = Variable<int>(pageOffset.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3164,6 +3325,9 @@ class LessonMaterialsCompanion extends UpdateCompanion<LessonMaterial> {
           ..write('storedFileName: $storedFileName, ')
           ..write('mimeType: $mimeType, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('language: $language, ')
+          ..write('variantOfId: $variantOfId, ')
+          ..write('pageOffset: $pageOffset, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -23599,6 +23763,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'lesson_materials',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('lesson_materials', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'study_pins',
         limitUpdateKind: UpdateKind.delete,
       ),
@@ -27690,6 +27861,9 @@ typedef $$LessonMaterialsTableCreateCompanionBuilder =
       required String storedFileName,
       Value<String> mimeType,
       Value<int> sortOrder,
+      Value<String?> language,
+      Value<String?> variantOfId,
+      Value<int> pageOffset,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -27703,6 +27877,9 @@ typedef $$LessonMaterialsTableUpdateCompanionBuilder =
       Value<String> storedFileName,
       Value<String> mimeType,
       Value<int> sortOrder,
+      Value<String?> language,
+      Value<String?> variantOfId,
+      Value<int> pageOffset,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -27728,6 +27905,24 @@ final class $$LessonMaterialsTableReferences
       $_db.lessons,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_lessonIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LessonMaterialsTable _variantOfIdTable(_$AppDatabase db) => db
+      .lessonMaterials
+      .createAlias('lesson_materials__variant_of_id__lesson_materials__id');
+
+  $$LessonMaterialsTableProcessedTableManager? get variantOfId {
+    final $_column = $_itemColumn<String>('variant_of_id');
+    if ($_column == null) return null;
+    final manager = $$LessonMaterialsTableTableManager(
+      $_db,
+      $_db.lessonMaterials,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_variantOfIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -27943,6 +28138,16 @@ class $$LessonMaterialsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageOffset => $composableBuilder(
+    column: $table.pageOffset,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -27967,6 +28172,29 @@ class $$LessonMaterialsTableFilterComposer
           }) => $$LessonsTableFilterComposer(
             $db: $db,
             $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableFilterComposer get variantOfId {
+    final $$LessonMaterialsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.variantOfId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableFilterComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -28218,6 +28446,16 @@ class $$LessonMaterialsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageOffset => $composableBuilder(
+    column: $table.pageOffset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -28242,6 +28480,29 @@ class $$LessonMaterialsTableOrderingComposer
           }) => $$LessonsTableOrderingComposer(
             $db: $db,
             $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableOrderingComposer get variantOfId {
+    final $$LessonMaterialsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.variantOfId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableOrderingComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -28283,6 +28544,14 @@ class $$LessonMaterialsTableAnnotationComposer
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<int> get pageOffset => $composableBuilder(
+    column: $table.pageOffset,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -28303,6 +28572,29 @@ class $$LessonMaterialsTableAnnotationComposer
           }) => $$LessonsTableAnnotationComposer(
             $db: $db,
             $table: $db.lessons,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LessonMaterialsTableAnnotationComposer get variantOfId {
+    final $$LessonMaterialsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.variantOfId,
+      referencedTable: $db.lessonMaterials,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LessonMaterialsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.lessonMaterials,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -28534,6 +28826,7 @@ class $$LessonMaterialsTableTableManager
           LessonMaterial,
           PrefetchHooks Function({
             bool lessonId,
+            bool variantOfId,
             bool studyPinsRefs,
             bool materialBookmarksRefs,
             bool annotationAiGenerationsRefs,
@@ -28566,6 +28859,9 @@ class $$LessonMaterialsTableTableManager
                 Value<String> storedFileName = const Value.absent(),
                 Value<String> mimeType = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                Value<String?> variantOfId = const Value.absent(),
+                Value<int> pageOffset = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -28577,6 +28873,9 @@ class $$LessonMaterialsTableTableManager
                 storedFileName: storedFileName,
                 mimeType: mimeType,
                 sortOrder: sortOrder,
+                language: language,
+                variantOfId: variantOfId,
+                pageOffset: pageOffset,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -28590,6 +28889,9 @@ class $$LessonMaterialsTableTableManager
                 required String storedFileName,
                 Value<String> mimeType = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> language = const Value.absent(),
+                Value<String?> variantOfId = const Value.absent(),
+                Value<int> pageOffset = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -28601,6 +28903,9 @@ class $$LessonMaterialsTableTableManager
                 storedFileName: storedFileName,
                 mimeType: mimeType,
                 sortOrder: sortOrder,
+                language: language,
+                variantOfId: variantOfId,
+                pageOffset: pageOffset,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -28616,6 +28921,7 @@ class $$LessonMaterialsTableTableManager
           prefetchHooksCallback:
               ({
                 lessonId = false,
+                variantOfId = false,
                 studyPinsRefs = false,
                 materialBookmarksRefs = false,
                 annotationAiGenerationsRefs = false,
@@ -28664,6 +28970,21 @@ class $$LessonMaterialsTableTableManager
                                     referencedColumn:
                                         $$LessonMaterialsTableReferences
                                             ._lessonIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (variantOfId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.variantOfId,
+                                    referencedTable:
+                                        $$LessonMaterialsTableReferences
+                                            ._variantOfIdTable(db),
+                                    referencedColumn:
+                                        $$LessonMaterialsTableReferences
+                                            ._variantOfIdTable(db)
                                             .id,
                                   )
                                   as T;
@@ -28863,6 +29184,7 @@ typedef $$LessonMaterialsTableProcessedTableManager =
       LessonMaterial,
       PrefetchHooks Function({
         bool lessonId,
+        bool variantOfId,
         bool studyPinsRefs,
         bool materialBookmarksRefs,
         bool annotationAiGenerationsRefs,
