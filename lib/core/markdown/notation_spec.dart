@@ -18,7 +18,14 @@ sealed class NotationSpec {
     if (looksMermaid) {
       final mermaid = MappingNotation.tryParseMermaid(text);
       if (mermaid != null) return mermaid;
+      // Explicit mermaid fences are never ASCII-diagram heuristics.
+      if (lang == 'mermaid') return null;
     }
+
+    // Unknown fence languages (e.g. jsx, vue) must stay as code blocks.
+    // Only empty / diagram-oriented tags may run ASCII notation parsers.
+    if (!_diagramLanguages.contains(lang)) return null;
+
     if (lang.isEmpty || lang == 'flow' || lang == 'text') {
       final flow = ArrowFlowNotation.tryParse(text);
       if (flow != null) return flow;
@@ -34,6 +41,17 @@ sealed class NotationSpec {
         MappingNotation.tryParseMermaid(text);
   }
 
+  /// Fence tags where ASCII study diagrams are allowed.
+  static const _diagramLanguages = {
+    '',
+    'text',
+    'flow',
+    'diagram',
+    'ascii',
+    'uml',
+    'notation',
+  };
+
   static const _codeLanguages = {
     'dart',
     'java',
@@ -43,8 +61,11 @@ sealed class NotationSpec {
     'py',
     'js',
     'javascript',
+    'jsx',
     'ts',
     'typescript',
+    'tsx',
+    'react',
     'json',
     'yaml',
     'yml',
@@ -96,8 +117,9 @@ class MappingNotation extends NotationSpec {
 
   final List<NotationPair> pairs;
 
+  // Do not treat JS/TS `=>` as a diagram arrow — that steals arrow-function code.
   static final _arrow = RegExp(
-    r'^\s*(?:\[([^\]]+)\]|(.+?))\s*(?:-{2,}>|→|⇒|=>)\s*(.+?)\s*$',
+    r'^\s*(?:\[([^\]]+)\]|(.+?))\s*(?:-{2,}>|→|⇒)\s*(.+?)\s*$',
   );
 
   static MappingNotation? tryParse(String text) {

@@ -47,3 +47,10 @@ CREATE TABLE IF NOT EXISTS files (
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY(account_id, digest)
 );
+-- Columns added by later app schema versions, filled with the app's defaults
+-- so records stored before the bump still match library-schema.json.
+UPDATE records SET data = jsonb_build_object('exam_date', NULL) || data
+  WHERE table_name = 'subjects' AND data IS NOT NULL AND NOT data ? 'exam_date';
+UPDATE records SET data = jsonb_build_object('language', NULL, 'variant_of_id', NULL, 'page_offset', 0) || data
+  WHERE table_name = 'lesson_materials' AND data IS NOT NULL
+    AND NOT (data ?& ARRAY['language', 'variant_of_id', 'page_offset']);

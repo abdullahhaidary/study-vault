@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/markdown/study_markdown_repair.dart';
 import '../../ai_questions/domain/quiz_models.dart';
 import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
 
@@ -238,10 +239,11 @@ abstract final class ManualEntryParser {
         final section = ManualCourseReviewSection(
           lessonName: _string(item['lesson']),
           pdfTitle: _string(item['pdf']),
-          summary: _string(item['summary']),
-          explanation: _string(item['explanation']),
-          deepExplanation:
-              _string(item['deep_explanation']) ?? _string(item['deep']),
+          summary: _repairMarkdown(_string(item['summary'])),
+          explanation: _repairMarkdown(_string(item['explanation'])),
+          deepExplanation: _repairMarkdown(
+            _string(item['deep_explanation']) ?? _string(item['deep']),
+          ),
         );
         if (section.summary == null &&
             section.explanation == null &&
@@ -262,9 +264,14 @@ abstract final class ManualEntryParser {
     );
     return ManualCourseReview(
       sections: sections,
-      examples: _string(raw['examples']),
-      bigPicture: _string(raw['big_picture']),
+      examples: _repairMarkdown(_string(raw['examples'])),
+      bigPicture: _repairMarkdown(_string(raw['big_picture'])),
     );
+  }
+
+  static String? _repairMarkdown(String? markdown) {
+    if (markdown == null) return null;
+    return StudyMarkdownRepair.repair(markdown);
   }
 
   static String _stripFence(String text) {
@@ -310,7 +317,12 @@ abstract final class ManualEntryParser {
         warnings.add('Study material "${entry.key}" is empty; skipped.');
         continue;
       }
-      result.add(ManualStudyMaterial(type: type, markdown: markdown));
+      result.add(
+        ManualStudyMaterial(
+          type: type,
+          markdown: StudyMarkdownRepair.repair(markdown),
+        ),
+      );
     }
     return result;
   }

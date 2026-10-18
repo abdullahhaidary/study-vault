@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/markdown/study_markdown_repair.dart';
 import 'pdf_ai_material_models.dart';
 
 abstract final class PdfAiVersionPicker {
@@ -36,11 +37,11 @@ abstract final class PdfAiManualJson {
 
     final decoded = _tryDecode(text);
     if (decoded != null) {
-      return _markdownFromDecoded(decoded, type);
+      return StudyMarkdownRepair.repair(_markdownFromDecoded(decoded, type));
     }
 
     final recovered = _recoverBrokenStringField(text, type);
-    if (recovered != null) return recovered;
+    if (recovered != null) return StudyMarkdownRepair.repair(recovered);
 
     throw const FormatException(
       'Could not parse JSON. Copy the instruction, generate it with ChatGPT, '

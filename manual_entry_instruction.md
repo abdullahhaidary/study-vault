@@ -77,6 +77,12 @@ Rules:
 - All long text is Markdown: headings (#, ##), bullets, **bold**, `code`,
   formulas written inline. Preserve formulas, symbols, variable names, and
   technical English terms exactly.
+- "No markdown fences" applies only to the outer JSON reply. Inside any
+  Markdown string (summary, explanation, deep_explanation, notes, …), code
+  samples MUST use normal fenced blocks: a line with triple backticks plus a
+  language tag (jsx, javascript, dart, chart, …), then the code, then a line
+  with only triple backticks. Never write a bare language name on its own line
+  without those backticks — that breaks rendering in the app.
 - Charts (only inside "study_materials" texts): when numeric data is clearer
   as a chart, add a fenced code block tagged `chart` containing only JSON:
   {"type":"bar"|"line"|"pie","title":"...","labels":["..."],

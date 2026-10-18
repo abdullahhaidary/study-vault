@@ -378,8 +378,10 @@ abstract final class PdfAiPromptBuilder {
       '- text like "Here is the JSON:" before the object\n'
       '- inventing topics, stats, history, or interview guides not in the PDF\n'
       '7. Put all teaching material inside the Markdown string. Use normal '
-      'Markdown headings/lists/tables. Fenced code blocks are allowed inside '
-      '"content", with their newlines and backslashes JSON-escaped.';
+      'Markdown headings/lists/tables. Fenced code blocks are required inside '
+      '"content" for code samples and charts (```jsx … ``` / ```chart … ```), '
+      'with their newlines and backslashes JSON-escaped. Never leave a bare '
+      'language tag on its own line without the surrounding triple backticks.';
 
   static String systemContent({String? userStyle}) {
     return AiStyleMemory.appendToSystem(systemMessage, userStyle);

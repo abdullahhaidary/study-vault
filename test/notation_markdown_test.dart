@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/markdown/notation_block.dart';
 import 'package:study_vault/core/markdown/notation_spec.dart';
+import 'package:study_vault/core/markdown/study_code_block.dart';
 import 'package:study_vault/core/markdown/study_markdown.dart';
 
 const _mapping = '''
@@ -195,6 +196,32 @@ THE TWO PILLARS
       expect(NotationSpec.tryParse('print("a → b → c")'), isNull);
       expect(NotationSpec.tryParse('A → B\nnot a chain'), isNull);
     });
+
+    test('does not turn JSX arrow-function code into mapping cards', () {
+      const jsx = '''
+useEffect(() => {
+  if (mutation.isSuccess) {
+    const t = setTimeout(() => mutation.reset(), 2000);
+    return () => clearTimeout(t);
+  }
+}, [mutation.isSuccess]);
+''';
+      expect(NotationSpec.tryParse(jsx, language: 'jsx'), isNull);
+      expect(NotationSpec.tryParse(jsx, language: 'tsx'), isNull);
+      // Even with an empty fence tag, bare `=>` is not a mapping arrow.
+      expect(NotationSpec.tryParse(jsx), isNull);
+    });
+
+    test('ignores unknown fence languages instead of diagram heuristics', () {
+      expect(
+        NotationSpec.tryParse(_mapping, language: 'vue'),
+        isNull,
+      );
+      expect(
+        NotationSpec.tryParse(_mapping, language: 'plaintext'),
+        isNull,
+      );
+    });
   });
 
   group('notation markdown builder', () {
@@ -250,6 +277,22 @@ THE TWO PILLARS
       expect(find.text('Student'), findsOneWidget);
       expect(find.text('Enrollment'), findsOneWidget);
       expect(find.text('0..*'), findsOneWidget);
+    });
+
+    testWidgets('renders jsx fences as code, not mapping cards', (tester) async {
+      await tester.pumpWidget(
+        _markdown(r'''
+```jsx
+useEffect(() => {
+  const t = setTimeout(() => mutation.reset(), 2000);
+  return () => clearTimeout(t);
+}, [mutation.isSuccess]);
+```
+'''),
+      );
+      expect(find.byType(NotationBlock), findsNothing);
+      expect(find.byType(StudyCodeBlock), findsOneWidget);
+      expect(find.textContaining('mutation.reset()'), findsOneWidget);
     });
   });
 }
