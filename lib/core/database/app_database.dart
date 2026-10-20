@@ -136,6 +136,45 @@ class LessonMaterials extends Table {
   ];
 }
 
+/// Whether one non-null `(variant_of_id, language)` pair is unique.
+///
+/// Fresh databases get this from the table definition. Databases that
+/// reached schema 22 or 23 before the explicit index existed are repaired
+/// on open. When duplicates are already stored, no row is deleted or
+/// rewritten and [enforced] stays false. Delete or relink the extra
+/// companions, then open the database again; the index is created then.
+class LessonMaterialVariantUniqueness {
+  const LessonMaterialVariantUniqueness({
+    required this.enforced,
+    required this.duplicates,
+  });
+
+  static const enforcedAlready = LessonMaterialVariantUniqueness(
+    enforced: true,
+    duplicates: [],
+  );
+
+  /// Named index used when a table-level UNIQUE constraint is absent.
+  static const indexName = 'idx_lesson_materials_variant_language';
+
+  final bool enforced;
+  final List<LessonMaterialVariantDuplicate> duplicates;
+
+  bool get blockedByDuplicates => !enforced && duplicates.isNotEmpty;
+}
+
+class LessonMaterialVariantDuplicate {
+  const LessonMaterialVariantDuplicate({
+    required this.variantOfId,
+    required this.language,
+    required this.materialIds,
+  });
+
+  final String variantOfId;
+  final String language;
+  final List<String> materialIds;
+}
+
 /// Optional study-meaning categories for pins (Definition, Formula, …).
 class StudyPinCategories extends Table {
   TextColumn get id => text()();
@@ -1051,6 +1090,9 @@ class AppDatabase extends _$AppDatabase {
   Timer? _externalWatch;
   int? _dataVersion;
 
+  /// Set during [MigrationStrategy.beforeOpen]. Null until the file is open.
+  LessonMaterialVariantUniqueness? lessonMaterialVariantUniqueness;
+
   /// Refreshes open screens when another process (the Devin MCP tool)
   /// commits to this database file. `data_version` only changes for
   /// commits made by other connections.
@@ -1092,6 +1134,7 @@ class AppDatabase extends _$AppDatabase {
       // Other local writers (the Devin MCP tool) may hold a brief lock.
       await customStatement('PRAGMA busy_timeout = 10000');
       await _createLocalBookTables();
+      await _repairLessonMaterialVariantUniqueness();
     },
     onCreate: (Migrator m) async {
       await m.createAll();
@@ -1257,6 +1300,8 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(lessonMaterials, lessonMaterials.language);
         await m.addColumn(lessonMaterials, lessonMaterials.variantOfId);
         await m.addColumn(lessonMaterials, lessonMaterials.pageOffset);
+        // beforeOpen repairs uniqueness after this upgrade, including
+        // databases that already finished schema 22 or 23 without the index.
       }
       if (from < 23) {
         await m.createTable(classRoadmapEntries);
@@ -1264,6 +1309,86 @@ class AppDatabase extends _$AppDatabase {
       }
     },
   );
+
+  /// Gives upgraded databases the same `(variant_of_id, language)` rule
+  /// that [LessonMaterials.uniqueKeys] gives a fresh database.
+  ///
+  /// SQLite stores a table UNIQUE constraint as an automatically named
+  /// index. That counts as protection, so a second index is not added.
+  /// Existing duplicate companions block the index and are left unchanged.
+  Future<void> _repairLessonMaterialVariantUniqueness() async {
+    if (await _lessonMaterialVariantUniquenessExists()) {
+      lessonMaterialVariantUniqueness =
+          LessonMaterialVariantUniqueness.enforcedAlready;
+      return;
+    }
+    final duplicates = await _duplicateLessonMaterialVariants();
+    if (duplicates.isNotEmpty) {
+      lessonMaterialVariantUniqueness = LessonMaterialVariantUniqueness(
+        enforced: false,
+        duplicates: duplicates,
+      );
+      return;
+    }
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+      '${LessonMaterialVariantUniqueness.indexName} '
+      'ON lesson_materials (variant_of_id, language)',
+    );
+    lessonMaterialVariantUniqueness =
+        LessonMaterialVariantUniqueness.enforcedAlready;
+  }
+
+  Future<bool> _lessonMaterialVariantUniquenessExists() async {
+    final indexes = await customSelect(
+      'SELECT name FROM pragma_index_list(\'lesson_materials\') '
+      'WHERE "unique" != 0',
+    ).get();
+    for (final index in indexes) {
+      final name = index.data['name'] as String;
+      if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(name)) continue;
+      final columns = await customSelect(
+        "SELECT name FROM pragma_index_info('$name') ORDER BY seqno",
+      ).get();
+      final names = <String>{
+        for (final column in columns)
+          if (column.data['name'] is String) column.data['name'] as String,
+      };
+      if (names.length == 2 &&
+          names.contains('variant_of_id') &&
+          names.contains('language')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<List<LessonMaterialVariantDuplicate>>
+  _duplicateLessonMaterialVariants() async {
+    final rows = await customSelect(
+      'SELECT variant_of_id, language, id FROM lesson_materials '
+      'WHERE variant_of_id IS NOT NULL AND language IS NOT NULL '
+      'ORDER BY variant_of_id, language, id',
+    ).get();
+    final grouped = <String, List<String>>{};
+    final languages = <String, String>{};
+    for (final row in rows) {
+      final variantOfId = row.data['variant_of_id'] as String;
+      final language = row.data['language'] as String;
+      final key = '$variantOfId\u0000$language';
+      languages[key] = language;
+      grouped.putIfAbsent(key, () => []).add(row.data['id'] as String);
+    }
+    return [
+      for (final entry in grouped.entries)
+        if (entry.value.length > 1)
+          LessonMaterialVariantDuplicate(
+            variantOfId: entry.key.split('\u0000').first,
+            language: languages[entry.key]!,
+            materialIds: entry.value,
+          ),
+    ];
+  }
 
   Future<void> _createClassRoadmapIndexes() async {
     await customStatement(
@@ -1822,8 +1947,7 @@ class AppDatabase extends _$AppDatabase {
     String language,
   ) {
     return (select(lessonMaterials)..where(
-          (t) =>
-              t.variantOfId.equals(originalId) & t.language.equals(language),
+          (t) => t.variantOfId.equals(originalId) & t.language.equals(language),
         ))
         .watchSingleOrNull();
   }
@@ -1833,8 +1957,7 @@ class AppDatabase extends _$AppDatabase {
     String language,
   ) {
     return (select(lessonMaterials)..where(
-          (t) =>
-              t.variantOfId.equals(originalId) & t.language.equals(language),
+          (t) => t.variantOfId.equals(originalId) & t.language.equals(language),
         ))
         .getSingleOrNull();
   }

@@ -10,6 +10,8 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/widgets/responsive_grid.dart';
 import 'package:study_vault/features/search/presentation/search_screen.dart';
+import 'package:study_vault/features/study_review/presentation/recent_reviews_screen.dart';
+import 'package:study_vault/features/study_schedule/presentation/study_schedule_screen.dart';
 
 Future<AppDatabase> _pumpApp(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
@@ -65,6 +67,9 @@ void main() {
       final db = await _pumpApp(tester, const Size(1440, 900));
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.text('Library'), findsWidgets);
+      expect(find.text('Recent Reviews'), findsOneWidget);
+      expect(find.text('Schedule'), findsOneWidget);
+      expect(find.text('Reviews'), findsNothing);
       expect(find.widgetWithText(FilledButton, 'Add Class'), findsWidgets);
 
       await tester.tap(find.text('Search'));
@@ -78,6 +83,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsNothing);
       expect(find.text('My Classes'), findsOneWidget);
+
+      await tester.tap(find.text('Recent Reviews'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RecentReviewsScreen), findsOneWidget);
+      expect(find.byType(StudyScheduleScreen), findsNothing);
+      final reviewsRail = tester.widget<NavigationRail>(
+        find.byType(NavigationRail),
+      );
+      expect(reviewsRail.selectedIndex, 5);
+
+      await tester.tap(find.text('Schedule'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StudyScheduleScreen), findsOneWidget);
+      expect(find.byType(RecentReviewsScreen), findsNothing);
+      final scheduleRail = tester.widget<NavigationRail>(
+        find.byType(NavigationRail),
+      );
+      expect(scheduleRail.selectedIndex, 3);
       await _dispose(tester, db);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -121,6 +144,12 @@ void main() {
     try {
       final db = await _pumpApp(tester, const Size(900, 800));
       expect(find.byType(NavigationRail), findsNothing);
+      expect(find.text('Study Vault'), findsWidgets);
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent Reviews'), findsOneWidget);
+      expect(find.text('Study Schedule'), findsOneWidget);
+      expect(find.text('Schedule'), findsNothing);
       await _dispose(tester, db);
     } finally {
       debugDefaultTargetPlatformOverride = null;

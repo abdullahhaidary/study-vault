@@ -50,6 +50,52 @@ void main() {
       expect(mapping.pairs.last.from, 'UML (Unified Modeling Language)');
     });
 
+    test('parses the Docker daemon architecture diagram', () {
+      const daemon = '''
+                         Docker Daemon (dockerd)
+          USER → Docker CLI / Client → Docker API
+                         |
+        .............................................
+        |                    |                      |
+      Images              Networks               Volumes
+ Container Runtime
+    Containers
+''';
+      final tree = NotationSpec.tryParse(daemon, language: 'text');
+      expect(tree, isA<TreeNotation>());
+      final parsed = tree! as TreeNotation;
+      expect(parsed.root, 'Docker Daemon (dockerd)');
+      expect(parsed.subtitle, 'USER → Docker CLI / Client → Docker API');
+      expect(parsed.branches.map((b) => b.title), [
+        'Images',
+        'Networks',
+        'Volumes',
+      ]);
+      expect(parsed.branches[0].details, ['Container Runtime', 'Containers']);
+      expect(parsed.branches[1].details, isEmpty);
+      expect(parsed.branches[2].details, isEmpty);
+
+      const registry = '''
+Image distribution
+[ Docker Engine ]
+    |
+    v
+[ Pull / Push operations ]
+    |
+    v
+[ External Image Registry ]
+''';
+      final flow = NotationSpec.tryParse(registry, language: 'text');
+      expect(flow, isA<StackFlowNotation>());
+      final stack = flow! as StackFlowNotation;
+      expect(stack.title, 'Image distribution');
+      expect(stack.items.map((item) => item.title), [
+        'Docker Engine',
+        'Pull / Push operations',
+        'External Image Registry',
+      ]);
+    });
+
     test('parses a two-branch ASCII tree', () {
       final spec = NotationSpec.tryParse(_tree);
       expect(spec, isA<TreeNotation>());
@@ -213,14 +259,8 @@ useEffect(() => {
     });
 
     test('ignores unknown fence languages instead of diagram heuristics', () {
-      expect(
-        NotationSpec.tryParse(_mapping, language: 'vue'),
-        isNull,
-      );
-      expect(
-        NotationSpec.tryParse(_mapping, language: 'plaintext'),
-        isNull,
-      );
+      expect(NotationSpec.tryParse(_mapping, language: 'vue'), isNull);
+      expect(NotationSpec.tryParse(_mapping, language: 'plaintext'), isNull);
     });
   });
 
@@ -279,7 +319,9 @@ useEffect(() => {
       expect(find.text('0..*'), findsOneWidget);
     });
 
-    testWidgets('renders jsx fences as code, not mapping cards', (tester) async {
+    testWidgets('renders jsx fences as code, not mapping cards', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _markdown(r'''
 ```jsx

@@ -267,6 +267,14 @@ class _ScheduleReviewScreenState extends ConsumerState<ScheduleReviewScreen> {
             label: Text('Optional: quiz yourself on $pinCount pins'),
           ),
         ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Pin practice is optional. After practicing, return here and '
+          'rate your lesson recall to finish this scheduled review.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
       const SizedBox(height: AppSpacing.xl),
       Text('How much did you recall?', style: theme.textTheme.titleMedium),

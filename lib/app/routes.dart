@@ -7,6 +7,7 @@ import '../features/classes/presentation/class_details_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/lesson_images_screen.dart';
+import '../features/lessons/presentation/lesson_summary_screen.dart';
 import '../features/lessons/presentation/markdown_study_screen.dart';
 import '../features/lessons/presentation/pdf_study_screen.dart';
 import '../features/manual_entry/presentation/manual_entry_import_screen.dart';
@@ -44,6 +45,7 @@ abstract final class AppRoutes {
   static const flashcardsList = '/flashcards';
   static const flashcardStudy = '/flashcards/study';
   static const lessonImages = '/lesson-images';
+  static const lessonSummary = '/lesson-summary';
   static const questionSets = '/ai-questions';
   static const manualEntry = '/manual-entry';
   static const reviews = '/reviews';
@@ -125,6 +127,13 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) =>
             LessonImagesScreen(scope: settings.arguments as LessonImagesScope),
+      );
+
+    case AppRoutes.lessonSummary:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) =>
+            LessonSummaryScreen(args: settings.arguments as LessonSummaryArgs),
       );
 
     case AppRoutes.questionSets:

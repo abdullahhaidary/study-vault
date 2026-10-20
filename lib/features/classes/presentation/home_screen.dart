@@ -28,7 +28,9 @@ class HomeScreen extends ConsumerWidget {
     final counts =
         ref.watch(subjectCountsProvider).valueOrNull ?? const <String, int>{};
     final continueAsync = ref.watch(continueStudyingLessonsProvider);
-    final dueCount = ref.watch(scheduleDueCountProvider);
+    final plan = ref.watch(schedulePlanProvider).valueOrNull;
+    final todayCount = plan?.today.length ?? 0;
+    final overflowCount = plan?.overflow.length ?? 0;
     final theme = Theme.of(context);
     final desktop = AppSpacing.isDesktopLayout(context);
 
@@ -112,7 +114,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
             ),
-            if (dueCount > 0)
+            if (todayCount + overflowCount > 0)
               SliverToBoxAdapter(
                 child: ContentHomePadding(
                   bottom: AppSpacing.md,
@@ -123,10 +125,9 @@ class HomeScreen extends ConsumerWidget {
                         color: theme.colorScheme.primary,
                       ),
                       title: Text(
-                        '$dueCount lesson${dueCount == 1 ? '' : 's'} due for '
-                        'review',
+                        _reviewCardTitle(todayCount, overflowCount),
                       ),
-                      subtitle: const Text('Open your Study Schedule'),
+                      subtitle: Text(_reviewCardSubtitle(overflowCount)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => StudyScheduleScreen.open(context),
                     ),
@@ -244,6 +245,27 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Today's plan is [SchedulePlan.today]. Overflow lessons are still due;
+/// the daily limit only keeps them out of today's plan.
+String _reviewCardTitle(int todayCount, int overflowCount) {
+  if (overflowCount == 0) {
+    return todayCount == 1
+        ? '1 lesson ready for review'
+        : '$todayCount lessons ready for review';
+  }
+  return todayCount == 1
+      ? "1 lesson review in today's plan"
+      : "$todayCount lesson reviews in today's plan";
+}
+
+String _reviewCardSubtitle(int overflowCount) {
+  if (overflowCount == 0) return 'Open your Study Schedule';
+  if (overflowCount == 1) {
+    return '1 additional lesson is due beyond your daily limit.';
+  }
+  return '$overflowCount additional lessons are due beyond your daily limit.';
 }
 
 /// Page padding with optional bottom inset and max width.

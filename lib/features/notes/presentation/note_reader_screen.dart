@@ -15,7 +15,11 @@ class NoteReaderScreen extends ConsumerWidget {
 
   final String noteId;
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, String title) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    String title,
+  ) async {
     final confirmed = await confirmDelete(
       context,
       title: 'Delete note?',

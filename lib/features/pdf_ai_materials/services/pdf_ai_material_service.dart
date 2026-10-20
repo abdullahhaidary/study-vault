@@ -15,6 +15,7 @@ import '../../ai_assistant/services/deepseek_ai_service.dart';
 import '../../ai_assistant/services/gemini_ai_service.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/services/pdf_text_extractor.dart';
+import '../../lessons/data/lesson_summary_repository.dart';
 import '../../lessons/data/material_mime.dart';
 import '../domain/pdf_ai_material_models.dart';
 
@@ -264,6 +265,7 @@ class PdfAiMaterialService {
         durationMs: stopwatch.elapsedMilliseconds,
         sourceFingerprint: fingerprint,
         customInstruction: storedInstruction ?? customInstruction,
+        appendToLessonSummary: false,
       );
     }
 
@@ -343,7 +345,8 @@ class PdfAiMaterialService {
     required int durationMs,
     required String sourceFingerprint,
     String? customInstruction,
-  }) {
+    bool appendToLessonSummary = true,
+  }) async {
     if (completedMarkdown.isEmpty) {
       throw StateError('The AI returned an empty study material.');
     }
@@ -351,7 +354,7 @@ class PdfAiMaterialService {
       for (final call in calls) call.usage,
     ])?.copyWith(durationMs: durationMs);
     final now = DateTime.now();
-    return _db.insertPdfAiMaterialVersion(
+    final saved = await _db.insertPdfAiMaterialVersion(
       materialId: materialId,
       type: type.storageValue,
       builder: (version) => PdfAiMaterialsCompanion.insert(
@@ -373,6 +376,15 @@ class PdfAiMaterialService {
         customInstruction: Value(_nullableTrim(customInstruction)),
       ),
     );
+    if (appendToLessonSummary) await _appendToLessonSummary(saved);
+    return saved;
+  }
+
+  Future<void> _appendToLessonSummary(PdfAiMaterial saved) async {
+    if (saved.type != PdfAiMaterialType.summary.storageValue) return;
+    await LessonSummaryRepository(
+      _db,
+    ).appendAiSummary(materialId: saved.materialId, markdown: saved.content);
   }
 
   Future<List<String>> _digestChunks({
@@ -421,12 +433,12 @@ class PdfAiMaterialService {
     required PdfAiMaterialType type,
     required String content,
     String? sourceFingerprint,
-  }) {
+  }) async {
     final markdown = content.trim();
     if (markdown.isEmpty) {
       throw ArgumentError.value(content, 'content');
     }
-    return _db.insertPdfAiMaterialVersion(
+    final saved = await _db.insertPdfAiMaterialVersion(
       materialId: materialId,
       type: type.storageValue,
       builder: (version) => PdfAiMaterialsCompanion.insert(
@@ -444,6 +456,8 @@ class PdfAiMaterialService {
         customInstruction: const Value('Manual JSON'),
       ),
     );
+    await _appendToLessonSummary(saved);
+    return saved;
   }
 
   Future<void> deleteVersion(String id) => _db.deletePdfAiMaterial(id);

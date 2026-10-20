@@ -76,7 +76,12 @@ class DesktopFrame extends ConsumerWidget {
       'Schedule',
     ),
     (AppRoutes.favorites, Icons.star_outline, Icons.star, 'Favorites'),
-    (AppRoutes.reviews, Icons.history_outlined, Icons.history, 'Reviews'),
+    (
+      AppRoutes.reviews,
+      Icons.history_outlined,
+      Icons.history,
+      'Recent Reviews',
+    ),
     (AppRoutes.settings, Icons.settings_outlined, Icons.settings, 'Settings'),
   ];
 
@@ -116,7 +121,7 @@ class DesktopFrame extends ConsumerWidget {
             selectedIndex: _indexFor(route),
             labelType: NavigationRailLabelType.all,
             groupAlignment: -1,
-            minWidth: 88,
+            minWidth: 112,
             backgroundColor: theme.colorScheme.surface,
             onDestinationSelected: (index) => _open(_sections[index].$1),
             leading: Padding(
@@ -150,7 +155,7 @@ class DesktopFrame extends ConsumerWidget {
                 NavigationRailDestination(
                   icon: Icon(section.$2),
                   selectedIcon: Icon(section.$3),
-                  label: Text(section.$4),
+                  label: Text(section.$4, textAlign: TextAlign.center),
                 ),
             ],
           ),

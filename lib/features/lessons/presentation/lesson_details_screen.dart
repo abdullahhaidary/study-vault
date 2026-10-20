@@ -33,6 +33,7 @@ import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
 import 'create_markdown_material_dialog.dart';
 import 'lesson_images_screen.dart';
+import 'lesson_summary_screen.dart';
 
 /// Lesson page — attach and open local PDF / text / image study materials.
 class LessonDetailsScreen extends ConsumerWidget {
@@ -330,7 +331,7 @@ class LessonDetailsScreen extends ConsumerWidget {
           title: lesson.name,
           description: lesson.description,
           actions: [
-            _LessonProgressBadge(
+            LessonProgressBadge(
               status: LessonProgressStatus.fromStorage(lesson.progressStatus),
               onSelected: (status) async {
                 final added = await setLessonProgress(
@@ -499,6 +500,23 @@ class LessonDetailsScreen extends ConsumerWidget {
     return Column(
       children: [
         _StudyToolTile(
+          icon: Icons.summarize_outlined,
+          title: 'Lesson Summary',
+          subtitle: 'Every AI summary in one place · edit, copy, add',
+          onTap: () => LessonSummaryScreen.open(
+            context,
+            lessonId: lessonId,
+            lessonName: lesson.name,
+          ),
+          trailing: IconButton(
+            tooltip: 'Copy summary',
+            icon: const Icon(Icons.copy_all_outlined),
+            onPressed: () =>
+                copyLessonSummary(context, ref, lessonId: lessonId),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _StudyToolTile(
           icon: Icons.style_outlined,
           title: 'Flashcards',
           subtitle: flashcardCount == null
@@ -660,8 +678,18 @@ class _MaterialTile extends ConsumerWidget {
   }
 }
 
-class _LessonProgressBadge extends StatelessWidget {
-  const _LessonProgressBadge({required this.status, required this.onSelected});
+class LessonProgressBadge extends StatelessWidget {
+  const LessonProgressBadge({
+    super.key,
+    required this.status,
+    required this.onSelected,
+  });
+
+  /// Shown with the status choices. Enrollment itself stays in
+  /// [setLessonProgress]; this text does not change that behavior.
+  static const scheduleExplanation =
+      'Reviewed and Mastered add this lesson to your Study Schedule. '
+      'Changing progress later won\'t remove an existing schedule.';
 
   final LessonProgressStatus status;
   final ValueChanged<LessonProgressStatus> onSelected;
@@ -676,6 +704,14 @@ class _LessonProgressBadge extends StatelessWidget {
       initialValue: status,
       onSelected: onSelected,
       itemBuilder: (context) => [
+        const PopupMenuItem<LessonProgressStatus>(
+          enabled: false,
+          height: 88,
+          child: SizedBox(
+            width: 260,
+            child: Text(LessonProgressBadge.scheduleExplanation),
+          ),
+        ),
         for (final option in LessonProgressStatus.values)
           PopupMenuItem(
             value: option,
@@ -765,6 +801,7 @@ class _StudyToolTile extends StatelessWidget {
     required this.subtitle,
     this.onTap,
     this.interactive = true,
+    this.trailing,
   });
 
   final IconData icon;
@@ -772,6 +809,7 @@ class _StudyToolTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
   final bool interactive;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -826,6 +864,7 @@ class _StudyToolTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                ?trailing,
                 if (enabled)
                   Icon(Icons.chevron_right, color: theme.colorScheme.outline),
               ],

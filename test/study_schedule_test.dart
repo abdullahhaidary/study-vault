@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
@@ -8,6 +9,11 @@ import 'package:study_vault/features/study_schedule/data/study_schedule_reposito
 import 'package:study_vault/features/study_schedule/domain/review_scheduler.dart';
 import 'package:study_vault/features/study_schedule/domain/schedule_day.dart';
 import 'package:study_vault/features/study_schedule/domain/schedule_models.dart';
+
+Future<List<String>> _columnNames(AppDatabase db, String table) async {
+  final rows = await db.customSelect('PRAGMA table_info($table)').get();
+  return [for (final row in rows) row.data['name'] as String];
+}
 
 final _today = DateTime.utc(2026, 10, 13);
 DateTime _day(int offset) => ScheduleDay.add(_today, offset);
@@ -201,6 +207,60 @@ void main() {
           updatedAt: t,
         ),
       );
+      await db.insertLesson(
+        LessonsCompanion.insert(
+          id: 'l',
+          subjectId: 's',
+          name: 'Kept lesson',
+          createdAt: t,
+          updatedAt: t,
+        ),
+      );
+      await db.insertLessonMaterial(
+        LessonMaterialsCompanion.insert(
+          id: 'm',
+          lessonId: 'l',
+          title: 'Kept.pdf',
+          originalFileName: 'Kept.pdf',
+          storedFileName: 'kept.pdf',
+          createdAt: t,
+          updatedAt: t,
+        ),
+      );
+      final freshVersion = await db
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(freshVersion.data.values.single, db.schemaVersion);
+      expect(await _columnNames(db, 'lesson_materials'), contains('language'));
+
+      // The file was just created at the current schema. Version 18 had no
+      // schedule, exam date, flashcard reviews, PDF translations, language
+      // columns, or class roadmap. Strip those, then reopen.
+      await db.customStatement('PRAGMA foreign_keys = OFF');
+      await db.customStatement(
+        'CREATE TABLE lesson_materials_v18 ('
+        'id TEXT NOT NULL PRIMARY KEY, '
+        'lesson_id TEXT NOT NULL, '
+        'title TEXT NOT NULL, '
+        'original_file_name TEXT NOT NULL, '
+        'stored_file_name TEXT NOT NULL, '
+        'mime_type TEXT NOT NULL DEFAULT \'application/pdf\', '
+        'sort_order INTEGER NOT NULL DEFAULT 0, '
+        'created_at INTEGER NOT NULL, '
+        'updated_at INTEGER NOT NULL)',
+      );
+      await db.customStatement(
+        'INSERT INTO lesson_materials_v18 ('
+        'id, lesson_id, title, original_file_name, stored_file_name, '
+        'mime_type, sort_order, created_at, updated_at) '
+        'SELECT id, lesson_id, title, original_file_name, stored_file_name, '
+        'mime_type, sort_order, created_at, updated_at FROM lesson_materials',
+      );
+      await db.customStatement('DROP TABLE lesson_materials');
+      await db.customStatement(
+        'ALTER TABLE lesson_materials_v18 RENAME TO lesson_materials',
+      );
+      await db.customStatement('DROP TABLE class_roadmap_entries');
       await db.customStatement('DROP TABLE pdf_ai_material_translations');
       await db.customStatement('DROP TABLE flashcard_review_events');
       await db.customStatement('DROP TABLE study_schedule_events');
@@ -212,9 +272,63 @@ void main() {
       db = AppDatabase.forTesting(NativeDatabase(file));
       addTearDown(db.close);
       expect((await db.getSubjectById('s'))!.name, 'Kept');
+      expect((await db.getLessonById('l'))!.name, 'Kept lesson');
+      final material = (await db.getMaterialById('m'))!;
+      expect(material.title, 'Kept.pdf');
+      expect(material.language, isNull);
+      expect(material.variantOfId, isNull);
+      expect(material.pageOffset, 0);
+      expect(
+        await _columnNames(db, 'lesson_materials'),
+        containsAll(['language', 'variant_of_id', 'page_offset']),
+      );
+      final foreignKeys = await db
+          .customSelect('PRAGMA foreign_key_list(lesson_materials)')
+          .get();
+      expect(
+        foreignKeys.map((row) => row.data['from']),
+        contains('variant_of_id'),
+      );
       expect(await db.select(db.studySchedules).get(), isEmpty);
+      expect(await db.select(db.classRoadmapEntries).get(), isEmpty);
       final version = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(version.data.values.single, 21);
+      expect(version.data.values.single, db.schemaVersion);
+
+      final now = DateTime(2026, 10, 14);
+      await db.insertLessonMaterial(
+        LessonMaterialsCompanion.insert(
+          id: 'fa',
+          lessonId: 'l',
+          title: 'فارسی',
+          originalFileName: 'kept-fa.pdf',
+          storedFileName: 'kept-fa.pdf',
+          language: const Value('fa'),
+          variantOfId: const Value('m'),
+          pageOffset: const Value(1),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      expect(
+        (await db.getMaterialVariant('m', 'fa'))?.pageOffset,
+        1,
+      );
+      expect(
+        db.insertLessonMaterial(
+          LessonMaterialsCompanion.insert(
+            id: 'fa-2',
+            lessonId: 'l',
+            title: 'فارسی again',
+            originalFileName: 'kept-fa-2.pdf',
+            storedFileName: 'kept-fa-2.pdf',
+            language: const Value('fa'),
+            variantOfId: const Value('m'),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ),
+        throwsA(isA<Exception>()),
+      );
     },
   );
 

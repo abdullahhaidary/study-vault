@@ -10,6 +10,7 @@ import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../ai_questions/domain/quiz_models.dart';
 import '../../course_review/data/course_review_repository.dart';
 import '../../course_review/domain/course_review_models.dart';
+import '../../lessons/data/lesson_summary_repository.dart';
 import '../../pdf_ai_materials/domain/pdf_ai_material_models.dart';
 import '../../study_pins/domain/pin_type.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -506,6 +507,11 @@ class ManualEntryImportService {
         sourceFingerprint: sha256.convert(utf8.encode(content)).toString(),
       ),
     );
+    if (material.type == PdfAiMaterialType.summary) {
+      await LessonSummaryRepository(
+        _db,
+      ).appendAiSummary(materialId: plan.target.materialId!, markdown: content);
+    }
   }
 
   Future<void> _writeNote(

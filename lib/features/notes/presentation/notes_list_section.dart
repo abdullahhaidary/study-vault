@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../lessons/domain/lesson_summary.dart';
 import '../data/notes_providers.dart';
 
 /// Reusable compact note list for subject and lesson detail screens.
@@ -57,84 +58,93 @@ class NotesListSection extends ConsumerWidget {
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Text('Could not load notes: $error'),
-      data: (items) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Notes',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+      data: (all) {
+        final summaryId = lessonId == null
+            ? null
+            : LessonSummary.noteIdFor(lessonId!);
+        final items = [
+          for (final note in all)
+            if (note.id != summaryId) note,
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Notes',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => _create(context, ref),
-                icon: const Icon(Icons.add),
-                label: const Text('New Note'),
-              ),
-            ],
-          ),
-          if (items.isEmpty)
-            Text(
-              'No notes yet',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          else
-            ...items.map(
-              (note) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.sticky_note_2_outlined,
-                  color: theme.colorScheme.primary,
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => _create(context, ref),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New Note'),
                 ),
-                title: AutoDirectionText(note.title),
-                subtitle:
-                    note.plainTextContent == null ||
-                        note.plainTextContent!.isEmpty
-                    ? null
-                    : AutoDirectionText(
-                        note.plainTextContent!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                trailing: PopupMenuButton<String>(
-                  tooltip: 'Note options',
-                  onSelected: (value) {
-                    if (value == 'open') {
-                      Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.noteReader, arguments: note.id);
-                    } else if (value == 'edit') {
-                      Navigator.of(
-                        context,
-                      ).pushNamed(AppRoutes.noteEditor, arguments: note.id);
-                    } else if (value == 'delete') {
-                      _deleteNote(context, ref, note.id, note.title);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'open', child: Text('Open')),
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: theme.colorScheme.error),
-                      ),
-                    ),
-                  ],
-                ),
-                onTap: () => Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.noteReader, arguments: note.id),
-              ),
+              ],
             ),
-        ],
-      ),
+            if (items.isEmpty)
+              Text(
+                'No notes yet',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...items.map(
+                (note) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.sticky_note_2_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: AutoDirectionText(note.title),
+                  subtitle:
+                      note.plainTextContent == null ||
+                          note.plainTextContent!.isEmpty
+                      ? null
+                      : AutoDirectionText(
+                          note.plainTextContent!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  trailing: PopupMenuButton<String>(
+                    tooltip: 'Note options',
+                    onSelected: (value) {
+                      if (value == 'open') {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.noteReader, arguments: note.id);
+                      } else if (value == 'edit') {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.noteEditor, arguments: note.id);
+                      } else if (value == 'delete') {
+                        _deleteNote(context, ref, note.id, note.title);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'open', child: Text('Open')),
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ),
+                    ],
+                  ),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.noteReader, arguments: note.id),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

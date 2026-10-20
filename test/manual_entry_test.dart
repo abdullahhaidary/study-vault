@@ -199,6 +199,7 @@ void main() {
 
         final notes = await db.getStudyNotesForLesson('lesson-1');
         expect(notes.map((n) => n.title).toSet(), {
+          'Lesson Summary',
           'Key terms',
           'Untitled heading',
         });
