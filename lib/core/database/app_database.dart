@@ -740,8 +740,8 @@ class QuizAnswers extends Table {
 
 /// Condensed subject-wide review content, versioned like [PdfAiMaterials].
 ///
-/// Per-lecture sections reference their source PDF; subject-wide parts
-/// (examples, big picture) leave [materialId] null.
+/// Per-lecture sections reference their source PDF. Subject-wide parts
+/// (the complete `document`, examples, and big picture) leave [materialId] null.
 @DataClassName('CourseReviewEntry')
 class CourseReviewEntries extends Table {
   TextColumn get id => text()();
@@ -754,7 +754,7 @@ class CourseReviewEntries extends Table {
   )();
 
   /// `summary` | `explanation` | `deep_explanation` | `examples` |
-  /// `big_picture`
+  /// `big_picture` | `document`
   TextColumn get part => text()();
   TextColumn get content => text()();
   IntColumn get version => integer()();

@@ -16,7 +16,7 @@ class CourseReviewEntryCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final state = ref.watch(courseReviewProvider(subjectId)).valueOrNull;
     final subtitle = state == null
-        ? 'Condensed summary, explanation and examples of every lecture'
+        ? 'One complete review of every lecture'
         : _subtitle(state);
     return Card(
       child: ListTile(
@@ -35,17 +35,19 @@ class CourseReviewEntryCard extends ConsumerWidget {
   }
 
   static String _subtitle(CourseReviewState state) {
-    final total = state.included.length;
-    if (total == 0) {
+    final document = state.document;
+    if (document != null) {
+      return [
+        'Complete review v${document.version}',
+        if (state.documentOutdated) 'Outdated',
+      ].join(' · ');
+    }
+    if (state.included.isEmpty) {
       return 'Add PDFs or text documents to lessons to build a Course Review';
     }
-    final added = state.withSections.length;
-    final pending =
-        state.count(CourseReviewSourceStatus.notAdded) +
-        state.count(CourseReviewSourceStatus.outdated);
-    return [
-      '$added of $total lectures added',
-      if (pending > 0) '$pending need attention',
-    ].join(' · ');
+    if (state.hasLegacyContent) {
+      return 'Older sections can be combined into one review';
+    }
+    return 'No complete review yet';
   }
 }

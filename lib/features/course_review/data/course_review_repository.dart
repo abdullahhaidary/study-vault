@@ -55,7 +55,9 @@ class CourseReviewRepository {
                   (t) => OrderingTerm.asc(t.createdAt),
                 ]))
               .get();
-    final pdfs = materials.where((m) => isDocumentMimeType(m.mimeType)).toList();
+    final pdfs = materials
+        .where((m) => isDocumentMimeType(m.mimeType))
+        .toList();
     final pdfIds = [for (final m in pdfs) m.id];
 
     final lessonMaterials = pdfIds.isEmpty
@@ -120,14 +122,17 @@ class CourseReviewRepository {
         );
       }
     }
+    final subjectWide = latest[null] ?? const {};
     return CourseReviewState(
       subject: subject,
       sources: sources,
       overview: {
-        for (final e in (latest[null] ?? const {}).entries)
-          if (!e.key.isSection) e.key: e.value,
+        for (final e in subjectWide.entries)
+          if (e.key.isOverview) e.key: e.value,
       },
       overviewFingerprint: overviewFingerprint(sources),
+      document: subjectWide[CourseReviewPart.document],
+      documentFingerprint: documentFingerprint(sources),
     );
   }
 
@@ -156,5 +161,22 @@ class CourseReviewRepository {
             if (s.latest[part] != null) s.latest[part]!.id,
     ]..sort();
     return 'sections:${sha256.convert(utf8.encode(ids.join(','))).toString().substring(0, 24)}';
+  }
+
+  /// Fingerprint of the included PDFs and each PDF's current source.
+  ///
+  /// Excluding a PDF or changing its lesson materials or file changes this
+  /// value. A saved document keeps its old fingerprint until the user saves.
+  static String documentFingerprint(Iterable<CourseReviewSource> sources) {
+    final lines = [
+      for (final source in sources)
+        if (!source.excluded)
+          '${source.material.id}\t${source.currentFingerprint}',
+    ];
+    final digest = sha256
+        .convert(utf8.encode(lines.join('\n')))
+        .toString()
+        .substring(0, 24);
+    return 'documents:$digest';
   }
 }

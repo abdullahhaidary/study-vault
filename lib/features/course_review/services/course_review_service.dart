@@ -9,7 +9,7 @@ import '../data/course_review_repository.dart';
 import '../domain/course_review_models.dart';
 import '../domain/course_review_prompts.dart';
 
-/// Generates Course Review content one PDF per AI request.
+/// Saves the complete Course Review and still generates legacy sections.
 class CourseReviewService {
   CourseReviewService(
     this._db,
@@ -131,6 +131,38 @@ class CourseReviewService {
       }
     });
   }
+
+  /// Appends a new version of the subject's complete review.
+  ///
+  /// The stored fingerprint is the subject's current included sources, so a
+  /// save clears the outdated flag. An empty document is rejected.
+  Future<CourseReviewEntry> saveCompleteDocument({
+    required String subjectId,
+    required String content,
+  }) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError.value(
+        content,
+        'content',
+        'A complete review cannot be empty.',
+      );
+    }
+    final state = await repository.load(subjectId);
+    if (state == null) throw StateError('The subject no longer exists.');
+    return _db.insertCourseReviewVersion(
+      id: _uuid.v4(),
+      subjectId: subjectId,
+      materialId: null,
+      part: CourseReviewPart.document.storageValue,
+      content: trimmed,
+      sourceFingerprint: state.documentFingerprint,
+    );
+  }
+
+  /// Older section rows as one Markdown document. Does not write or delete.
+  String compileLegacyDocument(CourseReviewState state) =>
+      CourseReviewPrompts.compileLegacyDocument(state);
 
   Future<void> saveEdit({
     required CourseReviewEntry entry,

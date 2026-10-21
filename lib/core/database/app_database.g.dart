@@ -17822,7 +17822,7 @@ class CourseReviewEntry extends DataClass
   final String? materialId;
 
   /// `summary` | `explanation` | `deep_explanation` | `examples` |
-  /// `big_picture`
+  /// `big_picture` | `document`
   final String part;
   final String content;
   final int version;

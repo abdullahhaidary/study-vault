@@ -1,3 +1,4 @@
+import '../../../core/database/app_database.dart';
 import 'course_review_models.dart';
 
 /// Prompts for the condensed, already-studied Course Review depth.
@@ -161,4 +162,98 @@ ${sectionsDocument(state)}''';
 
   static String _json(String value) =>
       '"${value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+
+  /// One external prompt for a single Markdown Course Review.
+  static String completeReviewPrompt(CourseReviewState state) {
+    final subject = state.subject.name;
+    final included = state.included.toList();
+    final lectureList = included.isEmpty
+        ? '(No lessons are included.)'
+        : included
+              .map(
+                (source) =>
+                    '- Lesson: "${source.lesson.name}", PDF: "${source.material.title}"',
+              )
+              .join('\n');
+    final lessonSections = included
+        .map(
+          (source) =>
+              '''
+## ${source.label}
+### Summary
+### Explanation
+### Deep Review''',
+        )
+        .join('\n\n');
+    return '''
+The student has already studied every lesson in "$subject". Write one condensed course review for revision, using only the lesson materials supplied with this request.
+
+Subject: $subject
+
+Included lessons and PDFs:
+$lectureList
+
+Cover every supplied lesson. Preserve formulas, notation, and technical terms exactly as they appear in the materials. Do not invent facts, numbers, examples, or claims. If the materials are unclear or incomplete, say so briefly instead of guessing. Keep the review condensed: short paragraphs and tight bullets, not a re-teaching of the course.
+
+Return one Markdown document and nothing else. Do not return JSON. Do not wrap the document in a code fence. Use exactly this structure, with one lesson section for every included lesson and PDF:
+
+# $subject Course Review
+
+## Big Picture
+
+$lessonSections
+
+## Course Examples
+'''
+        .trim();
+  }
+
+  /// Compiles older section rows into one Markdown document, in lesson order.
+  ///
+  /// Big Picture comes first, then each included lesson that has a section,
+  /// then Course Examples. Missing parts are omitted. Nothing is saved.
+  static String compileLegacyDocument(CourseReviewState state) {
+    final buffer = StringBuffer()
+      ..writeln('# ${state.subject.name} Course Review');
+    final bigPicture = _body(state.overview[CourseReviewPart.bigPicture]);
+    if (bigPicture != null) {
+      _heading(buffer, '## Big Picture', bigPicture);
+    }
+    for (final source in state.included) {
+      final blocks = <(String, String)>[
+        for (final (heading, part) in const [
+          ('Summary', CourseReviewPart.summary),
+          ('Explanation', CourseReviewPart.explanation),
+          ('Deep Review', CourseReviewPart.deepExplanation),
+        ])
+          if (_body(source.latest[part]) case final text?) (heading, text),
+      ];
+      if (blocks.isEmpty) continue;
+      buffer
+        ..writeln()
+        ..writeln('## ${source.label}');
+      for (final (heading, text) in blocks) {
+        _heading(buffer, '### $heading', text);
+      }
+    }
+    final examples = _body(state.overview[CourseReviewPart.examples]);
+    if (examples != null) {
+      _heading(buffer, '## Course Examples', examples);
+    }
+    return buffer.toString().trimRight();
+  }
+
+  static void _heading(StringBuffer buffer, String heading, String body) {
+    buffer
+      ..writeln()
+      ..writeln(heading)
+      ..writeln()
+      ..writeln(body);
+  }
+
+  static String? _body(CourseReviewEntry? entry) {
+    final text = entry?.content.trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
 }
