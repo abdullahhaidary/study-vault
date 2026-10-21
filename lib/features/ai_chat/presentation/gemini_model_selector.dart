@@ -14,5 +14,5 @@ Future<String?> showGeminiModelSelector(
 }) async {
   final selected = AiExecutionSelection.fromModelId(selectedModelId);
   final next = await showAiModelSelector(context, selected: selected);
-  return next?.requestedModelId;
+  return next?.persistedModelId;
 }

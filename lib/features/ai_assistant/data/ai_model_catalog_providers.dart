@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai_chat/data/ai_chat_providers.dart';
+import '../domain/ai_endpoint_catalog.dart';
 import '../domain/ai_execution_selection.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_selectable_model.dart';
@@ -41,30 +42,20 @@ final availableAiModelsProvider =
         ];
       }
 
-      final newApiId = await ref
-          .watch(aiSettingsStoreProvider)
-          .getModelIdFor(AiProviderId.newApi);
-      if (newApiId.length > 7 &&
-          !models.any((m) => m.provider == AiProviderId.newApi)) {
-        models = [
-          ...models,
-          AiSelectableModel(
-            id: newApiId,
-            displayName: newApiId.substring(7),
-            description: 'Claude Messages via your New API server',
-            recommended: false,
-            group: 'Other',
-            provider: AiProviderId.newApi,
-          ),
-        ];
-      }
+      final endpointModels = selectableModelsForEndpointProfiles(
+        await ref.watch(aiEndpointProfileRepositoryProvider).list(),
+        visionOnly: constraints.visionOnly,
+      );
+      final withoutCustom = [
+        for (final model in models)
+          if (model.provider != AiProviderId.newApi &&
+              model.endpointProfileId == null)
+            model,
+      ];
+      models = [...withoutCustom, ...endpointModels];
       final creds = ref.watch(aiCredentialStoreProvider);
       final geminiReady = await creds.hasApiKeyFor(AiProviderId.gemini);
       final deepSeekReady = await creds.hasApiKeyFor(AiProviderId.deepseek);
-      final newApiReady =
-          await creds.hasApiKeyFor(AiProviderId.newApi) &&
-          (await ref.watch(aiSettingsStoreProvider).getNewApiBaseUrl())
-              .isNotEmpty;
 
       return [
         for (final model in models)
@@ -76,7 +67,6 @@ final availableAiModelsProvider =
               constraints: constraints,
               geminiReady: geminiReady,
               deepSeekReady: deepSeekReady,
-              newApiReady: newApiReady,
             ),
       ];
     });
@@ -86,21 +76,16 @@ AiSelectableModel _applyConstraints(
   required AiExecutionConstraints constraints,
   required bool geminiReady,
   required bool deepSeekReady,
-  required bool newApiReady,
 }) {
-  if (model.provider == AiProviderId.newApi) {
+  if (model.endpointProfileId != null ||
+      model.provider == AiProviderId.newApi) {
     if (constraints.visionOnly) {
       return model.copyWith(
         enabled: false,
-        disabledReason: 'Use Gemini for page images.',
+        disabledReason: customProfileVisionReason,
       );
     }
-    return newApiReady
-        ? model
-        : model.copyWith(
-            enabled: false,
-            disabledReason: 'Add a New API key and server URL in Settings.',
-          );
+    return model;
   }
   if (model.provider == AiProviderId.gemini) {
     if (!geminiReady) {

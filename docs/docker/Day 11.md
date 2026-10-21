@@ -261,32 +261,15 @@ Provides a logical identity and resource grouping for the application.
 ## 4.2 Logical Architecture
 
 ```text
-                   DEVELOPER
-                       |
-                       v
-              DOCKER COMPOSE CLI
-                       |
-                       v
-                 compose.yaml
-                       |
-                       v
-             COMPOSE APPLICATION
-                    MODEL
-                       |
-                       v
-                  DOCKER ENGINE
-                       |
-        +--------------+--------------+
-        |              |              |
-        v              v              v
-     SERVICES        NETWORKS       VOLUMES
-        |
-        v
-     CONTAINERS
-        |
-        v
-     APPLICATION
-      PROCESSES
+DEVELOPER → DOCKER COMPOSE CLI
+DOCKER COMPOSE CLI → compose.yaml
+compose.yaml → COMPOSE APPLICATION MODEL
+COMPOSE APPLICATION MODEL → DOCKER ENGINE
+DOCKER ENGINE → SERVICES
+DOCKER ENGINE → NETWORKS
+DOCKER ENGINE → VOLUMES
+SERVICES → CONTAINERS
+CONTAINERS → APPLICATION PROCESSES
 ```
 
 ## 4.3 Compose and Docker Engine
@@ -737,15 +720,9 @@ A service may be represented by one or more containers, depending on its configu
 ## 11.4 Conceptual Model
 
 ```text
-             COMPOSE SERVICE
-                   |
-                   v
-            SERVICE DEFINITION
-                   |
-          +--------+--------+
-          |                 |
-          v                 v
-      CONTAINER 1       CONTAINER 2
+COMPOSE SERVICE → SERVICE DEFINITION
+SERVICE DEFINITION → CONTAINER 1
+SERVICE DEFINITION → CONTAINER 2
 ```
 
 This distinction becomes important in later discussions of scaling and replicated services.
@@ -1345,45 +1322,19 @@ down
 ## 22.2 Lifecycle Model
 
 ```text
-              COMPOSE FILE
-                   |
-                   v
-            CONFIG VALIDATION
-                   |
-                   v
-             docker compose up
-                   |
-                   v
-          SERVICES AND RESOURCES
-                   |
-                   v
-            RUNNING CONTAINERS
-                   |
-          +--------+--------+
-          |                 |
-          v                 v
-        INSPECT            LOGS
-          |                 |
-          +--------+--------+
-                   |
-                   v
-            docker compose stop
-                   |
-                   v
-             STOPPED SERVICES
-                   |
-                   v
-           docker compose start
-                   |
-                   v
-             RUNNING SERVICES
-                   |
-                   v
-            docker compose down
-                   |
-                   v
-         CONTAINERS AND NETWORKS
-                 REMOVED
+COMPOSE FILE → CONFIG VALIDATION
+CONFIG VALIDATION → docker compose up
+docker compose up → SERVICES AND RESOURCES
+SERVICES AND RESOURCES → RUNNING CONTAINERS
+RUNNING CONTAINERS → INSPECT
+RUNNING CONTAINERS → LOGS
+INSPECT → docker compose stop
+LOGS → docker compose stop
+docker compose stop → STOPPED SERVICES
+STOPPED SERVICES → docker compose start
+docker compose start → RUNNING SERVICES
+RUNNING SERVICES → docker compose down
+docker compose down → CONTAINERS AND NETWORKS REMOVED
 ```
 
 Named volumes are normally retained by `down` unless the appropriate removal option is supplied.
@@ -1787,32 +1738,14 @@ The Nginx service will use a read-only bind mount for website files.
 ## 31.1 Logical Architecture
 
 ```text
-                 WEB BROWSER
-                      |
-                      v
-           http://127.0.0.1:8211
-                      |
-                      v
-                 DOCKER HOST
-                      |
-               Published Port
-                      |
-                      v
-              +---------------+
-              | NGINX SERVICE |
-              |   Port 80     |
-              +---------------+
-                      |
-                  APP NETWORK
-                      |
-              +---------------+
-              | REDIS SERVICE |
-              |   Port 6379   |
-              +---------------+
-                      |
-                      v
-                  NAMED VOLUME
-                  redis-data
+[ WEB BROWSER ]
+[ http://127.0.0.1:8211 ]
+[ DOCKER HOST ]
+[ Published Port ]
+[ NGINX SERVICE Port 80 ]
+[ APP NETWORK ]
+[ REDIS SERVICE Port 6379 ]
+[ NAMED VOLUME redis-data ]
 ```
 
 ## 31.2 Important Architectural Qualification

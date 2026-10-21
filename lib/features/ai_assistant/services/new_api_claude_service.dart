@@ -5,10 +5,13 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../data/ai_credential_store.dart';
+import '../data/ai_endpoint_profile_repository.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
+import '../domain/ai_endpoint_profile.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_execution_selection.dart';
+import '../domain/ai_model_ref.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_token_usage.dart';
@@ -20,32 +23,80 @@ class NewApiClaudeService implements AiService {
   NewApiClaudeService({
     required this.credentials,
     required this.settings,
+    required this.profiles,
     http.Client? httpClient,
   }) : _http = httpClient ?? http.Client();
 
   final AiCredentialStore credentials;
   final AiSettingsStore settings;
+  final AiEndpointProfileRepository profiles;
   final http.Client _http;
 
   @override
-  Future<bool> get isConfigured async =>
-      await credentials.hasApiKeyFor(AiProviderId.newApi) &&
-      (await settings.getNewApiBaseUrl()).isNotEmpty &&
-      (await settings.getModelIdFor(AiProviderId.newApi)).length > 7;
-
-  Future<({Uri uri, String key})> connection() async {
-    final key = await credentials.readApiKeyFor(AiProviderId.newApi);
-    final base = await settings.getNewApiBaseUrl();
-    if (key == null || base.isEmpty) {
-      throw const AiNotConfiguredException(
-        'Add a New API key and HTTPS server URL in Settings.',
-      );
+  Future<bool> get isConfigured async {
+    try {
+      final id = await _configuredProfileId();
+      if (id == null) return false;
+      final profile = await profiles.find(id);
+      if (profile == null || !profile.enabled || profile.baseUrl.isEmpty) {
+        return false;
+      }
+      if (!await credentials.hasEndpointKey(id)) return false;
+      final model = profile.defaultModelId.trim().isNotEmpty
+          ? profile.defaultModelId.trim()
+          : newApiBareModelId(
+              await settings.getModelIdFor(AiProviderId.newApi),
+            );
+      return model.isNotEmpty;
+    } on Object {
+      return false;
     }
-    final url = normalizeNewApiBaseUrl(base);
-    return (
-      uri: Uri.parse('$url${url.endsWith('/v1') ? '' : '/v1'}/messages'),
-      key: key,
-    );
+  }
+
+  Future<String?> _configuredProfileId() async {
+    await profiles.ensureMigrated();
+    final active = await settings.getActiveEndpointProfileId();
+    if (active != null && active.isNotEmpty) return active;
+    return profiles.legacyProfileId();
+  }
+
+  Future<({Uri uri, String key})> _open(String? profileId, String model) async {
+    final id = await _resolveProfileId(profileId, model);
+    AiEndpointConnection connection;
+    try {
+      connection = await profiles.resolve(id);
+    } on FormatException catch (error) {
+      if (error.message.contains('API profile unavailable')) {
+        throw const AiProfileUnavailableException();
+      }
+      throw AiNotConfiguredException(error.message);
+    }
+    return (uri: connection.messagesUri, key: connection.apiKey);
+  }
+
+  Future<String> _resolveProfileId(String? profileId, String model) async {
+    await profiles.ensureMigrated();
+    if (profileId != null && profileId.isNotEmpty) {
+      if (await profiles.find(profileId) == null) {
+        throw const AiProfileUnavailableException();
+      }
+      return profileId;
+    }
+    final parsed = AiModelRef.parse(model);
+    if (parsed is EndpointAiModelRef) {
+      if (await profiles.find(parsed.profileId) == null) {
+        throw const AiProfileUnavailableException();
+      }
+      return parsed.profileId;
+    }
+    if (parsed is LegacyNewApiModelRef || model.trim().startsWith('newapi:')) {
+      final legacy = await profiles.legacyProfileId();
+      if (legacy == null || await profiles.find(legacy) == null) {
+        throw const AiProfileUnavailableException();
+      }
+      return legacy;
+    }
+    throw const AiProfileUnavailableException();
   }
 
   /// Maps low-level transport failures. [requestStarted] means bytes may already
@@ -63,17 +114,24 @@ class NewApiClaudeService implements AiService {
   }
 
   Future<List<String>> listAvailableModels({
+    String? profileId,
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    final conn = await connection();
-    final uri = conn.uri.replace(
-      path: conn.uri.path.replaceFirst(RegExp(r'/messages$'), '/models'),
-    );
+    final id = await _resolveProfileId(profileId, 'newapi:');
+    final AiEndpointConnection connection;
+    try {
+      connection = await profiles.resolve(id);
+    } on FormatException catch (error) {
+      if (error.message.contains('API profile unavailable')) {
+        throw const AiProfileUnavailableException();
+      }
+      throw AiNotConfiguredException(error.message);
+    }
     late http.Response response;
     try {
-      final request = http.Request('GET', uri)
+      final request = http.Request('GET', connection.modelsUri)
         ..followRedirects = false
-        ..headers['Authorization'] = 'Bearer ${conn.key}';
+        ..headers['Authorization'] = 'Bearer ${connection.apiKey}';
       response = await http.Response.fromStream(
         await _http.send(request).timeout(timeout),
       ).timeout(timeout);
@@ -128,10 +186,10 @@ class NewApiClaudeService implements AiService {
   }
 
   String modelName(String id) {
-    final name = normalizeNewApiModelId(id).substring(7);
+    final name = newApiBareModelId(id);
     if (name.isEmpty) {
       throw const AiNotConfiguredException(
-        'Enter the Claude model ID available on your New API server in Settings.',
+        'Enter the model ID available on this API profile in Settings.',
       );
     }
     return name;
@@ -225,13 +283,14 @@ class NewApiClaudeService implements AiService {
     required String model,
     required List<Map<String, String>> messages,
     required int maxTokens,
+    String? profileId,
     Duration timeout = const Duration(seconds: 90),
     bool requireConsent = true,
   }) async {
     if (requireConsent && !await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final conn = await connection();
+    final conn = await _open(profileId, model);
     late http.Response response;
     try {
       final request = http.Request('POST', conn.uri)
@@ -282,14 +341,16 @@ class NewApiClaudeService implements AiService {
   Stream<({String? text, AiTokenUsage? usage})> streamMessages({
     required String model,
     required List<Map<String, String>> messages,
+    String? profileId,
     int maxTokens = 4096,
+
     /// Idle gap between stream events. SSE tokens keep middleboxes awake.
     Duration timeout = const Duration(minutes: 3),
   }) async* {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
-    final conn = await connection();
+    final conn = await _open(profileId, model);
     late http.StreamedResponse response;
     try {
       final request = http.Request('POST', conn.uri)
@@ -508,16 +569,75 @@ class NewApiClaudeService implements AiService {
   Future<void> testConnection({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    final model = await settings.getModelIdFor(AiProviderId.newApi);
-    await completeMessages(
-      model: model,
-      messages: const [
-        {'role': 'user', 'content': 'Reply with exactly: OK'},
-      ],
-      maxTokens: 16,
-      timeout: timeout,
-      requireConsent: false,
-    );
+    final id = await _configuredProfileId();
+    if (id == null) {
+      throw const AiNotConfiguredException(
+        'Add an API profile in Settings before testing the connection.',
+      );
+    }
+    await testProfile(id, timeout: timeout);
+  }
+
+  Future<void> testProfile(
+    String profileId, {
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    final profile = await profiles.find(profileId);
+    if (profile == null) throw const AiProfileUnavailableException();
+    final model = profile.defaultModelId.trim().isNotEmpty
+        ? profile.defaultModelId.trim()
+        : newApiBareModelId(await settings.getModelIdFor(AiProviderId.newApi));
+    if (model.isEmpty) {
+      throw const AiNotConfiguredException(
+        'Select a default model for this profile first.',
+      );
+    }
+    try {
+      await completeMessages(
+        profileId: profileId,
+        model: model,
+        messages: const [
+          {'role': 'user', 'content': 'Reply with exactly: OK'},
+        ],
+        maxTokens: 16,
+        timeout: timeout,
+        requireConsent: false,
+      );
+      await profiles.setConnection(
+        id: profileId,
+        status: AiEndpointConnectionStatus.ok,
+        detail: 'Connected',
+      );
+    } on AiException catch (error) {
+      await profiles.setConnection(
+        id: profileId,
+        status: AiEndpointConnectionStatus.failed,
+        detail: error.message,
+      );
+      rethrow;
+    }
+  }
+
+  /// Fetches models for [profileId] and replaces that profile's cache.
+  /// A failed refresh leaves the previous cache in place.
+  Future<List<String>> refreshCachedModels(String profileId) async {
+    try {
+      final models = await listAvailableModels(profileId: profileId);
+      await profiles.cacheModels(id: profileId, modelIds: models);
+      await profiles.setConnection(
+        id: profileId,
+        status: AiEndpointConnectionStatus.ok,
+        detail: 'Connected',
+      );
+      return models;
+    } on AiException catch (error) {
+      await profiles.setConnection(
+        id: profileId,
+        status: AiEndpointConnectionStatus.failed,
+        detail: error.message,
+      );
+      rethrow;
+    }
   }
 
   @override
@@ -551,6 +671,7 @@ class NewApiClaudeService implements AiService {
       userPreference: request.userPreference ?? preference,
     );
     final result = await completeMessages(
+      profileId: request.selection.endpointProfileId,
       model: request.selection.resolvedModelId,
       messages: AiPromptBuilder.deepSeekMessages(enriched),
       maxTokens: switch (request.action) {
@@ -602,6 +723,7 @@ class NewApiClaudeService implements AiService {
     required int maxOutputTokens,
     required AiExecutionSelection selection,
     Duration timeout = const Duration(minutes: 5),
+    void Function(String partialText)? onPartialText,
   }) async {
     if (messages.isEmpty) {
       throw const AiMalformedOutputException('The document prompt is empty.');
@@ -610,24 +732,26 @@ class NewApiClaudeService implements AiService {
     AiTokenUsage? combinedUsage;
     try {
       await for (final event in streamMessages(
+        profileId: selection.endpointProfileId,
         model: selection.resolvedModelId,
         messages: messages,
         maxTokens: maxOutputTokens,
         timeout: timeout,
       )) {
         final delta = event.text;
-        if (delta != null && delta.isNotEmpty) buffer.write(delta);
+        if (delta != null && delta.isNotEmpty) {
+          buffer.write(delta);
+          onPartialText?.call(buffer.toString());
+        }
         if (event.usage != null) combinedUsage = event.usage;
       }
     } on AiConnectionInterruptedException {
       final partial = buffer.toString().trim();
-      // Keep billed partial output when the socket dies late in generation.
       if (partial.length >= 400) {
         return AiTextResult(
-          markdown:
-              '$partial\n\n> *(Connection interrupted — this is a partial '
-              'result. Regenerate if you need the rest.)*',
+          markdown: partial,
           usage: combinedUsage,
+          disposition: AiCompletionDisposition.partialConnection,
         );
       }
       rethrow;
@@ -635,10 +759,9 @@ class NewApiClaudeService implements AiService {
       final partial = buffer.toString().trim();
       if (partial.length >= 400) {
         return AiTextResult(
-          markdown:
-              '$partial\n\n> *(Timed out — this is a partial result. '
-              'Regenerate if you need the rest.)*',
+          markdown: partial,
           usage: combinedUsage,
+          disposition: AiCompletionDisposition.partialTimeout,
         );
       }
       rethrow;

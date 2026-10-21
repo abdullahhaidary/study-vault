@@ -7,7 +7,6 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
-import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
@@ -16,8 +15,10 @@ import '../data/pdf_ai_material_providers.dart';
 import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
 import '../domain/pdf_ai_versioning.dart';
+import '../../ai_generation_queue/data/ai_generation_providers.dart';
 import 'pdf_ai_manual_import_dialog.dart';
 import 'pdf_ai_material_reader_screen.dart';
+import 'pdf_ai_queue_actions.dart';
 
 Future<void> showPdfAiMaterialsSheet(
   BuildContext context, {
@@ -56,10 +57,20 @@ class PdfAiMaterialsSheet extends ConsumerStatefulWidget {
 }
 
 class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
-  final Set<PdfAiMaterialType> _generating = {};
+  bool _isActive(PdfAiMaterialType type) {
+    return ref
+            .read(
+              pdfAiJobForTargetProvider((
+                materialId: widget.materialId,
+                type: type,
+              )),
+            )
+            ?.isActive ??
+        false;
+  }
 
   Future<void> _onTap(PdfAiMaterialType type, PdfAiMaterial? current) async {
-    if (_generating.contains(type)) return;
+    if (_isActive(type)) return;
     if (current != null) {
       await _open(type, current.id);
       return;
@@ -105,7 +116,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
   }
 
   Future<void> _generate(PdfAiMaterialType type) async {
-    if (_generating.contains(type)) return;
+    if (_isActive(type)) return;
 
     if (!await AiAssistantController.ensureReady(context, ref)) return;
     if (!mounted) return;
@@ -123,33 +134,18 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
         ) ??
         selection;
 
-    setState(() => _generating.add(type));
-    try {
-      final generated = await ref
-          .read(pdfAiMaterialServiceProvider)
-          .generate(
-            materialId: widget.materialId,
-            title: widget.title,
-            filePath: widget.filePath,
-            type: type,
-            selection: selection,
-            customInstruction: '',
-          );
-      if (!mounted) return;
-      await _open(type, generated.id);
-    } on AiException catch (error) {
-      _showError(error.message);
-    } on Object catch (error) {
-      final raw = error.toString();
-      _showError(
-        raw.contains('no extractable text')
-            ? 'This PDF has no extractable text. OCR is not available yet.'
-            : 'Could not generate ${type.shortName.toLowerCase()}. '
-                  'Your existing versions are unchanged.',
-      );
-    } finally {
-      if (mounted) setState(() => _generating.remove(type));
-    }
+    final alsoPersian = ref.read(pdfAiAlsoPersianProvider).valueOrNull ?? false;
+    if (!mounted) return;
+    await enqueuePdfMaterialGeneration(
+      context: context,
+      ref: ref,
+      materialId: widget.materialId,
+      title: widget.title,
+      filePath: widget.filePath,
+      type: type,
+      selection: selection,
+      translateToPersian: alsoPersian,
+    );
   }
 
   Future<void> _open(PdfAiMaterialType type, String generationId) {
@@ -236,7 +232,16 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
                                 )
                                 .valueOrNull,
                           ),
-                          generating: _generating.contains(type),
+                          generating:
+                              ref
+                                  .watch(
+                                    pdfAiJobForTargetProvider((
+                                      materialId: widget.materialId,
+                                      type: type,
+                                    )),
+                                  )
+                                  ?.isActive ??
+                              false,
                           stale: false,
                           onTap: () => _onTap(
                             type,
@@ -340,7 +345,7 @@ class _MaterialTypeCard extends StatelessWidget {
                           const SizedBox(height: AppSpacing.xs),
                           if (generating)
                             Text(
-                              'Generating…',
+                              'In the generation queue',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,

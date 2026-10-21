@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/ai_actions.dart';
+import '../domain/ai_model_ref.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_style_memory.dart';
 import '../domain/deepseek_model_registry.dart';
@@ -55,6 +56,53 @@ abstract class AiSettingsStore {
   Future<void> setPrivacyConsentAccepted(bool accepted);
 
   Future<void> resetPrivacyConsent() => setPrivacyConsentAccepted(false);
+
+  /// Persisted global default. Empty when provider and model fields are enough.
+  Future<String?> readGlobalModelRefStorage() async => null;
+
+  Future<void> writeGlobalModelRefStorage(String value) async {}
+
+  Future<String?> getActiveEndpointProfileId() async => null;
+
+  Future<void> setActiveEndpointProfileId(String? id) async {}
+
+  Future<AiModelRef> getGlobalModelRef() async {
+    final provider = await getProvider();
+    final storedRaw = await readGlobalModelRefStorage();
+    final activeProfile = await getActiveEndpointProfileId();
+    AiModelRef? stored;
+    if (storedRaw != null && storedRaw.trim().isNotEmpty) {
+      stored = AiModelRef.parse(storedRaw);
+    }
+    if (stored != null && stored.provider == provider) {
+      if (stored is EndpointAiModelRef) {
+        final liveBare = newApiBareModelId(await getModelIdFor(provider));
+        return EndpointAiModelRef(
+          profileId: activeProfile ?? stored.profileId,
+          modelId: liveBare.isEmpty ? stored.bareModelId : liveBare,
+        );
+      }
+      if (provider != AiProviderId.newApi) {
+        return AiModelRef.parse(await getModelIdFor(provider));
+      }
+    }
+    if (provider == AiProviderId.newApi &&
+        activeProfile != null &&
+        activeProfile.isNotEmpty) {
+      final liveBare = newApiBareModelId(await getModelIdFor(provider));
+      if (liveBare.isNotEmpty) {
+        return EndpointAiModelRef(profileId: activeProfile, modelId: liveBare);
+      }
+    }
+    return AiModelRef.parse(await getModelIdFor(provider));
+  }
+
+  Future<void> setGlobalModelRef(AiModelRef ref) async {
+    await writeGlobalModelRefStorage(ref.storageValue);
+    await setProvider(ref.provider);
+    await setModelIdFor(ref.provider, ref.providerModelId);
+    await setActiveEndpointProfileId(ref.endpointProfileId);
+  }
 }
 
 class SharedPreferencesAiSettingsStore extends AiSettingsStore {
@@ -66,6 +114,8 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
   static const _deepseekModelKey = 'ai_deepseek_model';
   static const _newApiModelKey = 'ai_newapi_model';
   static const _newApiBaseUrlKey = 'ai_newapi_base_url';
+  static const _globalModelRefKey = 'ai_global_model_ref';
+  static const _activeEndpointProfileKey = 'ai_active_endpoint_profile';
   static const _thinkingKey = 'ai_deepseek_thinking';
   static const _languageKey = 'ai_default_language';
   static const _preferenceKey = 'ai_study_preference';
@@ -249,6 +299,31 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
   }
 
   @override
+  Future<String?> readGlobalModelRefStorage() async =>
+      (await _prefs()).getString(_globalModelRefKey);
+
+  @override
+  Future<void> writeGlobalModelRefStorage(String value) async {
+    final prefs = await _prefs();
+    await prefs.setString(_globalModelRefKey, value);
+  }
+
+  @override
+  Future<String?> getActiveEndpointProfileId() async =>
+      (await _prefs()).getString(_activeEndpointProfileKey);
+
+  @override
+  Future<void> setActiveEndpointProfileId(String? id) async {
+    final prefs = await _prefs();
+    final trimmed = id?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      await prefs.remove(_activeEndpointProfileKey);
+    } else {
+      await prefs.setString(_activeEndpointProfileKey, trimmed);
+    }
+  }
+
+  @override
   Future<void> resetPrivacyConsent() => setPrivacyConsentAccepted(false);
 }
 
@@ -258,22 +333,55 @@ String normalizeNewApiModelId(String? raw) {
 }
 
 String normalizeNewApiBaseUrl(String raw) {
-  final url = raw.trim().replaceAll(RegExp(r'/+$'), '');
-  if (url.isEmpty) return '';
-  final uri = Uri.tryParse(url);
-  if (uri == null ||
-      uri.scheme != 'https' ||
-      uri.host.isEmpty ||
-      uri.host == 'docs.newapi.pro' ||
-      uri.userInfo.isNotEmpty ||
-      uri.hasQuery ||
-      uri.hasFragment ||
-      uri.path.endsWith('/messages')) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return '';
+  final withoutTrailing = trimmed.replaceAll(RegExp(r'/+$'), '');
+  final uri = Uri.tryParse(withoutTrailing);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+    throw const FormatException('Enter the HTTPS base URL of your API server.');
+  }
+  if (uri.userInfo.isNotEmpty) {
     throw const FormatException(
-      'Enter your HTTPS New API server URL (not docs.newapi.pro, without /messages).',
+      'Remove the username and password from the server URL.',
     );
   }
-  return url;
+  if (uri.hasQuery || uri.hasFragment) {
+    throw const FormatException(
+      'Remove the query string and fragment from the server URL.',
+    );
+  }
+  final host = uri.host.toLowerCase();
+  final loopback = host == 'localhost' || host == '127.0.0.1' || host == '::1';
+  final scheme = uri.scheme.toLowerCase();
+  if (scheme == 'http') {
+    if (!loopback) {
+      throw const FormatException(
+        'HTTP is only allowed for localhost. Use HTTPS for other servers.',
+      );
+    }
+  } else if (scheme != 'https') {
+    throw const FormatException(
+      'Enter an HTTPS server URL. HTTP is only allowed for localhost.',
+    );
+  }
+  if (host == 'docs.newapi.pro') {
+    throw const FormatException(
+      'Enter your API server URL, not the documentation site.',
+    );
+  }
+  final path = uri.path;
+  if (path.endsWith('/messages') || path.endsWith('/models')) {
+    throw const FormatException(
+      'Enter the server base URL, not the /messages or /models endpoint.',
+    );
+  }
+  final normalized = Uri(
+    scheme: scheme,
+    host: host,
+    port: uri.hasPort ? uri.port : null,
+    path: path.isEmpty ? '' : path,
+  );
+  return normalized.toString().replaceAll(RegExp(r'/+$'), '');
 }
 
 /// In-memory settings for tests.
@@ -288,6 +396,8 @@ class MemoryAiSettingsStore extends AiSettingsStore {
   List<AiStyleMemoryItem> _items = const [];
   int _geminiRetryCount = AiSettingsStore.defaultGeminiRetryCount;
   bool _consent = false;
+  String? _globalModelRef;
+  String? _activeEndpointProfileId;
 
   @override
   Future<AiProviderId> getProvider() async => _provider;
@@ -384,6 +494,24 @@ class MemoryAiSettingsStore extends AiSettingsStore {
   @override
   Future<void> setPrivacyConsentAccepted(bool accepted) async {
     _consent = accepted;
+  }
+
+  @override
+  Future<String?> readGlobalModelRefStorage() async => _globalModelRef;
+
+  @override
+  Future<void> writeGlobalModelRefStorage(String value) async {
+    _globalModelRef = value;
+  }
+
+  @override
+  Future<String?> getActiveEndpointProfileId() async =>
+      _activeEndpointProfileId;
+
+  @override
+  Future<void> setActiveEndpointProfileId(String? id) async {
+    final trimmed = id?.trim() ?? '';
+    _activeEndpointProfileId = trimmed.isEmpty ? null : trimmed;
   }
 
   @override

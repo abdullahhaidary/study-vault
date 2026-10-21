@@ -222,6 +222,7 @@ abstract final class StudyNavigator {
   static String studyRouteForMime(String mimeType) {
     if (isImageMimeType(mimeType)) return AppRoutes.imageStudy;
     if (isTextDocumentMimeType(mimeType)) return AppRoutes.markdownStudy;
+    if (isInteractiveHtmlMimeType(mimeType)) return AppRoutes.htmlStudy;
     return AppRoutes.pdfStudy;
   }
 }

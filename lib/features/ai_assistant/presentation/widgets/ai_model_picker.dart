@@ -5,7 +5,9 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../data/ai_model_catalog_providers.dart';
 import '../../data/ai_providers.dart';
 import '../../domain/ai_actions.dart';
+import '../../domain/ai_endpoint_profile.dart';
 import '../../domain/ai_execution_selection.dart';
+import '../../domain/ai_model_ref.dart';
 import '../../domain/ai_provider.dart';
 import '../../domain/ai_selectable_model.dart';
 import '../../domain/deepseek_model_registry.dart';
@@ -34,7 +36,7 @@ Future<AiExecutionSelection?> showAiModelSelector(
           subtitle ??
           (constraints.visionOnly
               ? 'Page images require a Gemini vision model.'
-              : 'Pick Gemini, DeepSeek, or New API for this request.'),
+              : 'Pick Gemini, DeepSeek, or a model from one of your API profiles.'),
     ),
   );
 }
@@ -84,7 +86,7 @@ class AiModelPickerButton extends StatelessWidget {
             size: compact ? 16 : 18,
           ),
           label: Text(
-            compact ? label : '${selection.provider.displayName} · $label',
+            compact ? label : '${_providerLabel(selection)} · $label',
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
@@ -103,6 +105,13 @@ class AiModelPickerButton extends StatelessWidget {
   }
 }
 
+String _providerLabel(AiExecutionSelection selection) {
+  if (selection.provider != AiProviderId.newApi) {
+    return selection.provider.displayName;
+  }
+  return 'Custom API';
+}
+
 String _displayName(AiExecutionSelection selection) {
   if (selection.provider == AiProviderId.deepseek &&
       DeepSeekModelIds.isAuto(selection.requestedModelId)) {
@@ -113,13 +122,14 @@ String _displayName(AiExecutionSelection selection) {
     return def?.displayName ?? selection.resolvedModelId;
   }
   if (selection.provider == AiProviderId.newApi) {
-    return selection.resolvedModelId.substring(7);
+    final bare = newApiBareModelId(selection.resolvedModelId);
+    return bare.isEmpty ? 'Model not set' : bare;
   }
   final def = DeepSeekModelRegistry.byId(selection.resolvedModelId);
   return def?.displayName ?? selection.resolvedModelId;
 }
 
-class _AiModelSelectorSheet extends ConsumerWidget {
+class _AiModelSelectorSheet extends ConsumerStatefulWidget {
   const _AiModelSelectorSheet({
     required this.selected,
     required this.action,
@@ -135,8 +145,20 @@ class _AiModelSelectorSheet extends ConsumerWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final modelsAsync = ref.watch(availableAiModelsProvider(constraints));
+  ConsumerState<_AiModelSelectorSheet> createState() =>
+      _AiModelSelectorSheetState();
+}
+
+class _AiModelSelectorSheetState extends ConsumerState<_AiModelSelectorSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final modelsAsync = ref.watch(
+      availableAiModelsProvider(widget.constraints),
+    );
+    final profiles =
+        ref.watch(aiEndpointProfilesProvider).valueOrNull ?? const [];
     final theme = Theme.of(context);
     final height = MediaQuery.sizeOf(context).height * 0.72;
 
@@ -153,35 +175,104 @@ class _AiModelSelectorSheet extends ConsumerWidget {
           child: modelsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, _) => _ModelList(
-              models: _fallback(constraints),
-              selected: selected,
-              action: action,
+              models: _filter(_fallback(widget.constraints)),
+              selected: widget.selected,
+              action: widget.action,
             ),
-            data: (models) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(title, style: theme.textTheme.titleLarge),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+            data: (models) {
+              final rows = _filter(_withPreviousSelection(models, profiles));
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(widget.title, style: theme.textTheme.titleLarge),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    widget.subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Expanded(
-                  child: _ModelList(
-                    models: models,
-                    selected: selected,
-                    action: action,
+                  if (models.length >= 8) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Filter models',
+                        prefixIcon: Icon(Icons.search),
+                        isDense: true,
+                      ),
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Expanded(
+                    child: _ModelList(
+                      models: rows,
+                      selected: widget.selected,
+                      action: widget.action,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
+  }
+
+  List<AiSelectableModel> _filter(List<AiSelectableModel> models) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return models;
+    return [
+      for (final model in models)
+        if (model.displayName.toLowerCase().contains(query) ||
+            model.sectionLabel.toLowerCase().contains(query) ||
+            (model.endpointHost ?? '').toLowerCase().contains(query))
+          model,
+    ];
+  }
+
+  List<AiSelectableModel> _withPreviousSelection(
+    List<AiSelectableModel> models,
+    List<AiEndpointProfile> profiles,
+  ) {
+    final selected = widget.selected;
+    if (selected.provider != AiProviderId.newApi) return models;
+    final profileId = selected.endpointProfileId;
+    final bare = newApiBareModelId(selected.resolvedModelId);
+    if (profileId == null || bare.isEmpty) return models;
+    final already = models.any(
+      (model) =>
+          model.endpointProfileId == profileId &&
+          newApiBareModelId(model.id) == bare,
+    );
+    if (already) return models;
+    final profile = profiles.where((item) => item.id == profileId).firstOrNull;
+    final ref = EndpointAiModelRef(profileId: profileId, modelId: bare);
+    return [
+      ...models,
+      AiSelectableModel(
+        id: ref.storageValue,
+        displayName: bare,
+        description: profile == null
+            ? 'API profile unavailable'
+            : 'Previously selected — unavailable',
+        recommended: false,
+        group: profile?.name ?? 'API profile',
+        section: profile?.name ?? 'API profile',
+        provider: AiProviderId.newApi,
+        enabled: profile != null && !widget.constraints.visionOnly,
+        disabledReason: widget.constraints.visionOnly
+            ? 'Custom API profiles are text-only. Use a Gemini vision model.'
+            : profile == null
+            ? 'API profile unavailable'
+            : null,
+        endpointProfileId: profileId,
+        endpointHost: profile?.host,
+        modelListStale: true,
+        modelRef: ref,
+      ),
+    ];
   }
 
   List<AiSelectableModel> _fallback(AiExecutionConstraints constraints) {
@@ -197,7 +288,7 @@ class _AiModelSelectorSheet extends ConsumerWidget {
   }
 }
 
-class _ModelList extends StatelessWidget {
+class _ModelList extends ConsumerWidget {
   const _ModelList({
     required this.models,
     required this.selected,
@@ -209,122 +300,145 @@ class _ModelList extends StatelessWidget {
   final AiStudyAction? action;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final byProvider = <AiProviderId, List<AiSelectableModel>>{};
+    final sections = <String, List<AiSelectableModel>>{};
     for (final model in models) {
-      byProvider.putIfAbsent(model.provider, () => []).add(model);
+      sections.putIfAbsent(model.sectionLabel, () => []).add(model);
     }
-    final order = [
-      AiProviderId.gemini,
-      AiProviderId.deepseek,
-      AiProviderId.newApi,
-      ...byProvider.keys.where(
-        (id) => id != AiProviderId.gemini && id != AiProviderId.deepseek,
-      ),
-    ];
 
     return ListView(
       children: [
-        for (final provider in order)
-          if (byProvider[provider] case final items?) ...[
-            Padding(
-              padding: const EdgeInsets.only(
-                top: AppSpacing.md,
-                bottom: AppSpacing.xs,
-              ),
-              child: Text(
-                provider.displayName,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        for (final entry in sections.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(
+              top: AppSpacing.md,
+              bottom: AppSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.key,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
+                if (entry.value.first.endpointProfileId case final profileId?)
+                  IconButton(
+                    tooltip: 'Refresh models',
+                    onPressed: () async {
+                      await ref
+                          .read(newApiClaudeServiceProvider)
+                          .refreshCachedModels(profileId);
+                      ref.invalidate(availableAiModelsProvider);
+                    },
+                    icon: const Icon(Icons.refresh),
+                  ),
+              ],
+            ),
+          ),
+          if (entry.value.first.endpointHost case final host?)
+            Text(
+              entry.value.first.modelListStale
+                  ? '$host · cached model list is stale'
+                  : host,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (provider == AiProviderId.deepseek) ...[
-              const DeepSeekPricingBanner(
-                style: DeepSeekPricingBannerStyle.full,
+          if (entry.value.first.provider == AiProviderId.deepseek &&
+              entry.value.first.endpointProfileId == null) ...[
+            const DeepSeekPricingBanner(style: DeepSeekPricingBannerStyle.full),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          for (final model in entry.value)
+            ListTile(
+              enabled: model.enabled,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                _isSelected(model) ? Icons.check_circle : Icons.circle_outlined,
+                color: _isSelected(model)
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
               ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            for (final model in items)
-              ListTile(
-                enabled: model.enabled,
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  selected.requestedModelId == model.id ||
-                          selected.resolvedModelId == model.id
-                      ? Icons.check_circle
-                      : Icons.circle_outlined,
-                  color:
-                      selected.requestedModelId == model.id ||
-                          selected.resolvedModelId == model.id
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.outline,
-                ),
-                title: Row(
-                  children: [
-                    Expanded(
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      model.displayName,
+                      style: TextStyle(
+                        color: model.enabled
+                            ? null
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.45,
+                              ),
+                      ),
+                    ),
+                  ),
+                  if (model.recommended)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.12,
+                        ),
+                        borderRadius: AppRadii.smAll,
+                      ),
                       child: Text(
-                        model.displayName,
-                        style: TextStyle(
-                          color: model.enabled
-                              ? null
-                              : theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.45,
-                                ),
+                        'Recommended',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    if (model.recommended)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.12,
-                          ),
-                          borderRadius: AppRadii.smAll,
-                        ),
-                        child: Text(
-                          'Recommended',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                subtitle: Text(
-                  model.enabled
-                      ? model.description
-                      : (model.disabledReason ?? model.description),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                onTap: !model.enabled
-                    ? null
-                    : () {
-                        final thinking = provider == AiProviderId.deepseek
-                            ? null
-                            : null;
-                        Navigator.pop(
-                          context,
-                          AiExecutionSelection.resolve(
-                            provider: provider,
-                            requestedModelId: model.id,
-                            action: action,
-                            thinkingMode: thinking,
-                          ),
-                        );
-                      },
+                ],
               ),
-          ],
+              subtitle: Text(
+                model.enabled
+                    ? model.description
+                    : (model.disabledReason ?? model.description),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              onTap: !model.enabled
+                  ? null
+                  : () {
+                      final refModel = model.modelRef;
+                      Navigator.pop(
+                        context,
+                        refModel == null
+                            ? AiExecutionSelection.resolve(
+                                provider: model.provider,
+                                requestedModelId: model.id,
+                                action: action,
+                              )
+                            : AiExecutionSelection.fromModelRef(
+                                refModel,
+                                action: action,
+                              ),
+                      );
+                    },
+            ),
+        ],
       ],
     );
+  }
+
+  bool _isSelected(AiSelectableModel model) {
+    if (model.endpointProfileId != null || selected.endpointProfileId != null) {
+      return model.endpointProfileId == selected.endpointProfileId &&
+          newApiBareModelId(model.id) ==
+              newApiBareModelId(selected.requestedModelId);
+    }
+    return selected.requestedModelId == model.id ||
+        selected.resolvedModelId == model.id;
   }
 }
 

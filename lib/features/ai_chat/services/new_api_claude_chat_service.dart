@@ -1,15 +1,23 @@
 import '../../../core/markdown/chart_spec.dart';
+import '../../ai_assistant/data/ai_endpoint_profile_repository.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
+import '../../ai_assistant/domain/ai_endpoint_catalog.dart';
+import '../../ai_assistant/domain/ai_model_ref.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
 
 class NewApiClaudeChatService implements AiChatTransport {
-  NewApiClaudeChatService({required this.service, required this.settings});
+  NewApiClaudeChatService({
+    required this.service,
+    required this.settings,
+    required this.profiles,
+  });
 
   final NewApiClaudeService service;
   final AiSettingsStore settings;
+  final AiEndpointProfileRepository profiles;
 
   @override
   Future<bool> get isConfigured => service.isConfigured;
@@ -18,18 +26,7 @@ class NewApiClaudeChatService implements AiChatTransport {
   Future<List<AiSelectableModel>> listAvailableChatModels({
     Duration timeout = const Duration(seconds: 20),
   }) async {
-    final id = await settings.getModelIdFor(AiProviderId.newApi);
-    if (id.length <= 7) return [];
-    return [
-      AiSelectableModel(
-        id: id,
-        displayName: id.substring(7),
-        description: 'Claude Messages via your New API server',
-        recommended: false,
-        group: 'Other',
-        provider: AiProviderId.newApi,
-      ),
-    ];
+    return selectableModelsForEndpointProfiles(await profiles.list());
   }
 
   List<Map<String, String>> _messages(
@@ -68,6 +65,7 @@ class NewApiClaudeChatService implements AiChatTransport {
       await settings.styleForSend(provider: AiProviderId.newApi),
     );
     final result = await service.completeMessages(
+      profileId: AiModelRef.parse(modelId).endpointProfileId,
       model: modelId,
       messages: messages,
       maxTokens: 4096,
@@ -91,6 +89,7 @@ class NewApiClaudeChatService implements AiChatTransport {
       await settings.styleForSend(provider: AiProviderId.newApi),
     );
     await for (final event in service.streamMessages(
+      profileId: AiModelRef.parse(modelId).endpointProfileId,
       model: modelId,
       messages: messages,
       timeout: timeout,

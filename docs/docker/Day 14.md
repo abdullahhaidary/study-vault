@@ -545,18 +545,10 @@ The Redis service will join `backend`.
 ## 14.3 Architecture
 
 ```text
-             FRONTEND NETWORK
-                    |
-          +---------+---------+
-          |                   |
-          v                   v
-        NGINX                FLASK
-                              |
-                              |
-                       BACKEND NETWORK
-                              |
-                              v
-                            REDIS
+FRONTEND NETWORK → NGINX
+FRONTEND NETWORK → FLASK
+FLASK → BACKEND NETWORK
+BACKEND NETWORK → REDIS
 ```
 
 The Flask container is attached to two networks.
@@ -837,49 +829,22 @@ The application must satisfy the following architectural properties.
 # 24. COMPLETE APPLICATION ARCHITECTURE
 
 ```text
-                    WEB BROWSER
-                         |
-                         |
-            http://127.0.0.1:8240
-                         |
-                         v
-                   DOCKER HOST
-                         |
-                   PORT PUBLISHING
-                         |
-                         v
-               +-------------------+
-               |   NGINX PROXY     |
-               |   Container :80   |
-               +-------------------+
-                         |
-                         |
-                  FRONTEND NETWORK
-                         |
-                         v
-               +-------------------+
-               |    FLASK WEB      |
-               |    GUNICORN       |
-               |   Container :8000 |
-               +-------------------+
-                         |
-                         |
-                  BACKEND NETWORK
-                         |
-                         v
-               +-------------------+
-               |      REDIS        |
-               |   Container :6379 |
-               +-------------------+
-                         |
-                         |
-                       /data
-                         |
-                         v
-                +----------------+
-                | NAMED VOLUME   |
-                |   redis-data   |
-                +----------------+
+[ WEB BROWSER ]
+[ http://127.0.0.1:8240 ]
+[ DOCKER HOST ]
+[ PORT PUBLISHING ]
+[ NGINX PROXY ]
+[ Container :80 ]
+[ FRONTEND NETWORK ]
+[ FLASK WEB ]
+[ GUNICORN ]
+[ Container :8000 ]
+[ BACKEND NETWORK ]
+[ REDIS ]
+[ Container :6379 ]
+[ /data ]
+[ NAMED VOLUME ]
+[ redis-data ]
 ```
 
 The architecture contains three application services and two internal networks.

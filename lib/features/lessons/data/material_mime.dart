@@ -3,6 +3,26 @@ import 'package:path/path.dart' as p;
 const kMarkdownMimeType = 'text/markdown';
 const kPlainTextMimeType = 'text/plain';
 
+/// One self-contained interactive HTML page.
+const kHtmlMimeType = 'text/html';
+
+/// A `.zip` of an interactive page with its own scripts, styles, and images.
+const kHtmlBundleMimeType = 'application/vnd.study-vault.html-bundle+zip';
+
+bool isHtmlPageMimeType(String mimeType) {
+  return mimeType.toLowerCase() == kHtmlMimeType;
+}
+
+bool isHtmlBundleMimeType(String mimeType) {
+  return mimeType.toLowerCase() == kHtmlBundleMimeType;
+}
+
+/// Interactive HTML runs in a web view. It is not a study document, so AI
+/// Study Materials, Course Review, and chat context never read it.
+bool isInteractiveHtmlMimeType(String mimeType) {
+  return isHtmlPageMimeType(mimeType) || isHtmlBundleMimeType(mimeType);
+}
+
 bool isImageMimeType(String mimeType) {
   return mimeType.startsWith('image/');
 }
@@ -40,6 +60,8 @@ String materialKindLabel(String mimeType) {
   if (isMarkdownMimeType(mimeType)) return 'Markdown';
   if (isPlainTextMimeType(mimeType)) return 'Text';
   if (isImageMimeType(mimeType)) return 'Image';
+  if (isHtmlPageMimeType(mimeType)) return 'Interactive HTML';
+  if (isHtmlBundleMimeType(mimeType)) return 'Interactive HTML bundle';
   return 'File';
 }
 
@@ -49,6 +71,7 @@ String guessMimeType(String fileName) {
     '.pdf' => 'application/pdf',
     '.md' || '.markdown' => kMarkdownMimeType,
     '.txt' => kPlainTextMimeType,
+    '.html' || '.htm' => kHtmlMimeType,
     '.png' => 'image/png',
     '.jpg' || '.jpeg' => 'image/jpeg',
     '.gif' => 'image/gif',

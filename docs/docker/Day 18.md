@@ -215,21 +215,12 @@ stable
 ## 5.4 Hierarchical Model
 
 ```text
-                    REGISTRY
-                   docker.io
-                       |
-          +------------+------------+
-          |                         |
-          v                         v
-       USER A                    USER B
-          |                         |
-          v                         v
-       API REPO                 WEB REPO
-          |
-     +----+----+
-     |         |
-     v         v
-   1.0.0     1.1.0
+REGISTRY (docker.io) → USER A
+REGISTRY (docker.io) → USER B
+USER A → API REPO
+USER B → WEB REPO
+API REPO → 1.0.0
+API REPO → 1.1.0
 ```
 
 A registry contains repositories.
@@ -568,15 +559,10 @@ A single-platform image manifest commonly references:
 A simplified representation is:
 
 ```text
-                  IMAGE MANIFEST
-                         |
-              +----------+----------+
-              |                     |
-              v                     v
-       CONFIGURATION             LAYERS
-              |                     |
-              v                     v
-       IMAGE METADATA          FILESYSTEM
+IMAGE MANIFEST → CONFIGURATION
+IMAGE MANIFEST → LAYERS
+CONFIGURATION → IMAGE METADATA
+LAYERS → FILESYSTEM
 ```
 
 The manifest allows a client to determine which content objects are needed to retrieve the image.
@@ -612,18 +598,12 @@ A common use is multi-platform distribution.
 Example:
 
 ```text
-                  IMAGE INDEX
-                       |
-          +------------+------------+
-          |                         |
-          v                         v
-    linux/amd64                linux/arm64
-          |                         |
-          v                         v
-     MANIFEST A                MANIFEST B
-          |                         |
-          v                         v
-     IMAGE FILES               IMAGE FILES
+IMAGE INDEX → linux/amd64
+IMAGE INDEX → linux/arm64
+linux/amd64 → MANIFEST A
+linux/arm64 → MANIFEST B
+MANIFEST A → IMAGE FILES
+MANIFEST B → IMAGE FILES
 ```
 
 A compatible registry can store an image index and its associated platform-specific manifests.

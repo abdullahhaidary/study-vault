@@ -177,16 +177,45 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       selected: AiExecutionSelection.fromModelId(currentId),
     );
     if (selected == null || !mounted) return;
+    final stored = selected.persistedModelId;
 
     final chatId = ref.read(activeAiChatIdProvider);
     if (chatId == null) {
-      ref.read(pendingAiChatModelIdProvider.notifier).state =
-          selected.requestedModelId;
+      ref.read(pendingAiChatModelIdProvider.notifier).state = stored;
       return;
     }
-    await ref
-        .read(aiChatServiceProvider)
-        .setChatModel(chatId, selected.requestedModelId);
+    await ref.read(aiChatServiceProvider).setChatModel(chatId, stored);
+  }
+
+  Future<bool> _ensureProfileForSend() async {
+    final chatId = ref.read(activeAiChatIdProvider);
+    final pending = ref.read(pendingAiChatModelIdProvider);
+    final settings = await ref.read(aiSettingsStateProvider.future);
+    final modelId = chatId == null
+        ? (pending ?? settings.globalModelId)
+        : (await ref.read(aiChatServiceProvider).db.getAiChatById(chatId))
+                  ?.modelId ??
+              settings.globalModelId;
+    final available = await ref.read(
+      aiModelProfileAvailableProvider(modelId).future,
+    );
+    if (available) return true;
+    if (!mounted) return false;
+    final replacement = await showAiModelSelector(
+      context,
+      selected: AiExecutionSelection.fromModelId(modelId),
+      title: 'API profile unavailable',
+      subtitle:
+          'Choose another profile before sending. This chat stays readable.',
+    );
+    if (replacement == null || !mounted) return false;
+    final stored = replacement.persistedModelId;
+    if (chatId == null) {
+      ref.read(pendingAiChatModelIdProvider.notifier).state = stored;
+    } else {
+      await ref.read(aiChatServiceProvider).setChatModel(chatId, stored);
+    }
+    return true;
   }
 
   Future<void> _addAttachment(AiContextItem item) async {
@@ -250,6 +279,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final configured = await ref.read(aiConfiguredProvider.future);
     final consent = await ref.read(aiPrivacyConsentProvider.future);
     if (!configured || !consent) return;
+    if (!await _ensureProfileForSend()) return;
 
     final sendText = text.isEmpty
         ? 'Please use the attached study content.'
@@ -458,10 +488,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final modelId =
         chatAsync?.valueOrNull?.modelId ??
         pendingModelId ??
+        settingsAsync.valueOrNull?.globalModelId ??
         settingsAsync.valueOrNull?.modelId ??
         GeminiModelRegistry.defaultModelId;
+    final profileAvailable =
+        ref.watch(aiModelProfileAvailableProvider(modelId)).valueOrNull ?? true;
     final modelKnown = AiModels.isKnown(modelId);
-    final modelLabel = AiModels.chatDisplayName(modelId);
+    final modelLabel = profileAvailable
+        ? AiModels.chatDisplayName(modelId)
+        : 'API profile unavailable';
     final isDeepSeek =
         AiProviderIdX.fromModelId(modelId) == AiProviderId.deepseek;
 

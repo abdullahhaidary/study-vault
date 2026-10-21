@@ -13,6 +13,14 @@ class AiNotConfiguredException extends AiException {
   ]);
 }
 
+/// The chat or job names a custom profile that was deleted or never migrated.
+class AiProfileUnavailableException extends AiNotConfiguredException {
+  const AiProfileUnavailableException()
+    : super(
+        'API profile unavailable. Choose another profile before continuing.',
+      );
+}
+
 class AiPrivacyNotAcceptedException extends AiException {
   const AiPrivacyNotAcceptedException()
     : super('Please accept the AI privacy notice first.');

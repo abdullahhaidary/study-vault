@@ -4,6 +4,7 @@ import '../core/navigation/shell_tab.dart';
 import '../core/widgets/app_shell.dart';
 import '../features/class_roadmap/presentation/class_roadmap_screen.dart';
 import '../features/classes/presentation/class_details_screen.dart';
+import '../features/interactive_html/presentation/html_study_screen.dart';
 import '../features/lessons/presentation/image_study_screen.dart';
 import '../features/lessons/presentation/lesson_details_screen.dart';
 import '../features/lessons/presentation/lesson_images_screen.dart';
@@ -22,6 +23,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/study_review/presentation/recent_reviews_screen.dart';
 import '../features/study_schedule/presentation/study_schedule_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
+import '../features/ai_generation_queue/presentation/generation_center_screen.dart';
 import '../features/course_review/presentation/course_review_screen.dart';
 import '../features/reference_books/presentation/book_details_screen.dart';
 import '../features/reference_books/presentation/books_shelf_screen.dart';
@@ -36,6 +38,7 @@ abstract final class AppRoutes {
   static const pdfStudy = '/pdf-study';
   static const imageStudy = '/image-study';
   static const markdownStudy = '/markdown-study';
+  static const htmlStudy = '/html-study';
   static const search = '/search';
   static const aiChat = '/ai-chat';
   static const favorites = '/favorites';
@@ -51,6 +54,7 @@ abstract final class AppRoutes {
   static const reviews = '/reviews';
   static const studySchedule = '/schedule';
   static const courseReview = '/course-review';
+  static const generationCenter = '/generation-center';
   static const books = '/books';
   static const bookDetails = '/book';
 }
@@ -240,11 +244,29 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         ),
       );
 
+    case AppRoutes.generationCenter:
+      final jobId = settings.arguments as String?;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => GenerationCenterScreen(initialJobId: jobId),
+      );
+
     case AppRoutes.markdownStudy:
       final args = settings.arguments as Map<String, String>;
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => MarkdownStudyScreen(
+          resourceId: args['resourceId']!,
+          title: args['title']!,
+          filePath: args['filePath']!,
+        ),
+      );
+
+    case AppRoutes.htmlStudy:
+      final args = settings.arguments as Map<String, String>;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => HtmlStudyScreen(
           resourceId: args['resourceId']!,
           title: args['title']!,
           filePath: args['filePath']!,

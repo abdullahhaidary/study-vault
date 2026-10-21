@@ -295,39 +295,17 @@ Confirm normal functionality and record the findings.
 # 7. DIAGNOSTIC PROCESS DIAGRAM
 
 ```text
-                 FAILURE REPORTED
-                        |
-                        v
-                IDENTIFY SYMPTOM
-                        |
-                        v
-              ESTABLISH EXPECTATION
-                        |
-                        v
-                COLLECT EVIDENCE
-                        |
-                        v
-                FORM HYPOTHESES
-                        |
-                        v
-                PERFORM TESTS
-                        |
-                        v
-               CAUSE IDENTIFIED?
-                   /         \
-                  /           \
-                 NO           YES
-                 |             |
-                 v             v
-          COLLECT FURTHER    APPLY FIX
-             EVIDENCE          |
-                 |             v
-                 |         VERIFY RESULT
-                 |             |
-                 +----<--------+
-                               |
-                               v
-                       DOCUMENT FINDINGS
+FAILURE REPORTED → IDENTIFY SYMPTOM
+IDENTIFY SYMPTOM → ESTABLISH EXPECTATION
+ESTABLISH EXPECTATION → COLLECT EVIDENCE
+COLLECT EVIDENCE → FORM HYPOTHESES
+FORM HYPOTHESES → PERFORM TESTS
+PERFORM TESTS → CAUSE IDENTIFIED?
+CAUSE IDENTIFIED? → COLLECT FURTHER EVIDENCE (NO)
+CAUSE IDENTIFIED? → APPLY FIX (YES)
+APPLY FIX → VERIFY RESULT
+VERIFY RESULT → COLLECT FURTHER EVIDENCE
+VERIFY RESULT → DOCUMENT FINDINGS
 ```
 
 This model encourages deliberate investigation instead of random command execution.

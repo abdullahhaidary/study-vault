@@ -845,6 +845,7 @@ class _FakeCompletionClient implements PdfAiCompletionClient {
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
     required AiExecutionSelection selection,
+    void Function(String partialText)? onPartialText,
   }) async {
     this.messages.add(messages);
     final error = failure;

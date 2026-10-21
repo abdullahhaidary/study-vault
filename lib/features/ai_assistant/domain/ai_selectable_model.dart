@@ -1,3 +1,4 @@
+import 'ai_model_ref.dart';
 import 'ai_provider.dart';
 import 'deepseek_model_registry.dart';
 import 'gemini_model_registry.dart';
@@ -11,9 +12,14 @@ class AiSelectableModel {
     required this.recommended,
     required this.group,
     required this.provider,
+    this.section = '',
     this.supportsVision = false,
     this.enabled = true,
     this.disabledReason,
+    this.endpointProfileId,
+    this.endpointHost,
+    this.modelListStale = false,
+    this.modelRef,
   });
 
   final String id;
@@ -24,10 +30,19 @@ class AiSelectableModel {
   /// Legacy intra-provider group (Recommended / Fast / Other).
   final String group;
 
+  /// Picker heading. Custom profiles use their display name.
+  final String section;
+
   final AiProviderId provider;
   final bool supportsVision;
   final bool enabled;
   final String? disabledReason;
+  final String? endpointProfileId;
+  final String? endpointHost;
+  final bool modelListStale;
+  final AiModelRef? modelRef;
+
+  String get sectionLabel => section.isEmpty ? provider.displayName : section;
 
   AiSelectableModel copyWith({bool? enabled, String? disabledReason}) {
     return AiSelectableModel(
@@ -36,10 +51,15 @@ class AiSelectableModel {
       description: description,
       recommended: recommended,
       group: group,
+      section: section,
       provider: provider,
       supportsVision: supportsVision,
       enabled: enabled ?? this.enabled,
       disabledReason: disabledReason ?? this.disabledReason,
+      endpointProfileId: endpointProfileId,
+      endpointHost: endpointHost,
+      modelListStale: modelListStale,
+      modelRef: modelRef,
     );
   }
 

@@ -9,6 +9,8 @@ import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
+import '../domain/ai_model_ref.dart';
+import 'ai_endpoint_profiles_section.dart';
 import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
 import 'widgets/deepseek_pricing_banner.dart';
@@ -25,7 +27,6 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   final _keyController = TextEditingController();
   bool _saving = false;
   bool _testing = false;
-  bool _loadingModels = false;
   String? _testMessage;
   bool _testOk = false;
 
@@ -162,130 +163,6 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     }
   }
 
-  Future<void> _browseNewApiModels() async {
-    setState(() => _loadingModels = true);
-    try {
-      final models = await ref
-          .read(newApiClaudeServiceProvider)
-          .listAvailableModels();
-      if (!mounted) return;
-      if (models.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This key has no available models on the server.'),
-          ),
-        );
-        return;
-      }
-      final selected = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Choose a Claude-compatible model'),
-          content: SizedBox(
-            width: 400,
-            height: 360,
-            child: ListView.builder(
-              itemCount: models.length,
-              itemBuilder: (context, index) => ListTile(
-                title: Text(models[index]),
-                onTap: () => Navigator.pop(context, models[index]),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-      if (selected == null || !mounted) return;
-      await ref
-          .read(aiSettingsStoreProvider)
-          .setModelIdFor(AiProviderId.newApi, selected);
-      await _refresh();
-    } on AiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not load models from the New API server.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loadingModels = false);
-    }
-  }
-
-  Future<void> _editNewApiConfig(AiSettingsState state) async {
-    final url = TextEditingController(text: state.newApiBaseUrl);
-    final model = TextEditingController(
-      text: state.modelId.replaceFirst(RegExp(r'^newapi:'), ''),
-    );
-    try {
-      final save = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('New API Claude server'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: url,
-                decoration: const InputDecoration(
-                  labelText: 'HTTPS server base URL',
-                  hintText: 'https://your-server.example/v1',
-                ),
-              ),
-              TextField(
-                controller: model,
-                decoration: const InputDecoration(
-                  labelText: 'Claude model ID',
-                  hintText: 'Model ID enabled on your server',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      );
-      if (save != true) return;
-      if (model.text.trim().isEmpty || url.text.trim().isEmpty) {
-        throw const FormatException('Enter a server URL and model ID.');
-      }
-      await ref.read(aiSettingsStoreProvider).setNewApiBaseUrl(url.text);
-      await ref
-          .read(aiSettingsStoreProvider)
-          .setModelIdFor(AiProviderId.newApi, model.text);
-      await _refresh();
-    } on FormatException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } finally {
-      url.dispose();
-      model.dispose();
-    }
-  }
-
   Future<void> _showReplaceKeyDialog(AiProviderId provider) async {
     _keyController.clear();
     await showDialog<void>(
@@ -361,7 +238,36 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ],
                   onChanged: (value) async {
                     if (value == null) return;
-                    await ref.read(aiSettingsStoreProvider).setProvider(value);
+                    final store = ref.read(aiSettingsStoreProvider);
+                    if (value == AiProviderId.newApi) {
+                      final profiles = await ref
+                          .read(aiEndpointProfileRepositoryProvider)
+                          .list();
+                      final active = await store.getActiveEndpointProfileId();
+                      final profile =
+                          profiles
+                              .where((item) => item.id == active)
+                              .firstOrNull ??
+                          profiles
+                              .where((item) => item.defaultModelId.isNotEmpty)
+                              .firstOrNull;
+                      if (profile != null &&
+                          profile.defaultModelId.isNotEmpty) {
+                        await store.setGlobalModelRef(
+                          EndpointAiModelRef(
+                            profileId: profile.id,
+                            modelId: profile.defaultModelId,
+                          ),
+                        );
+                      } else {
+                        await store.setProvider(value);
+                      }
+                    } else {
+                      await store.setGlobalModelRef(
+                        AiModelRef.parse(await store.getModelIdFor(value)),
+                      );
+                    }
+                    if (!mounted) return;
                     setState(() {
                       _testMessage = null;
                     });
@@ -376,32 +282,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ),
                 if (provider == AiProviderId.newApi) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Server: ${state.newApiBaseUrl.isEmpty ? 'Not set' : state.newApiBaseUrl}',
-                  ),
-                  Text(
-                    'Model: ${state.modelId.length <= 7 ? 'Not set' : state.modelId.substring(7)}',
-                  ),
-                  TextButton(
-                    onPressed: () => _editNewApiConfig(state),
-                    child: const Text('Edit server and model'),
-                  ),
-                  TextButton(
-                    onPressed:
-                        _loadingModels ||
-                            !state.newApiConfigured ||
-                            state.newApiBaseUrl.isEmpty
-                        ? null
-                        : _browseNewApiModels,
-                    child: Text(
-                      _loadingModels
-                          ? 'Loading models…'
-                          : 'Browse available models',
-                    ),
-                  ),
+                  const SizedBox(height: 8),
                   const Text(
-                    'Use your own New API server URL, not the documentation URL.',
+                    'Choose a profile below as the global default. Each profile keeps its own server, key, and models.',
                   ),
                 ],
                 if (provider == AiProviderId.deepseek) ...[
@@ -506,6 +389,13 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                                 : 'Add another key',
                           ),
                   ),
+                ] else if (provider == AiProviderId.newApi) ...[
+                  Text(
+                    'API keys are saved on each profile below and are not shown again.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ] else if (configured) ...[
                   Text('••••••••••••••••', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
@@ -593,6 +483,8 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ],
                 const SizedBox(height: 20),
+                const AiEndpointProfilesSection(),
+                const SizedBox(height: 16),
                 if (provider != AiProviderId.newApi) ...[
                   Text('Default Model', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
@@ -793,4 +685,3 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     );
   }
 }
-

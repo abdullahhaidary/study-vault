@@ -441,6 +441,32 @@ abstract final class PdfAiPromptBuilder {
     ];
   }
 
+  /// Asks the model to extend a cut-off answer instead of starting over.
+  static List<Map<String, String>> continuationMessages({
+    required PdfAiMaterialType type,
+    required String partialMarkdown,
+    String? sourceExcerpt,
+    String? customInstruction,
+    String? userStyle,
+  }) {
+    final instruction = customInstruction?.trim();
+    return [
+      {'role': 'system', 'content': systemContent(userStyle: userStyle)},
+      if (sourceExcerpt != null && sourceExcerpt.trim().isNotEmpty)
+        {'role': 'user', 'content': sourceExcerpt},
+      {
+        'role': 'user',
+        'content':
+            'CONTINUE REQUEST: ${type.displayName}\n\n'
+            'The previous response was cut off. Continue exactly after the '
+            'partial content. Do not restart. Do not repeat headings or '
+            'paragraphs that are already written. Output only the continuation.\n\n'
+            'PARTIAL CONTENT:\n${partialMarkdown.trim()}'
+            '${instruction == null || instruction.isEmpty ? '' : '\n\nAdditional instruction:\n$instruction'}',
+      },
+    ];
+  }
+
   static List<Map<String, String>> chunkDigestMessages({
     required String documentChunk,
     required int chunkNumber,

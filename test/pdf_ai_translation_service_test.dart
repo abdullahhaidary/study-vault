@@ -18,6 +18,7 @@ class _Translator implements PdfAiCompletionClient {
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
     required AiExecutionSelection selection,
+    void Function(String partialText)? onPartialText,
   }) async {
     final prompt = messages.last['content']!;
     prompts.add(prompt);

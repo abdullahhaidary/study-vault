@@ -156,20 +156,13 @@ Therefore, image optimization must account for multiple requirements.
 ## 3.4 Quality Model
 
 ```text
-                IMAGE QUALITY
-                     |
-       +-------------+-------------+
-       |             |             |
-       v             v             v
-  CORRECTNESS     EFFICIENCY    SECURITY
-       |             |             |
-       +-------------+-------------+
-                     |
-                     v
-                MAINTAINABILITY
-                     |
-                     v
-               REPRODUCIBILITY
+IMAGE QUALITY → CORRECTNESS
+IMAGE QUALITY → EFFICIENCY
+IMAGE QUALITY → SECURITY
+CORRECTNESS → MAINTAINABILITY
+EFFICIENCY → MAINTAINABILITY
+SECURITY → MAINTAINABILITY
+MAINTAINABILITY → REPRODUCIBILITY
 ```
 
 No single measurement completely describes image quality.
@@ -239,14 +232,10 @@ Many Dockerfile instructions affect the filesystem state used to construct the i
 ## 5.2 Simplified Representation
 
 ```text
-               FINAL IMAGE
-          +---------------------+
-          | Application Files   |
-          +---------------------+
-          | Installed Packages  |
-          +---------------------+
-          | Base Image Content  |
-          +---------------------+
+FINAL IMAGE
+[ Application Files ]
+[ Installed Packages ]
+[ Base Image Content ]
 ```
 
 The image exposes a unified filesystem when a container executes.
@@ -427,27 +416,15 @@ The final image can contain the required application artifact without including 
 ## 9.4 Architecture
 
 ```text
-                SOURCE CODE
-                     |
-                     v
-               BUILD STAGE
-        +-------------------------+
-        | Compiler                |
-        | Build Tools             |
-        | Source Code             |
-        | Compiled Application    |
-        +-------------------------+
-                     |
-                     | COPY --from
-                     v
-               RUNTIME STAGE
-        +-------------------------+
-        | Compiled Application    |
-        | Required Runtime Files  |
-        +-------------------------+
-                     |
-                     v
-                 FINAL IMAGE
+SOURCE CODE → BUILD STAGE
+BUILD STAGE → Compiler
+BUILD STAGE → Build Tools
+BUILD STAGE → Source Code
+BUILD STAGE → Compiled Application
+BUILD STAGE → RUNTIME STAGE (COPY --from)
+RUNTIME STAGE → Compiled Application
+RUNTIME STAGE → Required Runtime Files
+RUNTIME STAGE → FINAL IMAGE
 ```
 
 ---
@@ -751,29 +728,14 @@ This permits BuildKit to identify independent operations and avoid unnecessary w
 ## 17.1 Simplified Architecture
 
 ```text
-                DOCKERFILE
-                    |
-                    v
-             DOCKERFILE FRONTEND
-                    |
-                    v
-              BUILD OPERATIONS
-                    |
-                    v
-               BUILDKIT ENGINE
-                    |
-          +---------+---------+
-          |                   |
-          v                   v
-      CACHE LOOKUP        EXECUTION
-          |                   |
-          +---------+---------+
-                    |
-                    v
-              BUILD OUTPUT
-                    |
-                    v
-                IMAGE
+DOCKERFILE → DOCKERFILE FRONTEND
+DOCKERFILE FRONTEND → BUILD OPERATIONS
+BUILD OPERATIONS → BUILDKIT ENGINE
+BUILDKIT ENGINE → CACHE LOOKUP
+BUILDKIT ENGINE → EXECUTION
+CACHE LOOKUP → BUILD OUTPUT
+EXECUTION → BUILD OUTPUT
+BUILD OUTPUT → IMAGE
 ```
 
 ## 17.2 Optimization
@@ -918,21 +880,12 @@ Reusing cached results can avoid repeating:
 ## 21.3 Cache Model
 
 ```text
-           DOCKERFILE INSTRUCTION
-                     |
-                     v
-                CACHE LOOKUP
-                     |
-          +----------+----------+
-          |                     |
-          v                     v
-       CACHE HIT             CACHE MISS
-          |                     |
-          v                     v
-     REUSE RESULT        EXECUTE OPERATION
-                                |
-                                v
-                           STORE RESULT
+DOCKERFILE INSTRUCTION → CACHE LOOKUP
+CACHE LOOKUP → CACHE HIT
+CACHE LOOKUP → CACHE MISS
+CACHE HIT → REUSE RESULT
+CACHE MISS → EXECUTE OPERATION
+EXECUTE OPERATION → STORE RESULT
 ```
 
 ## 21.4 Cache Correctness

@@ -1134,6 +1134,7 @@ class AppDatabase extends _$AppDatabase {
       // Other local writers (the Devin MCP tool) may hold a brief lock.
       await customStatement('PRAGMA busy_timeout = 10000');
       await _createLocalBookTables();
+      await _createLocalAiGenerationJobs();
       await _repairLessonMaterialVariantUniqueness();
     },
     onCreate: (Migrator m) async {
@@ -1409,6 +1410,63 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_study_schedule_events_lesson '
       'ON study_schedule_events (lesson_id, sequence_number DESC)',
     );
+  }
+
+  /// Device-local generation queue. Not a Drift table, so it never syncs.
+  Future<void> _createLocalAiGenerationJobs() async {
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS local_ai_generation_jobs ('
+      'id TEXT PRIMARY KEY, '
+      'operation_kind TEXT NOT NULL, '
+      'material_id TEXT NOT NULL, '
+      'lesson_id TEXT, '
+      'title TEXT NOT NULL, '
+      'file_path TEXT NOT NULL, '
+      'material_type TEXT NOT NULL, '
+      'provider TEXT NOT NULL, '
+      'requested_model TEXT NOT NULL, '
+      'resolved_model TEXT NOT NULL, '
+      'thinking_mode TEXT, '
+      'endpoint_profile_id TEXT, '
+      'status TEXT NOT NULL, '
+      'phase TEXT NOT NULL, '
+      'progress_current INTEGER NOT NULL DEFAULT 0, '
+      'progress_total INTEGER NOT NULL DEFAULT 0, '
+      'attempt_count INTEGER NOT NULL DEFAULT 0, '
+      'partial_output TEXT, '
+      'checkpoint_json TEXT, '
+      'request_json TEXT NOT NULL, '
+      'result_material_id TEXT, '
+      'error_message TEXT, '
+      'error_category TEXT, '
+      'parent_job_id TEXT, '
+      'superseded_by_job_id TEXT, '
+      'warning_message TEXT, '
+      'created_at INTEGER NOT NULL, '
+      'started_at INTEGER, '
+      'updated_at INTEGER NOT NULL, '
+      'completed_at INTEGER)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_local_ai_jobs_material '
+      'ON local_ai_generation_jobs (material_id, material_type, status)',
+    );
+    await _ensureLocalColumn(
+      'local_ai_generation_jobs',
+      'endpoint_profile_id',
+      'TEXT',
+    );
+  }
+
+  Future<void> _ensureLocalColumn(
+    String table,
+    String column,
+    String type,
+  ) async {
+    final info = await customSelect('PRAGMA table_info($table)').get();
+    final names = info.map((row) => row.read<String>('name')).toSet();
+    if (names.contains(column)) return;
+    await customStatement('ALTER TABLE $table ADD COLUMN $column $type');
   }
 
   /// Device-local, derivable book data. Deliberately not Drift tables so

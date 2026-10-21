@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../data/ai_credential_store.dart';
+import '../data/ai_endpoint_profile_repository.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
+import '../domain/ai_endpoint_profile.dart';
+import '../domain/ai_model_ref.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_style_memory.dart';
 import '../domain/annotation_ai_history.dart';
@@ -25,6 +28,30 @@ final aiSettingsStoreProvider = Provider<AiSettingsStore>((ref) {
   return SharedPreferencesAiSettingsStore();
 });
 
+final aiEndpointProfileRepositoryProvider =
+    Provider<AiEndpointProfileRepository>((ref) {
+      return AiEndpointProfileRepository(
+        store: SharedPreferencesAiEndpointCatalogStore(),
+        settings: ref.watch(aiSettingsStoreProvider),
+        credentials: ref.watch(aiCredentialStoreProvider),
+      );
+    });
+
+final aiEndpointProfilesProvider = FutureProvider<List<AiEndpointProfile>>((
+  ref,
+) async {
+  return ref.watch(aiEndpointProfileRepositoryProvider).list();
+});
+
+final aiModelProfileAvailableProvider = FutureProvider.family<bool, String>((
+  ref,
+  modelId,
+) async {
+  return ref
+      .watch(aiEndpointProfileRepositoryProvider)
+      .isAvailable(AiModelRef.parse(modelId));
+});
+
 final geminiAiServiceProvider = Provider<GeminiAiService>((ref) {
   return GeminiAiService(
     credentials: ref.watch(aiCredentialStoreProvider),
@@ -43,6 +70,7 @@ final newApiClaudeServiceProvider = Provider<NewApiClaudeService>((ref) {
   return NewApiClaudeService(
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),
+    profiles: ref.watch(aiEndpointProfileRepositoryProvider),
   );
 });
 
@@ -128,6 +156,7 @@ class AiSettingsState {
     required this.deepseekConfigured,
     required this.newApiConfigured,
     required this.newApiBaseUrl,
+    required this.globalModelId,
   });
 
   final AiProviderId provider;
@@ -144,6 +173,7 @@ class AiSettingsState {
   final bool deepseekConfigured;
   final bool newApiConfigured;
   final String newApiBaseUrl;
+  final String globalModelId;
 
   AiProviderCapabilities get capabilities =>
       AiProviderCapabilities.forProvider(provider);
@@ -166,7 +196,13 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
     geminiKeyCount: (await creds.readApiKeysFor(AiProviderId.gemini)).length,
     geminiKeySuffixes: await creds.readApiKeySuffixesFor(AiProviderId.gemini),
     deepseekConfigured: await creds.hasApiKeyFor(AiProviderId.deepseek),
-    newApiConfigured: await creds.hasApiKeyFor(AiProviderId.newApi),
+    newApiConfigured:
+        await creds.hasApiKeyFor(AiProviderId.newApi) ||
+        (await ref.watch(aiEndpointProfileRepositoryProvider).list()).any(
+          (profile) =>
+              profile.keySuffix.isNotEmpty && profile.baseUrl.isNotEmpty,
+        ),
     newApiBaseUrl: await settings.getNewApiBaseUrl(),
+    globalModelId: (await settings.getGlobalModelRef()).storageValue,
   );
 });

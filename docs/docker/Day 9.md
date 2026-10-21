@@ -185,16 +185,11 @@ Such changes may include:
 ## 3.3 Layered Filesystem Model
 
 ```text
-          RUNNING CONTAINER
-+----------------------------------+
-| Container Writable Layer         |
-+----------------------------------+
-| Image Layer 3                    |
-+----------------------------------+
-| Image Layer 2                    |
-+----------------------------------+
-| Image Layer 1                    |
-+----------------------------------+
+RUNNING CONTAINER
+[ Container Writable Layer ]
+[ Image Layer 3 ]
+[ Image Layer 2 ]
+[ Image Layer 1 ]
 ```
 
 The application ordinarily observes a unified filesystem hierarchy.
@@ -373,20 +368,11 @@ On Docker Desktop, the actual storage generally resides in Docker's Linux execut
 ## 6.4 Volume Architecture
 
 ```text
-              DOCKER ENGINE
-                    |
-           +--------+--------+
-           |                 |
-           v                 v
-      CONTAINER A       CONTAINER B
-           |                 |
-           +--------+--------+
-                    |
-                    v
-               NAMED VOLUME
-                    |
-                    v
-             STORED FILESYSTEM
+DOCKER ENGINE → CONTAINER A
+DOCKER ENGINE → CONTAINER B
+CONTAINER A → NAMED VOLUME
+CONTAINER B → NAMED VOLUME
+NAMED VOLUME → STORED FILESYSTEM
 ```
 
 Multiple containers may be able to mount the same volume.

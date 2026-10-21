@@ -179,20 +179,13 @@ Docker Compose is responsible for configuring and managing:
 ## 3.4 Separation of Responsibilities
 
 ```text
-             DOCKER COMPOSE
-                   |
-      +------------+------------+
-      |                         |
-      v                         v
-  WEB SERVICE              REDIS SERVICE
-      |                         |
-      v                         v
- HTTP LOGIC               KEY-VALUE STORAGE
-      |                         |
-      +------- NETWORK ---------+
-                                |
-                                v
-                           NAMED VOLUME
+DOCKER COMPOSE → WEB SERVICE
+DOCKER COMPOSE → REDIS SERVICE
+WEB SERVICE → HTTP LOGIC
+REDIS SERVICE → KEY-VALUE STORAGE
+HTTP LOGIC → NETWORK
+KEY-VALUE STORAGE → NETWORK
+KEY-VALUE STORAGE → NAMED VOLUME
 ```
 
 The web application and Redis implement the application behavior.
@@ -378,23 +371,12 @@ It can load a Flask application and serve HTTP requests using worker processes.
 ## 6.4 Application Execution Model
 
 ```text
-              HTTP CLIENT
-                   |
-                   v
-             GUNICORN SERVER
-                   |
-          +--------+--------+
-          |                 |
-          v                 v
-       WORKER 1          WORKER 2
-          |                 |
-          v                 v
-       FLASK APP         FLASK APP
-          |                 |
-          +--------+--------+
-                   |
-                   v
-                  REDIS
+HTTP CLIENT → GUNICORN SERVER
+GUNICORN SERVER → WORKER 1
+GUNICORN SERVER → WORKER 2
+WORKER 1 → FLASK APP
+WORKER 2 → FLASK APP
+FLASK APP → REDIS
 ```
 
 The diagram is a logical representation.
@@ -1275,58 +1257,26 @@ The application must:
 # 22. COMPLETE SYSTEM ARCHITECTURE
 
 ```text
-                   USER
-                    |
-                    v
-                WEB BROWSER
-                    |
-               HTTP REQUEST
-                    |
-                    v
-          127.0.0.1:8222
-                    |
-                    v
-             DOCKER HOST
-                    |
-              PORT MAPPING
-                    |
-                    v
-        +------------------------+
-        |       WEB SERVICE      |
-        |                        |
-        |      GUNICORN          |
-        |          |             |
-        |          v             |
-        |      FLASK APP         |
-        |                        |
-        |   GET /api/count       |
-        |   POST /api/increment  |
-        |   GET /health          |
-        |   GET /ready           |
-        +------------------------+
-                    |
-                    |
-             backend NETWORK
-                    |
-                redis:6379
-                    |
-                    v
-        +------------------------+
-        |      REDIS SERVICE     |
-        |                        |
-        |    KEY-VALUE STORE     |
-        |                        |
-        | lecture12:counter      |
-        +------------------------+
-                    |
-                    v
-                  /data
-                    |
-                    v
-           DOCKER NAMED VOLUME
-                    |
-                    v
-             PERSISTENT FILES
+USER → WEB BROWSER
+WEB BROWSER → HTTP REQUEST
+HTTP REQUEST → 127.0.0.1:8222
+127.0.0.1:8222 → DOCKER HOST
+DOCKER HOST → PORT MAPPING
+PORT MAPPING → WEB SERVICE
+WEB SERVICE → GUNICORN
+GUNICORN → FLASK APP
+WEB SERVICE → GET /api/count
+WEB SERVICE → POST /api/increment
+WEB SERVICE → GET /health
+WEB SERVICE → GET /ready
+WEB SERVICE → backend NETWORK
+backend NETWORK → redis:6379
+redis:6379 → REDIS SERVICE
+REDIS SERVICE → KEY-VALUE STORE
+KEY-VALUE STORE → lecture12:counter
+REDIS SERVICE → /data
+/data → DOCKER NAMED VOLUME
+DOCKER NAMED VOLUME → PERSISTENT FILES
 ```
 
 The application has two distinct state lifecycles.

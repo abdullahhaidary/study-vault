@@ -31,6 +31,7 @@ final newApiClaudeChatServiceProvider = Provider<AiChatTransport>((ref) {
   return NewApiClaudeChatService(
     service: ref.watch(newApiClaudeServiceProvider),
     settings: ref.watch(aiSettingsStoreProvider),
+    profiles: ref.watch(aiEndpointProfileRepositoryProvider),
   );
 });
 
@@ -54,6 +55,7 @@ final aiChatServiceProvider = Provider<AiChatService>((ref) {
     db: ref.watch(databaseProvider),
     transport: ref.watch(aiChatTransportProvider),
     settings: ref.watch(aiSettingsStoreProvider),
+    profiles: ref.watch(aiEndpointProfileRepositoryProvider),
   );
 });
 

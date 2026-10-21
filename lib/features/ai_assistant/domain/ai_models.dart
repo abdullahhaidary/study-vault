@@ -274,12 +274,19 @@ sealed class AiStudyResult {
   final AiTokenUsage? usage;
 }
 
+enum AiCompletionDisposition { complete, partialConnection, partialTimeout }
+
 class AiTextResult extends AiStudyResult {
-  const AiTextResult({required this.markdown, super.usage});
+  const AiTextResult({
+    required this.markdown,
+    super.usage,
+    this.disposition = AiCompletionDisposition.complete,
+  });
   final String markdown;
+  final AiCompletionDisposition disposition;
 
   AiTextResult withUsage(AiTokenUsage? next) =>
-      AiTextResult(markdown: markdown, usage: next);
+      AiTextResult(markdown: markdown, usage: next, disposition: disposition);
 }
 
 class AiAnnotationDraft extends AiStudyResult {

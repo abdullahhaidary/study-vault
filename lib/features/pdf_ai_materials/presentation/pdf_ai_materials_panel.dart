@@ -6,7 +6,6 @@ import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
-import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
 import '../../ai_assistant/presentation/widgets/ai_model_picker.dart';
@@ -15,8 +14,10 @@ import '../data/pdf_ai_material_providers.dart';
 import '../data/pdf_ai_preferred_store.dart';
 import '../domain/pdf_ai_material_models.dart';
 import '../domain/pdf_ai_versioning.dart';
+import '../../ai_generation_queue/data/ai_generation_providers.dart';
 import 'pdf_ai_manual_import_dialog.dart';
 import 'pdf_ai_material_reader_screen.dart';
+import 'pdf_ai_queue_actions.dart';
 import 'pdf_ai_translation_actions.dart';
 
 class PdfAiMaterialsPanel extends ConsumerWidget {
@@ -188,7 +189,17 @@ class _MaterialTypeView extends ConsumerStatefulWidget {
 }
 
 class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
-  bool _generating = false;
+  bool get _generating {
+    return ref
+            .read(
+              pdfAiJobForTargetProvider((
+                materialId: widget.materialId,
+                type: widget.type,
+              )),
+            )
+            ?.isActive ??
+        false;
+  }
 
   Future<void> _generate() async {
     if (_generating) return;
@@ -210,38 +221,17 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
         selection;
 
     final alsoPersian = ref.read(pdfAiAlsoPersianProvider).valueOrNull ?? false;
-    setState(() => _generating = true);
-    try {
-      final generated = await ref
-          .read(pdfAiMaterialServiceProvider)
-          .generate(
-            materialId: widget.materialId,
-            title: widget.title,
-            filePath: widget.filePath,
-            type: widget.type,
-            selection: selection,
-            customInstruction: '',
-          );
-      if (alsoPersian && mounted) {
-        await translatePdfAiVersion(
-          context,
-          ref,
-          generated,
-          selection: selection,
-        );
-      }
-    } on AiException catch (error) {
-      _showError(error.message);
-    } on Object catch (error) {
-      final text = error.toString();
-      _showError(
-        text.contains('no extractable text')
-            ? 'This PDF has no extractable text. OCR is not available yet.'
-            : 'Could not generate ${widget.type.shortName.toLowerCase()}.',
-      );
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
+    if (!mounted) return;
+    await enqueuePdfMaterialGeneration(
+      context: context,
+      ref: ref,
+      materialId: widget.materialId,
+      title: widget.title,
+      filePath: widget.filePath,
+      type: widget.type,
+      selection: selection,
+      translateToPersian: alsoPersian,
+    );
   }
 
   Future<void> _importJson() async {
@@ -288,6 +278,16 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
 
   @override
   Widget build(BuildContext context) {
+    final generating =
+        ref
+            .watch(
+              pdfAiJobForTargetProvider((
+                materialId: widget.materialId,
+                type: widget.type,
+              )),
+            )
+            ?.isActive ??
+        false;
     final current = widget.current;
     if (current != null) {
       return PdfAiMaterialReaderScreen(
@@ -318,15 +318,16 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
+            PdfAiQueueBanner(materialId: widget.materialId, type: widget.type),
             FilledButton.icon(
-              onPressed: _generating ? null : _generate,
-              icon: _generating
+              onPressed: generating ? null : _generate,
+              icon: generating
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.auto_awesome),
-              label: Text(_generating ? 'Generating…' : 'Generate'),
+              label: Text(generating ? 'Generating…' : 'Generate'),
             ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 320),
@@ -334,7 +335,7 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
                 dense: true,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: ref.watch(pdfAiAlsoPersianProvider).valueOrNull ?? false,
-                onChanged: _generating
+                onChanged: generating
                     ? null
                     : (value) => setPdfAiAlsoPersian(ref, value ?? false),
                 title: const Text('Also create Persian (فارسی)'),

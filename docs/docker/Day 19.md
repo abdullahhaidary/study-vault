@@ -217,16 +217,12 @@ Resilience is the ability of a system to withstand, adapt to, and recover from d
 ## 5.4 Relationship
 
 ```text
-                  APPLICATION
-                       |
-        +--------------+--------------+
-        |              |              |
-        v              v              v
-    RELIABILITY    AVAILABILITY    RESILIENCE
-        |              |              |
-        v              v              v
-   Correct work     Accessible     Recovery from
-   over time        when needed    disruption
+APPLICATION → RELIABILITY
+APPLICATION → AVAILABILITY
+APPLICATION → RESILIENCE
+RELIABILITY → Correct work over time
+AVAILABILITY → Accessible when needed
+RESILIENCE → Recovery from disruption
 ```
 
 These properties are related but not identical.
@@ -933,20 +929,13 @@ Describe the flow of operations through one or more services.
 ## Architecture
 
 ```text
-                  APPLICATION
-                       |
-           +-----------+-----------+
-           |           |           |
-           v           v           v
-          LOGS       METRICS      TRACES
-           |           |           |
-           +-----------+-----------+
-                       |
-                       v
-               OPERATIONAL ANALYSIS
-                       |
-                       v
-                  ALERTING
+APPLICATION → LOGS
+APPLICATION → METRICS
+APPLICATION → TRACES
+LOGS → OPERATIONAL ANALYSIS
+METRICS → OPERATIONAL ANALYSIS
+TRACES → OPERATIONAL ANALYSIS
+OPERATIONAL ANALYSIS → ALERTING
 ```
 
 ---
@@ -1468,57 +1457,27 @@ The system must:
 # 55. SYSTEM ARCHITECTURE
 
 ```text id="kw8unv"
-                    LOCAL BROWSER
-                         |
-                         |
-                HTTPS localhost:8443
-                         |
-                         v
-                +------------------+
-                |      NGINX       |
-                |   TLS GATEWAY    |
-                | Container :443   |
-                +------------------+
-                         |
-                         |
-                  FRONTEND NETWORK
-                         |
-                         v
-                +------------------+
-                |      FLASK       |
-                |     GUNICORN     |
-                | Container :8000  |
-                |    NON-ROOT      |
-                | READ-ONLY ROOT   |
-                +------------------+
-                         |
-                         |
-                 INTERNAL BACKEND
-                         |
-                         v
-                +------------------+
-                |      REDIS       |
-                | Container :6379  |
-                |    AOF ENABLED   |
-                +------------------+
-                         |
-                         |
-                       /data
-                         |
-                         v
-                +------------------+
-                |   NAMED VOLUME   |
-                |    redis-data    |
-                +------------------+
-                         |
-                         |
-                 CONTROLLED BACKUP
-                         |
-                         v
-                +------------------+
-                |    TAR ARCHIVE   |
-                |   HOST BACKUPS   |
-                +------------------+
+[ LOCAL BROWSER ]
+[ HTTPS localhost:8443 ]
+[ NGINX ]
+TLS GATEWAY
+Container :443
+[ FRONTEND NETWORK ]
+[ FLASK ]
+GUNICORN
+Container :8000
+NON-ROOT
+READ-ONLY ROOT
+[ INTERNAL BACKEND ]
+[ REDIS ]
+Container :6379
+AOF ENABLED
+[ /data ]
+[ NAMED VOLUME ]
+redis-data
+[ CONTROLLED BACKUP ]
+[ TAR ARCHIVE ]
+HOST BACKUPS
 ```
 
 The system separates the browser-facing HTTPS connection from internal application communication.

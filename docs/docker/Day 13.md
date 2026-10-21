@@ -168,21 +168,11 @@ A running container does not imply that every application operation is successfu
 ## 3.4 Conceptual Architecture
 
 ```text
-              DOCKER CONTAINER
-                     |
-                     v
-              PRINCIPAL PROCESS
-                     |
-           +---------+---------+
-           |                   |
-           v                   v
-        RUNNING           APPLICATION
-                            HEALTH
-                               |
-                        +------+------+
-                        |             |
-                        v             v
-                      HEALTHY       UNHEALTHY
+DOCKER CONTAINER → PRINCIPAL PROCESS
+PRINCIPAL PROCESS → RUNNING
+PRINCIPAL PROCESS → APPLICATION HEALTH
+APPLICATION HEALTH → HEALTHY
+APPLICATION HEALTH → UNHEALTHY
 ```
 
 The process state and health state provide different information about the system.
@@ -275,24 +265,14 @@ The configured health check has failed sufficiently often to satisfy the unhealt
 ## 5.4 State Model
 
 ```text
-              CONTAINER STARTS
-                     |
-                     v
-                  STARTING
-                     |
-              HEALTH CHECK
-                     |
-          +----------+----------+
-          |                     |
-          v                     v
-       SUCCESS             REPEATED FAILURE
-          |                     |
-          v                     v
-        HEALTHY               UNHEALTHY
-          |                     |
-          +----------+----------+
-                     |
-             SUBSEQUENT CHECKS
+CONTAINER STARTS → STARTING
+STARTING → HEALTH CHECK
+HEALTH CHECK → SUCCESS
+HEALTH CHECK → REPEATED FAILURE
+SUCCESS → HEALTHY
+REPEATED FAILURE → UNHEALTHY
+HEALTHY → SUBSEQUENT CHECKS
+UNHEALTHY → SUBSEQUENT CHECKS
 ```
 
 A container can move between healthy and unhealthy states while remaining in the running state.

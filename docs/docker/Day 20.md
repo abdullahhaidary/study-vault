@@ -418,27 +418,15 @@ The automation behavior is defined through workflow files stored in the reposito
 # 13. GITHUB ACTIONS ARCHITECTURE
 
 ```text
-                 GITHUB REPOSITORY
-                        |
-                        v
-                    EVENT
-                        |
-                        v
-                 WORKFLOW FILE
-                        |
-                        v
-                      JOBS
-                        |
-                +-------+-------+
-                |               |
-                v               v
-             TEST JOB       BUILD JOB
-                |               |
-                v               v
-              STEPS           STEPS
-                |               |
-                v               v
-             RESULTS         ARTIFACTS
+GITHUB REPOSITORY → EVENT
+EVENT → WORKFLOW FILE
+WORKFLOW FILE → JOBS
+JOBS → TEST JOB
+TEST JOB → STEPS
+STEPS → RESULTS
+JOBS → BUILD JOB
+BUILD JOB → STEPS
+STEPS → ARTIFACTS
 ```
 
 The central components are:
@@ -3568,15 +3556,9 @@ For stricter reproducibility, organizations may use pinned base-image digests an
 A release can be built once and promoted through environments.
 
 ```text
-                 VERIFIED IMAGE
-                       |
-                       v
-                     DIGEST
-                       |
-          +------------+------------+
-          |                         |
-          v                         v
-        STAGING                 PRODUCTION
+VERIFIED IMAGE → DIGEST
+DIGEST → STAGING
+DIGEST → PRODUCTION
 ```
 
 The environments can use distinct runtime configuration while selecting the same image digest.

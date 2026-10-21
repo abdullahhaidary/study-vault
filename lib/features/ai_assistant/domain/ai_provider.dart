@@ -32,9 +32,16 @@ extension AiProviderIdX on AiProviderId {
 
   /// Infer provider from a persisted model id (chat history, etc.).
   static AiProviderId fromModelId(String? modelId) {
-    final id = modelId?.trim().toLowerCase() ?? '';
-    if (id.startsWith('deepseek')) return AiProviderId.deepseek;
-    if (id.startsWith('newapi:')) return AiProviderId.newApi;
+    final id = modelId?.trim() ?? '';
+    if (id.isEmpty) return AiProviderId.gemini;
+    final lower = id.toLowerCase();
+    if (lower.startsWith('sv1:endpoint:') || lower.startsWith('newapi:')) {
+      return AiProviderId.newApi;
+    }
+    if (lower.startsWith('sv1:deepseek:') || lower.startsWith('deepseek')) {
+      return AiProviderId.deepseek;
+    }
+    if (lower == 'auto') return AiProviderId.deepseek;
     return AiProviderId.gemini;
   }
 }

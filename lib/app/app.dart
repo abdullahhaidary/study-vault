@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../features/ai_generation_queue/presentation/generation_queue_host.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/desktop_frame.dart';
@@ -26,12 +27,14 @@ class StudyVaultApp extends StatelessWidget {
       builder: (context, child) {
         // Keep all routes above the system navigation / home indicator.
         // Fill the inset with surface so it matches the bottom NavigationBar.
-        return ColoredBox(
-          color: AppColors.surface,
-          child: SystemBottomSafeArea(
-            child: DesktopFrame(
-              child: StudyWorkspaceHost(
-                child: child ?? const SizedBox.shrink(),
+        return GenerationQueueHost(
+          child: ColoredBox(
+            color: AppColors.surface,
+            child: SystemBottomSafeArea(
+              child: DesktopFrame(
+                child: StudyWorkspaceHost(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
           ),

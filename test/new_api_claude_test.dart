@@ -12,6 +12,7 @@ import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_models.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_provider.dart';
+import 'package:study_vault/features/ai_assistant/data/ai_endpoint_profile_repository.dart';
 import 'package:study_vault/features/ai_assistant/services/new_api_claude_service.dart';
 import 'package:study_vault/features/ai_chat/domain/ai_chat_models.dart';
 import 'package:study_vault/features/ai_chat/services/new_api_claude_chat_service.dart';
@@ -19,10 +20,16 @@ import 'package:study_vault/features/ai_chat/services/new_api_claude_chat_servic
 void main() {
   late MemoryAiSettingsStore settings;
   late MemoryAiCredentialStore credentials;
+  late AiEndpointProfileRepository profiles;
 
   setUp(() async {
     settings = MemoryAiSettingsStore();
     credentials = MemoryAiCredentialStore();
+    profiles = AiEndpointProfileRepository(
+      store: MemoryAiEndpointCatalogStore(),
+      settings: settings,
+      credentials: credentials,
+    );
     await settings.setNewApiBaseUrl('https://api.example.test/v1');
     await settings.setModelIdFor(AiProviderId.newApi, 'claude-example');
     await settings.setPrivacyConsentAccepted(true);
@@ -63,6 +70,7 @@ void main() {
       final service = NewApiClaudeService(
         credentials: credentials,
         settings: settings,
+        profiles: profiles,
         httpClient: client,
       );
       final result = await service.completeMessages(
@@ -96,6 +104,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
 
@@ -118,6 +127,7 @@ void main() {
       final service = NewApiClaudeService(
         credentials: credentials,
         settings: settings,
+        profiles: profiles,
         httpClient: MockClient((_) async => response),
       );
       await expectLater(
@@ -151,6 +161,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     final result = await service.run(
@@ -172,6 +183,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: MockClient((_) async => fail('No request expected')),
     );
     await expectLater(
@@ -199,6 +211,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
     );
     expect(await service.isConfigured, false);
     expect(
@@ -216,6 +229,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     await expectLater(
@@ -253,6 +267,7 @@ void main() {
       final service = NewApiClaudeService(
         credentials: credentials,
         settings: settings,
+        profiles: profiles,
         httpClient: client,
       );
       expect(await service.listAvailableModels(), [
@@ -267,6 +282,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: MockClient((_) async {
         calls++;
         return http.Response(
@@ -326,9 +342,11 @@ void main() {
     });
     final chat = NewApiClaudeChatService(
       settings: settings,
+      profiles: profiles,
       service: NewApiClaudeService(
         credentials: credentials,
         settings: settings,
+        profiles: profiles,
         httpClient: client,
       ),
     );
@@ -358,6 +376,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     final events = await service
@@ -384,6 +403,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     final texts = await service
@@ -414,6 +434,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     final events = await service
@@ -441,6 +462,7 @@ void main() {
     final service = NewApiClaudeService(
       credentials: credentials,
       settings: settings,
+      profiles: profiles,
       httpClient: client,
     );
     final result = await service.completeDocumentMessages(
@@ -477,26 +499,31 @@ void main() {
     );
   });
 
-  test('document completion keeps partial text after a mid-stream drop', () async {
-    final service = NewApiClaudeService(
-      credentials: credentials,
-      settings: settings,
-      httpClient: _DroppingStreamClient(partialText: 'p' * 450),
-    );
-    final result = await service.completeDocumentMessages(
-      messages: const [
-        {'role': 'user', 'content': 'DOCUMENT'},
-      ],
-      maxOutputTokens: 8192,
-      selection: const AiExecutionSelection(
-        provider: AiProviderId.newApi,
-        requestedModelId: 'newapi:claude-example',
-        resolvedModelId: 'newapi:claude-example',
-      ),
-    );
-    expect(result.markdown, contains('p' * 450));
-    expect(result.markdown, contains('partial result'));
-  });
+  test(
+    'document completion keeps partial text after a mid-stream drop',
+    () async {
+      final service = NewApiClaudeService(
+        credentials: credentials,
+        settings: settings,
+        profiles: profiles,
+        httpClient: _DroppingStreamClient(partialText: 'p' * 450),
+      );
+      final result = await service.completeDocumentMessages(
+        messages: const [
+          {'role': 'user', 'content': 'DOCUMENT'},
+        ],
+        maxOutputTokens: 8192,
+        selection: const AiExecutionSelection(
+          provider: AiProviderId.newApi,
+          requestedModelId: 'newapi:claude-example',
+          resolvedModelId: 'newapi:claude-example',
+        ),
+      );
+      expect(result.markdown, 'p' * 450);
+      expect(result.disposition, AiCompletionDisposition.partialConnection);
+      expect(result.markdown, isNot(contains('partial result')));
+    },
+  );
 }
 
 class _DroppingStreamClient extends http.BaseClient {

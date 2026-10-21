@@ -15,6 +15,10 @@ abstract class AiCredentialStore {
   Future<void> replaceApiKeyFor(AiProviderId provider, String key);
   Future<void> removeApiKeyFor(AiProviderId provider);
   Future<void> removeApiKeyAt(AiProviderId provider, int index);
+  Future<String?> readEndpointKey(String profileId);
+  Future<void> writeEndpointKey(String profileId, String key);
+  Future<void> deleteEndpointKey(String profileId);
+  Future<bool> hasEndpointKey(String profileId);
 }
 
 /// Android Keystore / Linux libsecret via flutter_secure_storage.
@@ -26,6 +30,9 @@ class SecureAiCredentialStore implements AiCredentialStore {
   static const _geminiKeysName = 'study_vault_gemini_api_keys';
   static const _deepseekKeyName = 'study_vault_deepseek_api_key';
   static const _newApiKeyName = 'study_vault_newapi_api_key';
+
+  static String endpointKeyName(String profileId) =>
+      'study_vault_ai_endpoint_key_$profileId';
 
   final FlutterSecureStorage _storage;
 
@@ -123,6 +130,29 @@ class SecureAiCredentialStore implements AiCredentialStore {
     await _writeGeminiKeys(keys);
   }
 
+  @override
+  Future<String?> readEndpointKey(String profileId) {
+    return _storage.read(key: endpointKeyName(profileId));
+  }
+
+  @override
+  Future<void> writeEndpointKey(String profileId, String key) async {
+    final trimmed = key.trim();
+    if (trimmed.isEmpty) return;
+    await _storage.write(key: endpointKeyName(profileId), value: trimmed);
+  }
+
+  @override
+  Future<void> deleteEndpointKey(String profileId) {
+    return _storage.delete(key: endpointKeyName(profileId));
+  }
+
+  @override
+  Future<bool> hasEndpointKey(String profileId) async {
+    final key = await readEndpointKey(profileId);
+    return key != null && key.isNotEmpty;
+  }
+
   Future<void> _writeGeminiKeys(List<String> keys) async {
     if (keys.isEmpty) {
       await _storage.delete(key: _geminiKeysName);
@@ -142,6 +172,7 @@ class SecureAiCredentialStore implements AiCredentialStore {
 /// In-memory stub for unit tests.
 class MemoryAiCredentialStore implements AiCredentialStore {
   final Map<AiProviderId, List<String>> _keys = {};
+  final Map<String, String> _endpointKeys = {};
 
   @override
   Future<bool> hasApiKeyFor(AiProviderId provider) async {
@@ -214,6 +245,31 @@ class MemoryAiCredentialStore implements AiCredentialStore {
     } else {
       _keys[provider] = keys;
     }
+  }
+
+  @override
+  Future<String?> readEndpointKey(String profileId) async =>
+      _endpointKeys[profileId];
+
+  @override
+  Future<void> writeEndpointKey(String profileId, String key) async {
+    final trimmed = key.trim();
+    if (trimmed.isEmpty) {
+      _endpointKeys.remove(profileId);
+      return;
+    }
+    _endpointKeys[profileId] = trimmed;
+  }
+
+  @override
+  Future<void> deleteEndpointKey(String profileId) async {
+    _endpointKeys.remove(profileId);
+  }
+
+  @override
+  Future<bool> hasEndpointKey(String profileId) async {
+    final key = _endpointKeys[profileId];
+    return key != null && key.isNotEmpty;
   }
 }
 

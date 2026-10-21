@@ -13,7 +13,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
-import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/presentation/ai_assistant_controller.dart';
@@ -37,7 +36,10 @@ import '../domain/pdf_ai_material_models.dart';
 import '../domain/pdf_ai_translation.dart';
 import '../domain/pdf_ai_versioning.dart';
 import '../services/pdf_ai_translation_service.dart';
+import '../../ai_generation_queue/data/ai_generation_providers.dart';
+import '../../ai_generation_queue/domain/ai_generation_models.dart';
 import 'pdf_ai_manual_import_dialog.dart';
+import 'pdf_ai_queue_actions.dart';
 import 'pdf_ai_translation_actions.dart';
 
 class _PdfAiRegenerateChoice {
@@ -84,7 +86,8 @@ class _PdfAiMaterialReaderScreenState
   String? _slideGenerationId;
   int _slideIndex = 0;
   String? _selectedId;
-  bool _generating = false;
+  AiGenerationJob? _queueJob;
+  bool get _generating => _queueJob?.isActive ?? false;
   bool _editing = false;
   bool _deleting = false;
   String? _restoredGenerationId;
@@ -446,49 +449,25 @@ class _PdfAiMaterialReaderScreenState
     final reformatSource = preset != null && preset.usesCurrentContent
         ? selected.content
         : null;
+    if (!mounted) return;
 
-    setState(() => _generating = true);
-    try {
-      final generated = await ref
-          .read(pdfAiMaterialServiceProvider)
-          .generate(
-            materialId: widget.materialId,
-            title: widget.pdfTitle,
-            filePath: widget.filePath,
-            type: widget.type,
-            selection: selection,
-            customInstruction: promptInstruction.isEmpty
-                ? null
-                : promptInstruction,
-            storedInstruction: storedInstruction.isEmpty
-                ? null
-                : storedInstruction,
-            reformatSource: reformatSource,
-            reuseSourceFingerprint: reformatSource == null
-                ? null
-                : selected.sourceFingerprint,
-          );
-      if (!mounted) return;
-      setState(() => _selectedId = generated.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Version ${generated.version} generated.')),
-      );
-      if (choice.alsoPersian && mounted) {
-        setState(() => _generating = false);
-        await translatePdfAiVersion(
-          context,
-          ref,
-          generated,
-          selection: selection,
-        );
-      }
-    } on AiException catch (error) {
-      _showError(error.message);
-    } on Object catch (error) {
-      _showError(_friendlyError(error));
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
+    await enqueuePdfMaterialGeneration(
+      context: context,
+      ref: ref,
+      materialId: widget.materialId,
+      lessonId: _lessonId,
+      title: widget.pdfTitle,
+      filePath: widget.filePath,
+      type: widget.type,
+      selection: selection,
+      customInstruction: promptInstruction.isEmpty ? null : promptInstruction,
+      storedInstruction: storedInstruction.isEmpty ? null : storedInstruction,
+      reformatSource: reformatSource,
+      reuseSourceFingerprint: reformatSource == null
+          ? null
+          : selected.sourceFingerprint,
+      translateToPersian: choice.alsoPersian,
+    );
   }
 
   Future<_PdfAiRegenerateChoice?> _showRegenerationDialog({
@@ -1235,6 +1214,10 @@ class _PdfAiMaterialReaderScreenState
                 if (!widget.embedded)
                   Column(
                     children: [
+                      PdfAiQueueBanner(
+                        materialId: widget.materialId,
+                        type: widget.type,
+                      ),
                       Row(
                         children: [
                           Expanded(
@@ -1250,7 +1233,10 @@ class _PdfAiMaterialReaderScreenState
                                   ? null
                                   : () => _regenerate(selected),
                               child: Text(
-                                _generating ? 'Generating…' : 'Regenerate',
+                                _generating
+                                    ? (_queueJob?.progressLabel ??
+                                          'Generating…')
+                                    : 'Regenerate',
                               ),
                             ),
                           ),
@@ -1277,6 +1263,12 @@ class _PdfAiMaterialReaderScreenState
 
   @override
   Widget build(BuildContext context) {
+    _queueJob = ref.watch(
+      pdfAiJobForTargetProvider((
+        materialId: widget.materialId,
+        type: widget.type,
+      )),
+    );
     final allAsync = ref.watch(pdfAiMaterialsProvider(widget.materialId));
 
     return allAsync.when(

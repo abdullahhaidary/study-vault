@@ -251,18 +251,18 @@ The application inside the container sees its network environment rather than th
 ## 4.3 Namespace Architecture
 
 ```text
-                   LINUX HOST
-                       |
-       +---------------+---------------+
-       |               |               |
-       v               v               v
-   HOST NETWORK     CONTAINER A     CONTAINER B
-    NAMESPACE        NAMESPACE       NAMESPACE
-       |               |               |
-       v               v               v
- Host Interfaces    Interface A     Interface B
- Host Routes        Routes A        Routes B
- Host Loopback      Loopback A      Loopback B
+LINUX HOST → HOST NETWORK NAMESPACE
+LINUX HOST → CONTAINER A NAMESPACE
+LINUX HOST → CONTAINER B NAMESPACE
+HOST NETWORK NAMESPACE → Host Interfaces
+HOST NETWORK NAMESPACE → Host Routes
+HOST NETWORK NAMESPACE → Host Loopback
+CONTAINER A NAMESPACE → Interface A
+CONTAINER A NAMESPACE → Routes A
+CONTAINER A NAMESPACE → Loopback A
+CONTAINER B NAMESPACE → Interface B
+CONTAINER B NAMESPACE → Routes B
+CONTAINER B NAMESPACE → Loopback B
 ```
 
 ## 4.4 Network Namespace Consequences
@@ -352,14 +352,10 @@ In a conventional Docker bridge network, the bridge provides connectivity among 
 ## 6.2 Simplified Bridge Architecture
 
 ```text
-               DOCKER HOST
-                    |
-               LINUX BRIDGE
-                    |
-       +------------+------------+
-       |            |            |
-       v            v            v
-   Container A  Container B  Container C
+DOCKER HOST → LINUX BRIDGE
+LINUX BRIDGE → Container A
+LINUX BRIDGE → Container B
+LINUX BRIDGE → Container C
 ```
 
 ## 6.3 Communication Through a Bridge
@@ -995,16 +991,9 @@ The database's internal TCP port is sufficient for this connection.
 ## 18.3 Architecture
 
 ```text
-              DOCKER NETWORK
-                   |
-         +---------+---------+
-         |                   |
-         v                   v
-    APPLICATION           DATABASE
-     CONTAINER            CONTAINER
-         |                   |
-         +------ TCP --------+
-                 6379
+DOCKER NETWORK → APPLICATION CONTAINER
+DOCKER NETWORK → DATABASE CONTAINER
+APPLICATION CONTAINER → DATABASE CONTAINER (TCP 6379)
 ```
 
 No host port publishing is required for the internal connection.
@@ -1049,17 +1038,11 @@ Containers attached only to `frontend-network` should not automatically have con
 ## 19.3 Isolation Diagram
 
 ```text
-           DOCKER HOST
-                |
-      +---------+---------+
-      |                   |
-      v                   v
-  NETWORK A           NETWORK B
-      |                   |
-      v                   v
- CONTAINER A          CONTAINER B
-      |                   |
-      +---- ISOLATED -----+
+DOCKER HOST → NETWORK A
+NETWORK A → CONTAINER A
+DOCKER HOST → NETWORK B
+NETWORK B → CONTAINER B
+CONTAINER A → CONTAINER B (ISOLATED)
 ```
 
 The drawing represents the ordinary isolation model.

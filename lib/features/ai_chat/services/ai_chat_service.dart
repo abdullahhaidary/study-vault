@@ -2,8 +2,10 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../ai_assistant/data/ai_endpoint_profile_repository.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_model_ref.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/deepseek_model_registry.dart';
@@ -11,6 +13,22 @@ import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import 'chat_context_resolver.dart';
 import 'gemini_chat_service.dart';
+
+/// Chat rows store a versioned [AiModelRef]. Built-in ids stay unchanged.
+String persistedChatModelId(String modelId) {
+  final ref = AiModelRef.parse(modelId);
+  return switch (ref) {
+    BuiltinGeminiModelRef(:final modelId) => GeminiModelRegistry.normalize(
+      modelId,
+    ),
+    BuiltinDeepSeekModelRef(:final modelId) =>
+      DeepSeekModelIds.isAuto(modelId)
+          ? DeepSeekModelRegistry.defaultModelId
+          : DeepSeekModelRegistry.normalize(modelId),
+    EndpointAiModelRef() => ref.storageValue,
+    LegacyNewApiModelRef() => ref.storageValue,
+  };
+}
 
 /// Orchestrates local chat persistence + provider completions.
 class AiChatService {
@@ -22,6 +40,7 @@ class AiChatService {
     /// Backward-compatible alias for older call sites / tests.
     AiChatTransport? gemini,
     ChatContextResolver? contextResolver,
+    this.profiles,
     Uuid? uuid,
   }) : transport = transport ?? gemini!,
        contextResolver = contextResolver ?? ChatContextResolver(db: db),
@@ -30,6 +49,7 @@ class AiChatService {
   final AppDatabase db;
   final AiChatTransport transport;
   final AiSettingsStore settings;
+  final AiEndpointProfileRepository? profiles;
   final ChatContextResolver contextResolver;
   final Uuid _uuid;
 
@@ -50,12 +70,12 @@ class AiChatService {
 
   Future<AiChat> createChat({String? modelId}) async {
     final now = DateTime.now();
-    final preferred = modelId ?? await settings.getModelId();
-    final provider = AiProviderIdX.fromModelId(preferred);
+    final preferred =
+        modelId ?? (await settings.getGlobalModelRef()).storageValue;
     final chat = AiChatsCompanion.insert(
       id: _uuid.v4(),
       title: 'New chat',
-      modelId: _normalizeModel(preferred, provider),
+      modelId: persistedChatModelId(preferred),
       createdAt: now,
       updatedAt: now,
       lastMessageAt: Value(now),
@@ -78,22 +98,19 @@ class AiChatService {
   Future<void> setChatModel(String chatId, String modelId) async {
     final chat = await db.getAiChatById(chatId);
     if (chat == null) return;
-    final provider = AiProviderIdX.fromModelId(modelId);
-    final normalized = _normalizeModel(modelId, provider);
     await db.updateAiChat(
-      chat.copyWith(modelId: normalized, updatedAt: DateTime.now()),
+      chat.copyWith(
+        modelId: persistedChatModelId(modelId),
+        updatedAt: DateTime.now(),
+      ),
     );
   }
 
-  String _normalizeModel(String modelId, AiProviderId provider) {
-    return switch (provider) {
-      AiProviderId.gemini => GeminiModelRegistry.normalize(modelId),
-      AiProviderId.newApi => normalizeNewApiModelId(modelId),
-      AiProviderId.deepseek =>
-        DeepSeekModelIds.isAuto(modelId)
-            ? DeepSeekModelRegistry.defaultModelId
-            : DeepSeekModelRegistry.normalize(modelId),
-    };
+  Future<void> _ensureProfileAvailable(String modelId) async {
+    final repository = profiles;
+    if (repository == null) return;
+    if (await repository.isAvailable(AiModelRef.parse(modelId))) return;
+    throw const AiProfileUnavailableException();
   }
 
   Future<void> saveDraft(
@@ -197,6 +214,7 @@ class AiChatService {
     if (chat == null) {
       throw const AiServerException('Chat not found.');
     }
+    await _ensureProfileAvailable(chat.modelId);
 
     final resolved = await _resolveAttachments(attachments);
     final now = DateTime.now();
@@ -310,6 +328,7 @@ class AiChatService {
     if (chat == null) {
       throw const AiServerException('Chat not found.');
     }
+    await _ensureProfileAvailable(chat.modelId);
 
     final resolved = await _resolveAttachments(attachments);
     final now = DateTime.now();

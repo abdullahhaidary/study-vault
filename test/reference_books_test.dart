@@ -165,14 +165,17 @@ void main() {
         outline: const [],
         pageText: {
           // Table of contents: several headings on one page.
-          3: 'Contents\nPreface\nPART I. FOUNDATIONS\n'
+          3:
+              'Contents\nPreface\nPART I. FOUNDATIONS\n'
               'Chapter 1. Introduction\nChapter 2. Planning',
           // Continuation page whose first lines still list headings.
-          4: 'Chapter Exercises\nReferences\n'
+          4:
+              'Chapter Exercises\nReferences\n'
               'PART III. EXECUTING AND ENDING THE\nPROJECT\n'
               'Chapter 11. Managing Project Execution',
           // Bare mid-sentence reference is not a chapter start.
-          30: 'as well as those resources, are discussed in\n'
+          30:
+              'as well as those resources, are discussed in\n'
               'Chapter 7.\nThis chapter provides',
           10: 'PART I\nProject Management Foundations',
           15: 'CHAPTER 1\nIntroduction\nFigure 1.1 objectives',
@@ -666,6 +669,7 @@ class _FakeClient implements PdfAiCompletionClient {
     required List<Map<String, String>> messages,
     required int maxOutputTokens,
     required AiExecutionSelection selection,
+    void Function(String partialText)? onPartialText,
   }) async {
     this.messages.add(messages);
     return PdfAiCompletion(

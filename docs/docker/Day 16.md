@@ -162,17 +162,12 @@ Examples include:
 ## 3.4 Security Model
 
 ```text
-             INFORMATION SECURITY
-                       |
-           +-----------+-----------+
-           |           |           |
-           v           v           v
-    CONFIDENTIALITY  INTEGRITY  AVAILABILITY
-           |           |           |
-           +-----------+-----------+
-                       |
-                       v
-               CONTAINER SECURITY
+INFORMATION SECURITY → CONFIDENTIALITY
+INFORMATION SECURITY → INTEGRITY
+INFORMATION SECURITY → AVAILABILITY
+CONFIDENTIALITY → CONTAINER SECURITY
+INTEGRITY → CONTAINER SECURITY
+AVAILABILITY → CONTAINER SECURITY
 ```
 
 These objectives are interconnected.
@@ -268,17 +263,13 @@ The kernel therefore remains an important security boundary.
 ## 5.4 Conceptual Diagram
 
 ```text
-                  DOCKER HOST
-                       |
-             SHARED LINUX KERNEL
-                       |
-        +--------------+--------------+
-        |              |              |
-        v              v              v
-    CONTAINER A    CONTAINER B    CONTAINER C
-        |              |              |
-        v              v              v
-   APPLICATION     DATABASE        WORKER
+DOCKER HOST → SHARED LINUX KERNEL
+SHARED LINUX KERNEL → CONTAINER A
+SHARED LINUX KERNEL → CONTAINER B
+SHARED LINUX KERNEL → CONTAINER C
+CONTAINER A → APPLICATION
+CONTAINER B → DATABASE
+CONTAINER C → WORKER
 ```
 
 ## 5.5 Security Interpretation
@@ -1508,26 +1499,22 @@ The exercises inspect security controls rather than attempting unauthorized expl
 # 42. SECURITY LABORATORY ARCHITECTURE
 
 ```text
-                    DOCKER HOST
-                         |
-              +----------+----------+
-              |                     |
-              v                     v
-         BASELINE APP          HARDENED APP
-              |                     |
-        UID 0 by default      UID 10001
-              |                     |
-        Writable root         Read-only root
-              |                     |
-        Default caps          Drop all caps
-              |                     |
-        Default NNP           No new privileges
-              |                     |
-        No secret grant       Demo secret mount
-              |                     |
-       Baseline network       Hardened network
-              |                     |
-          Port 8260              Port 8261
+DOCKER HOST → BASELINE APP
+DOCKER HOST → HARDENED APP
+BASELINE APP → UID 0 by default
+HARDENED APP → UID 10001
+UID 0 by default → Writable root
+UID 10001 → Read-only root
+Writable root → Default caps
+Read-only root → Drop all caps
+Default caps → Default NNP
+Drop all caps → No new privileges
+Default NNP → No secret grant
+No new privileges → Demo secret mount
+No secret grant → Baseline network
+Demo secret mount → Hardened network
+Baseline network → Port 8260
+Hardened network → Port 8261
 ```
 
 Both HTTP services provide the same primary application functionality.

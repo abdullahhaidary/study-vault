@@ -120,15 +120,13 @@ class _AiChatHistoryScreenState extends ConsumerState<AiChatHistoryScreen> {
     );
     if (selected == null || !mounted) return;
 
+    final stored = selected.persistedModelId;
     final chatId = ref.read(activeAiChatIdProvider);
     if (chatId == null) {
-      ref.read(pendingAiChatModelIdProvider.notifier).state =
-          selected.requestedModelId;
+      ref.read(pendingAiChatModelIdProvider.notifier).state = stored;
       return;
     }
-    await ref
-        .read(aiChatServiceProvider)
-        .setChatModel(chatId, selected.requestedModelId);
+    await ref.read(aiChatServiceProvider).setChatModel(chatId, stored);
   }
 
   @override
