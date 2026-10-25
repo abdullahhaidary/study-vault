@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/storage/material_storage.dart';
 
 const _uuid = Uuid();
@@ -71,6 +72,20 @@ Future<void> updateLessonDetails(
       updatedAt: DateTime.now(),
     ),
   );
+}
+
+Future<void> moveLesson(
+  WidgetRef ref, {
+  required List<Lesson> lessons,
+  required String lessonId,
+  required ReorderDestination destination,
+}) {
+  final ids = reorderIds(
+    ids: lessons.map((lesson) => lesson.id),
+    itemId: lessonId,
+    destination: destination,
+  );
+  return ref.read(databaseProvider).reorderLessons(ids);
 }
 
 Future<void> deleteLesson(WidgetRef ref, {required String lessonId}) async {

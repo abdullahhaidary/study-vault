@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
 import '../../flashcards/data/flashcards_providers.dart';
@@ -77,7 +78,9 @@ class _SelectionFlashcardDialogState
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not create the flashcard.')),
+        const TransientSnackBar(
+          content: Text('Could not create the flashcard.'),
+        ),
       );
     }
   }

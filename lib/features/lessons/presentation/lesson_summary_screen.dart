@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
@@ -56,9 +57,9 @@ class _LessonSummaryScreenState extends ConsumerState<LessonSummaryScreen> {
         .read(lessonSummaryRepositoryProvider)
         .appendMarkdown(lessonId: _lessonId, markdown: markdown);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Added to the summary.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const TransientSnackBar(content: Text('Added to the summary.')),
+    );
   }
 
   Future<void> _edit() async {
@@ -185,13 +186,13 @@ Future<void> copyLessonSummary(
   final markdown = QuillToMarkdown.fromStored(note.content).trim();
   if (markdown.isEmpty) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('The lesson summary is empty.')),
+      const TransientSnackBar(content: Text('The lesson summary is empty.')),
     );
     return;
   }
   await Clipboard.setData(ClipboardData(text: markdown));
   messenger.showSnackBar(
-    const SnackBar(content: Text('Lesson summary copied.')),
+    const TransientSnackBar(content: Text('Lesson summary copied.')),
   );
 }
 

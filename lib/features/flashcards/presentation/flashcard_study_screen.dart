@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/navigation/study_navigator.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
 import '../../study_review/domain/review_models.dart';
@@ -56,7 +57,9 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save review. Try again.')),
+          const TransientSnackBar(
+            content: Text('Could not save review. Try again.'),
+          ),
         );
       }
     } finally {

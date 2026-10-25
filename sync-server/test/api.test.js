@@ -32,7 +32,7 @@ async function request(route, { method = 'GET', body, auth = token, headers = {}
     ...(body ? { 'content-type': 'application/json' } : {}), ...headers,
   }, body: body ? JSON.stringify(body) : undefined });
 }
-const batch = (mutations) => ({ schemaVersion: 23, mutations });
+const batch = (mutations) => ({ schemaVersion: 24, mutations });
 const change = (id = randomUUID(), data = { id }, baseRevision = 0) => ({
   table: 'study_notes', id, data, baseRevision, mutationId: randomUUID(),
 });

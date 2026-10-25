@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
@@ -62,9 +63,9 @@ Future<void> showGenerateQuestionsSheet(
     source = await launch.resolveSource(config.sourceType);
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Could not prepare source: $e')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      TransientSnackBar(content: Text('Could not prepare source: $e')),
+    );
     return;
   }
 
@@ -72,7 +73,9 @@ Future<void> showGenerateQuestionsSheet(
   if (source.isEmpty && !allowEmpty) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No content available for that source.')),
+      const TransientSnackBar(
+        content: Text('No content available for that source.'),
+      ),
     );
     return;
   }
@@ -118,13 +121,13 @@ Future<void> showGenerateQuestionsSheet(
     Navigator.of(context, rootNavigator: true).pop();
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(e.message)));
+    ).showSnackBar(TransientSnackBar(content: Text(e.message)));
   } catch (e) {
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pop();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Question generation failed: $e')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      TransientSnackBar(content: Text('Question generation failed: $e')),
+    );
   }
 }
 

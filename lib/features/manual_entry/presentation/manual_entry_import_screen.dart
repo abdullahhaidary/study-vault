@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
@@ -261,9 +262,9 @@ class _ManualEntryImportScreenState
     final text = data?.text;
     if (text == null || text.trim().isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Clipboard is empty.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const TransientSnackBar(content: Text('Clipboard is empty.')),
+        );
       }
       return;
     }
@@ -281,7 +282,7 @@ class _ManualEntryImportScreenState
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(switch (which) {
           'full' => 'Full format guide copied.',
           'review' =>
@@ -309,7 +310,7 @@ class _ManualEntryImportScreenState
     if (plan == null || _saving) return;
     if (plan.missingLesson) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Choose a lesson, or untick the lesson items (everything except '
             'the Course Review).',
@@ -320,7 +321,7 @@ class _ManualEntryImportScreenState
     }
     if (plan.missingPdf) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Choose a PDF, or untick the study materials / annotations.',
           ),
@@ -330,7 +331,7 @@ class _ManualEntryImportScreenState
     }
     if (plan.writeCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nothing is selected to save.')),
+        const TransientSnackBar(content: Text('Nothing is selected to save.')),
       );
       return;
     }
@@ -367,7 +368,7 @@ class _ManualEntryImportScreenState
           .apply(plan);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             'Saved to ${plan.target.displayName}: ${result.summary}',
           ),
@@ -389,7 +390,7 @@ class _ManualEntryImportScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+      ).showSnackBar(TransientSnackBar(content: Text('Could not save: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

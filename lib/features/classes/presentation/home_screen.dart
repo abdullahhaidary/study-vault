@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/desktop_frame.dart';
@@ -11,7 +12,7 @@ import '../../../core/widgets/responsive_grid.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
-import '../../study_workspace/data/study_workspace_providers.dart';
+import '../../library_accounts/presentation/account_switcher.dart';
 import '../../study_review/presentation/recent_reviews_screen.dart';
 import '../../study_schedule/data/study_schedule_providers.dart';
 import '../../study_schedule/presentation/study_schedule_screen.dart';
@@ -55,10 +56,11 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ]
                   : [
+                      const AccountSwitcherButton(),
                       IconButton(
                         tooltip: 'AI Chat',
                         onPressed: () =>
-                            ref.read(studyWorkspaceProvider.notifier).open(),
+                            Navigator.of(context).pushNamed(AppRoutes.aiChat),
                         icon: const Icon(Icons.auto_awesome_outlined),
                       ),
                       IconButton(
@@ -124,9 +126,7 @@ class HomeScreen extends ConsumerWidget {
                         Icons.event_repeat,
                         color: theme.colorScheme.primary,
                       ),
-                      title: Text(
-                        _reviewCardTitle(todayCount, overflowCount),
-                      ),
+                      title: Text(_reviewCardTitle(todayCount, overflowCount)),
                       subtitle: Text(_reviewCardSubtitle(overflowCount)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => StudyScheduleScreen.open(context),
@@ -229,10 +229,42 @@ class HomeScreen extends ConsumerWidget {
                     child: ResponsiveGrid(
                       minItemWidth: 260,
                       children: [
-                        for (final classItem in classList)
+                        for (final (classIndex, classItem) in classList.indexed)
                           _ClassCard(
                             classItem: classItem,
                             subjectCount: counts[classItem.id],
+                            onMoveToStart: classIndex == 0
+                                ? null
+                                : () => moveClass(
+                                    ref,
+                                    classes: classList,
+                                    classId: classItem.id,
+                                    destination: ReorderDestination.start,
+                                  ),
+                            onMoveUp: classIndex == 0
+                                ? null
+                                : () => moveClass(
+                                    ref,
+                                    classes: classList,
+                                    classId: classItem.id,
+                                    destination: ReorderDestination.previous,
+                                  ),
+                            onMoveDown: classIndex == classList.length - 1
+                                ? null
+                                : () => moveClass(
+                                    ref,
+                                    classes: classList,
+                                    classId: classItem.id,
+                                    destination: ReorderDestination.next,
+                                  ),
+                            onMoveToEnd: classIndex == classList.length - 1
+                                ? null
+                                : () => moveClass(
+                                    ref,
+                                    classes: classList,
+                                    classId: classItem.id,
+                                    destination: ReorderDestination.end,
+                                  ),
                           ),
                       ],
                     ),
@@ -292,10 +324,21 @@ class ContentHomePadding extends StatelessWidget {
 }
 
 class _ClassCard extends StatelessWidget {
-  const _ClassCard({required this.classItem, required this.subjectCount});
+  const _ClassCard({
+    required this.classItem,
+    required this.subjectCount,
+    this.onMoveToStart,
+    this.onMoveUp,
+    this.onMoveDown,
+    this.onMoveToEnd,
+  });
 
   final StudyClass classItem;
   final int? subjectCount;
+  final VoidCallback? onMoveToStart;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+  final VoidCallback? onMoveToEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -331,10 +374,47 @@ class _ClassCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: theme.colorScheme.outline,
-                    size: 20,
+                  PopupMenuButton<_ClassOrderAction>(
+                    tooltip: 'Class options',
+                    onSelected: (action) {
+                      switch (action) {
+                        case _ClassOrderAction.moveToStart:
+                          onMoveToStart?.call();
+                        case _ClassOrderAction.moveUp:
+                          onMoveUp?.call();
+                        case _ClassOrderAction.moveDown:
+                          onMoveDown?.call();
+                        case _ClassOrderAction.moveToEnd:
+                          onMoveToEnd?.call();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (onMoveToStart != null)
+                        const PopupMenuItem(
+                          value: _ClassOrderAction.moveToStart,
+                          child: Text('Move to top'),
+                        ),
+                      if (onMoveUp != null)
+                        const PopupMenuItem(
+                          value: _ClassOrderAction.moveUp,
+                          child: Text('Move up'),
+                        ),
+                      if (onMoveDown != null)
+                        const PopupMenuItem(
+                          value: _ClassOrderAction.moveDown,
+                          child: Text('Move down'),
+                        ),
+                      if (onMoveToEnd != null)
+                        const PopupMenuItem(
+                          value: _ClassOrderAction.moveToEnd,
+                          child: Text('Move to bottom'),
+                        ),
+                    ],
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.outline,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -365,3 +445,5 @@ class _ClassCard extends StatelessWidget {
     );
   }
 }
+
+enum _ClassOrderAction { moveToStart, moveUp, moveDown, moveToEnd }

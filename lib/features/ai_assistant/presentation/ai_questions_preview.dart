@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../domain/ai_models.dart';
@@ -138,9 +139,9 @@ class AiQuestionsPreviewScreen extends StatelessWidget {
                     ClipboardData(text: buffer.toString()),
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Copied')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const TransientSnackBar(content: Text('Copied')),
+                    );
                   }
                 },
                 child: const Text('Copy'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../../../core/widgets/transient_snack_bar.dart';
 import '../../../../core/markdown/study_markdown.dart';
 import '../../../../core/text/text_direction_utils.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -117,9 +118,9 @@ class MessageBubble extends StatelessWidget {
             : () async {
                 await Clipboard.setData(ClipboardData(text: content));
                 if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Copied')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const TransientSnackBar(content: Text('Copied')),
+                  );
                 }
               },
         borderRadius: AppRadii.mdAll,
@@ -327,7 +328,7 @@ class _MessageActions extends StatelessWidget {
               if (!context.mounted) return;
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('Copied')));
+              ).showSnackBar(const TransientSnackBar(content: Text('Copied')));
             },
             icon: const Icon(Icons.copy_outlined),
           ),

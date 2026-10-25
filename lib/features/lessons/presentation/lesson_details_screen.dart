@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/detail_scaffold.dart';
@@ -47,15 +49,15 @@ class LessonDetailsScreen extends ConsumerWidget {
     try {
       final material = await attachPdfToLesson(ref, lessonId: lessonId);
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Attached ${material.title}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Attached ${material.title}')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not attach PDF: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Could not attach PDF: $error')),
+        );
       }
     }
   }
@@ -67,14 +69,16 @@ class LessonDetailsScreen extends ConsumerWidget {
         lessonId: lessonId,
       );
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Added ${material.title}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Added ${material.title}')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not add text document: $error')),
+          TransientSnackBar(
+            content: Text('Could not add text document: $error'),
+          ),
         );
       }
     }
@@ -139,14 +143,14 @@ class LessonDetailsScreen extends ConsumerWidget {
           ? await showPasteHtmlDialog(context, lessonId: lessonId)
           : await importInteractiveHtmlFile(ref, lessonId: lessonId);
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Added ${material.title}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Added ${material.title}')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not add the page: $error')),
+          TransientSnackBar(content: Text('Could not add the page: $error')),
         );
       }
     }
@@ -207,7 +211,7 @@ class LessonDetailsScreen extends ConsumerWidget {
       final persian = await attachPersianPdfToMaterial(ref, original: material);
       if (persian != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          const TransientSnackBar(
             content: Text(
               'Persian PDF attached. Open the PDF and use EN | فا to switch.',
             ),
@@ -217,7 +221,9 @@ class LessonDetailsScreen extends ConsumerWidget {
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not attach Persian PDF: $error')),
+          TransientSnackBar(
+            content: Text('Could not attach Persian PDF: $error'),
+          ),
         );
       }
     }
@@ -239,9 +245,9 @@ class LessonDetailsScreen extends ConsumerWidget {
     if (!confirmed) return;
     await deletePersianVariant(ref, original: material);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Persian PDF removed.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Persian PDF removed.')),
+      );
     }
   }
 
@@ -274,7 +280,7 @@ class LessonDetailsScreen extends ConsumerWidget {
     if (documents.isEmpty) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Attach a PDF or text document to use AI Study Materials.',
           ),
@@ -393,7 +399,7 @@ class LessonDetailsScreen extends ConsumerWidget {
                     .entryFor(lesson.id);
                 if (entry == null || !context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  TransientSnackBar(
                     content: Text(
                       'Added to your Study Schedule. First review '
                       '${ScheduleDay.relative(entry.dueOn).toLowerCase()} '
@@ -666,12 +672,44 @@ class LessonDetailsScreen extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final material in documents)
+            for (final (materialIndex, material) in documents.indexed)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: _MaterialTile(
                   material: material,
                   onOpen: () => _openMaterial(context, material),
+                  onMoveToStart: materialIndex == 0
+                      ? null
+                      : () => moveLessonMaterial(
+                          ref,
+                          materials: documents,
+                          materialId: material.id,
+                          destination: ReorderDestination.start,
+                        ),
+                  onMoveUp: materialIndex == 0
+                      ? null
+                      : () => moveLessonMaterial(
+                          ref,
+                          materials: documents,
+                          materialId: material.id,
+                          destination: ReorderDestination.previous,
+                        ),
+                  onMoveDown: materialIndex == documents.length - 1
+                      ? null
+                      : () => moveLessonMaterial(
+                          ref,
+                          materials: documents,
+                          materialId: material.id,
+                          destination: ReorderDestination.next,
+                        ),
+                  onMoveToEnd: materialIndex == documents.length - 1
+                      ? null
+                      : () => moveLessonMaterial(
+                          ref,
+                          materials: documents,
+                          materialId: material.id,
+                          destination: ReorderDestination.end,
+                        ),
                   onDelete: () => _confirmDelete(context, ref, material),
                   onAttachPersian: isPdfMimeType(material.mimeType)
                       ? () => _attachPersianPdf(context, ref, material)
@@ -693,6 +731,10 @@ class _MaterialTile extends ConsumerWidget {
     required this.material,
     required this.onOpen,
     required this.onDelete,
+    this.onMoveToStart,
+    this.onMoveUp,
+    this.onMoveDown,
+    this.onMoveToEnd,
     this.onAttachPersian,
     this.onRemovePersian,
   });
@@ -700,6 +742,10 @@ class _MaterialTile extends ConsumerWidget {
   final LessonMaterial material;
   final VoidCallback onOpen;
   final VoidCallback onDelete;
+  final VoidCallback? onMoveToStart;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+  final VoidCallback? onMoveToEnd;
   final VoidCallback? onAttachPersian;
   final VoidCallback? onRemovePersian;
 
@@ -729,6 +775,10 @@ class _MaterialTile extends ConsumerWidget {
           ? Icons.article_outlined
           : Icons.picture_as_pdf_outlined,
       onTap: onOpen,
+      onMoveToStart: onMoveToStart,
+      onMoveUp: onMoveUp,
+      onMoveDown: onMoveDown,
+      onMoveToEnd: onMoveToEnd,
       onEdit: isPdf
           ? (persian == null ? onAttachPersian : onRemovePersian)
           : null,

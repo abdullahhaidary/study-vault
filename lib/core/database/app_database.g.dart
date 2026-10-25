@@ -41,6 +41,18 @@ class $ClassesTable extends Classes with TableInfo<$ClassesTable, StudyClass> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -68,6 +80,7 @@ class $ClassesTable extends Classes with TableInfo<$ClassesTable, StudyClass> {
     id,
     name,
     description,
+    sortOrder,
     createdAt,
     updatedAt,
   ];
@@ -103,6 +116,12 @@ class $ClassesTable extends Classes with TableInfo<$ClassesTable, StudyClass> {
           data['description']!,
           _descriptionMeta,
         ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -142,6 +161,10 @@ class $ClassesTable extends Classes with TableInfo<$ClassesTable, StudyClass> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -163,12 +186,14 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
   final String id;
   final String name;
   final String? description;
+  final int sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
   const StudyClass({
     required this.id,
     required this.name,
     this.description,
+    required this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -180,6 +205,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
+    map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -192,6 +218,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -206,6 +233,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String?>(json['description']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -217,6 +245,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String?>(description),
+      'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -226,12 +255,14 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
     String? id,
     String? name,
     Value<String?> description = const Value.absent(),
+    int? sortOrder,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => StudyClass(
     id: id ?? this.id,
     name: name ?? this.name,
     description: description.present ? description.value : this.description,
+    sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -242,6 +273,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -253,6 +285,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -260,7 +293,8 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, description, createdAt, updatedAt);
+  int get hashCode =>
+      Object.hash(id, name, description, sortOrder, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -268,6 +302,7 @@ class StudyClass extends DataClass implements Insertable<StudyClass> {
           other.id == this.id &&
           other.name == this.name &&
           other.description == this.description &&
+          other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -276,6 +311,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> description;
+  final Value<int> sortOrder;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -283,6 +319,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -291,6 +328,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
     required String id,
     required String name,
     this.description = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -302,6 +340,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? description,
+    Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -310,6 +349,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -320,6 +360,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
     Value<String>? id,
     Value<String>? name,
     Value<String?>? description,
+    Value<int>? sortOrder,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -328,6 +369,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -345,6 +387,9 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -364,6 +409,7 @@ class ClassesCompanion extends UpdateCompanion<StudyClass> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -24569,6 +24615,7 @@ typedef $$ClassesTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<String?> description,
+      Value<int> sortOrder,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -24578,6 +24625,7 @@ typedef $$ClassesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String?> description,
+      Value<int> sortOrder,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -24667,6 +24715,11 @@ class $$ClassesTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -24780,6 +24833,11 @@ class $$ClassesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -24810,6 +24868,9 @@ class $$ClassesTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -24929,6 +24990,7 @@ class $$ClassesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -24936,6 +24998,7 @@ class $$ClassesTableTableManager
                 id: id,
                 name: name,
                 description: description,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -24945,6 +25008,7 @@ class $$ClassesTableTableManager
                 required String id,
                 required String name,
                 Value<String?> description = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -24952,6 +25016,7 @@ class $$ClassesTableTableManager
                 id: id,
                 name: name,
                 description: description,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

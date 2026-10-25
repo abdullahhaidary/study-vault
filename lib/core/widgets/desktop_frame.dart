@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes.dart';
+import '../../features/library_accounts/presentation/account_switcher.dart';
 import '../../features/study_workspace/data/study_workspace_providers.dart';
 import '../theme/app_spacing.dart';
 
@@ -15,6 +16,12 @@ class CurrentRouteObserver extends NavigatorObserver {
   final _pages = <Route<dynamic>>[];
 
   Route<dynamic>? get top => _pages.isEmpty ? null : _pages.last;
+
+  /// Forgets routes of a navigator that was disposed without popping them.
+  void reset() {
+    _pages.clear();
+    current.value = AppRoutes.home;
+  }
 
   void _changed() {
     final name = top?.settings.name;
@@ -70,6 +77,12 @@ class DesktopFrame extends ConsumerWidget {
     (AppRoutes.books, Icons.menu_book_outlined, Icons.menu_book, 'Books'),
     (AppRoutes.search, Icons.search, Icons.search, 'Search'),
     (
+      AppRoutes.aiChat,
+      Icons.auto_awesome_outlined,
+      Icons.auto_awesome,
+      'AI Chat',
+    ),
+    (
       AppRoutes.studySchedule,
       Icons.event_repeat_outlined,
       Icons.event_repeat,
@@ -91,7 +104,7 @@ class DesktopFrame extends ConsumerWidget {
   }
 
   /// Returns to the main window, respecting unsaved-change prompts.
-  static Future<bool> _returnHome() async {
+  static Future<bool> returnHome() async {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return false;
     for (var i = 0; i < 64; i++) {
@@ -104,7 +117,7 @@ class DesktopFrame extends ConsumerWidget {
   }
 
   static Future<void> _open(String route) async {
-    if (!await _returnHome() || route == AppRoutes.home) return;
+    if (!await returnHome() || route == AppRoutes.home) return;
     appNavigatorKey.currentState?.pushNamed(route);
   }
 
@@ -149,6 +162,10 @@ class DesktopFrame extends ConsumerWidget {
                   Text('AI Chat', style: theme.textTheme.labelSmall),
                 ],
               ),
+            ),
+            trailing: const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.md),
+              child: AccountSwitcherButton(showName: true),
             ),
             destinations: [
               for (final section in _sections)

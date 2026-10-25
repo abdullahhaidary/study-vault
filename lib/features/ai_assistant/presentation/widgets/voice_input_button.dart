@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/transient_snack_bar.dart';
 import '../../../../core/widgets/auto_direction_text_field.dart';
 import '../../data/voice_input_providers.dart';
 import '../../domain/voice_dictation_merge.dart';
@@ -121,7 +122,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton> {
     if (!mounted || message == null || message.isEmpty) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(TransientSnackBar(content: Text(message)));
   }
 
   @override

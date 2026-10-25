@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS files (
 );
 -- Columns added by later app schema versions, filled with the app's defaults
 -- so records stored before the bump still match library-schema.json.
+UPDATE records SET data = jsonb_build_object('sort_order', 0) || data
+  WHERE table_name = 'classes' AND data IS NOT NULL AND NOT data ? 'sort_order';
 UPDATE records SET data = jsonb_build_object('exam_date', NULL) || data
   WHERE table_name = 'subjects' AND data IS NOT NULL AND NOT data ? 'exam_date';
 UPDATE records SET data = jsonb_build_object('language', NULL, 'variant_of_id', NULL, 'page_offset', 0) || data

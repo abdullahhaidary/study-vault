@@ -2,7 +2,7 @@
 
 You are working on **Study Vault**, a local-first Flutter study app (version `4.0.0+6000`, Dart SDK `^3.12.2`). This file is the source of truth for the product, the code map, the database, and the rules you must follow. Read it before you design, write, or change anything.
 
-Repo root: the Flutter project that contains `lib/`, `test/`, `sync-server/`, `tool/study_vault_mcp.py`, and `manual_entry_instruction.md`.
+Repo root: the Flutter project that contains `lib/`, `test/`, `sync-server/`, `tool/study_vault_mcp.py`, `manual_entry_instruction.md`, and `AGENTS.md`. Keep this brief and `AGENTS.md` aligned; this brief is the product and architecture source of truth, while `AGENTS.md` is the short operational checklist.
 
 ---
 
@@ -65,13 +65,15 @@ Class
         └── Subject  (optional exam_date)
               └── LessonGroup (optional)
                     └── Lesson  (progress: notStarted | studying | reviewed | mastered)
-                          └── LessonMaterial  (PDF, image, or markdown file)
+                          └── LessonMaterial  (PDF, image, text, or interactive HTML)
                                 └── Study pins, bookmarks, AI materials, quizzes
 ```
 
 A subject can also hold notes, flashcards, a Course Review, a study schedule, and links to reference books. A class can hold a roadmap: an ordered list of existing lessons.
 
-The app is **local-first**. Cloud sync is manual and opt-in. AI calls are user-initiated and send only the selected study text (or one PDF for whole-PDF materials), never the whole library.
+The app is **local-first**. One device can hold multiple independent **library accounts**. Each library has its own SQLite database, material files, backups, AI queue, and optional cloud session. Switching libraries tears down the old Riverpod scope before opening the next one. The default library (initially named `Personal`) keeps the legacy documents-root paths; additional libraries live under `study_vault_accounts/{uuid}/`.
+
+Cloud sync is manual and opt-in. AI calls are user-initiated and send only the selected study text or selected document, never the whole library. Interactive HTML is never sent to AI.
 
 Platforms: Android, and desktop (Linux, Windows, macOS). Phones and windows narrower than 1000px use the mobile shell. Desktop uses a persistent left rail.
 
@@ -86,10 +88,11 @@ Platforms: Android, and desktop (Linux, Windows, macOS). Phones and windows narr
 | Rich text | `flutter_quill` (notes, pin explanations, flashcard backs) |
 | PDF | `pdfrx` |
 | Markdown / math / charts | `flutter_markdown`, `flutter_math_fork`, `fl_chart` |
-| AI HTTP | `http` to Gemini, DeepSeek, or a user-configured “New API” Claude-compatible server |
-| Secrets | `flutter_secure_storage` for API keys. Never store session tokens in `local_cloud_sync` |
-| Preferences | `shared_preferences` (daily review limit, chat appearance, and similar device-only settings) |
-| Cloud | `sync-server/` — Node 24, Express, PostgreSQL. Protocol v2: `GET /v2/snapshot`, `POST /v2/sync` |
+| AI HTTP | `http` to Gemini, DeepSeek, or named “New API” Anthropic Messages-compatible endpoint profiles |
+| Interactive HTML | `webview_flutter` where supported; loopback `HttpServer`; Linux GTK WebKit helper or browser fallback; `url_launcher` |
+| Secrets | `flutter_secure_storage` for API keys, endpoint-profile keys, and per-library cloud sessions. Never store session tokens in `local_cloud_sync` |
+| Preferences | `shared_preferences` (daily review limit, chat appearance, endpoint-profile metadata, and similar device-only settings) |
+| Cloud | `sync-server/` — production Docker uses Node 24; package engines allow Node ≥22; Express + PostgreSQL. Protocol v2: `GET /v2/snapshot`, `POST /v2/sync` |
 | External writer | `tool/study_vault_mcp.py` — Python stdlib MCP over stdio. Reads and adds to the local SQLite file. Never deletes study content. Writes preview unless `apply: true` |
 
 ---
@@ -111,12 +114,15 @@ Shell tabs (`lib/core/navigation/shell_tab.dart`): **Home** and **AI Chat** live
 | `/pdf-study` | PDF reader |
 | `/image-study` | Image reader |
 | `/markdown-study` | Markdown material reader |
+| `/html-study` | Interactive HTML material reader |
 | `/lesson-images` | Lesson image gallery |
+| `/lesson-summary` | One editable summary for a lesson |
 | `/note` `/note/edit` | Note reader / editor |
 | `/flashcards` `/flashcards/study` | Flashcard list / study |
 | `/ai-questions` | Question sets |
 | `/manual-entry` | JSON manual-entry import |
 | `/course-review` | Subject Course Review |
+| `/generation-center` | Device-local AI generation queue and job recovery |
 | `/books` `/book` | Reference-book shelf / book details |
 | `/schedule` | Study Schedule |
 | `/reviews` | Recent pin-review sessions |
@@ -124,7 +130,9 @@ Shell tabs (`lib/core/navigation/shell_tab.dart`): **Home** and **AI Chat** live
 | `/search` | Global search |
 | `/settings` | Settings (optional `section` argument) |
 
-Desktop rail (`DesktopFrame`, width ≥ 1000 on desktop OS): Library, Books, Search, Schedule, Favorites, Reviews, Settings.
+`GenerationQueueHost` wraps the routed app so queue progress and attention states remain visible above navigation.
+
+Desktop rail (`DesktopFrame`, width ≥ 1000 on desktop OS): Library, Books, Search, Schedule, Favorites, Recent Reviews, Settings. It also exposes the active library-account switcher.
 
 Use `AppSpacing.contentWidth(context)` for content width and `AdaptiveItemList` for lists that become grids on desktop. Do not hard-code an 840px max width.
 
@@ -138,9 +146,22 @@ Each feature folder is `lib/features/<name>/`. Typical split: `presentation/` (w
 
 - `classes/` — top-level containers. Home screen lists classes.
 - `subjects/` — belong to a class, optionally a subject group. `exam_date` is optional `yyyy-MM-dd` and feeds the study schedule.
-- `lessons/` — belong to a subject, optionally a lesson group. Progress is `notStarted | studying | reviewed | mastered`. Materials are PDFs, images, or markdown files stored on disk. A Persian PDF is a language variant: `language = fa`, `variant_of_id` points at the original, `page_offset` maps pages (`persianPage = originalPage + pageOffset`). Unique key `(variant_of_id, language)`.
-- Files: `{documents}/study_vault_files/lessons/{lessonId}/{storedFileName}`. Markdown materials use `{id}.md`.
+- `lessons/` — belong to a subject, optionally a lesson group. Progress is `notStarted | studying | reviewed | mastered`. Materials are PDFs, images, markdown, plain text, or interactive HTML files stored on disk. A Persian PDF is a language variant: `language = fa`, `variant_of_id` points at the original, `page_offset` maps pages (`persianPage = originalPage + pageOffset`). Unique key `(variant_of_id, language)`.
+- Files: `{active library}/study_vault_files/lessons/{lessonId}/{storedFileName}`. App-created markdown, HTML, and HTML bundle files use `{id}.md`, `{id}.html`, and `{id}.zip`.
+- PDF, markdown, and plain-text materials are study documents usable by AI Study Materials and Course Review. Images and interactive HTML are not.
+- `lesson_summary` — one deterministic lesson-owned `study_notes` row per lesson, editable at `/lesson-summary`. A generated PDF AI summary can append to it.
 - `class_roadmap/` — ordered lessons inside a class. One row per `(class_id, lesson_id)`.
+
+### Interactive HTML
+
+`interactive_html/` imports one `.html` page (`text/html`) or a `.zip` bundle containing `index.html` plus CSS, JavaScript, and images (`application/vnd.study-vault.html-bundle+zip`). It can also save pasted HTML.
+
+- HTML materials are ordinary `lesson_materials` rows and sync through `material_files`; no Drift schema bump is required.
+- They are excluded from AI Study Materials, Course Review, and chat context.
+- Opening unpacks to the temporary `study_vault_html/{materialId}/` cache. Zip-slip is rejected; bundles allow at most 5,000 entries and 512 MiB unpacked; imported files remain subject to the 256 MiB sync file limit.
+- A loopback server exposes only the opened material folder, with a per-open path token and stable per-item port so each page retains separate `localStorage`.
+- Android, iOS, and macOS use `webview_flutter`. Linux uses a Python GTK WebKit2 4.1 helper when installed and otherwise opens the browser. Windows uses the browser.
+- Website state and Linux `study_vault_html_webdata` are device-local and never sync. Remote references produce a **Uses internet** badge.
 
 ### Study pins, notes, bookmarks, favorites
 
@@ -164,20 +185,29 @@ Each feature folder is `lib/features/<name>/`. Typical split: `presentation/` (w
 
 ### AI
 
-Providers (`AiProviderId`): `gemini`, `deepseek`, `newApi` (a user-hosted Claude-compatible server). Keys live in secure storage. Features stay provider-agnostic; transport is in `*_ai_service.dart` / `*_chat_service.dart`. `routing_ai_service.dart` picks the provider.
+Providers (`AiProviderId`): `gemini`, `deepseek`, `newApi`. Features stay provider-agnostic; transport is in `*_ai_service.dart` / `*_chat_service.dart`, and `routing_ai_service.dart` picks the provider.
+
+- Gemini supports multiple keys. DeepSeek supports its defined thinking modes.
+- New API supports any number of named Anthropic Messages-compatible endpoint profiles. Profile metadata and cached model IDs live in device-local SharedPreferences under `ai_endpoint_profiles_v1`; each key lives only in secure storage as `study_vault_ai_endpoint_key_<profileId>`.
+- A model choice is an `AiModelRef`; a custom model identity includes endpoint profile and model (`sv1:endpoint:<profileId>:<modelId>`). `AiExecutionSelection` captures provider, requested/resolved model, profile, and thinking mode for the request. Chats, annotation calls, and queue jobs use that captured selection instead of re-reading global settings mid-request.
+- The legacy single New API URL/key/model migrates once into a profile named **New API**. Profiles, keys, and model preferences are device-local and do not sync.
 
 - `ai_assistant/` — selection and annotation actions: explain, simplify, rephrase, fix grammar, organize, summarize, define, give example, translate, ask, custom prompt, create annotation, flashcards, questions, key concepts, exam points. Languages include English and Persian Dari. Each completed call inserts an immutable `annotation_ai_generations` row. Regenerate adds a new row; `response_text` is never edited. `response_kind`: `text | flashcards | questions | annotation`.
 - `selection_ai/` — AI on a markdown/text selection inside readers.
-- `ai_chat/` — local conversations. Roles: `user | assistant | system`. Context chips (lesson, material, note, study pin) are JSON on the message and also indexed in `ai_message_context_refs` for reverse lookup. Draft text and draft chips are stored on the chat. Chat can speak (TTS) and take dictation.
-- `pdf_ai_materials/` — versioned whole-PDF artifacts. Types: `summary`, `explanation`, `deep_explanation`, `real_world_examples`, `slideshow`. Unique `(material_id, type, version)`. New generation inserts the next version; it does not overwrite. `source_fingerprint` is a hash of the extracted pages. Slideshow slides are separated by `<!-- slide -->`.
+- `ai_chat/` — local conversations. Roles: `user | assistant | system`. Context chips and `@` mentions (lesson, material, note, study pin) are JSON on the message and also indexed in `ai_message_context_refs` for reverse lookup. Draft text and draft chips are stored on the chat. Chat can speak (TTS) and take dictation.
+- `ai_generation_queue/` — device-local FIFO queue for PDF/text-document AI materials, continuations, and Persian translations. At most two jobs run concurrently. The Generation Center supports cancel, retry, continue partial output, profile replacement, and opening saved results. Provider keys and session tokens are never stored in jobs. Partial provider output belongs to the job until explicitly completed/saved. Restarted running jobs become `partial` or `interrupted`; the provider request does not survive process death. Deleting an endpoint profile marks affected jobs `configuration_required`. This build has in-app notices only, not OS notifications.
+- `pdf_ai_materials/` — versioned whole-document artifacts for PDF, markdown, and plain text. Types: `summary`, `explanation`, `deep_explanation`, `real_world_examples`, `slideshow`. Unique `(material_id, type, version)`. New generation inserts the next version; it does not overwrite. `source_fingerprint` hashes the source. Slideshow slides are separated by `<!-- slide -->`. Long-running work uses the AI generation queue.
   - Persian translation: one `pdf_ai_material_translations` row per source version + language `fa`. The reader splits the original into segments, translates each segment with code, formulas, charts, and slide markers replaced by `⟦SVn⟧` placeholders, and stores the result joined by `<!-- sv-segment -->` so section N matches section N. The EN | فا toggle restores the same section. `source_hash` marks a translation stale after the original is edited. Code, charts, and notation stay LTR.
 - `ai_questions/` — question sets. Source types include `selected_text`, `page`, `pages`, `material`, `annotations`, `notes`, `annotations_and_notes`, and the AI material types. Question types: `mcq | true_false | short_answer | fill_blank | mixed`. Difficulty: `easy | medium | hard | mixed`. Attempts and answers are stored. There is a live quiz session as well as a stored quiz session. Mode on attempts is `study` (exam is reserved).
-- `course_review/` — subject-wide condensed review. Per-PDF parts (`summary`, `explanation`, `deep_explanation`) reference `material_id`. Subject-wide parts (`examples`, `big_picture`) have null `material_id`. One AI request per PDF. Sections prefer that PDF’s latest lesson Summary/Explanation over raw PDF text. Staleness is `source_fingerprint`. Exclusions live in `course_review_exclusions` (unique on `material_id`). JSON import uses the `course_review` key and needs only a subject. The external prompt is the `## Course Review instruction` block in `manual_entry_instruction.md`.
+- `course_review/` — one complete Markdown review document per subject. The current document is the latest `course_review_entries` row with `part = document` and null `material_id`; every save appends a version. The screen copies one external prompt, accepts/edits the returned Markdown, and tracks staleness through a fingerprint of every included PDF/text document and its current source fingerprint. Exclusions live in `course_review_exclusions` (unique on `material_id`) and affect that fingerprint.
+  - Legacy per-material rows (`summary`, `explanation`, `deep_explanation`) and subject-wide rows (`examples`, `big_picture`) remain readable and can be compiled into a document, but they are no longer the primary editor.
+  - Legacy section generation prefers the material’s latest lesson Summary/Explanation over raw source text.
+  - JSON import using the `course_review` key still imports legacy sections and needs only a subject. The complete-document external prompt is `CourseReviewPrompts.completeReviewPrompt`; `manual_entry_instruction.md` remains the contract for legacy JSON import.
 - `manual_entry/` — import AI-produced JSON into lessons, materials, notes, flashcards, quizzes, and course review. The instruction the outside model must follow is `manual_entry_instruction.md` (also a Flutter asset).
 
 ### Reference books
 
-`reference_books/`. PDFs at `study_vault_files/books/{bookId}/{storedFileName}`.
+`reference_books/`. PDFs at `{active library}/study_vault_files/books/{bookId}/{storedFileName}`.
 
 Synced tables: `reference_books`, `reference_book_subjects`, `reference_book_chapters`, `reference_book_ai_items`, `reference_book_notes`, `reference_book_messages`, `reference_book_links`, `reference_book_quizzes`.
 
@@ -196,9 +226,10 @@ Synced tables: `reference_books`, `reference_book_subjects`, `reference_book_cha
 
 ### Settings, backup, cloud
 
-- `settings/` — API keys, model choice, backup export, sync recovery export, appearance.
-- `core/backup/` — local archive of the SQLite library and material files. `kStudyVaultSchemaVersion` must equal `AppDatabase.schemaVersion` (currently **23**).
-- `cloud_account/` — login, snapshot, sync, merge. See “Cloud sync” below.
+- `settings/` — API keys, endpoint profiles, model choice, backup export, sync recovery export, library accounts, appearance.
+- `library_accounts/` — creates, renames, switches, and permanently deletes independent local libraries. The default library (initially `Personal`) cannot be deleted. Switching replaces the root `ProviderScope`, closing the old database, cloud state, and AI queue before opening the selected library.
+- `core/backup/` — local archive of the SQLite library and material files. `kStudyVaultSchemaVersion` must equal `AppDatabase.schemaVersion` (currently **24**).
+- `cloud_account/` — login, snapshot, sync, merge. Secure sessions are keyed per library account; the default library retains the legacy secure-storage key. See “Cloud sync” below.
 - `file-share-server/` — a separate **unauthenticated** LAN sharing tool. It is not the private API. Do not document or expose it as the authenticated backend.
 
 ---
@@ -207,15 +238,32 @@ Synced tables: `reference_books`, `reference_book_subjects`, `reference_book_cha
 
 ```text
 {application documents}/
-  study_vault.sqlite          # plus -wal / -shm sidecars
+  study_vault.sqlite           # default Personal library; plus -wal / -shm
   study_vault_files/
     lessons/{lessonId}/{storedFileName}
     books/{bookId}/{storedFileName}
   study_vault_last_backup.json
-  study_vault_sync_recovery/   # local archives kept after a sync conflict
+  study_vault_sync_recovery/
+  study_vault_accounts/
+    default.json               # default account display metadata
+    active                     # active library account id
+    {uuid}/
+      account.json
+      study_vault.sqlite       # plus -wal / -shm
+      study_vault_files/
+        lessons/{lessonId}/{storedFileName}
+        books/{bookId}/{storedFileName}
+      study_vault_last_backup.json
+      study_vault_sync_recovery/
+
+{temporary directory}/
+  study_vault_html/{materialId}/
+
+{platform application data}/
+  study_vault_html_webdata/    # Linux WebKit website data; device-local
 ```
 
-Desktop and the MCP tool use the same SQLite file. The MCP default path is `~/Documents/study_vault.sqlite` via `STUDY_VAULT_DB`. The app sets `PRAGMA busy_timeout = 10000` and `foreign_keys = ON`. `AppDatabase.watchExternalChanges()` polls `PRAGMA data_version` so open screens refresh after the MCP tool writes.
+The MCP default path is `~/Documents/study_vault.sqlite` via `STUDY_VAULT_DB`, so it targets the default library unless `STUDY_VAULT_DB` is set to another library’s database. The app sets `PRAGMA busy_timeout = 10000` and `foreign_keys = ON`. `AppDatabase.watchExternalChanges()` polls `PRAGMA data_version` so open screens refresh after the MCP tool writes.
 
 Tests must use `AppDatabase.forTesting(NativeDatabase.memory())`. Never write the live database during tests.
 
@@ -223,13 +271,13 @@ Tests must use `AppDatabase.forTesting(NativeDatabase.memory())`. Never write th
 
 ## Database — local SQLite (pseudo schema)
 
-Schema version: **23** (`AppDatabase.schemaVersion`, `kStudyVaultSchemaVersion`, `sync-server/src/store.js`, `sync-server/src/library-schema.json`).
+Schema version: **24** (`AppDatabase.schemaVersion`, `kStudyVaultSchemaVersion`, `sync-server/src/store.js`, `sync-server/src/library-schema.json`).
 
 All of these are Drift tables (39). Primary key is `id TEXT` unless noted. `created_at` / `updated_at` are unix-second integers. Foreign keys cascade only where `onDelete` is stated; otherwise they are plain references.
 
 ```text
 classes
-  id, name[1..200], description?, created_at, updated_at
+  id, name[1..200], description?, sort_order=0, created_at, updated_at
 
 subject_groups
   id, class_id -> classes, name, description?, sort_order=0,
@@ -417,8 +465,9 @@ quiz_answers
 
 course_review_entries
   id, subject_id -> subjects ON DELETE CASCADE,
-  material_id? -> lesson_materials ON DELETE CASCADE,  -- null for examples|big_picture
-  part,                          -- summary|explanation|deep_explanation|examples|big_picture
+  material_id? -> lesson_materials ON DELETE CASCADE,
+  -- null for document|examples|big_picture; set for legacy material sections
+  part,                          -- document|summary|explanation|deep_explanation|examples|big_picture
   content, version, source_fingerprint?, provider?, model?, created_at
   UNIQUE (subject_id, material_id, part, version)
 
@@ -505,6 +554,16 @@ local_book_state (
   last_page=1, vectors_model
 )
 
+local_ai_generation_jobs
+  id TEXT PK, operation_kind, material_id, lesson_id?, title, file_path,
+  material_type, provider, requested_model, resolved_model, thinking_mode?,
+  endpoint_profile_id?, status, phase,
+  progress_current=0, progress_total=0, attempt_count=0,
+  partial_output?, checkpoint_json?, request_json, result_material_id?,
+  error_message?, error_category?, parent_job_id?, superseded_by_job_id?,
+  warning_message?, created_at, started_at?, updated_at, completed_at?
+  -- never store provider keys or cloud session tokens
+
 local_cloud_sync   -- single row id=1
   id INTEGER PK CHECK (id=1),
   account TEXT,                  -- binding so a library is not uploaded to the wrong account
@@ -550,11 +609,12 @@ Rules:
 
 - Account-scoped rows. Immutable revision history. Explicit tombstones (`data` null). Mutation IDs make retries idempotent. Optimistic revision checks. A conflicting batch stays atomic — no partial apply.
 - The Flutter client uses `/v2/snapshot` and `/v2/sync` only for library commits. One account-wide expected head and one durable operation id make the whole library commit atomic and retryable. Do not split related records into independent v1 batches.
+- Every local library has its own `local_cloud_sync` row and secure-storage session key. The default library keeps `study_vault_cloud_session_v1`; other keys include the library account UUID.
 - Limits: 20,000 metadata records, 48 MiB snapshot, files up to 256 MiB. Conflicts require an explicit user choice.
 - A private file manifest must reference a blob that was already uploaded and SHA-256 verified. Do not serve the file directory publicly.
 - File paths the manifest must include: `lessons/{lessonId}/{storedFileName}` and `books/{bookId}/{storedFileName}` (`cloudFilePath` in `cloud_sync_models.dart`).
 - Login: `POST /v1/login`. Session is a bearer token, 30 days, stored by the client outside `local_cloud_sync`. `GET /v1/me`, logout, logout-all. `GET /healthz` returns `{ status, schemaVersion, syncProtocol: 2 }`.
-- Production deploy is the dedicated `/opt/study-vault` Docker Compose project. Do not touch other VPS projects, their credentials, or their databases. Create accounts only with `npm run account -- create USERNAME` inside the API container. Backups are retained with no automatic deletion; the backup job refuses to start below 10 GiB free.
+- Production deploy is the dedicated `/opt/study-vault` Docker Compose project. Do not touch other VPS projects, their credentials, or their databases. Create each server username only with `npm run account -- create USERNAME` inside the API container; duplicate usernames are rejected. Backups are retained with no automatic deletion; the backup job refuses to start below 10 GiB free.
 
 ### Changing the database
 
@@ -565,7 +625,7 @@ Rules:
 5. Regenerate the contract: `flutter test --no-pub --dart-define=UPDATE_CLOUD_SCHEMA=true test/cloud_schema_contract_test.dart` and review `sync-server/src/library-schema.json`.
 6. Update `tool/study_vault_mcp.py` `SCHEMA_VERSIONS` if the MCP tool must accept the new schema, then run `flutter test --no-pub test/study_vault_mcp_test.dart`.
 7. If a new column has a default, add a PostgreSQL backfill in `sync-server/src/schema.sql` the same way `exam_date` and the material language columns were backfilled.
-8. Do not turn `local_book_*` or `local_cloud_sync` into Drift tables.
+8. Do not turn `local_book_*`, `local_ai_generation_jobs`, or `local_cloud_sync` into Drift tables. Device-local table additions use `beforeOpen` creation and `_ensureLocalColumn` where required; they do not bump the synced Drift schema.
 
 ---
 
@@ -581,7 +641,7 @@ Registered as `study-vault`. Read tools return JSON. Write tools return a previe
 | `read_pdf_text` | Page text, at most 120 pages per call |
 | `get_course_review` | Subject review status and optional content |
 | `get_book` / `search_book` | Chapters, AI items, keyword page search |
-| `add_lesson` / `attach_file` | Create a lesson; copy a local PDF or image into `study_vault_files/lessons/` |
+| `add_lesson` / `attach_file` | Create a lesson; copy a local PDF, markdown/plain-text document, or image into `study_vault_files/lessons/`. Interactive HTML import is app-only |
 | `draft_pdf_study_material` | Send one PDF to Gemini and return unsaved Markdown |
 | `add_study_material` | Insert a new version; never replace |
 | `add_flashcards` / `add_note` / `add_quiz` | Add study objects; duplicate flashcard fronts are skipped |
@@ -604,8 +664,10 @@ lib/core/navigation/shell_tab.dart
 lib/core/text/search_text_normalizer.dart
 lib/features/classes/
 lib/features/subjects/
-lib/features/lessons/            materials, PDF/image/markdown readers, progress
+lib/features/lessons/            materials, PDF/image/text readers, lesson summary, progress
 lib/features/class_roadmap/
+lib/features/interactive_html/   HTML import, secure loopback serving, platform readers
+lib/features/library_accounts/   isolated local libraries and active-library root
 lib/features/study_pins/
 lib/features/notes/
 lib/features/favorites/
@@ -616,6 +678,7 @@ lib/features/flashcards/
 lib/features/study_workspace/
 lib/features/ai_assistant/
 lib/features/ai_chat/
+lib/features/ai_generation_queue/ local raw-SQL queue, coordinator, Generation Center
 lib/features/ai_questions/
 lib/features/selection_ai/
 lib/features/pdf_ai_materials/
@@ -645,6 +708,12 @@ flutter test --no-pub <touched test files>
 flutter analyze
 ```
 
+Install backend dependencies after lockfile/package changes:
+
+```text
+npm ci --prefix sync-server
+```
+
 After a schema or sync change also run:
 
 ```text
@@ -670,7 +739,7 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi --no
 
 Output: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 
-Feature tests already in `test/`: `course_review_test.dart`, `study_schedule_test.dart`, `study_schedule_screen_test.dart`, `pdf_ai_translation_test.dart`, `pdf_ai_translation_service_test.dart`, `pdf_ai_translation_reader_test.dart`, `reference_books_test.dart`, `study_vault_mcp_test.dart`, `desktop_layout_test.dart`, `cloud_schema_contract_test.dart`, plus the AI, quiz, pin, backup, and markdown tests beside them.
+Feature tests already in `test/`: `library_accounts_test.dart`, `interactive_html_test.dart`, `ai_generation_queue_test.dart`, `ai_endpoint_profile_test.dart`, `ai_execution_selection_test.dart`, `lesson_summary_test.dart`, `course_review_test.dart`, `study_schedule_test.dart`, `study_schedule_screen_test.dart`, `pdf_ai_translation_test.dart`, `pdf_ai_translation_service_test.dart`, `pdf_ai_translation_reader_test.dart`, `reference_books_test.dart`, `chat_mentions_test.dart`, `study_vault_mcp_test.dart`, `desktop_layout_test.dart`, `cloud_schema_contract_test.dart`, plus the AI, quiz, pin, backup, material-variant, and markdown tests beside them.
 
 ---
 
@@ -678,12 +747,15 @@ Feature tests already in `test/`: `course_review_test.dart`, `study_schedule_tes
 
 - Schema version 23 stays consistent across Drift, `kStudyVaultSchemaVersion`, `store.js`, and `library-schema.json`.
 - Sync commits are one atomic v2 operation. Conflicting batches do not partially apply.
-- `local_book_pages`, `local_book_vectors`, `local_book_state`, and `local_cloud_sync` stay out of the synced schema.
-- Session tokens never go in `local_cloud_sync`. API keys stay in secure storage.
-- AI study materials, course-review parts, annotation generations, and book AI items are versioned inserts. Do not update prior content rows in place.
+- `local_book_pages`, `local_book_vectors`, `local_book_state`, `local_ai_generation_jobs`, and `local_cloud_sync` stay out of the synced schema.
+- Session tokens never go in `local_cloud_sync`; AI queue rows never contain API keys. API keys and per-library cloud sessions stay in secure storage.
+- Library account registry files, endpoint-profile metadata, HTML cache, HTML website state, and AI queue state remain device-local.
+- Switching library accounts must dispose the old provider scope before mounting the new account’s scope. The default library keeps legacy paths and cannot be deleted.
+- AI study materials, Course Review documents/legacy parts, annotation generations, and book AI items are versioned inserts. Do not update prior content rows in place.
 - Study-schedule events are append-only. The current due date is the latest event.
 - Schedule days and exam dates are `yyyy-MM-dd` text.
-- Course Review subject-wide parts use a null `material_id`. Per-PDF parts reference the PDF.
+- The primary Course Review is `part=document` with null `material_id`. Legacy `examples`/`big_picture` also have null `material_id`; legacy material sections reference their source material.
+- Interactive HTML syncs as a file but is never read as AI, Course Review, or chat context.
 - Book search indexes stay on device. Ask-the-book receives retrieved pages (≤ 14), not the file.
 - Persian PDF variants and Persian AI translations stay aligned to the source (page offset, or `<!-- sv-segment -->` sections).
 - The MCP tool does not delete study content and does not write unless `apply` is true.
@@ -733,14 +805,14 @@ Do not commit.
 Change the Study Vault schema: <exact column or table change>.
 
 1. Edit lib/core/database/app_database.dart.
-2. Bump schemaVersion from 23 and add an onUpgrade step only.
+2. Bump schemaVersion from 24 and add an onUpgrade step only.
 3. Bump kStudyVaultSchemaVersion in lib/core/backup/backup_providers.dart.
 4. Bump schemaVersion in sync-server/src/store.js.
 5. Regenerate sync-server/src/library-schema.json with:
    flutter test --no-pub --dart-define=UPDATE_CLOUD_SCHEMA=true test/cloud_schema_contract_test.dart
 6. If old server rows need the new field, backfill in sync-server/src/schema.sql.
 7. If tool/study_vault_mcp.py reads or writes the table, bump SCHEMA_VERSIONS and update the tool.
-8. Leave local_book_* and local_cloud_sync as raw SQL, not Drift tables.
+8. Leave local_book_*, local_ai_generation_jobs, and local_cloud_sync as raw SQL, not Drift tables.
 
 Run:
 flutter test --no-pub test/cloud_schema_contract_test.dart test/database_test.dart test/study_vault_mcp_test.dart
@@ -768,14 +840,70 @@ Change <course review or pdf ai material behavior>.
 Rules already in the app:
 - pdf_ai_materials types: summary, explanation, deep_explanation, real_world_examples, slideshow.
 - New output is a new version row. Unique (material_id, type, version). source_fingerprint marks staleness.
+- PDF, markdown, and plain text are documents. Interactive HTML and images are not document AI sources.
+- Long-running generation and Persian translation use local_ai_generation_jobs through AiGenerationCoordinator. Jobs capture provider/model/profile but never keys. Maximum concurrency is 2.
 - Persian translations are one row per source version + language fa, section-aligned with <!-- sv-segment -->, placeholders ⟦SVn⟧ for code, formulas, charts, and slides. source_hash marks stale translations. Code and notation render LTR.
-- course_review_entries: per-PDF summary, explanation, deep_explanation have material_id; examples and big_picture have null material_id. Unique (subject_id, material_id, part, version).
-- One AI request per PDF. Prefer that PDF’s latest lesson Summary/Explanation over raw PDF text.
+- The primary Course Review is one complete Markdown document per subject: part=document, material_id null, and every save appends a version.
+- Older per-material summary/explanation/deep_explanation and subject-wide examples/big_picture rows remain readable and compilable but are not the main editor.
+- Document staleness is based on every included document and its current source fingerprint.
 - Exclusions are course_review_exclusions, unique on material_id.
-- Import key is course_review and needs only a subject. External wording lives in the "## Course Review instruction" block of manual_entry_instruction.md.
+- Complete-document external wording comes from CourseReviewPrompts.completeReviewPrompt.
+- JSON import key course_review still writes legacy section rows and follows manual_entry_instruction.md.
 
-Tests: test/course_review_test.dart and the pdf_ai_translation_* tests if translation is touched.
+Tests: test/course_review_test.dart, test/ai_generation_queue_test.dart when queue behavior changes, and the pdf_ai_translation_* tests if translation is touched.
 Run those tests with flutter test --no-pub and flutter analyze.
+Do not commit.
+```
+
+### AI generation queue or endpoint profiles
+
+```text
+Change <AI queue or endpoint-profile behavior>.
+
+Keep local_ai_generation_jobs a raw device-local table created in beforeOpen. Do not add it to Drift, cloud schema, or backups-by-table.
+Jobs are FIFO with at most 2 running. Store AiExecutionSelection identity (provider, requested/resolved model, endpoint profile, thinking mode), never an API key.
+Partial output stays on the job until explicitly saved. Restarted running jobs become partial or interrupted.
+Deleting a profile marks its unfinished jobs configuration_required; never silently route them to another profile.
+Endpoint metadata stays in SharedPreferences. Endpoint keys stay in flutter_secure_storage. Profiles and keys never sync.
+Do not claim OS notifications; this build has in-app notices only.
+
+Tests: test/ai_generation_queue_test.dart, test/ai_endpoint_profile_test.dart, and test/ai_execution_selection_test.dart as applicable.
+Run touched tests with flutter test --no-pub and run flutter analyze.
+Do not commit.
+```
+
+### Interactive HTML
+
+```text
+Change Interactive HTML: <change>.
+
+Feature folder: lib/features/interactive_html/.
+MIME types are text/html for one page and application/vnd.study-vault.html-bundle+zip for a zip bundle with index.html.
+HTML is an ordinary lesson_materials row and syncs through material_files, but it is not a document source for AI Study Materials, Course Review, or chat context.
+Serve only the unpacked material folder from loopback with a per-open path token. Preserve stable per-item origin behavior for localStorage.
+Reject zip-slip, more than 5000 entries, more than 512 MiB unpacked, and imports above the 256 MiB file limit.
+Website state, temp cache, and study_vault_html_webdata stay device-local.
+Keep the platform matrix and browser fallbacks intact.
+
+Tests: test/interactive_html_test.dart.
+Run that test with flutter test --no-pub and run flutter analyze.
+Do not commit.
+```
+
+### Library accounts
+
+```text
+Change local library accounts: <change>.
+
+Feature folder: lib/features/library_accounts/.
+Each library owns its database, study_vault_files, backup metadata, sync recovery, AI queue, and secure cloud session.
+The default library (initially Personal) stays in the legacy documents-root paths and cannot be deleted. Other libraries live under study_vault_accounts/{uuid}/.
+LibraryAccountsController selects the new StudyVaultPaths root; LibraryAccountsRoot inserts a switching frame that disposes the old ProviderScope before mounting the new scope. Never keep the old database, sync service, or queue alive across a switch.
+Registry files are device-local and never synchronized. Cloud secure-storage keys are per library; preserve the default library’s legacy key.
+Deleting a non-default library is permanent and recursive, so retain explicit confirmation and never delete the active library before switching away.
+
+Tests: test/library_accounts_test.dart plus cloud/backup tests when those boundaries change.
+Run touched tests with flutter test --no-pub and run flutter analyze.
 Do not commit.
 ```
 

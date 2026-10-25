@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../domain/ai_models.dart';
@@ -144,7 +145,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                         await Clipboard.setData(ClipboardData(text: text));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Copied')),
+                            const TransientSnackBar(content: Text('Copied')),
                           );
                         }
                       },
@@ -169,7 +170,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                             .toList();
                         if (selected.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            const TransientSnackBar(
                               content: Text(
                                 'Select a card with both a front and an answer.',
                               ),
@@ -185,7 +186,7 @@ class _AiFlashcardsPreviewScreenState extends State<AiFlashcardsPreviewScreen> {
                           if (context.mounted) {
                             setState(() => _saving = false);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              const TransientSnackBar(
                                 content: Text(
                                   'Could not save flashcards. Please try again.',
                                 ),

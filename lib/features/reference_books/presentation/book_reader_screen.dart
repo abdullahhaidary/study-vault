@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -144,7 +145,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     await selection.clearTextSelection();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved to book notes (p. $_page)')),
+        TransientSnackBar(content: Text('Saved to book notes (p. $_page)')),
       );
     }
   }
@@ -228,7 +229,7 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
       if (selection == null || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
-        SnackBar(content: Text('Explaining page $_page…')),
+        TransientSnackBar(content: Text('Explaining page $_page…')),
       );
       try {
         item = await ref
@@ -240,7 +241,9 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
               selection: selection,
             );
       } on Object catch (e) {
-        messenger.showSnackBar(SnackBar(content: Text(aiErrorMessage(e))));
+        messenger.showSnackBar(
+          TransientSnackBar(content: Text(aiErrorMessage(e))),
+        );
         return;
       }
     }
@@ -282,9 +285,9 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
       title: 'Bookmark · page $_page',
     );
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Bookmarked page $_page')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        TransientSnackBar(content: Text('Bookmarked page $_page')),
+      );
     }
   }
 

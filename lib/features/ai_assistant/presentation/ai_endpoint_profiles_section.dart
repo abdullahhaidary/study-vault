@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../data/ai_model_catalog_providers.dart';
 import '../data/ai_providers.dart';
 import '../domain/ai_endpoint_profile.dart';
@@ -187,7 +188,7 @@ Future<void> _addProfile(BuildContext context, WidgetRef ref) async {
     await _reload(ref);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Profile saved. Test the connection, then refresh models.',
           ),
@@ -198,7 +199,7 @@ Future<void> _addProfile(BuildContext context, WidgetRef ref) async {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ).showSnackBar(TransientSnackBar(content: Text(error.message)));
     }
   }
 }
@@ -225,7 +226,7 @@ Future<void> _editProfile(
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ).showSnackBar(TransientSnackBar(content: Text(error.message)));
     }
   }
 }
@@ -239,16 +240,16 @@ Future<void> _test(
     await ref.read(newApiClaudeServiceProvider).testProfile(profile.id);
     await _reload(ref);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Connected to ${profile.name}.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        TransientSnackBar(content: Text('Connected to ${profile.name}.')),
+      );
     }
   } on AiException catch (error) {
     await _reload(ref);
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ).showSnackBar(TransientSnackBar(content: Text(error.message)));
     }
   }
 }
@@ -280,7 +281,7 @@ Future<void> _refresh(
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ).showSnackBar(TransientSnackBar(content: Text(error.message)));
     }
   }
 }

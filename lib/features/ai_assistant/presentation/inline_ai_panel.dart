@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
@@ -321,7 +322,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     final resourceId = widget.callbacks.resourceId;
     if (resourceId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot save annotation here.')),
+        const TransientSnackBar(content: Text('Cannot save annotation here.')),
       );
       return;
     }
@@ -330,7 +331,9 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
         widget.callbacks.rangeInputs.isEmpty &&
         state.mode == InlineAiSourceMode.selection) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selection ranges are unavailable.')),
+        const TransientSnackBar(
+          content: Text('Selection ranges are unavailable.'),
+        ),
       );
       return;
     }
@@ -340,7 +343,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     if (_controller.existingPin == null &&
         widget.callbacks.rangeInputs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Select text to create an annotation, or open an existing pin.',
           ),
@@ -363,13 +366,13 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       _controller.bindExistingPin(pin);
       await widget.callbacks.onAnnotationSaved?.call(pin);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Added to annotation')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Added to annotation')),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save annotation.')),
+        const TransientSnackBar(content: Text('Could not save annotation.')),
       );
     }
   }
@@ -383,7 +386,9 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not apply the AI answer.')),
+        const TransientSnackBar(
+          content: Text('Could not apply the AI answer.'),
+        ),
       );
       return;
     }
@@ -557,7 +562,9 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
       askController: _askController,
       askFocus: _askFocus,
       fillParent: true,
-      onHeaderDrag: _minimized ? null : (delta) => _move(delta, size, usableHeight),
+      onHeaderDrag: _minimized
+          ? null
+          : (delta) => _move(delta, size, usableHeight),
       onMinimize: () => setState(() => _minimized = true),
       onRun: _run,
       onAskFocusChip: () {
@@ -574,7 +581,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Copied')));
+          ).showSnackBar(const TransientSnackBar(content: Text('Copied')));
         }
       },
       onRegenerate: () => _controller.regenerate(ensureReady: _ensureReady),
@@ -611,58 +618,58 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
 
     return _PassThroughOverlay(
       child: Stack(
-      children: [
-        if (!_minimized)
-          Positioned(
-            left: geometry.left,
-            top: geometry.top,
-            width: geometry.width,
-            height: geometry.height,
-            child: Stack(
-              children: [
-                Positioned.fill(child: panel),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  width: 28,
-                  height: 28,
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeDownRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onPanUpdate: (details) =>
-                          _resize(details.delta, size, usableHeight),
-                      child: Align(
-                        alignment: Alignment.bottomRight,
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.drag_handle,
-                            size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+        children: [
+          if (!_minimized)
+            Positioned(
+              left: geometry.left,
+              top: geometry.top,
+              width: geometry.width,
+              height: geometry.height,
+              child: Stack(
+                children: [
+                  Positioned.fill(child: panel),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    width: 28,
+                    height: 28,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.resizeDownRight,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanUpdate: (details) =>
+                            _resize(details.delta, size, usableHeight),
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.drag_handle,
+                              size: 18,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        if (_minimized)
-          Positioned(
-            left: geometry.left,
-            top: geometry.top,
-            child: _MinimizedAiChip(
-              label: _controller.state.action?.menuLabel ?? 'AI',
-              onDrag: (delta) => _move(delta, size, usableHeight),
-              onRestore: () => setState(() => _minimized = false),
-              onClose: widget.callbacks.onDismiss,
+          if (_minimized)
+            Positioned(
+              left: geometry.left,
+              top: geometry.top,
+              child: _MinimizedAiChip(
+                label: _controller.state.action?.menuLabel ?? 'AI',
+                onDrag: (delta) => _move(delta, size, usableHeight),
+                onRestore: () => setState(() => _minimized = false),
+                onClose: widget.callbacks.onDismiss,
+              ),
             ),
-            ),
-      ],
+        ],
       ),
     );
   }
@@ -678,7 +685,10 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
     );
     final height = _minimized
         ? _chipSize
-        : (_height ?? _defaultHeight.clamp(minH, maxHeight)).clamp(minH, maxHeight);
+        : (_height ?? _defaultHeight.clamp(minH, maxHeight)).clamp(
+            minH,
+            maxHeight,
+          );
 
     final anchor = widget.anchorGlobal;
     final dockBottom =
@@ -894,314 +904,311 @@ class _InlineAiPanelCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       clipBehavior: Clip.antiAlias,
       child: Column(
-          mainAxisSize: fillParent ? MainAxisSize.max : MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MouseRegion(
-              cursor: onHeaderDrag == null
-                  ? MouseCursor.defer
-                  : SystemMouseCursors.move,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate: onHeaderDrag == null
-                    ? null
-                    : (details) => onHeaderDrag!(details.delta),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 6, 4, 0),
+        mainAxisSize: fillParent ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MouseRegion(
+            cursor: onHeaderDrag == null
+                ? MouseCursor.defer
+                : SystemMouseCursors.move,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: onHeaderDrag == null
+                  ? null
+                  : (details) => onHeaderDrag!(details.delta),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 4, 0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.drag_indicator,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.action?.menuLabel ?? 'AI',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                    if (state.hasResponse)
+                      IconButton(
+                        tooltip: 'Expand',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: busy ? null : onExpand,
+                        icon: const Icon(Icons.open_in_full, size: 18),
+                      ),
+                    if (onMinimize != null)
+                      IconButton(
+                        tooltip: 'Hide',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: onMinimize,
+                        icon: const Icon(Icons.minimize, size: 18),
+                      ),
+                    IconButton(
+                      tooltip: 'Close',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onIgnore,
+                      icon: const Icon(Icons.close, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+            child: onChangeContext == null
+                ? Text(
+                    state.contextLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                : Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: InkWell(
+                      onTap: busy ? null : onChangeContext,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                state.contextLabel,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+          if (onPageSendMode != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Send as',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  for (final mode in AiPageSendMode.values)
+                    ChoiceChip(
+                      label: Text(mode.label),
+                      selected: state.pageSendMode == mode,
+                      onSelected: busy ? null : (_) => onPageSendMode!(mode),
+                    ),
+                ],
+              ),
+            ),
+          if (state.selection != null && onSelectionChanged != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AiModelPickerButton(
+                  selection: state.selection!,
+                  action: state.action,
+                  compact: true,
+                  constraints: state.pageSendMode == AiPageSendMode.image
+                      ? AiExecutionConstraints.vision
+                      : AiExecutionConstraints.none,
+                  onChanged: busy ? (_) {} : onSelectionChanged!,
+                ),
+              ),
+            ),
+          if (state.phase == InlineAiPhase.ready ||
+              (state.phase == InlineAiPhase.error && !state.hasResponse))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final action in chips)
+                    ActionChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(action.menuLabel),
+                          if ((state.counts[action] ?? 0) > 0) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '${state.counts[action]}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      onPressed: busy ? null : () => onRun(action),
+                    ),
+                  ActionChip(
+                    label: const Text('Ask…'),
+                    onPressed: busy ? null : onAskFocusChip,
+                  ),
+                  ActionChip(
+                    label: const Text('More'),
+                    onPressed: busy ? null : onMore,
+                  ),
+                ],
+              ),
+            ),
+          if (state.generations.length > 1)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.drag_indicator,
-                        size: 18,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 18,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          state.action?.menuLabel ?? 'AI',
-                          style: theme.textTheme.titleSmall,
+                      for (final g in state.generations)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 6),
+                          child: ChoiceChip(
+                            label: Text(
+                              g.modelName == null || g.modelName!.isEmpty
+                                  ? 'V${g.generationNumber}'
+                                  : 'V${g.generationNumber} · ${AiModels.displayBadge(provider: g.provider, modelName: g.modelName)}',
+                            ),
+                            selected: state.selected?.id == g.id,
+                            onSelected: busy
+                                ? null
+                                : (_) => onSelectGeneration(g),
+                          ),
                         ),
-                      ),
-                      if (state.hasResponse)
-                        IconButton(
-                          tooltip: 'Expand',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: busy ? null : onExpand,
-                          icon: const Icon(Icons.open_in_full, size: 18),
-                        ),
-                      if (onMinimize != null)
-                        IconButton(
-                          tooltip: 'Hide',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: onMinimize,
-                          icon: const Icon(Icons.minimize, size: 18),
-                        ),
-                      IconButton(
-                        tooltip: 'Close',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: onIgnore,
-                        icon: const Icon(Icons.close, size: 18),
-                      ),
                     ],
                   ),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-              child: onChangeContext == null
-                  ? Text(
-                      state.contextLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    )
-                  : Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: InkWell(
-                        onTap: busy ? null : onChangeContext,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  state.contextLabel,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-            if (onPageSendMode != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Send as',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    for (final mode in AiPageSendMode.values)
-                      ChoiceChip(
-                        label: Text(mode.label),
-                        selected: state.pageSendMode == mode,
-                        onSelected: busy ? null : (_) => onPageSendMode!(mode),
-                      ),
-                  ],
-                ),
-              ),
-            if (state.selection != null && onSelectionChanged != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: AiModelPickerButton(
-                    selection: state.selection!,
-                    action: state.action,
-                    compact: true,
-                    constraints: state.pageSendMode == AiPageSendMode.image
-                        ? AiExecutionConstraints.vision
-                        : AiExecutionConstraints.none,
-                    onChanged: busy ? (_) {} : onSelectionChanged!,
-                  ),
-                ),
-              ),
-            if (state.phase == InlineAiPhase.ready ||
-                (state.phase == InlineAiPhase.error && !state.hasResponse))
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final action in chips)
-                      ActionChip(
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(action.menuLabel),
-                            if ((state.counts[action] ?? 0) > 0) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                '${state.counts[action]}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        onPressed: busy ? null : () => onRun(action),
-                      ),
-                    ActionChip(
-                      label: const Text('Ask…'),
-                      onPressed: busy ? null : onAskFocusChip,
-                    ),
-                    ActionChip(
-                      label: const Text('More'),
-                      onPressed: busy ? null : onMore,
-                    ),
-                  ],
-                ),
-              ),
-            if (state.generations.length > 1)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final g in state.generations)
-                          Padding(
-                            padding: const EdgeInsetsDirectional.only(end: 6),
-                            child: ChoiceChip(
-                              label: Text(
-                                g.modelName == null || g.modelName!.isEmpty
-                                    ? 'V${g.generationNumber}'
-                                    : 'V${g.generationNumber} · ${AiModels.displayBadge(provider: g.provider, modelName: g.modelName)}',
-                              ),
-                              selected: state.selected?.id == g.id,
-                              onSelected: busy
-                                  ? null
-                                  : (_) => onSelectGeneration(g),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            Flexible(child: _buildBody(context, busy)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CallbackShortcuts(
-                      bindings: {
-                        const SingleActivator(LogicalKeyboardKey.enter): () {
-                          if (!busy) onSubmitAsk();
-                        },
+          Flexible(child: _buildBody(context, busy)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CallbackShortcuts(
+                    bindings: {
+                      const SingleActivator(LogicalKeyboardKey.enter): () {
+                        if (!busy) onSubmitAsk();
                       },
-                      child: AutoDirectionTextField(
-                        controller: askController,
-                        focusNode: askFocus,
-                        enabled: !busy,
-                        minLines: 1,
-                        maxLines: 3,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: busy ? null : (_) => onSubmitAsk(),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: state.hasResponse
-                              ? 'Ask a follow-up…'
-                              : state.mode == InlineAiSourceMode.page
-                              ? 'Ask about this page…'
-                              : 'Ask about this selection…',
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 10,
-                          ),
+                    },
+                    child: AutoDirectionTextField(
+                      controller: askController,
+                      focusNode: askFocus,
+                      enabled: !busy,
+                      minLines: 1,
+                      maxLines: 3,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: busy ? null : (_) => onSubmitAsk(),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: state.hasResponse
+                            ? 'Ask a follow-up…'
+                            : state.mode == InlineAiSourceMode.page
+                            ? 'Ask about this page…'
+                            : 'Ask about this selection…',
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 10,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  VoiceInputButton(
-                    controller: askController,
-                    focusNode: askFocus,
-                    enabled: !busy,
-                    compact: true,
+                ),
+                const SizedBox(width: 6),
+                VoiceInputButton(
+                  controller: askController,
+                  focusNode: askFocus,
+                  enabled: !busy,
+                  compact: true,
+                ),
+                IconButton.filled(
+                  tooltip: 'Send',
+                  onPressed: busy ? null : onSubmitAsk,
+                  icon: const Icon(Icons.arrow_upward, size: 18),
+                ),
+              ],
+            ),
+          ),
+          if (state.hasResponse || state.phase == InlineAiPhase.loading)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                alignment: WrapAlignment.spaceBetween,
+                children: [
+                  TextButton(onPressed: onIgnore, child: const Text('Ignore')),
+                  if (onReplace != null)
+                    FilledButton.icon(
+                      onPressed: canApply ? onReplace : null,
+                      icon: const Icon(Icons.find_replace, size: 16),
+                      label: const Text('Replace'),
+                    ),
+                  if (onInsertBelow != null)
+                    FilledButton.tonalIcon(
+                      onPressed: canApply ? onInsertBelow : null,
+                      icon: const Icon(Icons.vertical_align_bottom, size: 16),
+                      label: const Text('Insert below'),
+                    ),
+                  if (onAppend != null)
+                    TextButton.icon(
+                      onPressed: canApply ? onAppend : null,
+                      icon: const Icon(Icons.playlist_add, size: 16),
+                      label: const Text('Add at end'),
+                    ),
+                  if (showAddToAnnotation)
+                    FilledButton(
+                      onPressed: canApply ? onAddToAnnotation : null,
+                      child: const Text('Add to annotation'),
+                    ),
+                  TextButton(
+                    onPressed: busy || state.action == null
+                        ? null
+                        : onRegenerate,
+                    child: const Text('Regenerate'),
                   ),
-                  IconButton.filled(
-                    tooltip: 'Send',
-                    onPressed: busy ? null : onSubmitAsk,
-                    icon: const Icon(Icons.arrow_upward, size: 18),
+                  TextButton(
+                    onPressed: busy ? null : onMore,
+                    child: const Text('More'),
                   ),
                 ],
               ),
             ),
-            if (state.hasResponse || state.phase == InlineAiPhase.loading)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-                child: Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: onIgnore,
-                      child: const Text('Ignore'),
-                    ),
-                    if (onReplace != null)
-                      FilledButton.icon(
-                        onPressed: canApply ? onReplace : null,
-                        icon: const Icon(Icons.find_replace, size: 16),
-                        label: const Text('Replace'),
-                      ),
-                    if (onInsertBelow != null)
-                      FilledButton.tonalIcon(
-                        onPressed: canApply ? onInsertBelow : null,
-                        icon: const Icon(Icons.vertical_align_bottom, size: 16),
-                        label: const Text('Insert below'),
-                      ),
-                    if (onAppend != null)
-                      TextButton.icon(
-                        onPressed: canApply ? onAppend : null,
-                        icon: const Icon(Icons.playlist_add, size: 16),
-                        label: const Text('Add at end'),
-                      ),
-                    if (showAddToAnnotation)
-                      FilledButton(
-                        onPressed: canApply ? onAddToAnnotation : null,
-                        child: const Text('Add to annotation'),
-                      ),
-                    TextButton(
-                      onPressed: busy || state.action == null
-                          ? null
-                          : onRegenerate,
-                      child: const Text('Regenerate'),
-                    ),
-                    TextButton(
-                      onPressed: busy ? null : onMore,
-                      child: const Text('More'),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        ],
+      ),
     );
   }
 

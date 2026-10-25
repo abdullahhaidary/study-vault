@@ -308,7 +308,7 @@ class BackupService {
       ),
     );
 
-    final docs = await StudyVaultPaths.documentsDirectory();
+    final docs = await StudyVaultPaths.libraryDirectory();
     final workRoot = Directory(
       p.join(
         docs.path,
@@ -362,10 +362,7 @@ class BackupService {
         final incomingMaterials = Directory(
           p.join(extractDir.path, 'backup', 'files', 'study_vault_files'),
         );
-        final docs = await StudyVaultPaths.documentsDirectory();
-        final targetMaterials = Directory(
-          p.join(docs.path, StudyVaultPaths.materialsDirName),
-        );
+        final targetMaterials = await StudyVaultPaths.materialsDirectory();
         await deleteIfExists(targetMaterials);
         if (await incomingMaterials.exists()) {
           await copyDirectoryStreaming(incomingMaterials, targetMaterials);

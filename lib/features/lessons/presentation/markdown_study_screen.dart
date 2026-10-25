@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -91,13 +92,13 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Saved')));
+      ).showSnackBar(const TransientSnackBar(content: Text('Saved')));
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        TransientSnackBar(content: Text('Could not save: $error')),
+      );
     }
   }
 

@@ -1,14 +1,17 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/desktop_frame.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -51,6 +54,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _scrollController = ScrollController();
   final Map<String, GlobalKey> _messageKeys = {};
   final Map<String, double> _chatScrollOffsets = {};
+  static const _stickToBottomThreshold = 48.0;
+  bool _stickToBottom = true;
+  bool _isProgrammaticScroll = false;
   bool _sending = false;
   String? _streamingText;
   String? _errorBanner;
@@ -139,7 +145,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final consent = await ref.read(aiPrivacyConsentProvider.future);
     if (!consent && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text('Accept the AI privacy notice in Settings first.'),
         ),
       );
@@ -166,6 +172,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     if (!mounted) return;
     if (widget.onClose != null) {
       widget.onClose!();
+      return;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
       return;
     }
     ref.read(shellTabProvider.notifier).state = ShellTab.home;
@@ -225,7 +235,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     if (_attachments.length >= AiChatService.maxAttachmentsPerMessage) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             'You can attach up to ${AiChatService.maxAttachmentsPerMessage} items.',
           ),
@@ -285,12 +295,14 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         ? 'Please use the attached study content.'
         : text;
 
+    _stickToBottom = true;
     setState(() {
       _sending = true;
       _errorBanner = null;
       _streamingText = '';
       _attachments = [];
     });
+    _scrollToBottom(force: true);
 
     try {
       var chatId = ref.read(activeAiChatIdProvider);
@@ -386,10 +398,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     );
     if (edited == null || !mounted) return;
 
+    _stickToBottom = true;
     setState(() {
       _sending = true;
       _errorBanner = null;
     });
+    _scrollToBottom(force: true);
     try {
       await ref
           .read(aiChatServiceProvider)
@@ -418,20 +432,64 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Text-to-speech is not available.')),
+        const TransientSnackBar(
+          content: Text('Text-to-speech is not available.'),
+        ),
       );
     }
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool force = false}) {
+    if (!force && !_stickToBottom) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
+      if (!mounted || !_scrollController.hasClients) return;
+      if (!force && !_stickToBottom) return;
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) return;
+      final target = position.maxScrollExtent;
+      final animate = force && !_sending;
+      _isProgrammaticScroll = true;
+      if (animate) {
+        _scrollController
+            .animateTo(
+              target,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            )
+            .whenComplete(() {
+              if (mounted) _isProgrammaticScroll = false;
+            });
+        return;
+      }
+      _scrollController.jumpTo(target);
+      _isProgrammaticScroll = false;
     });
+  }
+
+  bool _onMessageScroll(ScrollNotification notification) {
+    if (_isProgrammaticScroll || notification.depth != 0) return false;
+    if (!_scrollController.hasClients) return false;
+    final metrics = notification.metrics;
+    if (!metrics.hasContentDimensions || metrics.axis != Axis.vertical) {
+      return false;
+    }
+    final nearBottom =
+        metrics.maxScrollExtent - metrics.pixels <= _stickToBottomThreshold;
+    if (nearBottom) {
+      _stickToBottom = true;
+      return false;
+    }
+    if (notification is UserScrollNotification &&
+        notification.direction != ScrollDirection.idle) {
+      _stickToBottom = false;
+      return false;
+    }
+    if (notification is ScrollUpdateNotification &&
+        (notification.dragDetails != null ||
+            notification.scrollDelta != null)) {
+      _stickToBottom = false;
+    }
+    return false;
   }
 
   void _restoreChatScroll(String chatId) {
@@ -560,106 +618,112 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         width: drawerWidth,
         child: const AiChatHistoryScreen(asDrawer: true),
       ),
-      appBar: widget.embedded
-          ? null
-          : AppBar(
-              centerTitle: false,
-              titleSpacing: 0,
-              backgroundColor: theme.colorScheme.surface,
-              surfaceTintColor: Colors.transparent,
-              leading: Builder(
-                builder: (context) => IconButton(
-                  tooltip: 'Chat history',
-                  onPressed: () async {
-                    await _persistDraft();
-                    if (context.mounted) Scaffold.of(context).openDrawer();
-                  },
-                  icon: const Icon(Icons.menu),
-                ),
+      appBar: AppBar(
+        centerTitle: false,
+        titleSpacing: 0,
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: 'Chat history',
+            onPressed: () async {
+              await _persistDraft();
+              if (context.mounted) Scaffold.of(context).openDrawer();
+            },
+            icon: const Icon(Icons.menu),
+          ),
+        ),
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            onTap: () => _selectModel(modelId),
+            borderRadius: AppRadii.smAll,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xxs,
               ),
-              title: Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: () => _selectModel(modelId),
-                  borderRadius: AppRadii.smAll,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                      vertical: AppSpacing.xxs,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            modelLabel,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: modelKnown
-                                  ? theme.colorScheme.onSurface
-                                  : theme.colorScheme.error,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        if (isDeepSeek) ...[
-                          const SizedBox(width: 8),
-                          const DeepSeekPricingBanner(
-                            style: DeepSeekPricingBannerStyle.chip,
-                          ),
-                        ],
-                      ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      modelLabel,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: modelKnown
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ),
-              actions: [
-                IconButton(
-                  tooltip: widget.embedded
-                      ? 'Minimize workspace'
-                      : 'Leave chat',
-                  onPressed: _returnToApp,
-                  icon: Icon(widget.embedded ? Icons.minimize : Icons.logout),
-                ),
-                PopupMenuButton<String>(
-                  tooltip: 'More options',
-                  icon: const Icon(Icons.more_horiz),
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'new_chat':
-                        if (!_sending) _newChat();
-                      case 'appearance':
-                        showChatAppearanceSheet(context);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'new_chat',
-                      enabled: !_sending,
-                      child: const ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.edit_square),
-                        title: Text('New chat'),
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'appearance',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.palette_outlined),
-                        title: Text('Customize chat'),
-                      ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  if (isDeepSeek) ...[
+                    const SizedBox(width: 8),
+                    const DeepSeekPricingBanner(
+                      style: DeepSeekPricingBannerStyle.chip,
                     ),
                   ],
-                ),
-              ],
+                ],
+              ),
             ),
+          ),
+        ),
+        actions: [
+          if (widget.embedded)
+            IconButton(
+              tooltip: 'Open full screen',
+              onPressed: () {
+                widget.onClose?.call();
+                appNavigatorKey.currentState?.pushNamed(AppRoutes.aiChat);
+              },
+              icon: const Icon(Icons.open_in_full),
+            )
+          else
+            IconButton(
+              tooltip: 'Leave chat',
+              onPressed: _returnToApp,
+              icon: const Icon(Icons.logout),
+            ),
+          PopupMenuButton<String>(
+            tooltip: 'More options',
+            icon: const Icon(Icons.more_horiz),
+            onSelected: (value) {
+              switch (value) {
+                case 'new_chat':
+                  if (!_sending) _newChat();
+                case 'appearance':
+                  showChatAppearanceSheet(context);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'new_chat',
+                enabled: !_sending,
+                child: const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_square),
+                  title: Text('New chat'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'appearance',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.palette_outlined),
+                  title: Text('Customize chat'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: _ChatBackground(
         appearance: appearance,
         child: Column(
@@ -689,8 +753,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               child: chatId == null
                   ? _EmptyChat(onPrompt: _send)
                   : ScrollEdgeArrows(
-                      // Keep the up arrow clear of the floating window chrome.
-                      topPadding: widget.embedded ? 36 : 0,
+                      topPadding: 0,
                       child: messagesAsync!.when(
                         loading: () => const AppLoading(),
                         error: (_, _) => const AppErrorState(
@@ -706,115 +769,119 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                               (_streamingText!.isNotEmpty || _sending);
                           final fullWidth =
                               appearance.layout == ChatMessageLayout.fullWidth;
-                          return ListView.builder(
-                            controller: _scrollController,
-                            padding: EdgeInsets.fromLTRB(
-                              fullWidth ? 0 : AppSpacing.xxs,
-                              AppSpacing.md,
-                              fullWidth ? 0 : AppSpacing.xxs,
-                              AppSpacing.md,
-                            ),
-                            itemCount: messages.length + (showStream ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (showStream && index == messages.length) {
+                          return NotificationListener<ScrollNotification>(
+                            onNotification: _onMessageScroll,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: EdgeInsets.fromLTRB(
+                                fullWidth ? 0 : AppSpacing.xxs,
+                                AppSpacing.md,
+                                fullWidth ? 0 : AppSpacing.xxs,
+                                AppSpacing.md,
+                              ),
+                              itemCount: messages.length + (showStream ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (showStream && index == messages.length) {
+                                  return Center(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 760,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: AppSpacing.md,
+                                        ),
+                                        child: MessageBubble(
+                                          role: AiChatRole.assistant,
+                                          content: _streamingText!,
+                                          isStreaming: true,
+                                          appearance: appearance,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final message = messages[index];
+                                final isLastError =
+                                    index == messages.length - 1 &&
+                                    message.status == AiChatMessageStatus.error;
+                                final attachments =
+                                    message.role == AiChatRole.user
+                                    ? AiContextItem.decodeList(
+                                        message.contextJson,
+                                      )
+                                    : const <AiContextItem>[];
+                                final key = _messageKeys.putIfAbsent(
+                                  message.id,
+                                  GlobalKey.new,
+                                );
                                 return Center(
                                   child: ConstrainedBox(
                                     constraints: const BoxConstraints(
                                       maxWidth: 760,
                                     ),
                                     child: Padding(
+                                      key: key,
                                       padding: const EdgeInsets.only(
                                         bottom: AppSpacing.md,
                                       ),
                                       child: MessageBubble(
-                                        role: AiChatRole.assistant,
-                                        content: _streamingText!,
-                                        isStreaming: true,
+                                        role: message.role,
+                                        content: message.content,
+                                        status: message.status,
+                                        attachments: attachments,
+                                        onRetry: isLastError ? _retry : null,
+                                        highlighted:
+                                            message.id == _highlightMessageId,
                                         appearance: appearance,
+                                        onEditAndResend:
+                                            message.role == AiChatRole.user &&
+                                                !_sending
+                                            ? () => _editAndResend(message)
+                                            : null,
+                                        onRegenerate:
+                                            message.role ==
+                                                    AiChatRole.assistant &&
+                                                index == messages.length - 1 &&
+                                                message.status !=
+                                                    AiChatMessageStatus.error &&
+                                                !_sending
+                                            ? _retry
+                                            : null,
+                                        onToggleReadAloud:
+                                            message.role == AiChatRole.assistant
+                                            ? () => _toggleReadAloud(
+                                                message.content,
+                                              )
+                                            : null,
+                                        isSpeaking: speech.isSpeaking(
+                                          message.content,
+                                        ),
+                                        usage:
+                                            message.role == AiChatRole.assistant
+                                            ? aiTokenUsageFromColumns(
+                                                promptTokens:
+                                                    message.promptTokens,
+                                                completionTokens:
+                                                    message.completionTokens,
+                                                totalTokens:
+                                                    message.totalTokens,
+                                                cacheHitTokens:
+                                                    message.cacheHitTokens,
+                                                cacheMissTokens:
+                                                    message.cacheMissTokens,
+                                                model: message.aiModel,
+                                                provider: message.aiProvider,
+                                                durationMs:
+                                                    message.requestDurationMs,
+                                              )
+                                            : null,
                                       ),
                                     ),
                                   ),
                                 );
-                              }
-                              final message = messages[index];
-                              final isLastError =
-                                  index == messages.length - 1 &&
-                                  message.status == AiChatMessageStatus.error;
-                              final attachments =
-                                  message.role == AiChatRole.user
-                                  ? AiContextItem.decodeList(
-                                      message.contextJson,
-                                    )
-                                  : const <AiContextItem>[];
-                              final key = _messageKeys.putIfAbsent(
-                                message.id,
-                                GlobalKey.new,
-                              );
-                              return Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 760,
-                                  ),
-                                  child: Padding(
-                                    key: key,
-                                    padding: const EdgeInsets.only(
-                                      bottom: AppSpacing.md,
-                                    ),
-                                    child: MessageBubble(
-                                      role: message.role,
-                                      content: message.content,
-                                      status: message.status,
-                                      attachments: attachments,
-                                      onRetry: isLastError ? _retry : null,
-                                      highlighted:
-                                          message.id == _highlightMessageId,
-                                      appearance: appearance,
-                                      onEditAndResend:
-                                          message.role == AiChatRole.user &&
-                                              !_sending
-                                          ? () => _editAndResend(message)
-                                          : null,
-                                      onRegenerate:
-                                          message.role ==
-                                                  AiChatRole.assistant &&
-                                              index == messages.length - 1 &&
-                                              message.status !=
-                                                  AiChatMessageStatus.error &&
-                                              !_sending
-                                          ? _retry
-                                          : null,
-                                      onToggleReadAloud:
-                                          message.role == AiChatRole.assistant
-                                          ? () => _toggleReadAloud(
-                                              message.content,
-                                            )
-                                          : null,
-                                      isSpeaking: speech.isSpeaking(
-                                        message.content,
-                                      ),
-                                      usage:
-                                          message.role == AiChatRole.assistant
-                                          ? aiTokenUsageFromColumns(
-                                              promptTokens:
-                                                  message.promptTokens,
-                                              completionTokens:
-                                                  message.completionTokens,
-                                              totalTokens: message.totalTokens,
-                                              cacheHitTokens:
-                                                  message.cacheHitTokens,
-                                              cacheMissTokens:
-                                                  message.cacheMissTokens,
-                                              model: message.aiModel,
-                                              provider: message.aiProvider,
-                                              durationMs:
-                                                  message.requestDurationMs,
-                                            )
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                              },
+                            ),
                           );
                         },
                       ),
@@ -838,8 +905,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     if (widget.embedded) return scaffold;
     return PopScope(
-      // Full-screen chat lives in the shell rather than a pushed route.
-      canPop: !isActive,
+      canPop: Navigator.of(context).canPop() || !isActive,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop || !isActive) return;
         await _returnToApp();

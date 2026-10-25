@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
@@ -76,9 +77,9 @@ class _LiveQuizSessionScreenState extends ConsumerState<LiveQuizSessionScreen> {
     final session = _session;
     if (session == null || _busy) return;
     if (_answer.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter an answer first.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Enter an answer first.')),
+      );
       return;
     }
     setState(() {
@@ -205,10 +206,7 @@ class _LiveQuizSessionScreenState extends ConsumerState<LiveQuizSessionScreen> {
           style: Theme.of(context).textTheme.labelLarge,
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          session.question,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text(session.question, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: AppSpacing.lg),
         TextField(
           controller: _answer,
@@ -225,7 +223,10 @@ class _LiveQuizSessionScreenState extends ConsumerState<LiveQuizSessionScreen> {
           const SizedBox(height: AppSpacing.md),
           _statusRow(correct: false, label: 'Incorrect'),
           const SizedBox(height: AppSpacing.sm),
-          Text('From the source', style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'From the source',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: AppSpacing.xs),
           StudyMarkdown(data: session.lastFeedback ?? ''),
         ],

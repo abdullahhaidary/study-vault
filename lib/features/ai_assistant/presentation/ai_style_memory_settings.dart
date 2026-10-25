@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../data/ai_providers.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_exceptions.dart';
@@ -185,7 +186,7 @@ class AiStyleMemorySettings extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ).showSnackBar(TransientSnackBar(content: Text(error.message)));
     }
   }
 }

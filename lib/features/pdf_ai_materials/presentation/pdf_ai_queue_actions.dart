@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/widgets/desktop_frame.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
@@ -53,12 +54,12 @@ Future<void> enqueuePdfMaterialGeneration({
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('$error')));
+    ).showSnackBar(TransientSnackBar(content: Text('$error')));
     return;
   }
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
+    TransientSnackBar(
       content: const Text('Added to generation queue'),
       action: SnackBarAction(
         label: 'View',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/navigation/study_navigator.dart';
@@ -100,15 +101,15 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
     final needsOption =
         q.type == QuizQuestionType.mcq || q.type == QuizQuestionType.trueFalse;
     if (needsOption && _selectedOptionId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Select an answer first.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Select an answer first.')),
+      );
       return;
     }
     if (!needsOption && _textController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter an answer first.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Enter an answer first.')),
+      );
       return;
     }
 
@@ -131,7 +132,7 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
     if (correct && _index < _questions.length - 1) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Correct')));
+      ).showSnackBar(const TransientSnackBar(content: Text('Correct')));
       setState(() {
         _index++;
         _restoreCurrentAnswer();
@@ -196,7 +197,9 @@ class _QuizSessionScreenState extends ConsumerState<QuizSessionScreen> {
     final page = q.sourcePage;
     if (materialId == null || page == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No source page for this question.')),
+        const TransientSnackBar(
+          content: Text('No source page for this question.'),
+        ),
       );
       return;
     }

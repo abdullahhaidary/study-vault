@@ -9,11 +9,14 @@ import 'package:study_vault/app/app.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/widgets/responsive_grid.dart';
+import 'package:study_vault/features/ai_chat/presentation/ai_chat_screen.dart';
 import 'package:study_vault/features/search/presentation/search_screen.dart';
 import 'package:study_vault/features/study_review/presentation/recent_reviews_screen.dart';
 import 'package:study_vault/features/study_schedule/presentation/study_schedule_screen.dart';
 
 Future<AppDatabase> _pumpApp(WidgetTester tester, Size size) async {
+  SharedPreferences.setMockInitialValues({});
+  FlutterSecureStorage.setMockInitialValues({});
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -91,7 +94,7 @@ void main() {
       final reviewsRail = tester.widget<NavigationRail>(
         find.byType(NavigationRail),
       );
-      expect(reviewsRail.selectedIndex, 5);
+      expect(reviewsRail.selectedIndex, 6);
 
       await tester.tap(find.text('Schedule'));
       await tester.pumpAndSettle();
@@ -100,18 +103,52 @@ void main() {
       final scheduleRail = tester.widget<NavigationRail>(
         find.byType(NavigationRail),
       );
-      expect(scheduleRail.selectedIndex, 3);
+      expect(scheduleRail.selectedIndex, 4);
       await _dispose(tester, db);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
   });
 
+  testWidgets('desktop rail opens full-screen AI Chat', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    try {
+      final db = await _pumpApp(tester, const Size(1440, 900));
+      final aiChatLabels = find.descendant(
+        of: find.byType(NavigationRail),
+        matching: find.text('AI Chat'),
+      );
+      expect(aiChatLabels, findsNWidgets(2));
+
+      await tester.tap(aiChatLabels.last);
+      await tester.pumpAndSettle();
+      expect(find.byType(AiChatScreen), findsOneWidget);
+      expect(find.byTooltip('Leave chat'), findsOneWidget);
+      expect(find.byTooltip('Chat history'), findsOneWidget);
+      expect(find.byTooltip('More options'), findsOneWidget);
+      expect(find.byTooltip('Open full screen'), findsNothing);
+      expect(find.byTooltip('Minimize'), findsNothing);
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.selectedIndex, 3);
+      await _dispose(tester, db);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('mobile AI Chat opens the full-screen page', (tester) async {
+    final db = await _pumpApp(tester, const Size(400, 800));
+    await tester.tap(find.byTooltip('AI Chat'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AiChatScreen), findsOneWidget);
+    expect(find.byTooltip('Leave chat'), findsOneWidget);
+    expect(find.byTooltip('Minimize'), findsNothing);
+    await _dispose(tester, db);
+  });
+
   testWidgets('closing the AI chat window keeps app navigation working', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
-    FlutterSecureStorage.setMockInitialValues({});
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
       final db = await _pumpApp(tester, const Size(1440, 900));

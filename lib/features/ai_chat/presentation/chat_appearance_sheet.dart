@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../data/chat_appearance_providers.dart';
 import '../domain/chat_appearance.dart';
@@ -221,7 +222,7 @@ class _ChatAppearanceSheet extends ConsumerWidget {
                         } catch (_) {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            const TransientSnackBar(
                               content: Text(
                                 'Could not use that background image.',
                               ),

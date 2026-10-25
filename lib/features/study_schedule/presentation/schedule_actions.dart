@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../data/study_schedule_providers.dart';
@@ -13,7 +14,7 @@ DateTime _local(DateTime day) => DateTime(day.year, day.month, day.day);
 void _snack(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+    ..showSnackBar(TransientSnackBar(content: Text(message)));
 }
 
 Future<void> openScheduleReview(BuildContext context, String lessonId) {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../ai_assistant/data/ai_providers.dart';
@@ -111,7 +112,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${type.shortName} instruction copied.')),
+      TransientSnackBar(content: Text('${type.shortName} instruction copied.')),
     );
   }
 
@@ -166,7 +167,7 @@ class _PdfAiMaterialsSheetState extends ConsumerState<PdfAiMaterialsSheet> {
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(TransientSnackBar(content: Text(message)));
   }
 
   @override

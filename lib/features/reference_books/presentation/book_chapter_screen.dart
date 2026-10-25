@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -45,7 +46,7 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(aiErrorMessage(e))));
+        ).showSnackBar(TransientSnackBar(content: Text(aiErrorMessage(e))));
       }
     } finally {
       if (mounted) setState(() => _busy = null);
@@ -89,7 +90,9 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
     if (pages.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wait for indexing to finish first.')),
+          const TransientSnackBar(
+            content: Text('Wait for indexing to finish first.'),
+          ),
         );
       }
       return;
@@ -106,7 +109,7 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             'Copied the ${kind.label.toLowerCase()} request with '
             '${pages.length} pages. Paste the AI\'s answer back with '
@@ -602,9 +605,7 @@ class _PagesViewState extends ConsumerState<_PagesView> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: () => setState(() => _showAll = !_showAll),
-                  icon: Icon(
-                    _showAll ? Icons.unfold_less : Icons.unfold_more,
-                  ),
+                  icon: Icon(_showAll ? Icons.unfold_less : Icons.unfold_more),
                   label: Text(
                     _showAll
                         ? 'This ${chapter.level == 0 ? 'part' : 'chapter'} '

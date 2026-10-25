@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/domain/annotation_ai_context.dart';
@@ -165,7 +166,7 @@ abstract final class SelectionAiLauncher {
         (chosen == AiContextScope.fullText &&
             (fullText ?? '').trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             chosen == AiContextScope.summary
                 ? 'No summary is saved for this document yet. Sending the selection only.'
@@ -228,7 +229,7 @@ abstract final class SelectionAiLauncher {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Copied')));
+      ).showSnackBar(const TransientSnackBar(content: Text('Copied')));
     }
   }
 
@@ -250,7 +251,7 @@ abstract final class SelectionAiLauncher {
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             host.lessonId == null
                 ? 'Note created (not linked to a lesson)'
@@ -273,9 +274,9 @@ abstract final class SelectionAiLauncher {
       lessonId: host.lessonId,
     );
     if (created && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Flashcard created')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const TransientSnackBar(content: Text('Flashcard created')),
+      );
     }
   }
 

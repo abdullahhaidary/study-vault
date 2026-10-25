@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -17,7 +18,9 @@ class ClassRoadmapScreen extends ConsumerWidget {
   final String classId;
 
   static Future<void> open(BuildContext context, String classId) =>
-      Navigator.of(context).pushNamed(AppRoutes.classRoadmap, arguments: classId);
+      Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.classRoadmap, arguments: classId);
 
   Future<void> _addLessons(BuildContext context, WidgetRef ref) async {
     final repo = ref.read(classRoadmapRepositoryProvider);
@@ -26,8 +29,10 @@ class ClassRoadmapScreen extends ConsumerWidget {
 
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Every lesson in this class is already on the roadmap.'),
+        const TransientSnackBar(
+          content: Text(
+            'Every lesson in this class is already on the roadmap.',
+          ),
         ),
       );
       return;
@@ -43,7 +48,7 @@ class ClassRoadmapScreen extends ConsumerWidget {
     final added = await repo.addLessons(classId, selected);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           added == 1
               ? 'Added 1 lesson to the roadmap'
@@ -94,7 +99,12 @@ class ClassRoadmapScreen extends ConsumerWidget {
 
           final page = AppSpacing.pageInsets(context);
           return ListView(
-            padding: EdgeInsets.fromLTRB(page.left, AppSpacing.md, page.right, 96),
+            padding: EdgeInsets.fromLTRB(
+              page.left,
+              AppSpacing.md,
+              page.right,
+              96,
+            ),
             children: [
               ConstrainedBox(
                 constraints: BoxConstraints(
@@ -320,10 +330,7 @@ class _RoadmapStepTile extends StatelessWidget {
                   },
                   itemBuilder: (context) => [
                     if (!isFirst)
-                      const PopupMenuItem(
-                        value: 'up',
-                        child: Text('Move up'),
-                      ),
+                      const PopupMenuItem(value: 'up', child: Text('Move up')),
                     if (!isLast)
                       const PopupMenuItem(
                         value: 'down',

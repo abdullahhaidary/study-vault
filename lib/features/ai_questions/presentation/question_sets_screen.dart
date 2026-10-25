@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
@@ -355,7 +356,7 @@ class _EditQuestionSetScreenState
   void _showSaveError() {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save your changes.')),
+        const TransientSnackBar(content: Text('Could not save your changes.')),
       );
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -72,7 +73,7 @@ class _ScheduleReviewScreenState extends ConsumerState<ScheduleReviewScreen> {
           );
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             'Next review ${ScheduleDay.relative(next.dueOn).toLowerCase()} '
             '(${ScheduleDay.short(next.dueOn)}).',
@@ -83,7 +84,7 @@ class _ScheduleReviewScreenState extends ConsumerState<ScheduleReviewScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(content: Text('Could not save the review: $error')),
+        TransientSnackBar(content: Text('Could not save the review: $error')),
       );
     }
   }

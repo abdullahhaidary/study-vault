@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
@@ -162,9 +163,9 @@ class _AiAnnotationPreviewScreenState
                   ClipboardData(text: '${_short.text}\n\n$full'.trim()),
                 );
                 if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Copied')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const TransientSnackBar(content: Text('Copied')),
+                  );
                 }
               },
               icon: const Icon(Icons.copy_outlined, size: 18),

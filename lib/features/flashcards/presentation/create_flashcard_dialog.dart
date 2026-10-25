@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../study_pins/domain/study_note_codec.dart';
 import '../../study_pins/presentation/full_explanation_screen.dart';
@@ -67,7 +68,7 @@ class _CreateFlashcardDialogState extends ConsumerState<CreateFlashcardDialog> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(TransientSnackBar(content: Text(error.message)));
         setState(() => _creating = false);
       }
     }

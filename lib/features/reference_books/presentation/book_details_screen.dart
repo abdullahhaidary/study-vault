@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -249,7 +250,7 @@ class _StatusBar extends ConsumerWidget {
                           if (!available) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                const TransientSnackBar(
                                   content: Text(
                                     'Smart search needs a Gemini API key '
                                     '(Settings → AI).',
@@ -322,7 +323,7 @@ class _ChaptersTabState extends ConsumerState<_ChaptersTab> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(aiErrorMessage(e))));
+          ).showSnackBar(TransientSnackBar(content: Text(aiErrorMessage(e))));
         }
       }
     });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -87,9 +88,9 @@ class AiTextPreviewScreen extends StatelessWidget {
                         ClipboardData(text: result.markdown),
                       );
                       if (context.mounted) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(const SnackBar(content: Text('Copied')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const TransientSnackBar(content: Text('Copied')),
+                        );
                       }
                     },
               icon: const Icon(Icons.copy_outlined, size: 18),

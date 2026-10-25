@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
@@ -66,7 +67,9 @@ Future<void> addBook(
   } on Object catch (e) {
     navigator.pop();
     messenger.showSnackBar(
-      SnackBar(content: Text('Could not add the book: ${aiErrorMessage(e)}')),
+      TransientSnackBar(
+        content: Text('Could not add the book: ${aiErrorMessage(e)}'),
+      ),
     );
   }
 }

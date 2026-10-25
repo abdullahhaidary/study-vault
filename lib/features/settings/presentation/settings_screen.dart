@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/backup/backup_manifest.dart';
 import '../../../core/backup/backup_providers.dart';
 import '../../../core/backup/backup_service.dart';
@@ -9,9 +10,10 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
 import '../../cloud_account/cloud_account_section.dart';
+import '../../library_accounts/presentation/library_accounts_section.dart';
 import '../../manual_entry/presentation/manual_entry_settings_section.dart';
 
-/// App settings — AI Assistant + Backup & Restore.
+/// App settings — Accounts, cloud sync, AI Assistant, Backup & Restore.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({
     super.key,
@@ -87,6 +89,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const LibraryAccountsSection(),
+                    const SizedBox(height: AppSpacing.xl),
                     const CloudAccountSection(),
                     const SizedBox(height: AppSpacing.xl),
                     KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
@@ -201,7 +205,9 @@ class _BackupRestoreCard extends ConsumerWidget {
     if (!context.mounted) return;
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Study Vault restored successfully.')),
+        const TransientSnackBar(
+          content: Text('Study Vault restored successfully.'),
+        ),
       );
     }
   }

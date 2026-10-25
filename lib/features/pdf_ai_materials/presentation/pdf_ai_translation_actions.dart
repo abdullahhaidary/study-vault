@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
@@ -48,14 +49,14 @@ Future<bool> translatePdfAiVersion(
           PdfAiLanguage.persian;
     }
     messenger?.showSnackBar(
-      const SnackBar(content: Text('Persian translation is ready.')),
+      const TransientSnackBar(content: Text('Persian translation is ready.')),
     );
     return true;
   } on AiException catch (error) {
-    messenger?.showSnackBar(SnackBar(content: Text(error.message)));
+    messenger?.showSnackBar(TransientSnackBar(content: Text(error.message)));
   } on Object catch (error) {
     messenger?.showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           error is StateError && error.message.contains('already')
               ? error.message

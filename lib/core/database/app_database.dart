@@ -18,6 +18,7 @@ class Classes extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().withLength(min: 1, max: 200)();
   TextColumn get description => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -1125,7 +1126,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1307,6 +1308,16 @@ class AppDatabase extends _$AppDatabase {
       if (from < 23) {
         await m.createTable(classRoadmapEntries);
         await _createClassRoadmapIndexes();
+      }
+      if (from < 24) {
+        await m.addColumn(classes, classes.sortOrder);
+        final existing = await (select(
+          classes,
+        )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).get();
+        for (var index = 0; index < existing.length; index++) {
+          await (update(classes)..where((t) => t.id.equals(existing[index].id)))
+              .write(ClassesCompanion(sortOrder: Value(index)));
+        }
       }
     },
   );
@@ -1621,7 +1632,7 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<StudyClass>> watchAllClasses() {
     return (select(
       classes,
-    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
+    )..orderBy([(t) => OrderingTerm.asc(t.sortOrder)])).watch();
   }
 
   Future<StudyClass?> getClassById(String id) {
@@ -1643,6 +1654,26 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> insertClass(ClassesCompanion entry) {
     return into(classes).insert(entry);
+  }
+
+  Future<int> firstClassSortOrder() async {
+    final minExpr = classes.sortOrder.min();
+    final query = selectOnly(classes)..addColumns([minExpr]);
+    final row = await query.getSingle();
+    return (row.read(minExpr) ?? 1) - 1;
+  }
+
+  Future<void> reorderClasses(List<String> orderedIds) {
+    return transaction(() async {
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          classes,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          ClassesCompanion(sortOrder: Value(index), updatedAt: Value(now)),
+        );
+      }
+    });
   }
 
   // ── Subject Groups ───────────────────────────────────────
@@ -1675,6 +1706,22 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> updateSubjectGroup(SubjectGroup group) {
     return update(subjectGroups).replace(group);
+  }
+
+  Future<void> reorderSubjectGroups(List<String> orderedIds) {
+    return transaction(() async {
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          subjectGroups,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          SubjectGroupsCompanion(
+            sortOrder: Value(index),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   /// Unassigns subjects from the group, then deletes the group.
@@ -1718,6 +1765,30 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> updateSubject(Subject subject) {
     return update(subjects).replace(subject);
+  }
+
+  Future<void> reorderSubjects(List<String> orderedIds) {
+    return transaction(() async {
+      final existing = await (select(
+        subjects,
+      )..where((t) => t.id.isIn(orderedIds))).get();
+      if (existing.length != orderedIds.length) {
+        throw StateError('Cannot reorder unknown subjects.');
+      }
+      final sortOrders = existing.map((item) => item.sortOrder).toList()
+        ..sort();
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          subjects,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          SubjectsCompanion(
+            sortOrder: Value(sortOrders[index]),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   /// Deletes a subject and every lesson / note / review row under it.
@@ -1809,6 +1880,19 @@ class AppDatabase extends _$AppDatabase {
     return update(lessonGroups).replace(group);
   }
 
+  Future<void> reorderLessonGroups(List<String> orderedIds) {
+    return transaction(() async {
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          lessonGroups,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          LessonGroupsCompanion(sortOrder: Value(index), updatedAt: Value(now)),
+        );
+      }
+    });
+  }
+
   /// Unassigns lessons from the group, then deletes the group.
   Future<void> deleteLessonGroup(String groupId) async {
     await (update(lessons)..where((t) => t.lessonGroupId.equals(groupId)))
@@ -1844,6 +1928,30 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> updateLesson(Lesson lesson) {
     return update(lessons).replace(lesson);
+  }
+
+  Future<void> reorderLessons(List<String> orderedIds) {
+    return transaction(() async {
+      final existing = await (select(
+        lessons,
+      )..where((t) => t.id.isIn(orderedIds))).get();
+      if (existing.length != orderedIds.length) {
+        throw StateError('Cannot reorder unknown lessons.');
+      }
+      final sortOrders = existing.map((item) => item.sortOrder).toList()
+        ..sort();
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          lessons,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          LessonsCompanion(
+            sortOrder: Value(sortOrders[index]),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   Stream<Lesson?> watchLessonById(String id) {
@@ -2037,6 +2145,30 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> insertLessonMaterial(LessonMaterialsCompanion entry) {
     return into(lessonMaterials).insert(entry);
+  }
+
+  Future<void> reorderLessonMaterials(List<String> orderedIds) {
+    return transaction(() async {
+      final existing = await (select(
+        lessonMaterials,
+      )..where((t) => t.id.isIn(orderedIds))).get();
+      if (existing.length != orderedIds.length) {
+        throw StateError('Cannot reorder unknown lesson materials.');
+      }
+      final sortOrders = existing.map((item) => item.sortOrder).toList()
+        ..sort();
+      final now = DateTime.now();
+      for (var index = 0; index < orderedIds.length; index++) {
+        await (update(
+          lessonMaterials,
+        )..where((t) => t.id.equals(orderedIds[index]))).write(
+          LessonMaterialsCompanion(
+            sortOrder: Value(sortOrders[index]),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> touchLessonMaterial(String id, {DateTime? updatedAt}) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/navigation/shell_tab.dart';
 import '../core/widgets/app_shell.dart';
+import '../features/ai_chat/presentation/ai_chat_screen.dart';
 import '../features/class_roadmap/presentation/class_roadmap_screen.dart';
 import '../features/classes/presentation/class_details_screen.dart';
 import '../features/interactive_html/presentation/html_study_screen.dart';
@@ -78,7 +79,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     case AppRoutes.aiChat:
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => const AppShell(initialTab: ShellTab.aiChat),
+        builder: (_) => const AiChatScreen(),
       );
 
     case AppRoutes.favorites:

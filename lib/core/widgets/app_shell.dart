@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'transient_snack_bar.dart';
+import '../../features/ai_chat/presentation/ai_chat_screen.dart';
 import '../../features/classes/presentation/home_screen.dart';
-import '../../features/study_workspace/data/study_workspace_providers.dart';
 import '../navigation/shell_tab.dart';
 
 /// Application shell: Home by default, AI Chat when opened from Home.
@@ -28,15 +29,17 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (initial != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ref.read(shellTabProvider.notifier).state = ShellTab.home;
-        if (initial == ShellTab.aiChat) {
-          ref.read(studyWorkspaceProvider.notifier).open();
-        }
+        ref.read(shellTabProvider.notifier).state = initial;
       });
     }
   }
 
   void _onBack() {
+    if (ref.read(shellTabProvider) == ShellTab.aiChat) {
+      ref.read(shellTabProvider.notifier).state = ShellTab.home;
+      return;
+    }
+
     final now = DateTime.now();
     final previous = _lastBackAt;
     if (previous != null && now.difference(previous) <= _exitWindow) {
@@ -48,7 +51,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.clearSnackBars();
     messenger?.showSnackBar(
-      const SnackBar(
+      const TransientSnackBar(
         content: Text('Press back again to exit'),
         duration: _exitWindow,
       ),
@@ -58,6 +61,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tab = ref.watch(shellTabProvider);
 
     return PopScope(
       canPop: false,
@@ -67,7 +71,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       },
       child: Material(
         color: theme.scaffoldBackgroundColor,
-        child: const HomeScreen(),
+        child: IndexedStack(
+          index: tab == ShellTab.aiChat ? 1 : 0,
+          children: const [HomeScreen(), AiChatScreen()],
+        ),
       ),
     );
   }

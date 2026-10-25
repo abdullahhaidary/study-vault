@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/storage/material_storage.dart';
 import '../domain/material_language_variant.dart';
 import 'material_mime.dart';
@@ -266,6 +267,20 @@ Future<void> deleteLessonMaterial(
     );
   }
   await db.deleteLessonMaterial(material.id);
+}
+
+Future<void> moveLessonMaterial(
+  WidgetRef ref, {
+  required List<LessonMaterial> materials,
+  required String materialId,
+  required ReorderDestination destination,
+}) {
+  final ids = reorderIds(
+    ids: materials.map((material) => material.id),
+    itemId: materialId,
+    destination: destination,
+  );
+  return ref.read(databaseProvider).reorderLessonMaterials(ids);
 }
 
 /// Removes only the Persian companion PDF, leaving the original intact.

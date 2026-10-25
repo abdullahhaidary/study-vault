@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../ai_chat/data/ai_chat_providers.dart';
 import '../data/ai_credential_store.dart';
 import '../data/ai_providers.dart';
@@ -53,7 +54,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          TransientSnackBar(
             content: Text('${provider.displayName} API key saved securely.'),
           ),
         );
@@ -75,7 +76,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gemini API key saved securely.')),
+          const TransientSnackBar(
+            content: Text('Gemini API key saved securely.'),
+          ),
         );
       }
     } finally {
@@ -662,7 +665,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     ref.read(activeAiChatIdProvider.notifier).state = null;
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        const TransientSnackBar(
                           content: Text('AI chat history cleared.'),
                         ),
                       );

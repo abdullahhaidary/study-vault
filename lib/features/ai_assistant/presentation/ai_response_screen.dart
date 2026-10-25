@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/auto_direction_text_field.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
@@ -284,7 +285,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
         _generatingLabel = '';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(
             e.toString().contains('AiException')
                 ? e.toString()
@@ -364,7 +365,9 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
     } on Object catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save your changes.')),
+          const TransientSnackBar(
+            content: Text('Could not save your changes.'),
+          ),
         );
       }
     } finally {
@@ -811,7 +814,7 @@ class _AiResponseScreenState extends ConsumerState<AiResponseScreen> {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
+                                          const TransientSnackBar(
                                             content: Text('Copied'),
                                           ),
                                         );

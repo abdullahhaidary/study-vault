@@ -12,17 +12,31 @@ class GroupSectionHeader extends StatelessWidget {
     this.subtitle,
     this.onEdit,
     this.onDelete,
+    this.onMoveToStart,
+    this.onMoveUp,
+    this.onMoveDown,
+    this.onMoveToEnd,
   });
 
   final String title;
   final String? subtitle;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onMoveToStart;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+  final VoidCallback? onMoveToEnd;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasActions = onEdit != null || onDelete != null;
+    final hasActions =
+        onEdit != null ||
+        onDelete != null ||
+        onMoveToStart != null ||
+        onMoveUp != null ||
+        onMoveDown != null ||
+        onMoveToEnd != null;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
@@ -60,9 +74,37 @@ class GroupSectionHeader extends StatelessWidget {
                     onEdit?.call();
                   case _GroupAction.delete:
                     onDelete?.call();
+                  case _GroupAction.moveToStart:
+                    onMoveToStart?.call();
+                  case _GroupAction.moveUp:
+                    onMoveUp?.call();
+                  case _GroupAction.moveDown:
+                    onMoveDown?.call();
+                  case _GroupAction.moveToEnd:
+                    onMoveToEnd?.call();
                 }
               },
               itemBuilder: (context) => [
+                if (onMoveToStart != null)
+                  const PopupMenuItem(
+                    value: _GroupAction.moveToStart,
+                    child: Text('Move to top'),
+                  ),
+                if (onMoveUp != null)
+                  const PopupMenuItem(
+                    value: _GroupAction.moveUp,
+                    child: Text('Move up'),
+                  ),
+                if (onMoveDown != null)
+                  const PopupMenuItem(
+                    value: _GroupAction.moveDown,
+                    child: Text('Move down'),
+                  ),
+                if (onMoveToEnd != null)
+                  const PopupMenuItem(
+                    value: _GroupAction.moveToEnd,
+                    child: Text('Move to bottom'),
+                  ),
                 if (onEdit != null)
                   const PopupMenuItem(
                     value: _GroupAction.edit,
@@ -85,7 +127,7 @@ class GroupSectionHeader extends StatelessWidget {
   }
 }
 
-enum _GroupAction { edit, delete }
+enum _GroupAction { moveToStart, moveUp, moveDown, moveToEnd, edit, delete }
 
 /// Compact list tile for items under a group heading.
 ///
@@ -99,6 +141,10 @@ class GroupedItemTile extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onMoveToStart,
+    this.onMoveUp,
+    this.onMoveDown,
+    this.onMoveToEnd,
     this.editLabel = 'Edit',
     this.deleteLabel = 'Delete',
   });
@@ -109,13 +155,23 @@ class GroupedItemTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onMoveToStart;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+  final VoidCallback? onMoveToEnd;
   final String editLabel;
   final String deleteLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasMenu = onEdit != null || onDelete != null;
+    final hasMenu =
+        onEdit != null ||
+        onDelete != null ||
+        onMoveToStart != null ||
+        onMoveUp != null ||
+        onMoveDown != null ||
+        onMoveToEnd != null;
 
     return Material(
       color: theme.colorScheme.surface,
@@ -173,9 +229,37 @@ class GroupedItemTile extends StatelessWidget {
                           onEdit?.call();
                         case _ItemAction.delete:
                           onDelete?.call();
+                        case _ItemAction.moveToStart:
+                          onMoveToStart?.call();
+                        case _ItemAction.moveUp:
+                          onMoveUp?.call();
+                        case _ItemAction.moveDown:
+                          onMoveDown?.call();
+                        case _ItemAction.moveToEnd:
+                          onMoveToEnd?.call();
                       }
                     },
                     itemBuilder: (context) => [
+                      if (onMoveToStart != null)
+                        const PopupMenuItem(
+                          value: _ItemAction.moveToStart,
+                          child: Text('Move to top'),
+                        ),
+                      if (onMoveUp != null)
+                        const PopupMenuItem(
+                          value: _ItemAction.moveUp,
+                          child: Text('Move up'),
+                        ),
+                      if (onMoveDown != null)
+                        const PopupMenuItem(
+                          value: _ItemAction.moveDown,
+                          child: Text('Move down'),
+                        ),
+                      if (onMoveToEnd != null)
+                        const PopupMenuItem(
+                          value: _ItemAction.moveToEnd,
+                          child: Text('Move to bottom'),
+                        ),
                       if (onEdit != null)
                         PopupMenuItem(
                           value: _ItemAction.edit,
@@ -206,4 +290,4 @@ class GroupedItemTile extends StatelessWidget {
   }
 }
 
-enum _ItemAction { edit, delete }
+enum _ItemAction { moveToStart, moveUp, moveDown, moveToEnd, edit, delete }

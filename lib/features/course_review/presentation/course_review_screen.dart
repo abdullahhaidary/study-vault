@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -164,7 +165,7 @@ class _ReviewBody extends ConsumerWidget {
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      const TransientSnackBar(
         content: Text(
           'Prompt copied. Paste it into an external AI with the lesson materials.',
         ),
@@ -212,7 +213,9 @@ class _ReviewBody extends ConsumerWidget {
   }
 
   void _message(BuildContext context, String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(TransientSnackBar(content: Text(text)));
   }
 }
 
@@ -280,7 +283,7 @@ class _MissingDocument extends ConsumerWidget {
         .compileLegacyDocument(state);
     if (!markdown.contains('## ')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        const TransientSnackBar(
           content: Text(
             'Include a lecture that already has review sections, then combine.',
           ),

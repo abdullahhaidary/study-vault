@@ -4,11 +4,12 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/storage/material_storage.dart';
 
 const _uuid = Uuid();
 
-/// Watches all classes, ordered by creation date (newest first).
+/// Watches all classes in their user-defined order.
 final classesProvider = StreamProvider<List<StudyClass>>((ref) {
   final db = ref.watch(databaseProvider);
   return db.watchAllClasses();
@@ -55,6 +56,7 @@ Future<void> createClass(
 }) async {
   final db = ref.read(databaseProvider);
   final now = DateTime.now();
+  final sortOrder = await db.firstClassSortOrder();
 
   await db.insertClass(
     ClassesCompanion.insert(
@@ -63,10 +65,25 @@ Future<void> createClass(
       description: Value(
         description?.trim().isEmpty == true ? null : description?.trim(),
       ),
+      sortOrder: Value(sortOrder),
       createdAt: now,
       updatedAt: now,
     ),
   );
+}
+
+Future<void> moveClass(
+  WidgetRef ref, {
+  required List<StudyClass> classes,
+  required String classId,
+  required ReorderDestination destination,
+}) {
+  final ids = reorderIds(
+    ids: classes.map((item) => item.id),
+    itemId: classId,
+    destination: destination,
+  );
+  return ref.read(databaseProvider).reorderClasses(ids);
 }
 
 Future<void> deleteClass(WidgetRef ref, {required String classId}) async {

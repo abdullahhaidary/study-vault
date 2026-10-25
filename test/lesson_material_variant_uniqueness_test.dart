@@ -120,7 +120,7 @@ void main() {
     expect(status, isNotNull);
     expect(status!.enforced, isTrue);
     expect(status.duplicates, isEmpty);
-    expect(db.schemaVersion, 23);
+    expect(db.schemaVersion, 24);
     final indexes = await uniqueIndexNames(db);
     expect(indexes, isNotEmpty);
     expect(indexes, isNot(contains(LessonMaterialVariantUniqueness.indexName)));
@@ -133,57 +133,60 @@ void main() {
     expect(await uniqueIndexNames(db), indexes);
   });
 
-  test('version 23 without the constraint gains it and keeps rows', () async {
-    final dir = await Directory.systemTemp.createTemp('variant_repair');
-    addTearDown(() => dir.delete(recursive: true));
-    final file = File('${dir.path}/vault.sqlite');
-    var db = AppDatabase.forTesting(NativeDatabase(file));
-    await seedLibrary(db);
-    await insertMaterial(db, id: 'original');
-    await insertMaterial(
-      db,
-      id: 'fa',
-      variantOfId: 'original',
-      language: 'fa',
-      pageOffset: 1,
-    );
-    final before = (await db.getMaterialById('original'))!;
-    await stripVariantUniqueness(db);
-    expect(
-      await uniqueIndexNames(db),
-      isNot(contains(LessonMaterialVariantUniqueness.indexName)),
-    );
-    final version = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 23);
-    await db.close();
+  test(
+    'current schema without the constraint gains it and keeps rows',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('variant_repair');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/vault.sqlite');
+      var db = AppDatabase.forTesting(NativeDatabase(file));
+      await seedLibrary(db);
+      await insertMaterial(db, id: 'original');
+      await insertMaterial(
+        db,
+        id: 'fa',
+        variantOfId: 'original',
+        language: 'fa',
+        pageOffset: 1,
+      );
+      final before = (await db.getMaterialById('original'))!;
+      await stripVariantUniqueness(db);
+      expect(
+        await uniqueIndexNames(db),
+        isNot(contains(LessonMaterialVariantUniqueness.indexName)),
+      );
+      final version = await db.customSelect('PRAGMA user_version').getSingle();
+      expect(version.data.values.single, 24);
+      await db.close();
 
-    db = await openFile(file);
-    addTearDown(db.close);
-    expect(db.lessonMaterialVariantUniqueness!.enforced, isTrue);
-    expect(db.lessonMaterialVariantUniqueness!.duplicates, isEmpty);
-    expect(
-      await uniqueIndexNames(db),
-      contains(LessonMaterialVariantUniqueness.indexName),
-    );
-    final original = (await db.getMaterialById('original'))!;
-    expect(original.title, before.title);
-    expect(original.updatedAt, before.updatedAt);
-    final persian = (await db.getMaterialById('fa'))!;
-    expect(persian.language, 'fa');
-    expect(persian.variantOfId, 'original');
-    expect(persian.pageOffset, 1);
-    expect(
-      insertMaterial(db, id: 'fa-2', variantOfId: 'original', language: 'fa'),
-      throwsA(isA<Exception>()),
-    );
-    expect(
-      (await db.customSelect('PRAGMA user_version').getSingle())
-          .data
-          .values
-          .single,
-      23,
-    );
-  });
+      db = await openFile(file);
+      addTearDown(db.close);
+      expect(db.lessonMaterialVariantUniqueness!.enforced, isTrue);
+      expect(db.lessonMaterialVariantUniqueness!.duplicates, isEmpty);
+      expect(
+        await uniqueIndexNames(db),
+        contains(LessonMaterialVariantUniqueness.indexName),
+      );
+      final original = (await db.getMaterialById('original'))!;
+      expect(original.title, before.title);
+      expect(original.updatedAt, before.updatedAt);
+      final persian = (await db.getMaterialById('fa'))!;
+      expect(persian.language, 'fa');
+      expect(persian.variantOfId, 'original');
+      expect(persian.pageOffset, 1);
+      expect(
+        insertMaterial(db, id: 'fa-2', variantOfId: 'original', language: 'fa'),
+        throwsA(isA<Exception>()),
+      );
+      expect(
+        (await db.customSelect('PRAGMA user_version').getSingle())
+            .data
+            .values
+            .single,
+        24,
+      );
+    },
+  );
 
   test('opening a protected database again does not change rows', () async {
     final dir = await Directory.systemTemp.createTemp('variant_kept');

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "tables": {
     "classes": {
       "columns": {
@@ -14,6 +14,10 @@
         "description": {
           "type": "TEXT",
           "required": false
+        },
+        "sort_order": {
+          "type": "INTEGER",
+          "required": true
         },
         "created_at": {
           "type": "INTEGER",

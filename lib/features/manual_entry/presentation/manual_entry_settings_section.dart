@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/section_header.dart';
@@ -24,7 +25,7 @@ class ManualEntrySettingsSection extends ConsumerWidget {
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           full ? 'Full format guide copied.' : 'AI instruction copied.',
         ),

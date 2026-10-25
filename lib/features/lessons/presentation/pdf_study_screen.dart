@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -247,7 +248,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     );
     if (created != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text('Bookmarked page $page'),
           action: SnackBarAction(
             label: 'Title',
@@ -635,7 +636,7 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
           delegate.copyTextSelection();
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Copied')));
+          ).showSnackBar(const TransientSnackBar(content: Text('Copied')));
         },
         onAi: () {
           params.dismissContextMenu();
@@ -777,7 +778,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     final page = _currentPage;
     if (page == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Wait for the PDF page to load.')),
+        const TransientSnackBar(
+          content: Text('Wait for the PDF page to load.'),
+        ),
       );
       return;
     }
@@ -796,7 +799,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     if (!aiContext.hasUsableText &&
         (aiContext.filePath == null || aiContext.pageNumber == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This page has no extractable text.')),
+        const TransientSnackBar(
+          content: Text('This page has no extractable text.'),
+        ),
       );
       return;
     }
@@ -963,9 +968,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                 content: MarkdownToQuill.toDeltaJson(markdown),
               );
               if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Note created')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const TransientSnackBar(content: Text('Note created')),
+                );
               }
             },
       onFlashcardsCreate: lessonId == null

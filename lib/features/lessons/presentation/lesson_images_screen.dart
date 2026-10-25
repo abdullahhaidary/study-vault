@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -27,15 +28,15 @@ class LessonImagesScreen extends ConsumerWidget {
     try {
       final material = await attachImageToLesson(ref, lessonId: scope.lessonId);
       if (material != null && context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Added ${material.title}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Added ${material.title}')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not add image: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          TransientSnackBar(content: Text('Could not add image: $error')),
+        );
       }
     }
   }

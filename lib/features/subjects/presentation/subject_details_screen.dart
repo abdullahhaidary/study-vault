@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/desktop_frame.dart';
@@ -277,22 +278,57 @@ class SubjectDetailsScreen extends ConsumerWidget {
     for (final lesson in lessonList) {
       lessonsByGroup.putIfAbsent(lesson.lessonGroupId, () => []).add(lesson);
     }
-    Widget lessonTile(Lesson lesson) => GroupedItemTile(
-      title: lesson.name,
-      subtitle: _lessonSubtitle(lesson),
-      icon: Icons.auto_stories_outlined,
-      onTap: () => Navigator.of(
-        context,
-      ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id),
-      onEdit: () => CreateLessonDialog.show(
-        context,
-        subjectId: subjectId,
-        existing: lesson,
-      ),
-      onDelete: () => _confirmDeleteLesson(context, ref, lesson),
-    );
+    Widget lessonTile(Lesson lesson, List<Lesson> siblings) {
+      final index = siblings.indexWhere((item) => item.id == lesson.id);
+      return GroupedItemTile(
+        title: lesson.name,
+        subtitle: _lessonSubtitle(lesson),
+        icon: Icons.auto_stories_outlined,
+        onTap: () => Navigator.of(
+          context,
+        ).pushNamed(AppRoutes.lessonDetails, arguments: lesson.id),
+        onMoveToStart: index <= 0
+            ? null
+            : () => moveLesson(
+                ref,
+                lessons: siblings,
+                lessonId: lesson.id,
+                destination: ReorderDestination.start,
+              ),
+        onMoveUp: index <= 0
+            ? null
+            : () => moveLesson(
+                ref,
+                lessons: siblings,
+                lessonId: lesson.id,
+                destination: ReorderDestination.previous,
+              ),
+        onMoveDown: index < 0 || index == siblings.length - 1
+            ? null
+            : () => moveLesson(
+                ref,
+                lessons: siblings,
+                lessonId: lesson.id,
+                destination: ReorderDestination.next,
+              ),
+        onMoveToEnd: index < 0 || index == siblings.length - 1
+            ? null
+            : () => moveLesson(
+                ref,
+                lessons: siblings,
+                lessonId: lesson.id,
+                destination: ReorderDestination.end,
+              ),
+        onEdit: () => CreateLessonDialog.show(
+          context,
+          subjectId: subjectId,
+          existing: lesson,
+        ),
+        onDelete: () => _confirmDeleteLesson(context, ref, lesson),
+      );
+    }
 
-    for (final group in groupList) {
+    for (final (groupIndex, group) in groupList.indexed) {
       final inGroup = lessonsByGroup[group.id] ?? const <Lesson>[];
       children.add(
         GroupSectionHeader(
@@ -304,6 +340,38 @@ class SubjectDetailsScreen extends ConsumerWidget {
             existing: group,
           ),
           onDelete: () => _confirmDeleteGroup(context, ref, group),
+          onMoveToStart: groupIndex == 0
+              ? null
+              : () => moveLessonGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.start,
+                ),
+          onMoveUp: groupIndex == 0
+              ? null
+              : () => moveLessonGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.previous,
+                ),
+          onMoveDown: groupIndex == groupList.length - 1
+              ? null
+              : () => moveLessonGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.next,
+                ),
+          onMoveToEnd: groupIndex == groupList.length - 1
+              ? null
+              : () => moveLessonGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.end,
+                ),
         ),
       );
       if (inGroup.isEmpty) {
@@ -320,7 +388,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
         );
       } else {
         children.add(
-          AdaptiveItemList(children: [for (final l in inGroup) lessonTile(l)]),
+          AdaptiveItemList(
+            children: [for (final l in inGroup) lessonTile(l, inGroup)],
+          ),
         );
       }
       children.add(const SizedBox(height: AppSpacing.xs));
@@ -345,7 +415,9 @@ class SubjectDetailsScreen extends ConsumerWidget {
         );
       }
       children.add(
-        AdaptiveItemList(children: [for (final l in ungrouped) lessonTile(l)]),
+        AdaptiveItemList(
+          children: [for (final l in ungrouped) lessonTile(l, ungrouped)],
+        ),
       );
     }
 

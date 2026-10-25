@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -70,7 +71,7 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
         _input.text = question;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(aiErrorMessage(e))));
+        ).showSnackBar(TransientSnackBar(content: Text(aiErrorMessage(e))));
       }
     } finally {
       if (mounted) setState(() => _sending = false);

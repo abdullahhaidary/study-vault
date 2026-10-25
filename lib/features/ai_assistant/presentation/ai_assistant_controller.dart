@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../data/ai_providers.dart';
 import '../data/failed_ai_requests_provider.dart';
 import '../domain/ai_actions.dart';
@@ -67,7 +68,9 @@ abstract final class AiAssistantController {
   }) async {
     if (_requestInFlight) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An AI request is already in progress.')),
+        const TransientSnackBar(
+          content: Text('An AI request is already in progress.'),
+        ),
       );
       return null;
     }
@@ -75,7 +78,9 @@ abstract final class AiAssistantController {
     final sourceLen = request.effectiveSourceLength;
     if (!request.hasPageImage && request.sourceText.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select or provide text for AI first.')),
+        const TransientSnackBar(
+          content: Text('Select or provide text for AI first.'),
+        ),
       );
       return null;
     }
@@ -214,7 +219,7 @@ abstract final class AiAssistantController {
 
   static void _showFailureSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(message),
         action: SnackBarAction(
           label: 'View',

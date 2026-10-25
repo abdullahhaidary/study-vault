@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../core/backup/backup_io.dart';
-import '../../../core/backup/backup_service.dart';
-import '../../../core/database/database_provider.dart';
-import '../../../core/storage/study_vault_paths.dart';
+import '../../core/backup/backup_io.dart';
+import '../../core/backup/backup_service.dart';
+import '../../core/database/database_provider.dart';
+import '../../core/storage/study_vault_paths.dart';
+import '../library_accounts/data/library_accounts_controller.dart';
+import '../library_accounts/domain/library_account.dart';
 import 'cloud_api.dart';
 import 'cloud_sync_models.dart';
 import 'cloud_sync_service.dart';
@@ -19,8 +21,15 @@ abstract interface class CloudSessionStore {
   Future<void> clear();
 }
 
+/// One session per library account; the default account keeps the original
+/// key so existing sign-ins survive the upgrade.
 class SecureCloudSessionStore implements CloudSessionStore {
-  static const _key = 'study_vault_cloud_session_v1';
+  SecureCloudSessionStore(String libraryAccountId)
+    : _key = libraryAccountId == LibraryAccount.defaultId
+          ? 'study_vault_cloud_session_v1'
+          : 'study_vault_cloud_session_v1_$libraryAccountId';
+
+  final String _key;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   @override
@@ -68,15 +77,15 @@ class CloudAccountState {
 
 final cloudSyncServiceProvider = FutureProvider<CloudSyncService>((ref) async {
   final db = ref.watch(databaseProvider);
-  final docs = await StudyVaultPaths.documentsDirectory();
   final files = await StudyVaultPaths.materialsDirectory();
+  final recovery = await StudyVaultPaths.syncRecoveryDirectory();
   final api = CloudApi();
   ref.onDispose(api.close);
   return CloudSyncService(
     db: db,
     remote: api,
     filesRoot: files,
-    recoveryRoot: Directory(p.join(docs.path, 'study_vault_sync_recovery')),
+    recoveryRoot: recovery,
     serverId: CloudApi.origin.toString(),
   );
 });
@@ -87,7 +96,7 @@ final cloudAccountProvider =
       ref.onDispose(api.close);
       return CloudAccountController(
         api,
-        SecureCloudSessionStore(),
+        SecureCloudSessionStore(ref.read(activeLibraryAccountProvider).id),
         syncService: () => ref.read(cloudSyncServiceProvider.future),
       );
     });

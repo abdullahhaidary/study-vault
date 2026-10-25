@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../domain/pdf_ai_material_models.dart';
 import '../domain/pdf_ai_versioning.dart';
@@ -49,7 +50,7 @@ class _PdfAiManualImportDialogState extends State<_PdfAiManualImportDialog> {
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           '${widget.type.shortName} instruction copied. Paste it into ChatGPT, then paste the JSON here.',
         ),

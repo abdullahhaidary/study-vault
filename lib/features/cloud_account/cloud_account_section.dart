@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/section_header.dart';
+import '../../core/widgets/section_header.dart';
+import '../library_accounts/data/library_accounts_controller.dart';
 import 'cloud_account_provider.dart';
 import 'cloud_api.dart';
 import 'cloud_sync_models.dart';
@@ -163,6 +164,10 @@ class _CloudAccountSectionState extends ConsumerState<CloudAccountSection> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  'Account on this device: '
+                  '${ref.watch(activeLibraryAccountProvider).name}',
+                ),
                 Text('Server: ${CloudApi.origin}'),
                 const SizedBox(height: 8),
                 const Text(

@@ -1,20 +1,19 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import 'study_vault_paths.dart';
 
 /// Local file storage for lesson materials (PDFs, images, and text documents).
 ///
 /// Files live under:
-/// `{documents}/study_vault_files/lessons/{lessonId}/{storedFileName}`
+/// `{library}/study_vault_files/lessons/{lessonId}/{storedFileName}`
 class MaterialStorage {
   MaterialStorage._();
 
   static Future<Directory> lessonDir(String lessonId) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      p.join(docs.path, 'study_vault_files', 'lessons', lessonId),
-    );
+    final root = await StudyVaultPaths.materialsDirectory();
+    final dir = Directory(p.join(root.path, 'lessons', lessonId));
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -86,10 +85,8 @@ class MaterialStorage {
 
   /// Removes the whole lesson folder (all attached materials).
   static Future<void> deleteLessonDir(String lessonId) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      p.join(docs.path, 'study_vault_files', 'lessons', lessonId),
-    );
+    final root = await StudyVaultPaths.materialsDirectory();
+    final dir = Directory(p.join(root.path, 'lessons', lessonId));
     if (await dir.exists()) {
       await dir.delete(recursive: true);
     }

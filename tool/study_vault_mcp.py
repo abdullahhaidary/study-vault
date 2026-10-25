@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 import uuid
 
-SCHEMA_VERSIONS = {21, 22, 23}
+SCHEMA_VERSIONS = {21, 22, 23, 24}
 PROVIDER = "manual"
 MODEL = "devin"
 DB_PATH = os.path.expanduser(

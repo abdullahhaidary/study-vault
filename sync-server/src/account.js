@@ -35,8 +35,8 @@ try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(174829302)');
     if (action === 'create') {
-      const existing = await client.query('SELECT id FROM accounts LIMIT 1');
-      if (existing.rowCount) throw new Error('The private account already exists. Use password to reset it.');
+      const existing = await client.query('SELECT id FROM accounts WHERE username=$1', [rawUsername.toLowerCase()]);
+      if (existing.rowCount) throw new Error('This account already exists. Use password to reset it.');
       await client.query('INSERT INTO accounts(id,username,password_hash) VALUES($1,$2,$3)', [randomUUID(), rawUsername.toLowerCase(), passwordHash]);
     } else {
       const result = await client.query('UPDATE accounts SET password_hash=$1 WHERE username=$2 RETURNING id', [passwordHash, rawUsername.toLowerCase()]);

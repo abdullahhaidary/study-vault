@@ -1,3 +1,4 @@
+import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -220,7 +221,7 @@ class _PdfAiMaterialReaderScreenState
       if (mounted) {
         setState(() => _selectedId = saved.id);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          TransientSnackBar(
             content: Text(
               choice == 'new'
                   ? 'Saved as version ${saved.version}.'
@@ -649,7 +650,7 @@ class _PdfAiMaterialReaderScreenState
     ref.invalidate(pdfAiPreferredVersionProvider(_preferredKey));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           '${widget.type.shortName} version ${selected.version} will open by default.',
         ),
@@ -999,7 +1000,7 @@ class _PdfAiMaterialReaderScreenState
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(TransientSnackBar(content: Text(message)));
   }
 
   String _friendlyError(Object error) {
@@ -1476,7 +1477,7 @@ class _PdfAiMaterialReaderScreenState
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
-                                                    const SnackBar(
+                                                    const TransientSnackBar(
                                                       content: Text('Copied'),
                                                     ),
                                                   );

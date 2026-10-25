@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/widgets/desktop_frame.dart';
 import '../data/ai_generation_providers.dart';
@@ -26,7 +27,7 @@ class GenerationQueueHost extends ConsumerWidget {
       }
       final messenger = ScaffoldMessenger.maybeOf(context);
       messenger?.showSnackBar(
-        SnackBar(
+        TransientSnackBar(
           content: Text(notice.title),
           action: SnackBarAction(
             label: switch (notice.action) {

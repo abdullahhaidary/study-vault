@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/widgets/system_bottom_inset.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
@@ -34,16 +35,18 @@ Future<void> showLiveQuizLaunch(
     source = await launch.resolveSource(config.sourceType);
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Could not prepare source: $e')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      TransientSnackBar(content: Text('Could not prepare source: $e')),
+    );
     return;
   }
 
   if (source.isEmpty) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No content available for that source.')),
+      const TransientSnackBar(
+        content: Text('No content available for that source.'),
+      ),
     );
     return;
   }
@@ -51,10 +54,8 @@ Future<void> showLiveQuizLaunch(
   if (!context.mounted) return;
   await Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => LiveQuizSessionScreen(
-        source: source,
-        selection: config.selection,
-      ),
+      builder: (_) =>
+          LiveQuizSessionScreen(source: source, selection: config.selection),
     ),
   );
 }

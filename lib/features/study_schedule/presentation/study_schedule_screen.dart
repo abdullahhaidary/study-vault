@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -31,7 +32,7 @@ class StudyScheduleScreen extends ConsumerWidget {
         .enrollMany(lessons, dailyLimit: limit == 0 ? lessons.length : limit);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      TransientSnackBar(
         content: Text(
           'Added $added lesson${added == 1 ? '' : 's'}; first reviews are '
           'spread over the coming days.',

@@ -286,79 +286,74 @@ class _FloatingChatWindow extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Navigator(
-              onGenerateRoute: (settings) {
-                if (settings.name == Navigator.defaultRouteName) {
-                  return MaterialPageRoute<void>(
-                    settings: settings,
-                    builder: (_) =>
-                        AiChatScreen(embedded: true, onClose: onMinimize),
-                  );
-                }
-                return app_routes.onGenerateRoute(settings);
-              },
-            ),
-          ),
-          Positioned(
-            left: 44,
-            right: 76,
-            top: 0,
-            height: 18,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.move,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate: (details) => onDrag(details.delta),
-                child: Center(
-                  child: Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+          Column(
+            children: [
+              Material(
+                color: theme.colorScheme.surfaceContainerLow,
+                child: SizedBox(
+                  height: 40,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.move,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onPanUpdate: (details) => onDrag(details.delta),
+                            child: Center(
+                              child: Container(
+                                width: 38,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.outlineVariant,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Minimize',
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 32,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onPressed: onMinimize,
+                        icon: const Icon(Icons.minimize, size: 18),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 32,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onPressed: onClose,
+                        icon: const Icon(Icons.close, size: 18),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            top: 2,
-            right: 4,
-            child: Material(
-              color: theme.colorScheme.surfaceContainerLow.withValues(
-                alpha: 0.92,
+              Expanded(
+                child: Navigator(
+                  onGenerateRoute: (settings) {
+                    if (settings.name == Navigator.defaultRouteName) {
+                      return MaterialPageRoute<void>(
+                        settings: settings,
+                        builder: (_) =>
+                            AiChatScreen(embedded: true, onClose: onMinimize),
+                      );
+                    }
+                    return app_routes.onGenerateRoute(settings);
+                  },
+                ),
               ),
-              borderRadius: BorderRadius.circular(18),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: 'Minimize',
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 32,
-                      height: 32,
-                    ),
-                    padding: EdgeInsets.zero,
-                    onPressed: onMinimize,
-                    icon: const Icon(Icons.minimize, size: 18),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 32,
-                      height: 32,
-                    ),
-                    padding: EdgeInsets.zero,
-                    onPressed: onClose,
-                    icon: const Icon(Icons.close, size: 18),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
           Positioned(
             right: 0,

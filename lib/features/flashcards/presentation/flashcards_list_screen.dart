@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
@@ -198,7 +199,7 @@ class _EditFlashcardDialogState extends ConsumerState<_EditFlashcardDialog> {
     } on Object catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save flashcard.')),
+          const TransientSnackBar(content: Text('Could not save flashcard.')),
         );
       }
     } finally {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../data/review_session_providers.dart';
 import '../domain/review_models.dart';
@@ -74,7 +75,9 @@ class _ReviewSetupScreenState extends ConsumerState<ReviewSetupScreen> {
     if (!mounted) return;
     if (session.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No annotations match these filters.')),
+        const TransientSnackBar(
+          content: Text('No annotations match these filters.'),
+        ),
       );
       return;
     }

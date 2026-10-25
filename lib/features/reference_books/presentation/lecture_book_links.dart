@@ -48,15 +48,29 @@ class LectureBookLinks extends ConsumerWidget {
 /// Compact list of the book page ranges linked to a material, for surfaces
 /// like the AI study materials panel and sheet. Tap a row to open the book
 /// at that page. Renders nothing when the material has no links.
-class MaterialBookLinksSection extends ConsumerWidget {
+///
+/// Collapsed to a single header until expanded, so it does not keep a tall
+/// block above an explanation. Close hides it until the screen is opened again.
+class MaterialBookLinksSection extends ConsumerStatefulWidget {
   const MaterialBookLinksSection({super.key, required this.materialId});
 
   final String materialId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MaterialBookLinksSection> createState() =>
+      _MaterialBookLinksSectionState();
+}
+
+class _MaterialBookLinksSectionState
+    extends ConsumerState<MaterialBookLinksSection> {
+  bool _dismissed = false;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
     final links =
-        ref.watch(materialBookLinksProvider(materialId)).valueOrNull ??
+        ref.watch(materialBookLinksProvider(widget.materialId)).valueOrNull ??
         const [];
     if (links.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
@@ -64,53 +78,79 @@ class MaterialBookLinksSection extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xs,
-            AppSpacing.md,
-            0,
-          ),
-          child: Text(
+        ListTile(
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          title: Text(
             'Reference book pages',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 148),
-          child: ListView(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
+          onTap: () => setState(() => _expanded = !_expanded),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final (link, book) in links)
-                ListTile(
-                  dense: true,
-                  visualDensity: VisualDensity.compact,
-                  leading: Icon(
-                    link.done ? Icons.check : Icons.menu_book_outlined,
-                    size: 20,
-                  ),
-                  title: Text(
-                    '${book.title} · pp. ${link.startPage}–${link.endPage} · '
-                    '${BookLinkPriority.fromStorage(link.priority).label}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: link.reason == null || link.reason!.isEmpty
-                      ? null
-                      : Text(
-                          link.reason!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                  onTap: () =>
-                      openBookReader(context, book, page: link.startPage),
+              IconButton(
+                tooltip: _expanded ? 'Collapse' : 'Expand',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
                 ),
+                onPressed: () => setState(() => _expanded = !_expanded),
+                icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+              ),
+              IconButton(
+                tooltip: 'Hide',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                onPressed: () => setState(() => _dismissed = true),
+                icon: const Icon(Icons.close, size: 18),
+              ),
             ],
           ),
         ),
+        if (_expanded)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 148),
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              children: [
+                for (final (link, book) in links)
+                  ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: Icon(
+                      link.done ? Icons.check : Icons.menu_book_outlined,
+                      size: 20,
+                    ),
+                    title: Text(
+                      '${book.title} · pp. ${link.startPage}–${link.endPage} · '
+                      '${BookLinkPriority.fromStorage(link.priority).label}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: link.reason == null || link.reason!.isEmpty
+                        ? null
+                        : Text(
+                            link.reason!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    onTap: () =>
+                        openBookReader(context, book, page: link.startPage),
+                  ),
+              ],
+            ),
+          ),
         const Divider(height: 1),
       ],
     );

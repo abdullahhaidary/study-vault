@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../domain/quiz_models.dart';
 import 'generate_questions_sheet.dart';
 import 'quiz_session_screen.dart';
@@ -82,7 +83,7 @@ class QuizResultsScreen extends ConsumerWidget {
                   );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    TransientSnackBar(
                       content: Text(
                         created == 0
                             ? 'No mistakes to convert.'

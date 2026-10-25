@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
@@ -391,9 +392,9 @@ class StudyPinReaderPanel extends ConsumerWidget {
                 content: MarkdownToQuill.toDeltaJson(markdown),
               );
               if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Note created')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const TransientSnackBar(content: Text('Note created')),
+                );
               }
             },
       onFlashcardsCreate: (cards) async {

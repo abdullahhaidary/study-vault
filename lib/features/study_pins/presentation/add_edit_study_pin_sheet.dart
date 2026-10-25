@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
@@ -236,7 +237,9 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
     final short = _shortController.text.trim();
     if (short.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Short description is required.')),
+        const TransientSnackBar(
+          content: Text('Short description is required.'),
+        ),
       );
       return;
     }
@@ -257,7 +260,7 @@ class _AddEditStudyPinSheetState extends ConsumerState<AddEditStudyPinSheet> {
         : _fullController.document.toPlainText().trim();
     if (sourceText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write some note text first.')),
+        const TransientSnackBar(content: Text('Write some note text first.')),
       );
       return;
     }

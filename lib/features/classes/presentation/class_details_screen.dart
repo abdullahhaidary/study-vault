@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/built_in_data.dart';
+import '../../../core/navigation/library_reorder.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/desktop_frame.dart';
@@ -211,22 +212,57 @@ class ClassDetailsScreen extends ConsumerWidget {
 
     final children = <Widget>[];
     final theme = Theme.of(context);
-    Widget subjectTile(Subject subject) => GroupedItemTile(
-      title: subject.name,
-      subtitle: subject.description,
-      icon: Icons.menu_book_outlined,
-      onTap: () => Navigator.of(
-        context,
-      ).pushNamed(AppRoutes.subjectDetails, arguments: subject.id),
-      onEdit: () => CreateSubjectDialog.show(
-        context,
-        classId: classId,
-        existing: subject,
-      ),
-      onDelete: () => _confirmDeleteSubject(context, ref, subject),
-    );
+    Widget subjectTile(Subject subject, List<Subject> siblings) {
+      final index = siblings.indexWhere((item) => item.id == subject.id);
+      return GroupedItemTile(
+        title: subject.name,
+        subtitle: subject.description,
+        icon: Icons.menu_book_outlined,
+        onTap: () => Navigator.of(
+          context,
+        ).pushNamed(AppRoutes.subjectDetails, arguments: subject.id),
+        onMoveToStart: index <= 0
+            ? null
+            : () => moveSubject(
+                ref,
+                subjects: siblings,
+                subjectId: subject.id,
+                destination: ReorderDestination.start,
+              ),
+        onMoveUp: index <= 0
+            ? null
+            : () => moveSubject(
+                ref,
+                subjects: siblings,
+                subjectId: subject.id,
+                destination: ReorderDestination.previous,
+              ),
+        onMoveDown: index < 0 || index == siblings.length - 1
+            ? null
+            : () => moveSubject(
+                ref,
+                subjects: siblings,
+                subjectId: subject.id,
+                destination: ReorderDestination.next,
+              ),
+        onMoveToEnd: index < 0 || index == siblings.length - 1
+            ? null
+            : () => moveSubject(
+                ref,
+                subjects: siblings,
+                subjectId: subject.id,
+                destination: ReorderDestination.end,
+              ),
+        onEdit: () => CreateSubjectDialog.show(
+          context,
+          classId: classId,
+          existing: subject,
+        ),
+        onDelete: () => _confirmDeleteSubject(context, ref, subject),
+      );
+    }
 
-    for (final group in groupList) {
+    for (final (groupIndex, group) in groupList.indexed) {
       final inGroup = subjectList
           .where((s) => s.subjectGroupId == group.id)
           .toList();
@@ -240,6 +276,38 @@ class ClassDetailsScreen extends ConsumerWidget {
             existing: group,
           ),
           onDelete: () => _confirmDeleteGroup(context, ref, group),
+          onMoveToStart: groupIndex == 0
+              ? null
+              : () => moveSubjectGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.start,
+                ),
+          onMoveUp: groupIndex == 0
+              ? null
+              : () => moveSubjectGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.previous,
+                ),
+          onMoveDown: groupIndex == groupList.length - 1
+              ? null
+              : () => moveSubjectGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.next,
+                ),
+          onMoveToEnd: groupIndex == groupList.length - 1
+              ? null
+              : () => moveSubjectGroup(
+                  ref,
+                  groups: groupList,
+                  groupId: group.id,
+                  destination: ReorderDestination.end,
+                ),
         ),
       );
       if (inGroup.isEmpty) {
@@ -256,7 +324,9 @@ class ClassDetailsScreen extends ConsumerWidget {
         );
       } else {
         children.add(
-          AdaptiveItemList(children: [for (final s in inGroup) subjectTile(s)]),
+          AdaptiveItemList(
+            children: [for (final s in inGroup) subjectTile(s, inGroup)],
+          ),
         );
       }
       children.add(const SizedBox(height: AppSpacing.xs));
@@ -283,7 +353,9 @@ class ClassDetailsScreen extends ConsumerWidget {
         );
       }
       children.add(
-        AdaptiveItemList(children: [for (final s in ungrouped) subjectTile(s)]),
+        AdaptiveItemList(
+          children: [for (final s in ungrouped) subjectTile(s, ungrouped)],
+        ),
       );
     }
 

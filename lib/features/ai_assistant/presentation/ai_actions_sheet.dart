@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/transient_snack_bar.dart';
 import '../../ai_questions/domain/question_source.dart';
 import '../../ai_questions/presentation/generate_questions_sheet.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
@@ -277,7 +278,7 @@ Future<void> showAiActionsSheet(
         if (preview.action == AiPreviewApplyAction.copy && context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Copied')));
+          ).showSnackBar(const TransientSnackBar(content: Text('Copied')));
         }
       }
     }

@@ -6,10 +6,12 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../data/ai_chat_providers.dart';
 import '../../domain/ai_chat_models.dart';
 import '../../domain/referenced_ai_message.dart';
-import '../../services/ai_chat_navigation.dart';
 
 /// Compact reverse-reference section for Lesson / PDF / Note / Pin screens.
-class AiDiscussionsSection extends ConsumerWidget {
+///
+/// The close button hides the section for this visit. Opening the screen
+/// again creates a new state and shows it once more.
+class AiDiscussionsSection extends ConsumerStatefulWidget {
   const AiDiscussionsSection({
     super.key,
     required this.kind,
@@ -24,20 +26,30 @@ class AiDiscussionsSection extends ConsumerWidget {
   final bool dense;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final key = (kind: kind, id: id);
+  ConsumerState<AiDiscussionsSection> createState() =>
+      _AiDiscussionsSectionState();
+}
+
+class _AiDiscussionsSectionState extends ConsumerState<AiDiscussionsSection> {
+  bool _dismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final key = (kind: widget.kind, id: widget.id);
     final countAsync = ref.watch(aiDiscussionsCountProvider(key));
     final count = countAsync.valueOrNull ?? 0;
 
-    if (count == 0 && !countAsync.isLoading) {
-      return const SizedBox.shrink();
-    }
+    if (count == 0) return const SizedBox.shrink();
 
+    final dense = widget.dense;
     return Card(
       margin: EdgeInsets.zero,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          visualDensity: VisualDensity.compact,
           initiallyExpanded: false,
           tilePadding: EdgeInsets.symmetric(
             horizontal: dense ? 12 : 16,
@@ -53,7 +65,7 @@ class AiDiscussionsSection extends ConsumerWidget {
             Icons.auto_awesome_outlined,
             color: Theme.of(context).colorScheme.primary,
           ),
-          title: Text(title),
+          title: Text(widget.title),
           subtitle: Text(
             countAsync.isLoading
                 ? 'Loading…'
@@ -61,7 +73,17 @@ class AiDiscussionsSection extends ConsumerWidget {
                 ? '1 referenced message'
                 : '$count referenced messages',
           ),
-          children: [AiDiscussionsList(kind: kind, id: id, dense: dense)],
+          trailing: IconButton(
+            tooltip: 'Hide',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () => setState(() => _dismissed = true),
+          ),
+          children: [
+            AiDiscussionsList(kind: widget.kind, id: widget.id, dense: dense),
+          ],
         ),
       ),
     );
