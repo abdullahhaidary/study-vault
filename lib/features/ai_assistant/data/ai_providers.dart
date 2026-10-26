@@ -16,6 +16,7 @@ import '../services/annotation_ai_service.dart';
 import '../services/deepseek_ai_service.dart';
 import '../services/gemini_ai_service.dart';
 import '../services/new_api_claude_service.dart';
+import '../services/pocket_ai_service.dart';
 import '../services/routing_ai_service.dart';
 
 export 'voice_input_providers.dart' show voiceInputServiceProvider;
@@ -74,6 +75,10 @@ final newApiClaudeServiceProvider = Provider<NewApiClaudeService>((ref) {
   );
 });
 
+final pocketAiServiceProvider = Provider<PocketAiService>((ref) {
+  return PocketAiService(settings: ref.watch(aiSettingsStoreProvider));
+});
+
 /// Active study AI — routes to the selected provider from Settings.
 final aiServiceProvider = Provider<AiService>((ref) {
   return RoutingAiService(
@@ -81,6 +86,7 @@ final aiServiceProvider = Provider<AiService>((ref) {
     gemini: ref.watch(geminiAiServiceProvider),
     deepseek: ref.watch(deepseekAiServiceProvider),
     newApi: ref.watch(newApiClaudeServiceProvider),
+    pocket: ref.watch(pocketAiServiceProvider),
   );
 });
 
@@ -156,6 +162,7 @@ class AiSettingsState {
     required this.deepseekConfigured,
     required this.newApiConfigured,
     required this.newApiBaseUrl,
+    required this.pocketBaseUrl,
     required this.globalModelId,
   });
 
@@ -173,6 +180,7 @@ class AiSettingsState {
   final bool deepseekConfigured;
   final bool newApiConfigured;
   final String newApiBaseUrl;
+  final String pocketBaseUrl;
   final String globalModelId;
 
   AiProviderCapabilities get capabilities =>
@@ -203,6 +211,7 @@ final aiSettingsStateProvider = FutureProvider<AiSettingsState>((ref) async {
               profile.keySuffix.isNotEmpty && profile.baseUrl.isNotEmpty,
         ),
     newApiBaseUrl: await settings.getNewApiBaseUrl(),
+    pocketBaseUrl: await settings.getPocketBaseUrl(),
     globalModelId: (await settings.getGlobalModelRef()).storageValue,
   );
 });

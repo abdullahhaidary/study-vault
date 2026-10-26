@@ -72,6 +72,9 @@ class AiExecutionSelection {
   String get providerStorage => provider.storageValue;
 
   AiModelRef get modelRef {
+    if (provider == AiProviderId.pocket) {
+      return PocketModelRef.normalize(resolvedModelId);
+    }
     if (provider == AiProviderId.newApi) {
       final bare = newApiBareModelId(resolvedModelId);
       final profileId = endpointProfileId;
@@ -181,6 +184,9 @@ class AiExecutionSelection {
       AiProviderId.gemini => GeminiModelRegistry.normalize(
         parsed is BuiltinGeminiModelRef ? parsed.bareModelId : requestedModelId,
       ),
+      AiProviderId.pocket => PocketModelRef.normalize(
+        requestedModelId,
+      ).storageValue,
       AiProviderId.newApi => normalizeNewApiModelId(
         parsed is EndpointAiModelRef || parsed is LegacyNewApiModelRef
             ? parsed.bareModelId
@@ -210,7 +216,9 @@ class AiExecutionSelection {
     required String geminiModelId,
     AiStudyAction? action,
   }) {
-    if (provider == AiProviderId.gemini) return this;
+    if (provider == AiProviderId.gemini || provider == AiProviderId.pocket) {
+      return this;
+    }
     return resolve(
       provider: AiProviderId.gemini,
       requestedModelId: geminiModelId,

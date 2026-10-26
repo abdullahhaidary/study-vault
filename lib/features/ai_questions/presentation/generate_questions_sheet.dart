@@ -52,7 +52,9 @@ Future<void> showGenerateQuestionsSheet(
   if (!await AiAssistantController.ensureReady(
     context,
     ref,
-    requireGemini: config.sendMode == AiPageSendMode.image,
+    requireGemini:
+        config.sendMode == AiPageSendMode.image &&
+        config.selection.provider != AiProviderId.pocket,
   )) {
     return;
   }
@@ -235,25 +237,29 @@ class _GenerateQuestionsSheetState
                         selected: _sendMode == mode,
                         onSelected: (_) async {
                           setState(() => _sendMode = mode);
-                          if (mode == AiPageSendMode.image) {
-                            final global =
-                                await AiExecutionSelection.fromGlobal(
-                                  ref.read(aiSettingsStoreProvider),
-                                  action: AiStudyAction.generateQuestions,
-                                );
-                            final geminiModel =
-                                global.provider == AiProviderId.gemini
-                                ? global.requestedModelId
-                                : GeminiModelRegistry.defaultModelId;
-                            if (!mounted) return;
-                            setState(() {
-                              _selection = AiExecutionSelection.resolve(
-                                provider: AiProviderId.gemini,
-                                requestedModelId: geminiModel,
-                                action: AiStudyAction.generateQuestions,
-                              );
-                            });
+                          if (mode != AiPageSendMode.image) return;
+                          if (_selection?.provider == AiProviderId.pocket) {
+                            return;
                           }
+                          final global = await AiExecutionSelection.fromGlobal(
+                            ref.read(aiSettingsStoreProvider),
+                            action: AiStudyAction.generateQuestions,
+                          );
+                          if (!mounted ||
+                              global.provider == AiProviderId.pocket) {
+                            return;
+                          }
+                          final geminiModel =
+                              global.provider == AiProviderId.gemini
+                              ? global.requestedModelId
+                              : GeminiModelRegistry.defaultModelId;
+                          setState(() {
+                            _selection = AiExecutionSelection.resolve(
+                              provider: AiProviderId.gemini,
+                              requestedModelId: geminiModel,
+                              action: AiStudyAction.generateQuestions,
+                            );
+                          });
                         },
                       ),
                   ],
@@ -261,7 +267,9 @@ class _GenerateQuestionsSheetState
                 const SizedBox(height: 8),
                 Text(
                   _sendMode == AiPageSendMode.image
-                      ? 'Sends a picture of this page (diagrams and slides). Uses Gemini.'
+                      ? (_selection?.provider == AiProviderId.pocket
+                            ? 'Sends a picture of this page to the Pocket chat.'
+                            : 'Sends a picture of this page (diagrams and slides). Uses Gemini.')
                       : 'Sends extracted text only (usually cheaper).',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

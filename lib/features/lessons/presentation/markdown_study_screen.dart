@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/built_in_data.dart';
 import '../../../core/markdown/study_markdown.dart';
+import '../../../core/markdown/study_markdown_sections.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
@@ -255,17 +256,27 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
             ),
           );
         }
+        final sections = splitStudyMarkdown(content);
         return ScrollEdgeArrows(
-          child: ListView(
+          child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: [
-              StudyMarkdown(data: content),
-              const SizedBox(height: AppSpacing.xl),
-              AiDiscussionsSection(
-                kind: AiContextKind.material,
-                id: widget.resourceId,
-              ),
-            ],
+            cacheExtent: 120,
+            itemCount: sections.length + 1,
+            itemBuilder: (context, index) {
+              if (index == sections.length) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.xl),
+                    AiDiscussionsSection(
+                      kind: AiContextKind.material,
+                      id: widget.resourceId,
+                    ),
+                  ],
+                );
+              }
+              return StudyMarkdown(data: sections[index]);
+            },
           ),
         );
       },

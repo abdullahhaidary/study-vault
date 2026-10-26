@@ -92,3 +92,53 @@ class AiSelectableModel {
     );
   }
 }
+
+/// One extra ChatGPT sign-in besides the main Pocket window.
+class PocketAccountChoice {
+  const PocketAccountChoice({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
+/// ChatGPT, Claude, and Gemini tabs in the local Pocket window.
+List<AiSelectableModel> pocketSelectableModels({
+  List<PocketAccountChoice> accounts = const [],
+}) {
+  return [
+    for (final app in PocketModelRef.apps)
+      AiSelectableModel(
+        id: PocketModelRef(app).storageValue,
+        displayName: PocketModelRef(app).label,
+        description: PocketModelRef(app).description,
+        recommended: app == 'chatgpt',
+        group: 'Pocket',
+        section: 'Pocket',
+        provider: AiProviderId.pocket,
+        supportsVision: true,
+        modelRef: PocketModelRef(app),
+      ),
+    for (final account in accounts)
+      if (account.id != 'default')
+        AiSelectableModel(
+          id: PocketModelRef(
+            'chatgpt',
+            accountId: account.id,
+            accountName: account.name,
+          ).storageValue,
+          displayName: 'ChatGPT · ${account.name}',
+          description:
+              'ChatGPT account ${account.name}, in its own Pocket window.',
+          recommended: false,
+          group: 'Pocket',
+          section: 'Pocket',
+          provider: AiProviderId.pocket,
+          supportsVision: true,
+          modelRef: PocketModelRef(
+            'chatgpt',
+            accountId: account.id,
+            accountName: account.name,
+          ),
+        ),
+  ];
+}

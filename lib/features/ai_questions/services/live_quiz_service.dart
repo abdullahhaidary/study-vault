@@ -6,6 +6,7 @@ import '../../ai_assistant/domain/ai_style_memory.dart';
 import '../../ai_assistant/services/deepseek_ai_service.dart';
 import '../../ai_assistant/services/gemini_ai_service.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
+import '../../ai_assistant/services/pocket_ai_service.dart';
 import '../domain/live_quiz_models.dart';
 import '../domain/question_source.dart';
 import '../domain/quiz_models.dart';
@@ -23,11 +24,13 @@ class RoutingLiveQuizCompletionClient implements LiveQuizCompletionClient {
     required this._gemini,
     required this._deepSeek,
     this._newApi,
+    this._pocket,
   });
 
   final GeminiAiService _gemini;
   final DeepSeekAiService _deepSeek;
   final NewApiClaudeService? _newApi;
+  final PocketAiService? _pocket;
 
   @override
   Future<String> complete({
@@ -54,6 +57,12 @@ class RoutingLiveQuizCompletionClient implements LiveQuizCompletionClient {
         selection: selection,
         timeout: const Duration(seconds: 90),
       ),
+      AiProviderId.pocket => await _requirePocket().completeDocumentMessages(
+        messages: messages,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+        timeout: const Duration(seconds: 90),
+      ),
     };
     return result.markdown;
   }
@@ -62,6 +71,14 @@ class RoutingLiveQuizCompletionClient implements LiveQuizCompletionClient {
     final client = _newApi;
     if (client == null) {
       throw const AiNotConfiguredException('New API is not configured.');
+    }
+    return client;
+  }
+
+  PocketAiService _requirePocket() {
+    final client = _pocket;
+    if (client == null) {
+      throw const AiNotConfiguredException('Pocket is not configured.');
     }
     return client;
   }

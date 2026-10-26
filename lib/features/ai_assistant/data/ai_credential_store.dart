@@ -40,10 +40,12 @@ class SecureAiCredentialStore implements AiCredentialStore {
     AiProviderId.gemini => _geminiKeyName,
     AiProviderId.deepseek => _deepseekKeyName,
     AiProviderId.newApi => _newApiKeyName,
+    AiProviderId.pocket => 'study_vault_pocket_unused',
   };
 
   @override
   Future<bool> hasApiKeyFor(AiProviderId provider) async {
+    if (provider == AiProviderId.pocket) return true;
     return (await readApiKeysFor(provider)).isNotEmpty;
   }
 
@@ -55,6 +57,7 @@ class SecureAiCredentialStore implements AiCredentialStore {
 
   @override
   Future<List<String>> readApiKeysFor(AiProviderId provider) async {
+    if (provider == AiProviderId.pocket) return const [];
     if (provider != AiProviderId.gemini) {
       return _singleList(await _storage.read(key: _keyName(provider)));
     }
@@ -176,6 +179,7 @@ class MemoryAiCredentialStore implements AiCredentialStore {
 
   @override
   Future<bool> hasApiKeyFor(AiProviderId provider) async {
+    if (provider == AiProviderId.pocket) return true;
     return (_keys[provider] ?? const []).isNotEmpty;
   }
 
@@ -188,6 +192,7 @@ class MemoryAiCredentialStore implements AiCredentialStore {
 
   @override
   Future<List<String>> readApiKeysFor(AiProviderId provider) async {
+    if (provider == AiProviderId.pocket) return const [];
     return List.unmodifiable(_keys[provider] ?? const []);
   }
 

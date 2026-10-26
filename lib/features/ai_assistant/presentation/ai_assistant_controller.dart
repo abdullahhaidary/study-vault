@@ -113,8 +113,9 @@ abstract final class AiAssistantController {
           context,
           ref,
           requireGemini:
-              request.hasPageImage ||
-              request.pageSendMode == AiPageSendMode.image,
+              (request.hasPageImage ||
+                  request.pageSendMode == AiPageSendMode.image) &&
+              request.selection.provider != AiProviderId.pocket,
         )) {
       return null;
     }

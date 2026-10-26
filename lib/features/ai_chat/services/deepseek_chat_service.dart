@@ -468,12 +468,14 @@ class RoutingAiChatTransport implements AiChatTransport {
     required this.gemini,
     required this.deepseek,
     this.newApi,
+    this.pocket,
   });
 
   final AiSettingsStore settings;
   final AiChatTransport gemini;
   final AiChatTransport deepseek;
   final AiChatTransport? newApi;
+  final AiChatTransport? pocket;
 
   Future<AiChatTransport> _active() async {
     final provider = await settings.getProvider();
@@ -481,6 +483,9 @@ class RoutingAiChatTransport implements AiChatTransport {
       AiProviderId.gemini => gemini,
       AiProviderId.deepseek => deepseek,
       AiProviderId.newApi => newApi ?? deepseek,
+      AiProviderId.pocket =>
+        pocket ??
+            (throw const AiNotConfiguredException('Pocket is not configured.')),
     };
   }
 
@@ -489,6 +494,10 @@ class RoutingAiChatTransport implements AiChatTransport {
     final inferred = AiProviderIdX.fromModelId(modelId);
     final selected = await settings.getProvider();
     // Historical chats keep their original provider/model.
+    if (inferred == AiProviderId.pocket) {
+      return pocket ??
+          (throw const AiNotConfiguredException('Pocket is not configured.'));
+    }
     if (inferred == AiProviderId.newApi) return newApi ?? deepseek;
     if (inferred != selected && DeepSeekModelRegistry.isKnown(modelId)) {
       return deepseek;
@@ -518,6 +527,7 @@ class RoutingAiChatTransport implements AiChatTransport {
       safeList(gemini),
       safeList(deepseek),
       if (newApi != null) safeList(newApi!),
+      if (pocket != null) safeList(pocket!),
     ]);
     final geminiModels = lists[0].isEmpty
         ? GeminiModelRegistry.fallbackChatModels()
@@ -532,7 +542,7 @@ class RoutingAiChatTransport implements AiChatTransport {
     return [
       ...geminiModels,
       ...deepseekModels,
-      if (lists.length > 2) ...lists[2],
+      for (final extra in lists.skip(2)) ...extra,
     ];
   }
 

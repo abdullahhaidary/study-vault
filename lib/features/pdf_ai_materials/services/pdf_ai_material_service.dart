@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../ai_assistant/data/ai_settings_store.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
+import '../../ai_assistant/services/pocket_ai_service.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
@@ -54,13 +55,16 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
     required GeminiAiService gemini,
     required DeepSeekAiService deepSeek,
     NewApiClaudeService? newApi,
+    PocketAiService? pocket,
   }) : _gemini = gemini,
        _deepSeek = deepSeek,
-       _newApi = newApi;
+       _newApi = newApi,
+       _pocket = pocket;
 
   final GeminiAiService _gemini;
   final DeepSeekAiService _deepSeek;
   final NewApiClaudeService? _newApi;
+  final PocketAiService? _pocket;
 
   @override
   Future<PdfAiCompletion> complete({
@@ -86,6 +90,12 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
         selection: selection,
         onPartialText: onPartialText,
       ),
+      AiProviderId.pocket => await _requirePocket().completeDocumentMessages(
+        messages: messages,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+        onPartialText: onPartialText,
+      ),
     };
     return PdfAiCompletion(
       markdown: result.markdown,
@@ -94,6 +104,14 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
       usage: result.usage,
       disposition: result.disposition,
     );
+  }
+
+  PocketAiService _requirePocket() {
+    final client = _pocket;
+    if (client == null) {
+      throw StateError('Pocket is not configured.');
+    }
+    return client;
   }
 }
 

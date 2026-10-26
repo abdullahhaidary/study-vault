@@ -27,6 +27,7 @@ String persistedChatModelId(String modelId) {
           : DeepSeekModelRegistry.normalize(modelId),
     EndpointAiModelRef() => ref.storageValue,
     LegacyNewApiModelRef() => ref.storageValue,
+    PocketModelRef() => ref.storageValue,
   };
 }
 

@@ -32,6 +32,7 @@ abstract final class AiStyleMemory {
 
   static bool usesPrefixCache(AiProviderId provider) => switch (provider) {
     AiProviderId.gemini || AiProviderId.deepseek || AiProviderId.newApi => true,
+    AiProviderId.pocket => false,
   };
 
   static int budgetFor({required bool prefixCacheLikely}) =>

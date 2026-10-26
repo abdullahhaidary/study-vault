@@ -43,6 +43,9 @@ sealed class AiModelRef {
     if (value.startsWith('sv1:gemini:')) {
       return BuiltinGeminiModelRef(value.substring('sv1:gemini:'.length));
     }
+    if (value.startsWith('sv1:pocket:')) {
+      return PocketModelRef.normalize(value);
+    }
     if (value.startsWith('newapi:')) {
       return LegacyNewApiModelRef(value.substring(7).trim());
     }
@@ -150,6 +153,83 @@ final class LegacyNewApiModelRef extends AiModelRef {
 
   @override
   String get storageValue => 'newapi:$bareModelId';
+}
+
+/// Signed-in ChatGPT, Claude, or Gemini tab driven by the local Pocket window.
+///
+/// Extra ChatGPT sign-ins use `sv1:pocket:chatgpt:<accountId>`.
+final class PocketModelRef extends AiModelRef {
+  const PocketModelRef(this.appId, {this.accountId, this.accountName});
+
+  static const apps = ['chatgpt', 'claude', 'gemini'];
+  static final _accountId = RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$');
+
+  /// `chatgpt`, `claude`, or `gemini`.
+  final String appId;
+
+  /// Null for the main Pocket window.
+  final String? accountId;
+
+  /// Display name when the account list has been loaded.
+  final String? accountName;
+
+  factory PocketModelRef.normalize(String raw) {
+    var bare = raw.trim().toLowerCase();
+    const prefix = 'sv1:pocket:';
+    if (bare.startsWith(prefix)) bare = bare.substring(prefix.length);
+    if (bare.startsWith('pocket:')) bare = bare.substring('pocket:'.length);
+    final parts = bare.split(':');
+    final app = parts.first;
+    if (!apps.contains(app)) return const PocketModelRef('chatgpt');
+    if (app != 'chatgpt' || parts.length < 2) return PocketModelRef(app);
+    final account = parts[1];
+    if (account.isEmpty ||
+        account == 'default' ||
+        !_accountId.hasMatch(account)) {
+      return const PocketModelRef('chatgpt');
+    }
+    return PocketModelRef('chatgpt', accountId: account);
+  }
+
+  @override
+  AiProviderId get provider => AiProviderId.pocket;
+
+  @override
+  String get bareModelId => appId;
+
+  @override
+  String get providerModelId => storageValue;
+
+  @override
+  String? get endpointProfileId => null;
+
+  @override
+  String get storageValue => accountId == null
+      ? 'sv1:pocket:$appId'
+      : 'sv1:pocket:$appId:$accountId';
+
+  String get label {
+    final base = switch (appId) {
+      'claude' => 'Claude',
+      'gemini' => 'Gemini',
+      _ => 'ChatGPT',
+    };
+    if (accountId == null) return base;
+    return '$base · ${accountName ?? accountId}';
+  }
+
+  String get chatLabel => 'Pocket · $label';
+
+  String get description {
+    if (accountId != null) {
+      return 'ChatGPT account ${accountName ?? accountId}, in its own Pocket window.';
+    }
+    return switch (appId) {
+      'claude' => 'Signed-in Claude tab in the Pocket window.',
+      'gemini' => 'Signed-in Gemini tab in the Pocket window.',
+      _ => 'Signed-in ChatGPT tab in the main Pocket window.',
+    };
+  }
 }
 
 /// Bare model id from a New API storage value, a legacy prefix, or plain text.

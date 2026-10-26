@@ -15,6 +15,7 @@ final pdfAiCompletionClientProvider = Provider<PdfAiCompletionClient>((ref) {
     gemini: ref.watch(geminiAiServiceProvider),
     deepSeek: ref.watch(deepseekAiServiceProvider),
     newApi: ref.watch(newApiClaudeServiceProvider),
+    pocket: ref.watch(pocketAiServiceProvider),
   );
 });
 

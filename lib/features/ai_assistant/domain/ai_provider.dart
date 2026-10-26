@@ -1,6 +1,6 @@
 /// Study Vault AI backends. Features must stay provider-agnostic;
 /// provider-specific transport lives in infrastructure services.
-enum AiProviderId { gemini, deepseek, newApi }
+enum AiProviderId { gemini, deepseek, newApi, pocket }
 
 extension AiProviderIdX on AiProviderId {
   String get storageValue => name;
@@ -9,6 +9,7 @@ extension AiProviderIdX on AiProviderId {
     AiProviderId.gemini => 'Gemini',
     AiProviderId.deepseek => 'DeepSeek',
     AiProviderId.newApi => 'New API (Claude)',
+    AiProviderId.pocket => 'Pocket',
   };
 
   /// Short privacy line for Settings / consent.
@@ -19,6 +20,8 @@ extension AiProviderIdX on AiProviderId {
       'Study content used in AI requests is sent to DeepSeek.',
     AiProviderId.newApi =>
       'Study content used in AI requests is sent to your New API server.',
+    AiProviderId.pocket =>
+      'Study content is typed into the signed-in ChatGPT, Claude, or Gemini tab in the local Pocket window.',
   };
 
   static AiProviderId fromStorage(String? raw) {
@@ -26,6 +29,7 @@ extension AiProviderIdX on AiProviderId {
     return switch (value) {
       'deepseek' => AiProviderId.deepseek,
       'newapi' => AiProviderId.newApi,
+      'pocket' => AiProviderId.pocket,
       _ => AiProviderId.gemini,
     };
   }
@@ -35,6 +39,7 @@ extension AiProviderIdX on AiProviderId {
     final id = modelId?.trim() ?? '';
     if (id.isEmpty) return AiProviderId.gemini;
     final lower = id.toLowerCase();
+    if (lower.startsWith('sv1:pocket:')) return AiProviderId.pocket;
     if (lower.startsWith('sv1:endpoint:') || lower.startsWith('newapi:')) {
       return AiProviderId.newApi;
     }
@@ -112,9 +117,17 @@ class AiProviderCapabilities {
     streaming: true,
   );
 
+  static const pocket = AiProviderCapabilities(
+    text: true,
+    structuredJson: true,
+    streaming: true,
+    vision: true,
+  );
+
   static AiProviderCapabilities forProvider(AiProviderId id) => switch (id) {
     AiProviderId.gemini => gemini,
     AiProviderId.deepseek => deepseek,
     AiProviderId.newApi => newApi,
+    AiProviderId.pocket => pocket,
   };
 }

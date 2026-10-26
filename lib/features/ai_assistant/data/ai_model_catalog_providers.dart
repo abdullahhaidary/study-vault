@@ -28,6 +28,7 @@ final availableAiModelsProvider =
           ...DeepSeekModelRegistry.selectableModels().map(
             AiSelectableModel.fromDeepSeek,
           ),
+          ...pocketSelectableModels(),
         ];
       }
 
@@ -39,6 +40,7 @@ final availableAiModelsProvider =
           ...DeepSeekModelRegistry.selectableModels().map(
             AiSelectableModel.fromDeepSeek,
           ),
+          ...pocketSelectableModels(),
         ];
       }
 
@@ -77,6 +79,7 @@ AiSelectableModel _applyConstraints(
   required bool geminiReady,
   required bool deepSeekReady,
 }) {
+  if (model.provider == AiProviderId.pocket) return model;
   if (model.endpointProfileId != null ||
       model.provider == AiProviderId.newApi) {
     if (constraints.visionOnly) {

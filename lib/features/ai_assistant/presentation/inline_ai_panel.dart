@@ -13,6 +13,7 @@ import '../data/ai_providers.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../domain/inline_ai_models.dart';
 import '../services/inline_ai_annotation_saver.dart';
@@ -155,7 +156,9 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
   Future<bool> _ensureReady() => AiAssistantController.ensureReady(
     context,
     ref,
-    requireGemini: _controller.state.pageSendMode == AiPageSendMode.image,
+    requireGemini:
+        _controller.state.pageSendMode == AiPageSendMode.image &&
+        _controller.state.selection?.provider != AiProviderId.pocket,
   );
 
   Future<void> _run(AiStudyAction action) async {

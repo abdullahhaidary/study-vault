@@ -185,7 +185,9 @@ Each feature folder is `lib/features/<name>/`. Typical split: `presentation/` (w
 
 ### AI
 
-Providers (`AiProviderId`): `gemini`, `deepseek`, `newApi`. Features stay provider-agnostic; transport is in `*_ai_service.dart` / `*_chat_service.dart`, and `routing_ai_service.dart` picks the provider.
+Providers (`AiProviderId`): `gemini`, `deepseek`, `newApi`, `pocket`. Features stay provider-agnostic; transport is in `*_ai_service.dart` / `*_chat_service.dart`, and `routing_ai_service.dart` picks the provider.
+
+- Pocket (`sv1:pocket:chatgpt|claude|gemini`) types the request into the signed-in tab of the local Pocket window at `http://127.0.0.1:8765`. It needs no API key. Chat, annotation actions, quizzes, book questions, PDF materials, and Persian translation all use it when that model is selected. Each call opens a new Pocket chat and sends the full prompt. Page images are attached as files. Book embeddings stay on the Gemini API.
 
 - Gemini supports multiple keys. DeepSeek supports its defined thinking modes.
 - New API supports any number of named Anthropic Messages-compatible endpoint profiles. Profile metadata and cached model IDs live in device-local SharedPreferences under `ai_endpoint_profiles_v1`; each key lives only in secure storage as `study_vault_ai_endpoint_key_<profileId>`.

@@ -505,6 +505,7 @@ class MemoryAiSettingsStore extends AiSettingsStore {
   String _deepseekModel = 'deepseek-flash';
   String _newApiModel = 'newapi:';
   String _newApiBaseUrl = '';
+  String _pocketModel = 'sv1:pocket:chatgpt';
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   String? _preference;
@@ -528,6 +529,7 @@ class MemoryAiSettingsStore extends AiSettingsStore {
         AiProviderId.gemini => _model,
         AiProviderId.deepseek => _deepseekModel,
         AiProviderId.newApi => _newApiModel,
+        AiProviderId.pocket => _pocketModel,
       };
 
   @override
@@ -539,6 +541,8 @@ class MemoryAiSettingsStore extends AiSettingsStore {
         _deepseekModel = modelId;
       case AiProviderId.newApi:
         _newApiModel = modelId;
+      case AiProviderId.pocket:
+        _pocketModel = modelId;
     }
   }
 

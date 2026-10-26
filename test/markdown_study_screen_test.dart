@@ -97,6 +97,21 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('builds only the visible part of a long lecture', (tester) async {
+    final buffer = StringBuffer();
+    for (var n = 0; n < 40; n++) {
+      buffer.writeln('## Section $n');
+      buffer.writeln('marker-$n');
+      buffer.writeln(List.filled(25, 'A paragraph of study text.').join('\n'));
+      buffer.writeln();
+    }
+    file.writeAsStringSync(buffer.toString());
+    await pump(tester, const Size(400, 500));
+    expect(find.textContaining('marker-0'), findsOneWidget);
+    expect(find.textContaining('marker-30'), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('phones show AI materials as an overlay', (tester) async {
     await pump(tester, const Size(400, 800));
     await tester.tap(find.byTooltip('AI explanations'));

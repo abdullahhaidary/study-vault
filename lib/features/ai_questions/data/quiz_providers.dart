@@ -25,6 +25,7 @@ final liveQuizServiceProvider = Provider<LiveQuizService>((ref) {
       gemini: ref.watch(geminiAiServiceProvider),
       deepSeek: ref.watch(deepseekAiServiceProvider),
       newApi: ref.watch(newApiClaudeServiceProvider),
+      pocket: ref.watch(pocketAiServiceProvider),
     ),
     settings: ref.watch(aiSettingsStoreProvider),
   );

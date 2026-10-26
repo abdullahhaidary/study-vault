@@ -35,8 +35,8 @@ Future<AiExecutionSelection?> showAiModelSelector(
       subtitle:
           subtitle ??
           (constraints.visionOnly
-              ? 'Page images require a Gemini vision model.'
-              : 'Pick Gemini, DeepSeek, or a model from one of your API profiles.'),
+              ? 'Page images go to a Gemini vision model or a Pocket chat.'
+              : 'Pick Gemini, DeepSeek, Pocket, or a model from one of your API profiles.'),
     ),
   );
 }
@@ -124,6 +124,9 @@ String _displayName(AiExecutionSelection selection) {
   if (selection.provider == AiProviderId.newApi) {
     final bare = newApiBareModelId(selection.resolvedModelId);
     return bare.isEmpty ? 'Model not set' : bare;
+  }
+  if (selection.provider == AiProviderId.pocket) {
+    return PocketModelRef.normalize(selection.resolvedModelId).chatLabel;
   }
   final def = DeepSeekModelRegistry.byId(selection.resolvedModelId);
   return def?.displayName ?? selection.resolvedModelId;
@@ -284,6 +287,7 @@ class _AiModelSelectorSheetState extends ConsumerState<_AiModelSelectorSheet> {
         ...DeepSeekModelRegistry.selectableModels().map(
           AiSelectableModel.fromDeepSeek,
         ),
+      ...pocketSelectableModels(),
     ];
   }
 }

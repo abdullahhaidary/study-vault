@@ -14,6 +14,7 @@ import '../domain/ai_model_ref.dart';
 import 'ai_endpoint_profiles_section.dart';
 import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
+import 'pocket_accounts_section.dart';
 import 'widgets/deepseek_pricing_banner.dart';
 
 /// Settings → AI Assistant section (multi-provider).
@@ -26,6 +27,8 @@ class AiSettingsSection extends ConsumerStatefulWidget {
 
 class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   final _keyController = TextEditingController();
+  final _pocketUrlController = TextEditingController();
+  final _pocketUrlFocus = FocusNode();
   bool _saving = false;
   bool _testing = false;
   String? _testMessage;
@@ -34,6 +37,8 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
   @override
   void dispose() {
     _keyController.dispose();
+    _pocketUrlController.dispose();
+    _pocketUrlFocus.dispose();
     super.dispose();
   }
 
@@ -166,6 +171,31 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     }
   }
 
+  Future<void> _savePocketUrl() async {
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(aiSettingsStoreProvider)
+          .setPocketBaseUrl(_pocketUrlController.text);
+      _pocketUrlFocus.unfocus();
+      await _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const TransientSnackBar(content: Text('Pocket address saved.')),
+        );
+      }
+    } on FormatException catch (error) {
+      if (mounted) {
+        setState(() {
+          _testOk = false;
+          _testMessage = error.message;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _showReplaceKeyDialog(AiProviderId provider) async {
     _keyController.clear();
     await showDialog<void>(
@@ -214,6 +244,16 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
         final provider = state.provider;
         final configured = state.configured;
         final modelItems = AiModels.selectableIds(provider);
+        if (!_pocketUrlFocus.hasFocus &&
+            _pocketUrlController.text != state.pocketBaseUrl) {
+          final next = state.pocketBaseUrl;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _pocketUrlFocus.hasFocus) return;
+            if (_pocketUrlController.text != next) {
+              _pocketUrlController.text = next;
+            }
+          });
+        }
 
         return Card(
           child: Padding(
@@ -297,14 +337,63 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Text(
-                  provider == AiProviderId.gemini
-                      ? 'Gemini API keys'
-                      : '${provider.displayName} API Key',
-                  style: theme.textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                if (provider == AiProviderId.gemini) ...[
+                if (provider != AiProviderId.pocket) ...[
+                  Text(
+                    provider == AiProviderId.gemini
+                        ? 'Gemini API keys'
+                        : '${provider.displayName} API Key',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (provider == AiProviderId.pocket) ...[
+                  Text('Pocket window', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Chat, study actions, quizzes, book questions, document '
+                    'generation, and Persian translation are typed into the '
+                    'signed-in Pocket tab. Start Pocket and sign in first. '
+                    'Each request opens a new chat in that tab.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _pocketUrlController,
+                    focusNode: _pocketUrlFocus,
+                    decoration: const InputDecoration(
+                      labelText: 'Pocket address',
+                      hintText: 'http://127.0.0.1:8765',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _savePocketUrl(),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: _testing ? null : _test,
+                        child: _testing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Test Connection'),
+                      ),
+                      OutlinedButton(
+                        onPressed: _saving ? null : _savePocketUrl,
+                        child: const Text('Save address'),
+                      ),
+                    ],
+                  ),
+                  const PocketAccountsSection(),
+                ] else if (provider == AiProviderId.gemini) ...[
                   if (state.geminiKeyCount == 0)
                     Text(
                       'Gemini API key required',

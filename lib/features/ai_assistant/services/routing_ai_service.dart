@@ -16,12 +16,14 @@ class RoutingAiService implements AiService {
     required this.gemini,
     required this.deepseek,
     this.newApi,
+    this.pocket,
   });
 
   final AiSettingsStore settings;
   final AiService gemini;
   final AiService deepseek;
   final AiService? newApi;
+  final AiService? pocket;
 
   Future<AiService> _forProvider(AiProviderId provider) {
     return Future.value(switch (provider) {
@@ -32,6 +34,9 @@ class RoutingAiService implements AiService {
             (throw const AiNotConfiguredException(
               'New API is not configured.',
             )),
+      AiProviderId.pocket =>
+        pocket ??
+            (throw const AiNotConfiguredException('Pocket is not configured.')),
     });
   }
 
@@ -66,10 +71,13 @@ class RoutingAiService implements AiService {
     Map<String, String> categoryNameToId = const {},
     Duration timeout = const Duration(minutes: 5),
   }) async {
-    final effective = request.hasPageImage
+    final keepPocket = request.selection.provider == AiProviderId.pocket;
+    final effective = request.hasPageImage && !keepPocket
         ? _ensureGeminiSelection(request)
         : request;
-    final service = effective.hasPageImage
+    final service =
+        effective.hasPageImage &&
+            effective.selection.provider != AiProviderId.pocket
         ? await _forImage()
         : await _forProvider(effective.selection.provider);
     return service.run(
@@ -84,10 +92,13 @@ class RoutingAiService implements AiService {
     AiQuestionGenerationRequest request, {
     Duration timeout = const Duration(minutes: 5),
   }) async {
-    final effective = request.image != null
+    final keepPocket = request.selection.provider == AiProviderId.pocket;
+    final effective = request.image != null && !keepPocket
         ? _ensureGeminiQuestionSelection(request)
         : request;
-    final service = effective.image != null
+    final service =
+        effective.image != null &&
+            effective.selection.provider != AiProviderId.pocket
         ? await _forImage()
         : await _forProvider(effective.selection.provider);
     return service.generateQuestions(effective, timeout: timeout);

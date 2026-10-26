@@ -124,10 +124,15 @@ abstract final class AiModels {
           ...DeepSeekModelRegistry.selectableModels().map((m) => m.id),
         ],
         AiProviderId.newApi => const ['newapi:'],
+        AiProviderId.pocket => [
+          for (final app in PocketModelRef.apps)
+            PocketModelRef(app).storageValue,
+        ],
       };
 
   static String label(AiProviderId provider, String id) => switch (provider) {
     AiProviderId.gemini => AiModelIds.label(id),
+    AiProviderId.pocket => PocketModelRef.normalize(id).label,
     AiProviderId.newApi => id.startsWith('newapi:') ? id.substring(7) : id,
     AiProviderId.deepseek =>
       DeepSeekModelIds.isAuto(id)
@@ -146,6 +151,7 @@ abstract final class AiModels {
     String? id,
   ) => switch (provider) {
     AiProviderId.gemini => GeminiModelRegistry.normalize(id),
+    AiProviderId.pocket => PocketModelRef.normalize(id ?? '').storageValue,
     AiProviderId.newApi => () {
       final parsed = AiModelRef.parse(id ?? '');
       if (parsed is EndpointAiModelRef) return parsed.storageValue;
@@ -167,6 +173,7 @@ abstract final class AiModels {
     final modelLabel = switch (p) {
       AiProviderId.gemini =>
         GeminiModelRegistry.byId(model)?.displayName ?? model,
+      AiProviderId.pocket => PocketModelRef.normalize(model).chatLabel,
       AiProviderId.newApi => model.replaceFirst(RegExp(r'^newapi:'), ''),
       AiProviderId.deepseek =>
         DeepSeekModelRegistry.byId(model)?.displayName ?? model,
@@ -180,6 +187,7 @@ abstract final class AiModels {
     if (ref is EndpointAiModelRef || ref is LegacyNewApiModelRef) {
       return ref.bareModelId.isNotEmpty;
     }
+    if (ref is PocketModelRef) return true;
     if (DeepSeekModelIds.isAuto(id)) return true;
     if (DeepSeekModelRegistry.isKnown(id)) return true;
     return GeminiModelRegistry.isKnown(id);
@@ -188,6 +196,7 @@ abstract final class AiModels {
   /// Chat subtitle / app bar label. Unknown ids stay marked unavailable.
   static String chatDisplayName(String id) {
     final ref = AiModelRef.parse(id);
+    if (ref is PocketModelRef) return ref.chatLabel;
     if (ref is EndpointAiModelRef || ref is LegacyNewApiModelRef) {
       return ref.bareModelId;
     }

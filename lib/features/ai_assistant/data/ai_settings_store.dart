@@ -27,6 +27,10 @@ abstract class AiSettingsStore {
   Future<String> getNewApiBaseUrl();
   Future<void> setNewApiBaseUrl(String url);
 
+  Future<String> getPocketBaseUrl() async => 'http://127.0.0.1:8765';
+
+  Future<void> setPocketBaseUrl(String url) async {}
+
   Future<AiThinkingMode> getThinkingMode();
   Future<void> setThinkingMode(AiThinkingMode mode);
 
@@ -114,6 +118,8 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
   static const _deepseekModelKey = 'ai_deepseek_model';
   static const _newApiModelKey = 'ai_newapi_model';
   static const _newApiBaseUrlKey = 'ai_newapi_base_url';
+  static const _pocketModelKey = 'ai_pocket_model';
+  static const _pocketBaseUrlKey = 'ai_pocket_base_url';
   static const _globalModelRefKey = 'ai_global_model_ref';
   static const _activeEndpointProfileKey = 'ai_active_endpoint_profile';
   static const _thinkingKey = 'ai_deepseek_thinking';
@@ -168,6 +174,9 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
       AiProviderId.newApi => normalizeNewApiModelId(
         prefs.getString(_newApiModelKey),
       ),
+      AiProviderId.pocket => PocketModelRef.normalize(
+        prefs.getString(_pocketModelKey) ?? '',
+      ).storageValue,
     };
   }
 
@@ -187,6 +196,11 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
         );
       case AiProviderId.newApi:
         await prefs.setString(_newApiModelKey, normalizeNewApiModelId(modelId));
+      case AiProviderId.pocket:
+        await prefs.setString(
+          _pocketModelKey,
+          PocketModelRef.normalize(modelId).storageValue,
+        );
     }
   }
 
@@ -198,6 +212,19 @@ class SharedPreferencesAiSettingsStore extends AiSettingsStore {
   Future<void> setNewApiBaseUrl(String url) async {
     final prefs = await _prefs();
     await prefs.setString(_newApiBaseUrlKey, normalizeNewApiBaseUrl(url));
+  }
+
+  @override
+  Future<String> getPocketBaseUrl() async {
+    final stored = (await _prefs()).getString(_pocketBaseUrlKey);
+    if (stored == null || stored.trim().isEmpty) return 'http://127.0.0.1:8765';
+    return normalizePocketBaseUrl(stored);
+  }
+
+  @override
+  Future<void> setPocketBaseUrl(String url) async {
+    final prefs = await _prefs();
+    await prefs.setString(_pocketBaseUrlKey, normalizePocketBaseUrl(url));
   }
 
   String _normalizeDeepSeekStored(String? raw) {
@@ -384,6 +411,24 @@ String normalizeNewApiBaseUrl(String raw) {
   return normalized.toString().replaceAll(RegExp(r'/+$'), '');
 }
 
+/// Accepts only a loopback HTTP address. Study text must stay on this computer.
+String normalizePocketBaseUrl(String raw) {
+  const fallback = 'http://127.0.0.1:8765';
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return fallback;
+  final withScheme = trimmed.contains('://') ? trimmed : 'http://$trimmed';
+  final uri = Uri.parse(withScheme);
+  final host = uri.host.toLowerCase();
+  final local = host == '127.0.0.1' || host == 'localhost';
+  if (uri.scheme != 'http' || !local) {
+    throw const FormatException(
+      'Pocket address must be http://127.0.0.1:8765 or http://localhost:8765.',
+    );
+  }
+  final port = uri.hasPort ? uri.port : 8765;
+  return 'http://$host:$port';
+}
+
 /// In-memory settings for tests.
 class MemoryAiSettingsStore extends AiSettingsStore {
   AiProviderId _provider = AiProviderId.gemini;
@@ -391,6 +436,8 @@ class MemoryAiSettingsStore extends AiSettingsStore {
   String _deepseekModel = DeepSeekModelRegistry.defaultModelId;
   String _newApiModel = 'newapi:';
   String _newApiBaseUrl = '';
+  String _pocketModel = 'sv1:pocket:chatgpt';
+  String _pocketBaseUrl = 'http://127.0.0.1:8765';
   AiThinkingMode _thinking = AiThinkingMode.auto;
   AiLanguage _language = AiLanguage.auto;
   List<AiStyleMemoryItem> _items = const [];
@@ -418,6 +465,7 @@ class MemoryAiSettingsStore extends AiSettingsStore {
         AiProviderId.gemini => _geminiModel,
         AiProviderId.deepseek => _deepseekModel,
         AiProviderId.newApi => _newApiModel,
+        AiProviderId.pocket => _pocketModel,
       };
 
   @override
@@ -431,6 +479,8 @@ class MemoryAiSettingsStore extends AiSettingsStore {
             : DeepSeekModelRegistry.normalize(modelId);
       case AiProviderId.newApi:
         _newApiModel = normalizeNewApiModelId(modelId);
+      case AiProviderId.pocket:
+        _pocketModel = PocketModelRef.normalize(modelId).storageValue;
     }
   }
 
@@ -440,6 +490,14 @@ class MemoryAiSettingsStore extends AiSettingsStore {
   @override
   Future<void> setNewApiBaseUrl(String url) async =>
       _newApiBaseUrl = normalizeNewApiBaseUrl(url);
+
+  @override
+  Future<String> getPocketBaseUrl() async => _pocketBaseUrl;
+
+  @override
+  Future<void> setPocketBaseUrl(String url) async {
+    _pocketBaseUrl = normalizePocketBaseUrl(url);
+  }
 
   @override
   Future<AiThinkingMode> getThinkingMode() async => _thinking;
@@ -553,6 +611,8 @@ String resolveActiveModelId({
   switch (provider) {
     case AiProviderId.newApi:
       return normalizeNewApiModelId(storedModelId);
+    case AiProviderId.pocket:
+      return PocketModelRef.normalize(storedModelId).storageValue;
     case AiProviderId.gemini:
       return GeminiModelRegistry.normalize(storedModelId);
     case AiProviderId.deepseek:
