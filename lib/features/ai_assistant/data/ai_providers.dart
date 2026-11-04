@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../data/ai_credential_store.dart';
+import 'ai_request_metrics_store.dart';
 import '../data/ai_endpoint_profile_repository.dart';
 import '../data/ai_settings_store.dart';
 import '../domain/ai_actions.dart';
@@ -21,6 +22,19 @@ import '../services/routing_ai_service.dart';
 
 export 'voice_input_providers.dart' show voiceInputServiceProvider;
 
+final aiRequestMetricsStoreProvider = Provider<AiRequestMetricsStore>((ref) {
+  final store = AiRequestMetricsStore();
+  ref.onDispose(store.dispose);
+  return store;
+});
+final _aiRequestMetricChangesProvider = StreamProvider<void>(
+  (ref) => ref.watch(aiRequestMetricsStoreProvider).changes,
+);
+final aiRequestMetricsProvider = FutureProvider<List<AiRequestMetric>>((ref) {
+  ref.watch(_aiRequestMetricChangesProvider);
+  return ref.watch(aiRequestMetricsStoreProvider).list();
+});
+
 final aiCredentialStoreProvider = Provider<AiCredentialStore>((ref) {
   return SecureAiCredentialStore();
 });
@@ -31,16 +45,23 @@ final aiSettingsStoreProvider = Provider<AiSettingsStore>((ref) {
 
 final aiEndpointProfileRepositoryProvider =
     Provider<AiEndpointProfileRepository>((ref) {
-      return AiEndpointProfileRepository(
+      final repository = AiEndpointProfileRepository(
         store: SharedPreferencesAiEndpointCatalogStore(),
         settings: ref.watch(aiSettingsStoreProvider),
         credentials: ref.watch(aiCredentialStoreProvider),
       );
+      ref.onDispose(repository.dispose);
+      return repository;
     });
+
+final _endpointCatalogChangesProvider = StreamProvider<void>((ref) {
+  return ref.watch(aiEndpointProfileRepositoryProvider).changes;
+});
 
 final aiEndpointProfilesProvider = FutureProvider<List<AiEndpointProfile>>((
   ref,
-) async {
+) {
+  ref.watch(_endpointCatalogChangesProvider);
   return ref.watch(aiEndpointProfileRepositoryProvider).list();
 });
 
@@ -48,6 +69,7 @@ final aiModelProfileAvailableProvider = FutureProvider.family<bool, String>((
   ref,
   modelId,
 ) async {
+  ref.watch(_endpointCatalogChangesProvider);
   return ref
       .watch(aiEndpointProfileRepositoryProvider)
       .isAvailable(AiModelRef.parse(modelId));
@@ -68,11 +90,13 @@ final deepseekAiServiceProvider = Provider<DeepSeekAiService>((ref) {
 });
 
 final newApiClaudeServiceProvider = Provider<NewApiClaudeService>((ref) {
-  return NewApiClaudeService(
+  final service = NewApiClaudeService(
     credentials: ref.watch(aiCredentialStoreProvider),
     settings: ref.watch(aiSettingsStoreProvider),
     profiles: ref.watch(aiEndpointProfileRepositoryProvider),
   );
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 final pocketAiServiceProvider = Provider<PocketAiService>((ref) {
@@ -92,7 +116,11 @@ final aiServiceProvider = Provider<AiService>((ref) {
 
 /// Annotation/selection façade over [aiServiceProvider].
 final annotationAiServiceProvider = Provider<AnnotationAiService>((ref) {
-  return AnnotationAiService(aiService: ref.watch(aiServiceProvider));
+  return AnnotationAiService(
+    aiService: ref.watch(aiServiceProvider),
+    settings: ref.watch(aiSettingsStoreProvider),
+    profiles: ref.watch(aiEndpointProfileRepositoryProvider),
+  );
 });
 
 /// Persistent generation history for annotation AI actions.

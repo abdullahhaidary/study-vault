@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/presentation/pick_ai_model.dart';
@@ -260,9 +261,22 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
           controller: scroll,
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text(
-              'Page ${item!.startPage} explained',
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Page ${item!.startPage} explained',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                DownloadDocumentButton(
+                  tooltip: 'Download Markdown',
+                  request: () async => DocumentTextRequest(
+                    fileName: '${book.title} page ${item!.startPage}',
+                    text: content,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.sm),
             BookMarkdown(
@@ -371,6 +385,15 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
             icon: const Icon(Icons.bookmark_add_outlined),
             onPressed: () => _bookmark(book),
           ),
+          if (_path != null && !_missing)
+            DownloadDocumentButton(
+              tooltip: 'Download PDF',
+              request: () async => DocumentFileRequest(
+                fileName: book.title,
+                sourcePath: _path!,
+                kind: DocumentFileKind.pdf,
+              ),
+            ),
         ],
       ),
       body: _missing

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +84,17 @@ class AiEndpointProfileRepository {
   final String Function() _newId;
 
   Future<void>? _migrating;
+  Future<void> _writes = Future.value();
+  final _changes = StreamController<void>.broadcast(sync: true);
+  Stream<void> get changes => _changes.stream;
+  void dispose() => _changes.close();
+
+  // Every read/modify/write is serialized, including refresh completions.
+  Future<T> _serialize<T>(Future<T> Function() operation) {
+    final next = _writes.then((_) => operation());
+    _writes = next.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return next;
+  }
 
   Future<void> ensureMigrated() {
     final pending = _migrating;
@@ -142,45 +155,49 @@ class AiEndpointProfileRepository {
     required String apiKey,
     String? defaultModelId,
     bool makeGlobalDefault = false,
+    bool promptCachingEnabled = false,
   }) async {
     await ensureMigrated();
-    final cleanedName = _uniqueName(name, existing: await _read());
-    final url = normalizeNewApiBaseUrl(baseUrl);
-    if (url.isEmpty) {
-      throw const FormatException('Enter the server base URL.');
-    }
-    final key = apiKey.trim();
-    if (key.isEmpty) {
-      throw const FormatException('Enter an API key for this profile.');
-    }
-    final model = (defaultModelId ?? '').trim();
-    final now = _clock();
-    final profile = AiEndpointProfile(
-      id: _newId(),
-      name: cleanedName,
-      protocol: AiEndpointProtocol.newApiAnthropic,
-      baseUrl: url,
-      defaultModelId: model,
-      cachedModelIds: const [],
-      modelsRefreshedAt: null,
-      createdAt: now,
-      updatedAt: now,
-      enabled: true,
-      connectionStatus: AiEndpointConnectionStatus.unknown,
-      connectionDetail: null,
-      keySuffix: GeminiApiKeys.suffix(key),
-    );
-    await credentials.writeEndpointKey(profile.id, key);
-    final catalog = await _read();
-    await _write(catalog.copyWith(profiles: [...catalog.profiles, profile]));
-    if (makeGlobalDefault && model.isNotEmpty) {
-      await settings.setGlobalModelRef(
-        EndpointAiModelRef(profileId: profile.id, modelId: model),
+    return _serialize(() async {
+      final cleanedName = _uniqueName(name, existing: await _read());
+      final url = normalizeNewApiBaseUrl(baseUrl);
+      if (url.isEmpty) {
+        throw const FormatException('Enter the server base URL.');
+      }
+      final key = apiKey.trim();
+      if (key.isEmpty) {
+        throw const FormatException('Enter an API key for this profile.');
+      }
+      final model = (defaultModelId ?? '').trim();
+      final now = _clock();
+      final profile = AiEndpointProfile(
+        id: _newId(),
+        promptCachingEnabled: promptCachingEnabled,
+        name: cleanedName,
+        protocol: AiEndpointProtocol.newApiAnthropic,
+        baseUrl: url,
+        defaultModelId: model,
+        cachedModelIds: const [],
+        modelsRefreshedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        enabled: true,
+        connectionStatus: AiEndpointConnectionStatus.unknown,
+        connectionDetail: null,
+        keySuffix: GeminiApiKeys.suffix(key),
       );
-    } else if (await settings.getActiveEndpointProfileId() == null) {
-      await settings.setActiveEndpointProfileId(profile.id);
-    }
-    return profile;
+      await credentials.writeEndpointKey(profile.id, key);
+      final catalog = await _read();
+      await _write(catalog.copyWith(profiles: [...catalog.profiles, profile]));
+      if (makeGlobalDefault && model.isNotEmpty) {
+        await settings.setGlobalModelRef(
+          EndpointAiModelRef(profileId: profile.id, modelId: model),
+        );
+      } else if (await settings.getActiveEndpointProfileId() == null) {
+        await settings.setActiveEndpointProfileId(profile.id);
+      }
+      return profile;
+    });
   }
 
   Future<AiEndpointProfile> update({
@@ -190,90 +207,108 @@ class AiEndpointProfileRepository {
     String? replacementApiKey,
     String? defaultModelId,
     bool? enabled,
+    bool? promptCachingEnabled,
   }) async {
     await ensureMigrated();
-    final catalog = await _read();
-    final index = catalog.profiles.indexWhere((profile) => profile.id == id);
-    if (index < 0) {
-      throw const FormatException('API profile unavailable.');
-    }
-    final current = catalog.profiles[index];
-    final nextName = name == null
-        ? current.name
-        : _uniqueName(name, existing: catalog, exceptId: id);
-    final nextUrl = baseUrl == null
-        ? current.baseUrl
-        : normalizeNewApiBaseUrl(baseUrl);
-    if (nextUrl.isEmpty) {
-      throw const FormatException('Enter the server base URL.');
-    }
-    final nextModel = defaultModelId == null
-        ? current.defaultModelId
-        : defaultModelId.trim();
-    if (defaultModelId != null && nextModel.isEmpty) {
-      throw const FormatException('Enter a model ID.');
-    }
-    final replacement = replacementApiKey?.trim();
-    var suffix = current.keySuffix;
-    if (replacement != null && replacement.isNotEmpty) {
-      await credentials.writeEndpointKey(id, replacement);
-      suffix = GeminiApiKeys.suffix(replacement);
-    }
-    final next = current.copyWith(
-      name: nextName,
-      baseUrl: nextUrl,
-      defaultModelId: nextModel,
-      enabled: enabled,
-      keySuffix: suffix,
-      updatedAt: _clock(),
-    );
-    final profiles = [...catalog.profiles];
-    profiles[index] = next;
-    await _write(catalog.copyWith(profiles: profiles));
-    return next;
+    return _serialize(() async {
+      final catalog = await _read();
+      final index = catalog.profiles.indexWhere((profile) => profile.id == id);
+      if (index < 0) {
+        throw const FormatException('API profile unavailable.');
+      }
+      final current = catalog.profiles[index];
+      final nextName = name == null
+          ? current.name
+          : _uniqueName(name, existing: catalog, exceptId: id);
+      final nextUrl = baseUrl == null
+          ? current.baseUrl
+          : normalizeNewApiBaseUrl(baseUrl);
+      if (nextUrl.isEmpty) {
+        throw const FormatException('Enter the server base URL.');
+      }
+      final nextModel = defaultModelId == null
+          ? current.defaultModelId
+          : defaultModelId.trim();
+      if (defaultModelId != null && nextModel.isEmpty) {
+        throw const FormatException('Enter a model ID.');
+      }
+      final replacement = replacementApiKey?.trim();
+      var suffix = current.keySuffix;
+      if (replacement != null && replacement.isNotEmpty) {
+        await credentials.writeEndpointKey(id, replacement);
+        suffix = GeminiApiKeys.suffix(replacement);
+      }
+      final connectionChanged =
+          nextUrl != current.baseUrl ||
+          (replacement != null && replacement.isNotEmpty);
+      final next = current.copyWith(
+        promptCachingEnabled: promptCachingEnabled,
+        connectionRevision:
+            current.connectionRevision + (connectionChanged ? 1 : 0),
+        cachedModelIds: connectionChanged ? const [] : null,
+        clearModelsRefreshedAt: connectionChanged,
+        connectionStatus: connectionChanged
+            ? AiEndpointConnectionStatus.unknown
+            : null,
+        clearConnectionDetail: connectionChanged,
+        name: nextName,
+        baseUrl: nextUrl,
+        defaultModelId: nextModel,
+        enabled: enabled,
+        keySuffix: suffix,
+        updatedAt: _clock(),
+      );
+      final profiles = [...catalog.profiles];
+      profiles[index] = next;
+      await _write(catalog.copyWith(profiles: profiles));
+      return next;
+    });
   }
 
   Future<void> delete(String id, {AiModelRef? replacementDefault}) async {
     await ensureMigrated();
-    final catalog = await _read();
-    final global = await settings.getGlobalModelRef();
-    final wasGlobal =
-        global is EndpointAiModelRef && global.profileId == id ||
-        (global is LegacyNewApiModelRef && catalog.legacyProfileId == id);
-    if (wasGlobal) {
-      final replacement =
-          replacementDefault ??
-          BuiltinGeminiModelRef(
-            await settings.getModelIdFor(AiProviderId.gemini),
+    return _serialize(() async {
+      final catalog = await _read();
+      final global = await settings.getGlobalModelRef();
+      final wasGlobal =
+          global is EndpointAiModelRef && global.profileId == id ||
+          (global is LegacyNewApiModelRef && catalog.legacyProfileId == id);
+      if (wasGlobal) {
+        final replacement =
+            replacementDefault ??
+            BuiltinGeminiModelRef(
+              await settings.getModelIdFor(AiProviderId.gemini),
+            );
+        if (replacement is EndpointAiModelRef && replacement.profileId == id) {
+          throw const FormatException(
+            'Choose a different default before deleting this profile.',
           );
-      if (replacement is EndpointAiModelRef && replacement.profileId == id) {
-        throw const FormatException(
-          'Choose a different default before deleting this profile.',
+        }
+        await settings.setGlobalModelRef(replacement);
+      }
+      if (await settings.getActiveEndpointProfileId() == id) {
+        final remaining = catalog.profiles.where((profile) => profile.id != id);
+        await settings.setActiveEndpointProfileId(
+          remaining.isEmpty ? null : remaining.first.id,
         );
       }
-      await settings.setGlobalModelRef(replacement);
-    }
-    if (await settings.getActiveEndpointProfileId() == id) {
-      final remaining = catalog.profiles.where((profile) => profile.id != id);
-      await settings.setActiveEndpointProfileId(
-        remaining.isEmpty ? null : remaining.first.id,
+      await _write(
+        catalog.copyWith(
+          profiles: [
+            for (final profile in catalog.profiles)
+              if (profile.id != id) profile,
+          ],
+          clearLegacyProfileId: catalog.legacyProfileId == id,
+        ),
       );
-    }
-    await _write(
-      catalog.copyWith(
-        profiles: [
-          for (final profile in catalog.profiles)
-            if (profile.id != id) profile,
-        ],
-        clearLegacyProfileId: catalog.legacyProfileId == id,
-      ),
-    );
-    await credentials.deleteEndpointKey(id);
+      await credentials.deleteEndpointKey(id);
+    });
   }
 
   Future<AiEndpointProfile> cacheModels({
     required String id,
     required List<String> modelIds,
+    int? expectedConnectionRevision,
   }) async {
     final unique = <String>{};
     final models = <String>[
@@ -281,7 +316,13 @@ class AiEndpointProfileRepository {
         if (id.trim().isNotEmpty && unique.add(id.trim())) id.trim(),
     ]..sort();
     return _replace(id, (profile) {
+      if (expectedConnectionRevision != null &&
+          profile.connectionRevision != expectedConnectionRevision) {
+        return profile;
+      }
       return profile.copyWith(
+        connectionStatus: AiEndpointConnectionStatus.ok,
+        connectionDetail: 'Connected',
         cachedModelIds: models,
         modelsRefreshedAt: _clock(),
         updatedAt: _clock(),
@@ -293,9 +334,14 @@ class AiEndpointProfileRepository {
     required String id,
     required AiEndpointConnectionStatus status,
     String? detail,
+    int? expectedConnectionRevision,
   }) {
     final message = _publicDetail(detail);
     return _replace(id, (profile) {
+      if (expectedConnectionRevision != null &&
+          profile.connectionRevision != expectedConnectionRevision) {
+        return profile;
+      }
       return profile.copyWith(
         connectionStatus: status,
         connectionDetail: message,
@@ -307,30 +353,32 @@ class AiEndpointProfileRepository {
 
   Future<AiEndpointConnection> resolve(String profileId) async {
     await ensureMigrated();
-    final profile = await find(profileId);
-    if (profile == null) {
-      throw const FormatException('API profile unavailable.');
-    }
-    if (!profile.enabled) {
-      throw const FormatException('This API profile is turned off.');
-    }
-    if (profile.protocol != AiEndpointProtocol.newApiAnthropic) {
-      throw FormatException(
-        'Protocol ${profile.protocol.storageValue} is not supported.',
+    return _serialize(() async {
+      final profile = await find(profileId);
+      if (profile == null) {
+        throw const FormatException('API profile unavailable.');
+      }
+      if (!profile.enabled) {
+        throw const FormatException('This API profile is turned off.');
+      }
+      if (profile.protocol != AiEndpointProtocol.newApiAnthropic) {
+        throw FormatException(
+          'Protocol ${profile.protocol.storageValue} is not supported.',
+        );
+      }
+      final key = await credentials.readEndpointKey(profileId);
+      if (key == null || key.isEmpty || profile.baseUrl.isEmpty) {
+        throw const FormatException(
+          'Add an API key and server URL for this profile in Settings.',
+        );
+      }
+      return AiEndpointConnection(
+        profile: profile,
+        messagesUri: aiEndpointMessagesUri(profile.baseUrl),
+        modelsUri: aiEndpointModelsUri(profile.baseUrl),
+        apiKey: key,
       );
-    }
-    final key = await credentials.readEndpointKey(profileId);
-    if (key == null || key.isEmpty || profile.baseUrl.isEmpty) {
-      throw const FormatException(
-        'Add an API key and server URL for this profile in Settings.',
-      );
-    }
-    return AiEndpointConnection(
-      profile: profile,
-      messagesUri: aiEndpointMessagesUri(profile.baseUrl),
-      modelsUri: aiEndpointModelsUri(profile.baseUrl),
-      apiKey: key,
-    );
+    });
   }
 
   Future<String> metadataJson() async {
@@ -343,16 +391,19 @@ class AiEndpointProfileRepository {
     AiEndpointProfile Function(AiEndpointProfile profile) update,
   ) async {
     await ensureMigrated();
-    final catalog = await _read();
-    final index = catalog.profiles.indexWhere((profile) => profile.id == id);
-    if (index < 0) {
-      throw const FormatException('API profile unavailable.');
-    }
-    final profiles = [...catalog.profiles];
-    final next = update(profiles[index]);
-    profiles[index] = next;
-    await _write(catalog.copyWith(profiles: profiles));
-    return next;
+    return _serialize(() async {
+      final catalog = await _read();
+      final index = catalog.profiles.indexWhere((profile) => profile.id == id);
+      if (index < 0) {
+        throw const FormatException('API profile unavailable.');
+      }
+      final profiles = [...catalog.profiles];
+      final next = update(profiles[index]);
+      if (identical(next, profiles[index])) return next;
+      profiles[index] = next;
+      await _write(catalog.copyWith(profiles: profiles));
+      return next;
+    });
   }
 
   Future<void> _migrate() async {
@@ -426,8 +477,9 @@ class AiEndpointProfileRepository {
     }
   }
 
-  Future<void> _write(AiEndpointCatalog catalog) {
-    return store.write(jsonEncode(catalog.toJson()));
+  Future<void> _write(AiEndpointCatalog catalog) async {
+    await store.write(jsonEncode(catalog.toJson()));
+    if (!_changes.isClosed) _changes.add(null);
   }
 
   String _uniqueName(

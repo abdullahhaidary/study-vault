@@ -132,6 +132,7 @@ class PocketAiService implements AiService {
       modelId: selection.resolvedModelId,
       message: prompt,
       timeout: timeout,
+      newChat: true,
     )) {
       text = reply.text;
       onPartialText?.call(text);
@@ -159,6 +160,7 @@ class PocketAiService implements AiService {
         message: message,
         files: [?staged],
         timeout: timeout,
+        newChat: true,
       );
       return reply.text;
     } finally {

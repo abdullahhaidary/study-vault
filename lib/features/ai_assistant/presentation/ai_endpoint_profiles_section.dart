@@ -76,6 +76,12 @@ class _ProfileCard extends ConsumerWidget {
     final suffix = profile.keySuffix.isEmpty
         ? 'not saved'
         : '••••${profile.keySuffix}';
+    final refreshing =
+        ref
+            .watch(refreshingModelProfilesProvider)
+            .valueOrNull
+            ?.contains(profile.id) ??
+        false;
     final refreshed = profile.modelsRefreshedAt;
     final refreshedLabel = refreshed == null
         ? 'Not refreshed'
@@ -137,8 +143,10 @@ class _ProfileCard extends ConsumerWidget {
                   child: const Text('Test'),
                 ),
                 TextButton(
-                  onPressed: () => _refresh(context, ref, profile),
-                  child: const Text('Refresh models'),
+                  onPressed: refreshing
+                      ? null
+                      : () => _refresh(context, ref, profile),
+                  child: Text(refreshing ? 'Refreshing…' : 'Refresh models'),
                 ),
                 TextButton(
                   onPressed: () =>
@@ -184,13 +192,14 @@ Future<void> _addProfile(BuildContext context, WidgetRef ref) async {
           name: created.name,
           baseUrl: created.baseUrl,
           apiKey: created.apiKey,
+          promptCachingEnabled: created.promptCachingEnabled,
         );
     await _reload(ref);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const TransientSnackBar(
           content: Text(
-            'Profile saved. Test the connection, then refresh models.',
+            'Profile saved. Models refresh automatically when you open the picker.',
           ),
         ),
       );
@@ -220,6 +229,7 @@ Future<void> _editProfile(
           baseUrl: edited.baseUrl,
           replacementApiKey: edited.apiKey,
           defaultModelId: edited.defaultModelId,
+          promptCachingEnabled: edited.promptCachingEnabled,
         );
     await _reload(ref);
   } on FormatException catch (error) {
@@ -390,12 +400,14 @@ class _ProfileDraft {
     required this.baseUrl,
     required this.apiKey,
     this.defaultModelId,
+    required this.promptCachingEnabled,
   });
 
   final String name;
   final String baseUrl;
   final String apiKey;
   final String? defaultModelId;
+  final bool promptCachingEnabled;
 }
 
 Future<_ProfileDraft?> _showProfileDialog(
@@ -406,66 +418,82 @@ Future<_ProfileDraft?> _showProfileDialog(
   final url = TextEditingController(text: existing?.baseUrl ?? '');
   final key = TextEditingController();
   final model = TextEditingController(text: existing?.defaultModelId ?? '');
+  var promptCachingEnabled = existing?.promptCachingEnabled ?? false;
   return showDialog<_ProfileDraft>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(existing == null ? 'Add API profile' : 'Edit API profile'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: const InputDecoration(labelText: 'Profile name'),
-            ),
-            TextField(
-              controller: url,
-              decoration: const InputDecoration(
-                labelText: 'Server base URL',
-                hintText: 'https://your-server.example/v1',
-              ),
-            ),
-            TextField(
-              controller: key,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: existing == null ? 'API key' : 'Replacement API key',
-                helperText: existing == null
-                    ? 'Saved in secure storage. It is not shown again.'
-                    : 'Leave blank to keep the saved key.',
-              ),
-            ),
-            if (existing != null)
+    builder: (context) => StatefulBuilder(
+      builder: (context, setLocal) => AlertDialog(
+        title: Text(existing == null ? 'Add API profile' : 'Edit API profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               TextField(
-                controller: model,
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Profile name'),
+              ),
+              TextField(
+                controller: url,
                 decoration: const InputDecoration(
-                  labelText: 'Default model ID',
-                  helperText:
-                      'You can type a model if the server has no model list.',
+                  labelText: 'Server base URL',
+                  hintText: 'https://your-server.example/v1',
                 ),
               ),
-          ],
+              TextField(
+                controller: key,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: existing == null
+                      ? 'API key'
+                      : 'Replacement API key',
+                  helperText: existing == null
+                      ? 'Saved in secure storage. It is not shown again.'
+                      : 'Leave blank to keep the saved key.',
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Claude prompt caching'),
+                subtitle: const Text(
+                  'Enable if this server supports Anthropic cache_control. Uses the default 5-minute cache.',
+                ),
+                value: promptCachingEnabled,
+                onChanged: (value) =>
+                    setLocal(() => promptCachingEnabled = value),
+              ),
+              if (existing != null)
+                TextField(
+                  controller: model,
+                  decoration: const InputDecoration(
+                    labelText: 'Default model ID',
+                    helperText:
+                        'You can type a model if the server has no model list.',
+                  ),
+                ),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final draft = _ProfileDraft(
+                promptCachingEnabled: promptCachingEnabled,
+                name: name.text,
+                baseUrl: url.text,
+                apiKey: key.text,
+                defaultModelId: existing == null ? null : model.text,
+              );
+              key.clear();
+              Navigator.pop(context, draft);
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final draft = _ProfileDraft(
-              name: name.text,
-              baseUrl: url.text,
-              apiKey: key.text,
-              defaultModelId: existing == null ? null : model.text,
-            );
-            key.clear();
-            Navigator.pop(context, draft);
-          },
-          child: const Text('Save'),
-        ),
-      ],
     ),
   ).whenComplete(() {
     name.dispose();

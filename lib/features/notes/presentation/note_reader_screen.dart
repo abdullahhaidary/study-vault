@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/export/download_document_button.dart';
+import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
@@ -47,6 +49,19 @@ class NoteReaderScreen extends ConsumerWidget {
             title: Text(item.title),
             actions: [
               FavoriteStarButton(entityType: 'note', entityId: item.id),
+              DownloadDocumentButton(
+                tooltip: 'Download Markdown',
+                request: () async {
+                  final markdown = QuillToMarkdown.fromStored(
+                    item.content,
+                  ).trim();
+                  if (markdown.isEmpty) return null;
+                  return DocumentTextRequest(
+                    fileName: item.title,
+                    text: markdown,
+                  );
+                },
+              ),
               IconButton(
                 tooltip: 'Edit note',
                 icon: const Icon(Icons.edit_outlined),

@@ -162,6 +162,9 @@ class _AiModelSelectorSheetState extends ConsumerState<_AiModelSelectorSheet> {
     );
     final profiles =
         ref.watch(aiEndpointProfilesProvider).valueOrNull ?? const [];
+    final refreshing =
+        ref.watch(refreshingModelProfilesProvider).valueOrNull ??
+        const <String>{};
     final theme = Theme.of(context);
     final height = MediaQuery.sizeOf(context).height * 0.72;
 
@@ -187,7 +190,41 @@ class _AiModelSelectorSheetState extends ConsumerState<_AiModelSelectorSheet> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(widget.title, style: theme.textTheme.titleLarge),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: theme.textTheme.titleLarge,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Refresh model lists',
+                        onPressed: refreshing.isNotEmpty
+                            ? null
+                            : () async {
+                                ref.invalidate(discoveredAiModelsProvider);
+                                final service = ref.read(
+                                  newApiClaudeServiceProvider,
+                                );
+                                await Future.wait([
+                                  for (final profile in profiles)
+                                    if (profile.enabled &&
+                                        profile.keySuffix.isNotEmpty)
+                                      service
+                                          .refreshCachedModels(profile.id)
+                                          .then<void>(
+                                            (_) {},
+                                            onError:
+                                                (Object _, StackTrace _) {},
+                                          ),
+                                ]);
+                              },
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                  if (refreshing.isNotEmpty) const LinearProgressIndicator(),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     widget.subtitle,

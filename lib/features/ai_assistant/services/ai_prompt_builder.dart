@@ -1,3 +1,5 @@
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/services/chat_history_policy.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_style_memory.dart';
@@ -103,15 +105,23 @@ Return concise but educational answers.
 
   static String _conversationBlock(AiStudyRequest request) {
     if (request.conversation.isEmpty) return '';
-    // Bound context growth for all providers.
-    const maxTurns = 8;
-    final turns = request.conversation.length > maxTurns
-        ? request.conversation.sublist(request.conversation.length - maxTurns)
-        : request.conversation;
+    final history = ChatHistoryPolicy.compact([
+      AiChatTurn(
+        role: AiChatRole.user,
+        content: _sourceBlock(request),
+        pinForCache: true,
+      ),
+      for (final turn in request.conversation) ...[
+        AiChatTurn(role: AiChatRole.user, content: turn.userMessage),
+        AiChatTurn(role: AiChatRole.assistant, content: turn.assistantMarkdown),
+      ],
+      AiChatTurn(role: AiChatRole.user, content: _taskBlock(request)),
+    ]);
     final buffer = StringBuffer('\nPRIOR CONVERSATION (same selection):\n');
-    for (final turn in turns) {
-      buffer.writeln('Student: ${turn.userMessage}');
-      buffer.writeln('Assistant: ${turn.assistantMarkdown}');
+    for (final turn in history.skip(1).take(history.length - 2)) {
+      buffer.writeln(
+        '${turn.role == AiChatRole.assistant ? 'Assistant' : 'Student'}: ${turn.content}',
+      );
       buffer.writeln();
     }
     return buffer.toString();
@@ -179,11 +189,7 @@ Return concise but educational answers.
 
     if (_includeConversation(request.action) &&
         request.conversation.isNotEmpty) {
-      const maxTurns = 8;
-      final turns = request.conversation.length > maxTurns
-          ? request.conversation.sublist(request.conversation.length - maxTurns)
-          : request.conversation;
-      for (final turn in turns) {
+      for (final turn in request.conversation) {
         final q = turn.userMessage.trim();
         final a = turn.assistantMarkdown.trim();
         if (q.isNotEmpty) {
@@ -199,7 +205,13 @@ Return concise but educational answers.
     if (latest.isNotEmpty) {
       messages.add({'role': 'user', 'content': latest});
     }
-    return messages;
+    return [
+      for (final turn in ChatHistoryPolicy.compact([
+        for (final message in messages)
+          AiChatTurn(role: message['role']!, content: message['content']!),
+      ]))
+        {'role': turn.role, 'content': turn.content},
+    ];
   }
 
   /// User-message body: document + prior turns + current task/question.

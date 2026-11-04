@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/presentation/pick_ai_model.dart';
@@ -97,6 +98,17 @@ class _BookDetailsScreenState extends ConsumerState<BookDetailsScreen> {
             PopupMenuButton<String>(
               onSelected: (v) async {
                 switch (v) {
+                  case 'download':
+                    final path = await BookStorage.absolutePath(book);
+                    if (!context.mounted) return;
+                    await runDocumentDownload(
+                      context,
+                      DocumentFileRequest(
+                        fileName: book.title,
+                        sourcePath: path,
+                        kind: DocumentFileKind.pdf,
+                      ),
+                    );
                   case 'edit':
                     await editBookDetails(context, ref, book);
                   case 'chapters':
@@ -108,6 +120,7 @@ class _BookDetailsScreenState extends ConsumerState<BookDetailsScreen> {
                 }
               },
               itemBuilder: (_) => const [
+                PopupMenuItem(value: 'download', child: Text('Download PDF')),
                 PopupMenuItem(
                   value: 'edit',
                   child: Text('Title, author & subjects'),
@@ -510,10 +523,32 @@ class _NotesTab extends ConsumerWidget {
                   ),
             onTap: () => openBookReader(context, book, page: n.pageNumber),
             trailing: PopupMenuButton<String>(
-              onSelected: (v) => v == 'edit'
-                  ? _edit(context, ref, n)
-                  : ref.read(bookRepositoryProvider).deleteNote(n.id),
+              onSelected: (v) {
+                switch (v) {
+                  case 'download':
+                    final text = n.content.trim().isEmpty
+                        ? (n.selectedText ?? '')
+                        : n.content;
+                    runDocumentDownload(
+                      context,
+                      text.trim().isEmpty
+                          ? null
+                          : DocumentTextRequest(
+                              fileName: '${book.title} ${n.title}',
+                              text: text,
+                            ),
+                    );
+                  case 'edit':
+                    _edit(context, ref, n);
+                  case 'delete':
+                    ref.read(bookRepositoryProvider).deleteNote(n.id);
+                }
+              },
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'download',
+                  child: Text('Download Markdown'),
+                ),
                 PopupMenuItem(value: 'edit', child: Text('Edit')),
                 PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],

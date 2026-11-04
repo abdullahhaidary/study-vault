@@ -1,8 +1,14 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+
+import '../data/ai_endpoint_profile_repository.dart';
+import '../data/ai_settings_store.dart';
+import 'ai_prompt_builder.dart';
 import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
-import '../domain/ai_provider.dart';
 import '../domain/annotation_ai_context.dart';
 import '../../ai_questions/services/pdf_page_image_extractor.dart';
 import 'ai_service.dart';
@@ -14,17 +20,21 @@ import 'ai_service.dart';
 class AnnotationAiService {
   AnnotationAiService({
     required AiService aiService,
+    this.settings,
+    this.profiles,
     this.cacheTtl = const Duration(minutes: 5),
     this.maxCacheEntries = 24,
   }) : _ai = aiService;
 
   final AiService _ai;
+  final AiSettingsStore? settings;
+  final AiEndpointProfileRepository? profiles;
   final Duration cacheTtl;
   final int maxCacheEntries;
 
   final Map<String, _CacheEntry> _cache = {};
-  Future<AiStudyResult>? _inFlight;
-  String? _inFlightKey;
+  final Map<String, Future<AiStudyResult>> _inFlight = {};
+  int _cacheEpoch = 0;
 
   Future<bool> get isConfigured => _ai.isConfigured;
 
@@ -70,6 +80,9 @@ class AnnotationAiService {
     final request = context.toStudyRequest(
       action: action,
       selection: selection,
+      userPreference: settings == null
+          ? null
+          : (await settings!.styleForSend(provider: selection.provider) ?? ''),
       rephraseMode: rephraseMode,
       organizeMode: organizeMode,
       summarizeMode: summarizeMode,
@@ -90,7 +103,21 @@ class AnnotationAiService {
       throw const AiSourceTooLargeException();
     }
 
-    final key = _cacheKey(request);
+    final profileId = request.selection.endpointProfileId;
+    final profile = profileId == null ? null : await profiles?.find(profileId);
+    if (profileId != null &&
+        profiles != null &&
+        (profile == null || !profile.enabled)) {
+      throw const AiProfileUnavailableException();
+    }
+    final key = _cacheKey(
+      request,
+      categoryNameToId,
+      profile?.connectionRevision,
+      (await settings?.getThinkingMode())?.name,
+      timeout,
+    );
+    final epoch = _cacheEpoch;
     if (useCache &&
         action.isCacheable &&
         conversation.isEmpty &&
@@ -102,21 +129,22 @@ class AnnotationAiService {
     }
 
     // Collapse accidental double-taps of the same request.
-    if (_inFlight != null && _inFlightKey == key) {
-      return _inFlight!;
-    }
+    final pending = _inFlight[key];
+    if (pending != null) return pending;
 
     final future = _ai.run(
       request,
       categoryNameToId: categoryNameToId,
       timeout: timeout,
     );
-    _inFlight = future;
-    _inFlightKey = key;
+    _inFlight[key] = future;
 
     try {
       final result = await future;
       if (useCache &&
+          epoch == _cacheEpoch &&
+          !(result is AiTextResult &&
+              result.disposition != AiCompletionDisposition.complete) &&
           action.isCacheable &&
           conversation.isEmpty &&
           (customPrompt == null || customPrompt.trim().isEmpty)) {
@@ -124,10 +152,7 @@ class AnnotationAiService {
       }
       return result;
     } finally {
-      if (identical(_inFlight, future)) {
-        _inFlight = null;
-        _inFlightKey = null;
-      }
+      if (identical(_inFlight[key], future)) _inFlight.remove(key);
     }
   }
 
@@ -156,29 +181,56 @@ class AnnotationAiService {
     return result;
   }
 
-  void clearCache() => _cache.clear();
+  void clearCache() {
+    _cache.clear();
+    _cacheEpoch++;
+  }
 
-  String _cacheKey(AiStudyRequest request) {
-    return [
-      request.action.name,
-      request.selection.provider.storageValue,
-      request.selection.resolvedModelId,
-      request.language.name,
-      request.rephraseMode?.name ?? '',
-      request.organizeMode?.name ?? '',
-      request.summarizeMode?.name ?? '',
-      request.translateTarget?.name ?? '',
-      '${request.flashcardCount}',
-      request.sourceText,
-      request.surroundingText ?? '',
-      request.customPrompt ?? '',
-      request.pageNumber?.toString() ?? '',
-      request.pageSendMode.name,
-      request.hasPageImage ? 'img' : '',
-    ].join('\u001f');
+  String _cacheKey(
+    AiStudyRequest request,
+    Map<String, String> categoryNameToId,
+    int? connectionRevision,
+    String? thinkingMode,
+    Duration timeout,
+  ) {
+    final categoryIds = categoryNameToId.keys.toList()..sort();
+    // Canonical structured encoding avoids delimiter collisions. Hashes bound
+    // memory usage and keep source text out of map keys and diagnostics.
+    final identity = {
+      'v': 2,
+      'model': request.selection.modelRef.storageValue,
+      'resolvedModel': request.selection.resolvedModelId,
+      'connectionRevision': connectionRevision,
+      'thinking': request.selection.thinkingMode?.name ?? thinkingMode,
+      'prompt': AiPromptBuilder.forRequest(request),
+      'conversation': [
+        for (final turn in request.conversation)
+          [turn.userMessage, turn.assistantMarkdown],
+      ],
+      'categories': [
+        for (final name in categoryIds) [name, categoryNameToId[name]],
+      ],
+      'source': request.sourceText,
+      'selected': request.selectedText,
+      'shortDescription': request.shortDescription,
+      'surroundingLabel': request.surroundingLabel,
+      'pageSendMode': request.pageSendMode.name,
+      'image': request.image == null
+          ? null
+          : {
+              'sha256': sha256.convert(request.image!.bytes).toString(),
+              'mimeType': request.image!.mimeType,
+              'page': request.image!.pageNumber,
+            },
+      'timeoutMicros': timeout.inMicroseconds,
+    };
+    return sha256.convert(utf8.encode(jsonEncode(identity))).toString();
   }
 
   void _putCache(String key, AiStudyResult result) {
+    if (maxCacheEntries <= 0) return;
+    final now = DateTime.now();
+    _cache.removeWhere((_, entry) => now.difference(entry.at) >= cacheTtl);
     _cache[key] = _CacheEntry(at: DateTime.now(), result: result);
     if (_cache.length <= maxCacheEntries) return;
     final oldest = _cache.entries.reduce(

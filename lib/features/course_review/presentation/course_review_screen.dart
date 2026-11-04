@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/export/download_document_button.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -49,6 +50,16 @@ class CourseReviewScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            actions: [
+              if (state.document != null)
+                DownloadDocumentButton(
+                  tooltip: 'Download Markdown',
+                  request: () async => DocumentTextRequest(
+                    fileName: '${state.subject.name} Course Review',
+                    text: state.document!.content,
+                  ),
+                ),
+            ],
           ),
           body: _ReviewBody(subjectId: subjectId, state: state),
         );

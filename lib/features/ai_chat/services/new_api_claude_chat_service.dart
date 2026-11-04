@@ -7,6 +7,7 @@ import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/services/new_api_claude_service.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
+import 'chat_history_policy.dart';
 
 class NewApiClaudeChatService implements AiChatTransport {
   NewApiClaudeChatService({
@@ -42,7 +43,7 @@ class NewApiClaudeChatService implements AiChatTransport {
             '${ChartSpec.promptInstruction}'
             '${preference == null || preference.trim().isEmpty ? '' : '\n${preference.trim()}'}',
       },
-      for (final turn in history)
+      for (final turn in ChatHistoryPolicy.compact(history))
         {
           'role': turn.role == AiChatRole.assistant
               ? 'assistant'
@@ -59,16 +60,18 @@ class NewApiClaudeChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async {
     final messages = _messages(
       history,
-      await settings.styleForSend(provider: AiProviderId.newApi),
+      history.firstOrNull?.systemPreference ??
+          await settings.styleForSend(provider: AiProviderId.newApi),
     );
     final result = await service.completeMessages(
       profileId: AiModelRef.parse(modelId).endpointProfileId,
       model: modelId,
       messages: messages,
-      maxTokens: 4096,
+      maxTokens: history.firstOrNull?.outputTokenLimit ?? 4096,
       timeout: timeout,
     );
     return AiChatCompletion(
@@ -83,15 +86,18 @@ class NewApiClaudeChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async* {
     final messages = _messages(
       history,
-      await settings.styleForSend(provider: AiProviderId.newApi),
+      history.firstOrNull?.systemPreference ??
+          await settings.styleForSend(provider: AiProviderId.newApi),
     );
     await for (final event in service.streamMessages(
       profileId: AiModelRef.parse(modelId).endpointProfileId,
       model: modelId,
       messages: messages,
+      maxTokens: history.firstOrNull?.outputTokenLimit ?? 4096,
       timeout: timeout,
     )) {
       yield AiChatStreamEvent(textDelta: event.text, usage: event.usage);

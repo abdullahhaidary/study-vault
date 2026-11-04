@@ -13,6 +13,7 @@ import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../../ai_assistant/services/gemini_retry_policy.dart';
 import '../domain/ai_chat_models.dart';
+import 'chat_history_policy.dart';
 
 /// Multi-turn chat networking (provider-agnostic transport).
 abstract class AiChatTransport {
@@ -26,6 +27,7 @@ abstract class AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 90),
+    String? pocketChatId,
   });
 
   /// Yields text deltas, then optionally a final event with [AiChatStreamEvent.usage].
@@ -33,6 +35,7 @@ abstract class AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(seconds: 120),
+    String? pocketChatId,
   });
 }
 
@@ -121,14 +124,15 @@ class HttpGeminiChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = GeminiModelRegistry.normalize(modelId);
-    final preference = await settings.styleForSend(
-      provider: AiProviderId.gemini,
-    );
+    final preference =
+        history.firstOrNull?.systemPreference ??
+        await settings.styleForSend(provider: AiProviderId.gemini);
     final body = _buildRequestBody(
       history: history,
       modelId: model,
@@ -157,14 +161,15 @@ class HttpGeminiChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async* {
     if (!await settings.getPrivacyConsentAccepted()) {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = GeminiModelRegistry.normalize(modelId);
-    final preference = await settings.styleForSend(
-      provider: AiProviderId.gemini,
-    );
+    final preference =
+        history.firstOrNull?.systemPreference ??
+        await settings.styleForSend(provider: AiProviderId.gemini);
     final body = _buildRequestBody(
       history: history,
       modelId: model,
@@ -278,7 +283,9 @@ class HttpGeminiChatService implements AiChatTransport {
       throw const AiServerException('Nothing to send to Gemini.');
     }
 
-    final generationConfig = <String, dynamic>{'maxOutputTokens': 8192};
+    final generationConfig = <String, dynamic>{
+      'maxOutputTokens': history.firstOrNull?.outputTokenLimit ?? 8192,
+    };
     final def = GeminiModelRegistry.byId(modelId);
     if (def?.supportsThinkingLevel == true) {
       generationConfig['thinkingConfig'] = {'thinkingLevel': 'medium'};
@@ -307,22 +314,12 @@ class HttpGeminiChatService implements AiChatTransport {
     };
   }
 
-  List<AiChatTurn> _trimHistory(List<AiChatTurn> history) {
-    if (history.isEmpty) return history;
-    final recent = history.length > maxContextMessages
-        ? history.sublist(history.length - maxContextMessages)
-        : List<AiChatTurn>.from(history);
-
-    var total = 0;
-    final kept = <AiChatTurn>[];
-    for (var i = recent.length - 1; i >= 0; i--) {
-      final turn = recent[i];
-      total += turn.content.length;
-      if (total > maxContextChars && kept.isNotEmpty) break;
-      kept.add(turn);
-    }
-    return kept.reversed.toList();
-  }
+  List<AiChatTurn> _trimHistory(List<AiChatTurn> history) =>
+      ChatHistoryPolicy.compact(
+        history,
+        maxTokens: maxContextChars ~/ 4,
+        maxMessages: maxContextMessages,
+      );
 
   Future<List<String>> _requireKeys() async {
     final keys = await credentials.readApiKeysFor(_provider);
@@ -547,6 +544,7 @@ class FakeGeminiChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async {
     if (!await credentials.hasApiKeyFor(AiProviderId.gemini)) {
       throw const AiNotConfiguredException();
@@ -574,6 +572,7 @@ class FakeGeminiChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async* {
     final result = await complete(
       modelId: modelId,

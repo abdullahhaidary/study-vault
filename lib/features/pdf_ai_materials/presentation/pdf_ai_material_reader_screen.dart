@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -852,11 +853,24 @@ class _PdfAiMaterialReaderScreenState
     );
   }
 
+  Widget _downloadButton(String text, {required bool persian}) {
+    return DownloadDocumentButton(
+      tooltip: 'Download Markdown',
+      request: () async => DocumentTextRequest(
+        fileName: persian
+            ? '${widget.pdfTitle} ${widget.type.shortName} فارسی'
+            : '${widget.pdfTitle} ${widget.type.shortName}',
+        text: text,
+      ),
+    );
+  }
+
   Widget _embeddedVersionBar(
     List<PdfAiMaterial> history,
     PdfAiMaterial selected,
     PdfAiMaterialTranslation? translation,
     PdfAiLanguage showing,
+    String text,
   ) {
     if (!widget.embedded) return const SizedBox.shrink();
     return Material(
@@ -873,6 +887,7 @@ class _PdfAiMaterialReaderScreenState
           ),
           const Spacer(),
           _languageToggle(selected, translation, showing),
+          _downloadButton(text, persian: showing == PdfAiLanguage.persian),
           _versionMenu(selected, translation),
         ],
       ),
@@ -1086,7 +1101,13 @@ class _PdfAiMaterialReaderScreenState
     }
     return Column(
       children: [
-        _embeddedVersionBar(history, selected, translation, showing),
+        _embeddedVersionBar(
+          history,
+          selected,
+          translation,
+          showing,
+          persianText ?? selected.content,
+        ),
         _translationNotice(selected, translation, wanted),
         if (!widget.embedded)
           MaterialBookLinksSection(materialId: widget.materialId),
@@ -1389,6 +1410,10 @@ class _PdfAiMaterialReaderScreenState
                         child: const Icon(Icons.history),
                       ),
                     ),
+                    _downloadButton(
+                      shownText,
+                      persian: showing == PdfAiLanguage.persian,
+                    ),
                     _versionMenu(selected, translation),
                   ],
                 ),
@@ -1409,6 +1434,7 @@ class _PdfAiMaterialReaderScreenState
                       selected,
                       translation,
                       showing,
+                      shownText,
                     ),
                     _translationNotice(selected, translation, wanted),
                     if (!widget.embedded)

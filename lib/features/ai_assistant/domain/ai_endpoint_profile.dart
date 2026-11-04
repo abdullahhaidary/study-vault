@@ -55,6 +55,8 @@ class AiEndpointProfile {
     required this.connectionStatus,
     required this.connectionDetail,
     required this.keySuffix,
+    this.connectionRevision = 0,
+    this.promptCachingEnabled = false,
   });
 
   static const staleAfter = Duration(hours: 24);
@@ -73,6 +75,12 @@ class AiEndpointProfile {
   final String? connectionDetail;
   final String keySuffix;
 
+  /// Changes whenever credentials or the server URL change. Never a key hash.
+  final int connectionRevision;
+
+  /// Opt in only when the gateway supports Anthropic cache_control.
+  final bool promptCachingEnabled;
+
   String get host {
     final uri = Uri.tryParse(baseUrl);
     if (uri == null || uri.host.isEmpty) return baseUrl;
@@ -85,7 +93,7 @@ class AiEndpointProfile {
 
   bool get modelsStale {
     final refreshed = modelsRefreshedAt;
-    if (refreshed == null) return false;
+    if (refreshed == null) return true;
     return DateTime.now().difference(refreshed) > staleAfter;
   }
 
@@ -111,6 +119,8 @@ class AiEndpointProfile {
     'connectionStatus': connectionStatus.storageValue,
     'connectionDetail': connectionDetail,
     'keySuffix': keySuffix,
+    'connectionRevision': connectionRevision,
+    'promptCachingEnabled': promptCachingEnabled,
   };
 
   factory AiEndpointProfile.fromJson(Map<String, Object?> json) {
@@ -138,6 +148,8 @@ class AiEndpointProfile {
       ),
       connectionDetail: json['connectionDetail'] as String?,
       keySuffix: json['keySuffix'] as String? ?? '',
+      connectionRevision: json['connectionRevision'] as int? ?? 0,
+      promptCachingEnabled: json['promptCachingEnabled'] == true,
     );
   }
 
@@ -155,6 +167,8 @@ class AiEndpointProfile {
     String? connectionDetail,
     bool clearConnectionDetail = false,
     String? keySuffix,
+    int? connectionRevision,
+    bool? promptCachingEnabled,
   }) {
     return AiEndpointProfile(
       id: id,
@@ -174,6 +188,8 @@ class AiEndpointProfile {
           ? null
           : connectionDetail ?? this.connectionDetail,
       keySuffix: keySuffix ?? this.keySuffix,
+      connectionRevision: connectionRevision ?? this.connectionRevision,
+      promptCachingEnabled: promptCachingEnabled ?? this.promptCachingEnabled,
     );
   }
 

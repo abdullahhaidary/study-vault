@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/export/download_document_button.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
+import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../ai_assistant/presentation/ai_preview_screen.dart';
 import '../../flashcards/data/flashcards_providers.dart';
 import '../../selection_ai/presentation/quill_selection_apply.dart';
@@ -71,6 +73,16 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
       ..removeListener(_onChanged)
       ..dispose();
     super.dispose();
+  }
+
+  Future<void> _downloadMarkdown() async {
+    final markdown = QuillToMarkdown.fromDocument(_controller.document).trim();
+    await runDocumentDownload(
+      context,
+      markdown.isEmpty
+          ? null
+          : DocumentTextRequest(fileName: widget.title, text: markdown),
+    );
   }
 
   Future<bool> _confirmDiscard() async {
@@ -195,6 +207,11 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleMedium,
                 ),
+              ),
+              IconButton(
+                tooltip: 'Download Markdown',
+                onPressed: _downloadMarkdown,
+                icon: const Icon(Icons.download_outlined),
               ),
               if (!widget.readOnly)
                 Consumer(

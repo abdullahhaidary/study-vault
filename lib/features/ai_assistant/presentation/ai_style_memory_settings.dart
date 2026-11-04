@@ -36,7 +36,8 @@ class AiStyleMemorySettings extends ConsumerWidget {
           'This is not one chat’s transcript. It is the style you want across '
           'summaries, explanations, quizzes, and chat. Write 10–20 sentences '
           'per note (how you like answers, questions, and implementations). '
-          'The text is sent hidden with every request until you edit or delete it.',
+          'Study actions use the latest notes. API chats keep the style captured '
+          'when first used with a model; start a new chat to apply edits.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

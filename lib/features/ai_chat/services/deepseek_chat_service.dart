@@ -15,6 +15,7 @@ import '../../ai_assistant/domain/deepseek_usage.dart';
 import '../../ai_assistant/domain/gemini_model_registry.dart';
 import '../domain/ai_chat_models.dart';
 import 'gemini_chat_service.dart';
+import 'chat_history_policy.dart';
 
 /// DeepSeek OpenAI-compatible chat transport (`/chat/completions`).
 class HttpDeepSeekChatService implements AiChatTransport {
@@ -82,6 +83,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async {
     final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
@@ -89,9 +91,9 @@ class HttpDeepSeekChatService implements AiChatTransport {
     }
     final model = DeepSeekModelRegistry.normalize(modelId);
     final thinking = await settings.getThinkingMode();
-    final preference = await settings.styleForSend(
-      provider: AiProviderId.deepseek,
-    );
+    final preference =
+        history.firstOrNull?.systemPreference ??
+        await settings.styleForSend(provider: AiProviderId.deepseek);
     final messages = _buildMessages(history, preference);
     final result = await _postChat(
       apiKey: key,
@@ -99,6 +101,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
       messages: messages,
       thinking: thinking,
       stream: false,
+      maxTokens: history.firstOrNull?.outputTokenLimit ?? 4096,
       timeout: timeout,
     );
     return AiChatCompletion(
@@ -113,6 +116,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async* {
     final key = await _requireKey();
     if (!await settings.getPrivacyConsentAccepted()) {
@@ -120,9 +124,9 @@ class HttpDeepSeekChatService implements AiChatTransport {
     }
     final model = DeepSeekModelRegistry.normalize(modelId);
     final thinking = await settings.getThinkingMode();
-    final preference = await settings.styleForSend(
-      provider: AiProviderId.deepseek,
-    );
+    final preference =
+        history.firstOrNull?.systemPreference ??
+        await settings.styleForSend(provider: AiProviderId.deepseek);
     final messages = _buildMessages(history, preference);
 
     final uri = Uri.parse('$baseUrl/chat/completions');
@@ -130,7 +134,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
       'model': model,
       'messages': messages,
       'stream': true,
-      'max_tokens': 4096,
+      'max_tokens': history.firstOrNull?.outputTokenLimit ?? 4096,
       'stream_options': {'include_usage': true},
       ..._thinkingPayload(thinking),
     };
@@ -236,61 +240,11 @@ class HttpDeepSeekChatService implements AiChatTransport {
     int maxMessages = maxContextMessages,
     int maxChars = maxContextChars,
   }) {
-    if (history.isEmpty) return history;
-
-    final pinned = <AiChatTurn>[];
-    final rest = <AiChatTurn>[];
-    var seenDocument = false;
-    for (final turn in history) {
-      if (turn.role == AiChatRole.system) {
-        pinned.add(turn);
-        continue;
-      }
-      if (!seenDocument &&
-          turn.role == AiChatRole.user &&
-          (turn.pinForCache || _looksLikeDocumentTurn(turn.content))) {
-        pinned.add(turn);
-        seenDocument = true;
-        continue;
-      }
-      // First user turn is treated as the document/context anchor when no
-      // explicit pin is present (covers pasted study material).
-      if (!seenDocument && turn.role == AiChatRole.user) {
-        pinned.add(turn);
-        seenDocument = true;
-        continue;
-      }
-      rest.add(turn);
-    }
-
-    var conversational = List<AiChatTurn>.of(rest);
-    var total =
-        pinned.fold<int>(0, (s, t) => s + t.content.length) +
-        conversational.fold<int>(0, (s, t) => s + t.content.length);
-
-    // Prefer dropping conversational turns; never drop pinned prefix while
-    // any conversational turn remains.
-    while (conversational.isNotEmpty &&
-        (pinned.length + conversational.length > maxMessages ||
-            total > maxChars)) {
-      final removed = conversational.removeAt(0);
-      total -= removed.content.length;
-      if (removed.role == AiChatRole.user &&
-          conversational.isNotEmpty &&
-          conversational.first.role == AiChatRole.assistant) {
-        total -= conversational.first.content.length;
-        conversational.removeAt(0);
-      }
-    }
-
-    return [...pinned, ...conversational];
-  }
-
-  static bool _looksLikeDocumentTurn(String content) {
-    return content.contains('Attached Study Vault context:') ||
-        content.contains('SELECTED TEXT:') ||
-        content.contains('SOURCE MATERIAL:') ||
-        content.contains('--- Page ');
+    return ChatHistoryPolicy.compact(
+      history,
+      maxTokens: maxChars ~/ 4,
+      maxMessages: maxMessages,
+    );
   }
 
   Map<String, dynamic> _thinkingPayload(AiThinkingMode mode) {
@@ -313,13 +267,14 @@ class HttpDeepSeekChatService implements AiChatTransport {
     required AiThinkingMode thinking,
     required bool stream,
     required Duration timeout,
+    int maxTokens = 4096,
   }) async {
     final uri = Uri.parse('$baseUrl/chat/completions');
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
       'stream': stream,
-      'max_tokens': 4096,
+      'max_tokens': maxTokens,
       ..._thinkingPayload(thinking),
     };
 
@@ -551,10 +506,14 @@ class RoutingAiChatTransport implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async {
-    return (await _forModel(
-      modelId,
-    )).complete(modelId: modelId, history: history, timeout: timeout);
+    return (await _forModel(modelId)).complete(
+      modelId: modelId,
+      history: history,
+      timeout: timeout,
+      pocketChatId: pocketChatId,
+    );
   }
 
   @override
@@ -562,9 +521,13 @@ class RoutingAiChatTransport implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 5),
+    String? pocketChatId,
   }) async* {
-    yield* (await _forModel(
-      modelId,
-    )).streamComplete(modelId: modelId, history: history, timeout: timeout);
+    yield* (await _forModel(modelId)).streamComplete(
+      modelId: modelId,
+      history: history,
+      timeout: timeout,
+      pocketChatId: pocketChatId,
+    );
   }
 }

@@ -31,6 +31,15 @@ class NewApiClaudeService implements AiService {
   final AiSettingsStore settings;
   final AiEndpointProfileRepository profiles;
   final http.Client _http;
+  final Map<String, Future<List<String>>> _modelRefreshes = {};
+  final Map<String, DateTime> _autoRetryAfter = {};
+  final Set<String> refreshingProfileIds = {};
+  final _refreshChanges = StreamController<void>.broadcast();
+  Stream<void> get refreshChanges => _refreshChanges.stream;
+  void dispose() {
+    _http.close();
+    _refreshChanges.close();
+  }
 
   @override
   Future<bool> get isConfigured async {
@@ -60,7 +69,10 @@ class NewApiClaudeService implements AiService {
     return profiles.legacyProfileId();
   }
 
-  Future<({Uri uri, String key})> _open(String? profileId, String model) async {
+  Future<({Uri uri, String key, bool promptCachingEnabled})> _open(
+    String? profileId,
+    String model,
+  ) async {
     final id = await _resolveProfileId(profileId, model);
     AiEndpointConnection connection;
     try {
@@ -71,7 +83,11 @@ class NewApiClaudeService implements AiService {
       }
       throw AiNotConfiguredException(error.message);
     }
-    return (uri: connection.messagesUri, key: connection.apiKey);
+    return (
+      uri: connection.messagesUri,
+      key: connection.apiKey,
+      promptCachingEnabled: connection.profile.promptCachingEnabled,
+    );
   }
 
   Future<String> _resolveProfileId(String? profileId, String model) async {
@@ -127,6 +143,13 @@ class NewApiClaudeService implements AiService {
       }
       throw AiNotConfiguredException(error.message);
     }
+    return _listModels(connection, timeout);
+  }
+
+  Future<List<String>> _listModels(
+    AiEndpointConnection connection,
+    Duration timeout,
+  ) async {
     late http.Response response;
     try {
       final request = http.Request('GET', connection.modelsUri)
@@ -161,7 +184,8 @@ class NewApiClaudeService implements AiService {
           .whereType<Map>()
           .map((entry) => entry['id'])
           .whereType<String>()
-          .where((id) => id.trim().isNotEmpty)
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
           .toSet()
           .toList()
         ..sort();
@@ -207,6 +231,7 @@ class NewApiClaudeService implements AiService {
     required List<Map<String, String>> messages,
     required int maxTokens,
     required bool stream,
+    bool promptCachingEnabled = false,
   }) {
     final system = messages
         .where((m) => m['role'] == 'system')
@@ -223,6 +248,7 @@ class NewApiClaudeService implements AiService {
       'messages': turns,
       if (system.isNotEmpty) 'system': system,
       'stream': stream,
+      if (promptCachingEnabled) 'cache_control': {'type': 'ephemeral'},
     };
   }
 
@@ -271,6 +297,8 @@ class NewApiClaudeService implements AiService {
       completionTokens: output is int ? output : null,
       totalTokens: prompt != null && output is int ? prompt + output : null,
       cacheHitTokens: cached is int ? cached : null,
+      cacheWriteTokens: created is int ? created : null,
+      uncachedInputTokens: input is int ? input : null,
       cacheMissTokens: input is int
           ? input + (created is int ? created : 0)
           : null,
@@ -302,6 +330,7 @@ class NewApiClaudeService implements AiService {
             messages: messages,
             maxTokens: maxTokens,
             stream: false,
+            promptCachingEnabled: conn.promptCachingEnabled,
           ),
         );
       // Connect timeout only; reading the body can take several minutes for
@@ -362,6 +391,7 @@ class NewApiClaudeService implements AiService {
             messages: messages,
             maxTokens: maxTokens,
             stream: true,
+            promptCachingEnabled: conn.promptCachingEnabled,
           ),
         );
       response = await _http.send(request).timeout(timeout);
@@ -424,6 +454,10 @@ class NewApiClaudeService implements AiService {
           promptTokens: input,
           completionTokens: output,
           totalTokens: input != null && output != null ? input + output : null,
+          cacheWriteTokens:
+              tokens.cacheWriteTokens ?? combinedUsage?.cacheWriteTokens,
+          uncachedInputTokens:
+              tokens.uncachedInputTokens ?? combinedUsage?.uncachedInputTokens,
           cacheHitTokens:
               tokens.cacheHitTokens ?? combinedUsage?.cacheHitTokens,
           cacheMissTokens:
@@ -605,12 +639,14 @@ class NewApiClaudeService implements AiService {
       );
       await profiles.setConnection(
         id: profileId,
+        expectedConnectionRevision: profile.connectionRevision,
         status: AiEndpointConnectionStatus.ok,
         detail: 'Connected',
       );
     } on AiException catch (error) {
       await profiles.setConnection(
         id: profileId,
+        expectedConnectionRevision: profile.connectionRevision,
         status: AiEndpointConnectionStatus.failed,
         detail: error.message,
       );
@@ -620,23 +656,70 @@ class NewApiClaudeService implements AiService {
 
   /// Fetches models for [profileId] and replaces that profile's cache.
   /// A failed refresh leaves the previous cache in place.
-  Future<List<String>> refreshCachedModels(String profileId) async {
+  Future<void> refreshModelsIfStale(AiEndpointProfile profile) async {
+    if (!profile.enabled || !profile.modelsStale || profile.keySuffix.isEmpty) {
+      return;
+    }
+    final key = '${profile.id}:${profile.connectionRevision}';
+    if (DateTime.now().isBefore(_autoRetryAfter[key] ?? DateTime(1970))) return;
+    _autoRetryAfter[key] = DateTime.now().add(const Duration(minutes: 5));
     try {
-      final models = await listAvailableModels(profileId: profileId);
-      await profiles.cacheModels(id: profileId, modelIds: models);
-      await profiles.setConnection(
-        id: profileId,
-        status: AiEndpointConnectionStatus.ok,
-        detail: 'Connected',
+      await refreshCachedModels(profile.id);
+    } on Object {
+      // A failed background refresh retains the last successful list. Manual
+      // refresh bypasses this retry cooldown.
+      _autoRetryAfter[key] = DateTime.now().add(const Duration(minutes: 5));
+    }
+  }
+
+  Future<List<String>> refreshCachedModels(String profileId) async {
+    final connection = await profiles.resolve(profileId);
+    final revision = connection.profile.connectionRevision;
+    final key = '$profileId:$revision';
+    final existing = _modelRefreshes[key];
+    if (existing != null) return existing;
+    final run = _refreshModels(connection);
+    _modelRefreshes[key] = run;
+    refreshingProfileIds.add(profileId);
+    if (!_refreshChanges.isClosed) _refreshChanges.add(null);
+    try {
+      return await run;
+    } finally {
+      if (identical(_modelRefreshes[key], run)) _modelRefreshes.remove(key);
+      if (!_modelRefreshes.keys.any((k) => k.startsWith('$profileId:'))) {
+        refreshingProfileIds.remove(profileId);
+      }
+      if (!_refreshChanges.isClosed) _refreshChanges.add(null);
+    }
+  }
+
+  Future<List<String>> _refreshModels(AiEndpointConnection connection) async {
+    final profile = connection.profile;
+    try {
+      final models = await _listModels(connection, const Duration(seconds: 20));
+      final saved = await profiles.cacheModels(
+        id: profile.id,
+        modelIds: models,
+        expectedConnectionRevision: profile.connectionRevision,
       );
+      if (saved.connectionRevision != profile.connectionRevision) {
+        throw const AiProfileUnavailableException();
+      }
       return models;
     } on AiException catch (error) {
-      await profiles.setConnection(
-        id: profileId,
-        status: AiEndpointConnectionStatus.failed,
-        detail: error.message,
-      );
+      try {
+        await profiles.setConnection(
+          id: profile.id,
+          status: AiEndpointConnectionStatus.failed,
+          detail: error.message,
+          expectedConnectionRevision: profile.connectionRevision,
+        );
+      } on FormatException {
+        // Profile was deleted while discovery was in flight.
+      }
       rethrow;
+    } on FormatException {
+      throw const AiProfileUnavailableException();
     }
   }
 

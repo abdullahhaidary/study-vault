@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../ai_assistant/presentation/pick_ai_model.dart';
@@ -460,9 +461,22 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
           if (item == null)
             Text('No ${kind.label.toLowerCase()} yet.')
           else ...[
-            Text(
-              'v${item.version}${item.provider == 'manual' ? ' · pasted' : ''}',
-              style: theme.textTheme.labelSmall,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'v${item.version}${item.provider == 'manual' ? ' · pasted' : ''}',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ),
+                DownloadDocumentButton(
+                  tooltip: 'Download Markdown',
+                  request: () async => DocumentTextRequest(
+                    fileName: '${book.title} ${chapter.title} ${kind.label}',
+                    text: item.content,
+                  ),
+                ),
+              ],
             ),
             BookMarkdown(data: item.content, onOpenPage: open),
           ],
@@ -502,6 +516,18 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
               ),
               childrenPadding: const EdgeInsets.all(AppSpacing.md),
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: DownloadDocumentButton(
+                    tooltip: 'Download Markdown',
+                    request: () async => DocumentTextRequest(
+                      fileName: item.startPage == item.endPage
+                          ? '${book.title} page ${item.startPage}'
+                          : '${book.title} pages ${item.startPage}-${item.endPage}',
+                      text: item.content,
+                    ),
+                  ),
+                ),
                 SelectionArea(
                   child: BookMarkdown(data: item.content, onOpenPage: open),
                 ),

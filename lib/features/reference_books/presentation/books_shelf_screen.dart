@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/export/download_document_button.dart';
+import '../services/book_import_service.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -113,6 +115,22 @@ class BookCard extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'Download PDF',
+                onPressed: () async {
+                  final path = await BookStorage.absolutePath(book);
+                  if (!context.mounted) return;
+                  await runDocumentDownload(
+                    context,
+                    DocumentFileRequest(
+                      fileName: book.title,
+                      sourcePath: path,
+                      kind: DocumentFileKind.pdf,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.download_outlined),
               ),
             ],
           ),

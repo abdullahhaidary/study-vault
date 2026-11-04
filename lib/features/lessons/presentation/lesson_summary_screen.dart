@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/export/download_document_button.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -85,6 +86,23 @@ class _LessonSummaryScreenState extends ConsumerState<LessonSummaryScreen> {
     await ref.read(lessonSummaryRepositoryProvider).clear(_lessonId);
   }
 
+  Future<void> _download() async {
+    final note = await ref.read(lessonSummaryRepositoryProvider).ensure(
+      _lessonId,
+    );
+    if (!mounted) return;
+    final markdown = QuillToMarkdown.fromStored(note.content).trim();
+    await runDocumentDownload(
+      context,
+      markdown.isEmpty
+          ? null
+          : DocumentTextRequest(
+              fileName: '${widget.args.lessonName} ${LessonSummary.title}',
+              text: markdown,
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = ref.watch(lessonSummaryProvider(_lessonId));
@@ -111,9 +129,19 @@ class _LessonSummaryScreenState extends ConsumerState<LessonSummaryScreen> {
           PopupMenuButton<String>(
             tooltip: 'More',
             onSelected: (value) {
-              if (value == 'clear') _clear();
+              switch (value) {
+                case 'download':
+                  _download();
+                case 'clear':
+                  _clear();
+              }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'download',
+                enabled: hasContent,
+                child: const Text('Download Markdown'),
+              ),
               PopupMenuItem(
                 value: 'clear',
                 enabled: hasContent,

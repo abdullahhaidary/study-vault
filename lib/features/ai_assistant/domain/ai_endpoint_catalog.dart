@@ -31,8 +31,11 @@ List<AiSelectableModel> selectableModelsForEndpointProfiles(
           id: ref.storageValue,
           displayName: bare,
           description: missingFromCache
-              ? 'Previously selected — unavailable'
-              : '${profile.host} · ${profile.modelListLabel}',
+              ? (profile.modelsRefreshedAt == null
+                    ? 'Manually selected model · ${profile.host}'
+                    : 'Previously selected — unavailable')
+              : '${profile.host} · ${profile.modelListLabel}'
+                    '${profile.connectionStatus == AiEndpointConnectionStatus.failed ? ' · Refresh failed; using saved list' : ''}',
           recommended: bare == profile.defaultModelId,
           group: profile.name,
           section: profile.name,

@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';

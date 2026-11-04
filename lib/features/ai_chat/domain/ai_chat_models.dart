@@ -234,34 +234,53 @@ class AiChatTurn {
     required this.role,
     required this.content,
     this.pinForCache = false,
+    this.systemPreference,
+    this.outputTokenLimit,
   });
 
   final String role;
   final String content;
 
-  /// When true, DeepSeek history trimming must keep this turn (document /
+  /// When true, shared history compaction must keep this turn (document /
   /// first study context). System messages are always kept separately.
   final bool pinForCache;
+
+  /// Null means a direct transport call; empty means an explicitly blank snapshot.
+  final String? systemPreference;
+
+  /// Optional request budget, carried on the first turn (e.g. a short title).
+  final int? outputTokenLimit;
 }
 
 /// Result of a completed (non-stream) chat completion.
 class AiChatCompletion {
-  const AiChatCompletion({required this.text, this.modelId, this.usage});
+  const AiChatCompletion({
+    required this.text,
+    this.modelId,
+    this.usage,
+    this.pocketChatId,
+  });
 
   final String text;
   final String? modelId;
   final AiTokenUsage? usage;
+
+  /// Pocket browser conversation that produced this reply.
+  final String? pocketChatId;
 }
 
 /// One event from a streaming chat completion.
 class AiChatStreamEvent {
-  const AiChatStreamEvent({this.textDelta, this.usage});
+  const AiChatStreamEvent({this.textDelta, this.usage, this.pocketChatId});
 
   /// Incremental assistant text (may be empty/null on the final usage event).
   final String? textDelta;
 
   /// Present on the final event when the provider reported usage.
   final AiTokenUsage? usage;
+
+  /// Pocket browser conversation that produced this event.
+  final String? pocketChatId;
 
   bool get hasText => textDelta != null && textDelta!.isNotEmpty;
 }

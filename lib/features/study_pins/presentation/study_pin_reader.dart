@@ -9,7 +9,9 @@ import '../../../core/widgets/auto_direction_text.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/presentation/ai_actions_sheet.dart';
 import '../../ai_assistant/services/annotation_ai_context_builder.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../ai_assistant/services/markdown_to_quill.dart';
+import '../../ai_assistant/services/quill_to_markdown.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../ai_questions/presentation/question_source_launches.dart';
@@ -440,6 +442,19 @@ class StudyPinReaderPanel extends ConsumerWidget {
                 FavoriteStarButton(
                   entityType: FavoriteEntityType.studyPin,
                   entityId: pin.id,
+                ),
+                DownloadDocumentButton(
+                  tooltip: 'Download Markdown',
+                  request: () async {
+                    final markdown = hasFull
+                        ? QuillToMarkdown.fromStored(pin.fullExplanation).trim()
+                        : pin.shortText.trim();
+                    if (markdown.isEmpty) return null;
+                    return DocumentTextRequest(
+                      fileName: pin.shortText,
+                      text: markdown,
+                    );
+                  },
                 ),
                 IconButton(
                   tooltip: 'AI Actions',

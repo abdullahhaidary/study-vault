@@ -27,6 +27,7 @@ import '../domain/ai_chat_models.dart';
 import '../services/ai_chat_service.dart';
 import '../../ai_assistant/presentation/widgets/ai_usage_indicator.dart';
 import 'ai_chat_history_screen.dart';
+import 'pocket_chat_history_sheet.dart';
 import 'chat_appearance_sheet.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
@@ -160,6 +161,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     _composer.clear();
     _draftHydrated = false;
     ref.read(activeAiChatIdProvider.notifier).state = null;
+    ref.read(pendingPocketChatIdProvider.notifier).state = null;
     setState(() {
       _streamingText = null;
       _errorBanner = null;
@@ -306,6 +308,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
     try {
       var chatId = ref.read(activeAiChatIdProvider);
+      final createdChat = chatId == null;
       if (chatId == null) {
         final pendingModelId = ref.read(pendingAiChatModelIdProvider);
         final chat = await ref
@@ -314,6 +317,17 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         chatId = chat.id;
         ref.read(activeAiChatIdProvider.notifier).state = chatId;
         ref.read(pendingAiChatModelIdProvider.notifier).state = null;
+      }
+      final pendingPocket = ref.read(pendingPocketChatIdProvider);
+      final createdChatId = chatId;
+      if (createdChat && pendingPocket != null) {
+        final links = ref.read(pocketChatLinksProvider);
+        if (pendingPocket.isEmpty) {
+          await links.clear(createdChatId);
+        } else {
+          await links.bind(createdChatId, pendingPocket);
+        }
+        ref.read(pendingPocketChatIdProvider.notifier).state = null;
       }
 
       if (preset == null) {
@@ -700,6 +714,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   if (!_sending) _newChat();
                 case 'appearance':
                   showChatAppearanceSheet(context);
+                case 'pocket_chats':
+                  showPocketChatHistorySheet(
+                    context,
+                    ref,
+                    studyChatId: ref.read(activeAiChatIdProvider),
+                  );
               }
             },
             itemBuilder: (context) => [
@@ -712,6 +732,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   title: Text('New chat'),
                 ),
               ),
+              if (AiProviderIdX.fromModelId(modelId) == AiProviderId.pocket)
+                const PopupMenuItem(
+                  value: 'pocket_chats',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.history),
+                    title: Text('Pocket chats'),
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'appearance',
                 child: ListTile(

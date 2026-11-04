@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/export/download_document_button.dart';
 import '../../../core/markdown/chart_markdown_builder.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -28,6 +29,15 @@ class ManualEntryItemReader extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          DownloadDocumentButton(
+            tooltip: 'Download Markdown',
+            request: () async => DocumentTextRequest(
+              fileName: item.title,
+              text: item.markdown,
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(28),
           child: Padding(

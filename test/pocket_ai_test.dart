@@ -48,7 +48,21 @@ void main() {
       httpClient: MockClient((request) async {
         seen = request;
         return http.Response(
-          jsonEncode({'reply': 'A tree has one root.', 'images': []}),
+          jsonEncode({
+            'id': 'chatcmpl_test',
+            'object': 'chat.completion',
+            'model': 'chatgpt',
+            'choices': [
+              {
+                'index': 0,
+                'message': {
+                  'role': 'assistant',
+                  'content': 'A tree has one root.',
+                },
+                'finish_reason': 'stop',
+              },
+            ],
+          }),
           200,
         );
       }),
@@ -99,7 +113,21 @@ void main() {
               (body['files'] as List).single,
               contains('study-vault-pocket-'),
             );
-            return http.Response(jsonEncode({'reply': 'diagram'}), 200);
+            return http.Response(
+              jsonEncode({
+                'id': 'chatcmpl_test',
+                'object': 'chat.completion',
+                'model': 'claude',
+                'choices': [
+                  {
+                    'index': 0,
+                    'message': {'role': 'assistant', 'content': 'diagram'},
+                    'finish_reason': 'stop',
+                  },
+                ],
+              }),
+              200,
+            );
           }),
         ),
       ),
@@ -136,7 +164,21 @@ void main() {
         settings: settings,
         httpClient: MockClient((request) async {
           seen = request;
-          return http.Response(jsonEncode({'reply': 'pong'}), 200);
+          return http.Response(
+            jsonEncode({
+              'id': 'chatcmpl_test',
+              'object': 'chat.completion',
+              'model': 'gemini',
+              'choices': [
+                {
+                  'index': 0,
+                  'message': {'role': 'assistant', 'content': 'pong'},
+                  'finish_reason': 'stop',
+                },
+              ],
+            }),
+            200,
+          );
         }),
       ),
     );
@@ -162,7 +204,12 @@ void main() {
       settings: settings,
       httpClient: MockClient((request) async {
         return http.Response(
-          jsonEncode({'error': 'Timed out waiting for ChatGPT\'s reply.'}),
+          jsonEncode({
+            'error': {
+              'message': 'Timed out waiting for ChatGPT\'s reply.',
+              'type': 'server_error',
+            },
+          }),
           502,
         );
       }),
@@ -171,5 +218,126 @@ void main() {
       client.send(modelId: 'chatgpt', message: 'hi'),
       throwsA(isA<AiTimeoutException>()),
     );
+  });
+
+  test(
+    'a completion stream opens, appends deltas, and closes on stop',
+    () async {
+      const sse = '''
+: pocket
+
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"claude","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"claude","choices":[{"index":0,"delta":{"content":"1\\n2\\n3\\n"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"claude","choices":[{"index":0,"delta":{"content":"4\\n5"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"claude","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+
+''';
+      final settings = MemoryAiSettingsStore();
+      final client = PocketClient(
+        settings: settings,
+        httpClient: MockClient((request) async {
+          expect(request.headers['accept'], 'text/event-stream');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['stream'], isTrue);
+          expect(body['app'], 'claude');
+          expect(body['new_chat'], isTrue);
+          expect(body.containsKey('chat_id'), isFalse);
+          return http.Response(
+            sse,
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }),
+      );
+      final chat = PocketChatService(settings: settings, client: client);
+      final events = await chat
+          .streamComplete(
+            modelId: 'sv1:pocket:claude',
+            history: const [
+              AiChatTurn(role: AiChatRole.user, content: 'count'),
+            ],
+          )
+          .toList();
+      final text = events.map((event) => event.textDelta ?? '').join();
+      expect(text, '1\n2\n3\n4\n5');
+      expect(events.last.usage, isNotNull);
+    },
+  );
+
+  test(
+    'a chat id continues that browser chat with only the new message',
+    () async {
+      http.Request? seen;
+      const sse = '''
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"chatgpt","chat_id":"chat_0123456789abcdef","choices":[{"index":0,"delta":{"content":"same"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl_test","object":"chat.completion.chunk","model":"chatgpt","chat_id":"chat_0123456789abcdef","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+
+''';
+      final settings = MemoryAiSettingsStore();
+      final client = PocketClient(
+        settings: settings,
+        httpClient: MockClient((request) async {
+          seen = request;
+          return http.Response(
+            sse,
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          );
+        }),
+      );
+      final chat = PocketChatService(settings: settings, client: client);
+      final events = await chat
+          .streamComplete(
+            modelId: 'sv1:pocket:chatgpt',
+            pocketChatId: 'chat_0123456789abcdef',
+            history: const [
+              AiChatTurn(role: AiChatRole.user, content: 'first'),
+              AiChatTurn(role: AiChatRole.assistant, content: 'pong'),
+              AiChatTurn(role: AiChatRole.user, content: 'Say it again.'),
+            ],
+          )
+          .toList();
+      final body = jsonDecode(seen!.body) as Map<String, dynamic>;
+      expect(body['chat_id'], 'chat_0123456789abcdef');
+      expect(body.containsKey('new_chat'), isFalse);
+      expect(body['message'], 'Say it again.');
+      expect(events.last.pocketChatId, 'chat_0123456789abcdef');
+    },
+  );
+
+  test('browser chat history is listed from Pocket', () async {
+    final settings = MemoryAiSettingsStore();
+    final client = PocketClient(
+      settings: settings,
+      httpClient: MockClient((request) async {
+        expect(request.url.path, '/chats');
+        expect(request.url.queryParameters['app'], 'chatgpt');
+        return http.Response(
+          jsonEncode({
+            'chats': [
+              {
+                'id': 'chat_0123456789abcdef',
+                'app': 'chatgpt',
+                'title': 'Pong',
+                'account': 'default',
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    final chats = await client.listChats(app: 'chatgpt');
+    expect(chats, hasLength(1));
+    expect(chats.single.title, 'Pong');
+    expect(chats.single.id, 'chat_0123456789abcdef');
   });
 }

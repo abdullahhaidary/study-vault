@@ -36,6 +36,7 @@ import '../data/lessons_providers.dart';
 import '../data/materials_providers.dart';
 import 'create_lesson_dialog.dart';
 import 'create_markdown_material_dialog.dart';
+import 'download_lesson_material.dart';
 import 'lesson_images_screen.dart';
 import 'lesson_summary_screen.dart';
 
@@ -711,6 +712,9 @@ class LessonDetailsScreen extends ConsumerWidget {
                           destination: ReorderDestination.end,
                         ),
                   onDelete: () => _confirmDelete(context, ref, material),
+                  onDownload: isDocumentMimeType(material.mimeType)
+                      ? () => downloadLessonMaterial(context, ref, material)
+                      : null,
                   onAttachPersian: isPdfMimeType(material.mimeType)
                       ? () => _attachPersianPdf(context, ref, material)
                       : null,
@@ -737,11 +741,13 @@ class _MaterialTile extends ConsumerWidget {
     this.onMoveToEnd,
     this.onAttachPersian,
     this.onRemovePersian,
+    this.onDownload,
   });
 
   final LessonMaterial material;
   final VoidCallback onOpen;
   final VoidCallback onDelete;
+  final VoidCallback? onDownload;
   final VoidCallback? onMoveToStart;
   final VoidCallback? onMoveUp;
   final VoidCallback? onMoveDown;
@@ -779,6 +785,7 @@ class _MaterialTile extends ConsumerWidget {
       onMoveUp: onMoveUp,
       onMoveDown: onMoveDown,
       onMoveToEnd: onMoveToEnd,
+      onDownload: onDownload,
       onEdit: isPdf
           ? (persian == null ? onAttachPersian : onRemovePersian)
           : null,

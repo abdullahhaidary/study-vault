@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/presentation/pick_ai_model.dart';
@@ -242,6 +243,17 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
                     data: message.content,
                     onOpenPage: widget.onOpenPage,
                   ),
+            if (!user)
+              Align(
+                alignment: Alignment.centerRight,
+                child: DownloadDocumentButton(
+                  tooltip: 'Download Markdown',
+                  request: () async => DocumentTextRequest(
+                    fileName: '${widget.book.title} answer',
+                    text: message.content,
+                  ),
+                ),
+              ),
             if (pages.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xs),
               Wrap(

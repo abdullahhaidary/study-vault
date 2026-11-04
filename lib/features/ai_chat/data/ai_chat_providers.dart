@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/database_provider.dart';
 import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/data/ai_model_catalog_providers.dart';
+import '../../ai_assistant/domain/ai_execution_selection.dart';
+import '../../ai_assistant/data/pocket_chat_link_store.dart';
 import '../domain/ai_chat_models.dart';
+import 'chat_request_preferences.dart';
 import '../domain/referenced_ai_message.dart';
 import '../services/ai_chat_service.dart';
 import '../services/deepseek_chat_service.dart';
 import '../services/gemini_chat_service.dart';
+import '../services/measured_ai_chat_transport.dart';
 import '../services/new_api_claude_chat_service.dart';
 import '../services/pocket_chat_service.dart';
 import '../services/chat_speech_service.dart';
@@ -41,12 +46,15 @@ final pocketChatServiceProvider = Provider<AiChatTransport>((ref) {
 });
 
 final aiChatTransportProvider = Provider<AiChatTransport>((ref) {
-  return RoutingAiChatTransport(
-    settings: ref.watch(aiSettingsStoreProvider),
-    gemini: ref.watch(geminiChatServiceProvider),
-    deepseek: ref.watch(deepseekChatServiceProvider),
-    newApi: ref.watch(newApiClaudeChatServiceProvider),
-    pocket: ref.watch(pocketChatServiceProvider),
+  return MeasuredAiChatTransport(
+    RoutingAiChatTransport(
+      settings: ref.watch(aiSettingsStoreProvider),
+      gemini: ref.watch(geminiChatServiceProvider),
+      deepseek: ref.watch(deepseekChatServiceProvider),
+      newApi: ref.watch(newApiClaudeChatServiceProvider),
+      pocket: ref.watch(pocketChatServiceProvider),
+    ),
+    ref.watch(aiRequestMetricsStoreProvider),
   );
 });
 
@@ -56,12 +64,27 @@ final chatSpeechServiceProvider = ChangeNotifierProvider<ChatSpeechService>((
   return ChatSpeechService();
 });
 
+final pocketChatLinksProvider = Provider<PocketChatLinks>((ref) {
+  return SharedPreferencesPocketChatLinks();
+});
+
+/// Pocket chat chosen before a Study Vault chat row exists.
+///
+/// Empty string means the next message must open a new browser chat.
+final pendingPocketChatIdProvider = StateProvider<String?>((ref) => null);
+
+final chatRequestPreferencesProvider = Provider<ChatRequestPreferences>(
+  (ref) => LocalChatRequestPreferences(),
+);
+
 final aiChatServiceProvider = Provider<AiChatService>((ref) {
   return AiChatService(
     db: ref.watch(databaseProvider),
     transport: ref.watch(aiChatTransportProvider),
     settings: ref.watch(aiSettingsStoreProvider),
     profiles: ref.watch(aiEndpointProfileRepositoryProvider),
+    pocketLinks: ref.watch(pocketChatLinksProvider),
+    requestPreferences: ref.watch(chatRequestPreferencesProvider),
   );
 });
 
@@ -99,7 +122,9 @@ final aiChatLastMessageProvider = StreamProvider.family<AiChatMessage?, String>(
 final availableChatModelsProvider = FutureProvider<List<AiSelectableModel>>((
   ref,
 ) async {
-  return ref.watch(aiChatTransportProvider).listAvailableChatModels();
+  return ref.watch(
+    availableAiModelsProvider(AiExecutionConstraints.none).future,
+  );
 });
 
 final referencedAiMessageRepositoryProvider =

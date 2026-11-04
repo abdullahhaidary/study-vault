@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../../../core/export/download_document_button.dart';
 import '../../../../core/widgets/transient_snack_bar.dart';
 import '../../../../core/markdown/study_markdown.dart';
 import '../../../../core/text/text_direction_utils.dart';
@@ -318,6 +319,19 @@ class _MessageActions extends StatelessWidget {
               onPressed: onRegenerate,
               icon: const Icon(Icons.refresh),
             ),
+          IconButton(
+            tooltip: 'Download Markdown',
+            visualDensity: VisualDensity.compact,
+            iconSize: 18,
+            color: foreground.withValues(alpha: 0.72),
+            onPressed: () => runDocumentDownload(
+              context,
+              content.trim().isEmpty
+                  ? null
+                  : DocumentTextRequest(fileName: 'Chat message', text: content),
+            ),
+            icon: const Icon(Icons.download_outlined),
+          ),
           IconButton(
             tooltip: 'Copy message',
             visualDensity: VisualDensity.compact,

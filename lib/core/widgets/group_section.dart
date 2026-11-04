@@ -141,6 +141,7 @@ class GroupedItemTile extends StatelessWidget {
     required this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onDownload,
     this.onMoveToStart,
     this.onMoveUp,
     this.onMoveDown,
@@ -155,6 +156,7 @@ class GroupedItemTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onDownload;
   final VoidCallback? onMoveToStart;
   final VoidCallback? onMoveUp;
   final VoidCallback? onMoveDown;
@@ -168,6 +170,7 @@ class GroupedItemTile extends StatelessWidget {
     final hasMenu =
         onEdit != null ||
         onDelete != null ||
+        onDownload != null ||
         onMoveToStart != null ||
         onMoveUp != null ||
         onMoveDown != null ||
@@ -225,6 +228,8 @@ class GroupedItemTile extends StatelessWidget {
                     tooltip: 'Options',
                     onSelected: (action) {
                       switch (action) {
+                        case _ItemAction.download:
+                          onDownload?.call();
                         case _ItemAction.edit:
                           onEdit?.call();
                         case _ItemAction.delete:
@@ -260,6 +265,11 @@ class GroupedItemTile extends StatelessWidget {
                           value: _ItemAction.moveToEnd,
                           child: Text('Move to bottom'),
                         ),
+                      if (onDownload != null)
+                        const PopupMenuItem(
+                          value: _ItemAction.download,
+                          child: Text('Download'),
+                        ),
                       if (onEdit != null)
                         PopupMenuItem(
                           value: _ItemAction.edit,
@@ -290,4 +300,12 @@ class GroupedItemTile extends StatelessWidget {
   }
 }
 
-enum _ItemAction { moveToStart, moveUp, moveDown, moveToEnd, edit, delete }
+enum _ItemAction {
+  moveToStart,
+  moveUp,
+  moveDown,
+  moveToEnd,
+  download,
+  edit,
+  delete,
+}

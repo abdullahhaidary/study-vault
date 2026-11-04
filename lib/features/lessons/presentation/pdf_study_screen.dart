@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/export/download_document_button.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
@@ -1064,6 +1065,16 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         ),
         actions: [
           _pdfLanguageToggle(persian),
+          DownloadDocumentButton(
+            tooltip: 'Download PDF',
+            request: () async => DocumentFileRequest(
+              fileName: _pdfLanguage == PdfAiLanguage.persian
+                  ? '${widget.title} فارسی'
+                  : widget.title,
+              sourcePath: _activeFilePath,
+              kind: DocumentFileKind.pdf,
+            ),
+          ),
           IconButton(
             tooltip: 'AI explanations',
             onPressed: () =>

@@ -10,6 +10,9 @@ class AiTokenUsage {
     this.totalTokens,
     this.cacheHitTokens,
     this.cacheMissTokens,
+    this.cacheWriteTokens,
+    this.uncachedInputTokens,
+    this.timeToFirstTokenMs,
     this.model,
     this.provider,
     this.durationMs,
@@ -20,20 +23,22 @@ class AiTokenUsage {
   final int? totalTokens;
   final int? cacheHitTokens;
   final int? cacheMissTokens;
+  final int? cacheWriteTokens;
+  final int? uncachedInputTokens;
+  final int? timeToFirstTokenMs;
   final String? model;
   final String? provider;
   final int? durationMs;
 
-  /// `hit / (hit + miss) * 100`, or null when the denominator is ≤ 0 / missing.
+  /// Cache reads divided by known total input; null when reads or total are unknown.
   double? get cacheHitRatio {
     final hit = cacheHitTokens;
-    final miss = cacheMissTokens;
-    if (hit == null && miss == null) return null;
-    final h = hit ?? 0;
-    final m = miss ?? 0;
-    final denom = h + m;
-    if (denom <= 0) return null;
-    return h / denom * 100;
+    if (hit == null) return null;
+    final denominator = cacheMissTokens != null
+        ? hit + cacheMissTokens!
+        : promptTokens;
+    if (denominator == null || denominator <= 0) return null;
+    return hit / denominator * 100;
   }
 
   bool get hasAnyMetric =>
@@ -41,7 +46,9 @@ class AiTokenUsage {
       completionTokens != null ||
       totalTokens != null ||
       cacheHitTokens != null ||
-      cacheMissTokens != null;
+      cacheMissTokens != null ||
+      cacheWriteTokens != null ||
+      uncachedInputTokens != null;
 
   AiTokenUsage copyWith({
     int? promptTokens,
@@ -49,6 +56,9 @@ class AiTokenUsage {
     int? totalTokens,
     int? cacheHitTokens,
     int? cacheMissTokens,
+    int? cacheWriteTokens,
+    int? uncachedInputTokens,
+    int? timeToFirstTokenMs,
     String? model,
     String? provider,
     int? durationMs,
@@ -59,6 +69,9 @@ class AiTokenUsage {
       totalTokens: totalTokens ?? this.totalTokens,
       cacheHitTokens: cacheHitTokens ?? this.cacheHitTokens,
       cacheMissTokens: cacheMissTokens ?? this.cacheMissTokens,
+      cacheWriteTokens: cacheWriteTokens ?? this.cacheWriteTokens,
+      uncachedInputTokens: uncachedInputTokens ?? this.uncachedInputTokens,
+      timeToFirstTokenMs: timeToFirstTokenMs ?? this.timeToFirstTokenMs,
       model: model ?? this.model,
       provider: provider ?? this.provider,
       durationMs: durationMs ?? this.durationMs,
@@ -123,6 +136,9 @@ class AiTokenUsage {
       completionTokens: completionTokens,
       totalTokens: totalTokens,
       cacheHitTokens: cacheHit,
+      uncachedInputTokens: promptTokens != null && cacheHit != null
+          ? (promptTokens - cacheHit).clamp(0, promptTokens)
+          : null,
       cacheMissTokens: promptTokens != null && cacheHit != null
           ? (promptTokens - cacheHit).clamp(0, promptTokens)
           : null,
@@ -160,6 +176,8 @@ class AiTokenUsage {
       totalTokens: sum((u) => u.totalTokens),
       cacheHitTokens: sum((u) => u.cacheHitTokens),
       cacheMissTokens: sum((u) => u.cacheMissTokens),
+      cacheWriteTokens: sum((u) => u.cacheWriteTokens),
+      uncachedInputTokens: sum((u) => u.uncachedInputTokens),
       model: list.last.model,
       provider: list.last.provider,
       durationMs: sum((u) => u.durationMs),
@@ -210,6 +228,7 @@ class AiTokenUsage {
       completionTokens: completionTokens,
       totalTokens: totalTokens,
       cacheHitTokens: hit,
+      uncachedInputTokens: miss,
       cacheMissTokens: miss,
       model: model,
       provider: provider,

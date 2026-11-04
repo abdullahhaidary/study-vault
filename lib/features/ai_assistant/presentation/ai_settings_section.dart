@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../../ai_chat/data/ai_chat_providers.dart';
+import '../../ai_chat/presentation/pocket_chat_history_sheet.dart';
 import '../data/ai_credential_store.dart';
 import '../data/ai_providers.dart';
 import '../data/ai_model_catalog_providers.dart';
@@ -12,6 +13,7 @@ import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_model_ref.dart';
 import 'ai_endpoint_profiles_section.dart';
+import 'ai_cache_diagnostics.dart';
 import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
 import 'pocket_accounts_section.dart';
@@ -47,6 +49,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
     ref.invalidate(aiConfiguredProvider);
     ref.invalidate(availableChatModelsProvider);
     ref.invalidate(availableAiModelsProvider);
+    ref.invalidate(discoveredAiModelsProvider);
   }
 
   Future<void> _saveKey(AiProviderId provider) async {
@@ -353,7 +356,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     'Chat, study actions, quizzes, book questions, document '
                     'generation, and Persian translation are typed into the '
                     'signed-in Pocket tab. Start Pocket and sign in first. '
-                    'Each request opens a new chat in that tab.',
+                    'Messages in one Study Vault chat stay in the same browser '
+                    'chat. Choose another from Pocket chats in the chat menu. '
+                    'Study actions still open their own page.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -389,6 +394,14 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                       OutlinedButton(
                         onPressed: _saving ? null : _savePocketUrl,
                         child: const Text('Save address'),
+                      ),
+                      OutlinedButton(
+                        onPressed: () => showPocketChatHistorySheet(
+                          context,
+                          ref,
+                          studyChatId: ref.read(activeAiChatIdProvider),
+                        ),
+                        child: const Text('Browser chats'),
                       ),
                     ],
                   ),
@@ -576,6 +589,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 ],
                 const SizedBox(height: 20),
                 const AiEndpointProfilesSection(),
+                const AiCacheDiagnostics(),
                 const SizedBox(height: 16),
                 if (provider != AiProviderId.newApi) ...[
                   Text('Default Model', style: theme.textTheme.titleSmall),

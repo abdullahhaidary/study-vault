@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/built_in_data.dart';
+import '../../../core/export/download_document_button.dart';
+import 'download_lesson_material.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/markdown/study_markdown_sections.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -130,6 +132,24 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
             entityId: widget.resourceId,
+          ),
+          DownloadDocumentButton(
+            tooltip: 'Download',
+            request: () async {
+              final kind = documentKindForPath(widget.filePath);
+              if (_editing) {
+                return DocumentTextRequest(
+                  fileName: widget.title,
+                  text: _editController.text,
+                  kind: kind,
+                );
+              }
+              return DocumentFileRequest(
+                fileName: widget.title,
+                sourcePath: widget.filePath,
+                kind: kind,
+              );
+            },
           ),
           if (!_editing)
             IconButton(

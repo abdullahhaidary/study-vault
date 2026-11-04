@@ -39,11 +39,15 @@ class PocketChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 3),
+    String? pocketChatId,
   }) async {
+    final continuing = _continuing(pocketChatId);
     final reply = await _client.send(
       modelId: modelId,
-      message: transcriptForPocket(history),
+      message: messageForPocket(history, continuing: continuing),
       timeout: timeout,
+      chatId: continuing ? pocketChatId : null,
+      newChat: !continuing,
     );
     return AiChatCompletion(
       text: reply.text,
@@ -52,6 +56,7 @@ class PocketChatService implements AiChatTransport {
         model: PocketModelRef.normalize(modelId).storageValue,
         provider: AiProviderId.pocket.storageValue,
       ),
+      pocketChatId: reply.chatId,
     );
   }
 
@@ -60,34 +65,66 @@ class PocketChatService implements AiChatTransport {
     required String modelId,
     required List<AiChatTurn> history,
     Duration timeout = const Duration(minutes: 3),
+    String? pocketChatId,
   }) async* {
     final storage = PocketModelRef.normalize(modelId).storageValue;
     final usage = AiTokenUsage(
       model: storage,
       provider: AiProviderId.pocket.storageValue,
     );
-    var previous = '';
+    final continuing = _continuing(pocketChatId);
+    var started = false;
     await for (final reply in _client.watch(
       modelId: modelId,
-      message: transcriptForPocket(history),
+      message: messageForPocket(history, continuing: continuing),
       timeout: timeout,
+      chatId: continuing ? pocketChatId : null,
+      newChat: !continuing,
     )) {
-      final text = reply.text;
-      if (!text.startsWith(previous)) {
-        if (reply.done) {
-          yield AiChatStreamEvent(textDelta: '', usage: usage);
+      if (reply.replaces) {
+        if (!started && reply.text.isNotEmpty) {
+          yield AiChatStreamEvent(
+            textDelta: reply.text,
+            usage: reply.done ? usage : null,
+            pocketChatId: reply.chatId,
+          );
+          started = true;
+        } else if (reply.done) {
+          yield AiChatStreamEvent(
+            textDelta: '',
+            usage: usage,
+            pocketChatId: reply.chatId,
+          );
         }
         continue;
       }
-      final delta = text.substring(previous.length);
-      previous = text;
-      if (delta.isEmpty && !reply.done) continue;
+      if (reply.delta.isEmpty && !reply.done) continue;
+      if (reply.delta.isNotEmpty) started = true;
       yield AiChatStreamEvent(
-        textDelta: delta,
+        textDelta: reply.delta,
         usage: reply.done ? usage : null,
+        pocketChatId: reply.chatId,
       );
     }
   }
+
+  bool _continuing(String? pocketChatId) {
+    return pocketChatId != null && pocketChatId.trim().isNotEmpty;
+  }
+}
+
+/// Text sent into the Pocket browser.
+///
+/// A continued chat already holds the earlier turns, so only the latest user
+/// message is typed. A new browser chat still receives the labeled transcript.
+String messageForPocket(List<AiChatTurn> history, {required bool continuing}) {
+  if (!continuing) return transcriptForPocket(history);
+  for (final turn in history.reversed) {
+    if (turn.role == AiChatRole.user && turn.content.trim().isNotEmpty) {
+      return turn.content.trim();
+    }
+  }
+  return transcriptForPocket(history);
 }
 
 /// One Pocket message that carries the Study Vault conversation.

@@ -192,7 +192,7 @@ void main() {
 
       final result = await router.run(
         AiStudyRequest(
-          selection: testGeminiSelection(),
+          selection: testDeepSeekSelection(),
           action: AiStudyAction.explain,
           sourceText: 'Gradient descent',
         ),
