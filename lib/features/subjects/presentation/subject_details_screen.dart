@@ -1,3 +1,5 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -105,6 +107,17 @@ class SubjectDetailsScreen extends ConsumerWidget {
           title: subject.name,
           description: subject.description,
           actions: [
+            IconButton(
+              tooltip: 'Search this subject',
+              icon: const Icon(Icons.search),
+              onPressed: () => SearchScreen.open(
+                context,
+                scope: StudySearchScope.subject(
+                  id: subjectId,
+                  title: subject.name,
+                ),
+              ),
+            ),
             FavoriteStarButton(
               entityType: FavoriteEntityType.subject,
               entityId: subjectId,

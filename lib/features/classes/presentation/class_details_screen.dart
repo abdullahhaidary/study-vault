@@ -1,3 +1,5 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -98,6 +100,17 @@ class ClassDetailsScreen extends ConsumerWidget {
           title: classItem.name,
           description: classItem.description,
           actions: [
+            IconButton(
+              tooltip: 'Search this class',
+              icon: const Icon(Icons.search),
+              onPressed: () => SearchScreen.open(
+                context,
+                scope: StudySearchScope.class_(
+                  id: classId,
+                  title: classItem.name,
+                ),
+              ),
+            ),
             FavoriteStarButton(
               entityType: FavoriteEntityType.class_,
               entityId: classId,
@@ -126,7 +139,9 @@ class ClassDetailsScreen extends ConsumerWidget {
                   value: 'delete',
                   child: Text(
                     'Delete class',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ],
@@ -146,7 +161,8 @@ class ClassDetailsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     OutlinedButton.icon(
-                      onPressed: () => ClassRoadmapScreen.open(context, classId),
+                      onPressed: () =>
+                          ClassRoadmapScreen.open(context, classId),
                       icon: const Icon(Icons.route_outlined),
                       label: const Text('Class Roadmap'),
                     ),

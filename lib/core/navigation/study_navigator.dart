@@ -6,6 +6,9 @@ import '../../core/database/app_database.dart';
 import '../../core/database/database_provider.dart';
 import '../../core/storage/material_storage.dart';
 import '../../features/lessons/data/materials_providers.dart';
+import '../../features/pdf_ai_materials/domain/pdf_ai_material_models.dart';
+import '../../features/pdf_ai_materials/presentation/pdf_ai_material_reader_screen.dart';
+import '../../features/reference_books/presentation/book_reader_screen.dart';
 import '../../features/flashcards/presentation/flashcards_list_screen.dart';
 import '../../features/search/domain/study_search_result.dart';
 
@@ -66,7 +69,48 @@ abstract final class StudyNavigator {
           materialId: id,
           title: materialTitle,
           mimeType: mimeType,
+          initialPage: pageNumber,
         );
+      case StudyEntityKind.aiMaterial:
+        final db = ref.read(databaseProvider);
+        final entry = await db.getPdfAiMaterialById(id);
+        if (entry == null || !context.mounted) return;
+        final source = await db.getMaterialById(entry.materialId);
+        final type = PdfAiMaterialTypeX.fromStorage(entry.type);
+        if (source == null || type == null || !context.mounted) return;
+        final path = await MaterialStorage.absolutePath(
+          lessonId: source.lessonId,
+          storedFileName: source.storedFileName,
+        );
+        if (!context.mounted) return;
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => PdfAiMaterialReaderScreen(
+              materialId: source.id,
+              pdfTitle: source.title,
+              filePath: path,
+              type: type,
+              initialGenerationId: entry.id,
+            ),
+          ),
+        );
+      case StudyEntityKind.courseReview:
+        await Navigator.of(
+          context,
+        ).pushNamed(AppRoutes.courseReview, arguments: subjectId ?? id);
+      case StudyEntityKind.book:
+        if (pageNumber == null) {
+          await Navigator.of(
+            context,
+          ).pushNamed(AppRoutes.bookDetails, arguments: id);
+        } else {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) =>
+                  BookReaderScreen(bookId: id, initialPage: pageNumber),
+            ),
+          );
+        }
       case StudyEntityKind.studyPin:
         final pinMaterialId = materialId;
         if (pinMaterialId == null) return;

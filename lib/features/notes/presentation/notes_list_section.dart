@@ -1,3 +1,6 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_result.dart';
+import '../../search/domain/study_search_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -78,6 +81,23 @@ class NotesListSection extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
+                IconButton(
+                  tooltip: 'Search notes',
+                  icon: const Icon(Icons.search),
+                  onPressed: () => SearchScreen.open(
+                    context,
+                    filter: SearchResultFilter.notes,
+                    scope: lessonId != null
+                        ? StudySearchScope.lesson(
+                            id: lessonId,
+                            title: 'Lesson notes',
+                          )
+                        : StudySearchScope.subject(
+                            id: subjectId,
+                            title: 'Subject notes',
+                          ),
+                  ),
+                ),
                 TextButton.icon(
                   onPressed: () => _create(context, ref),
                   icon: const Icon(Icons.add),

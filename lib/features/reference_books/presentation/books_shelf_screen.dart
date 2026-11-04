@@ -1,3 +1,5 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,7 +22,17 @@ class BooksShelfScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final books = ref.watch(booksProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reference Books')),
+      appBar: AppBar(
+        title: const Text('Reference Books'),
+        actions: [
+          IconButton(
+            tooltip: 'Search books',
+            icon: const Icon(Icons.search),
+            onPressed: () =>
+                SearchScreen.open(context, filter: SearchResultFilter.books),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => addBook(context, ref),
         icon: const Icon(Icons.add),

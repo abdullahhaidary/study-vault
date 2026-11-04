@@ -1135,6 +1135,7 @@ class AppDatabase extends _$AppDatabase {
       // Other local writers (the Devin MCP tool) may hold a brief lock.
       await customStatement('PRAGMA busy_timeout = 10000');
       await _createLocalBookTables();
+      await _createLocalSearchTables();
       await _createLocalAiGenerationJobs();
       await _repairLessonMaterialVariantUniqueness();
     },
@@ -1424,6 +1425,53 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Device-local generation queue. Not a Drift table, so it never syncs.
+  /// Rebuildable, device-local extraction cache. Never a synchronized table.
+  Future<void> _createLocalSearchTables() async {
+    await customStatement(
+      "CREATE TABLE IF NOT EXISTS local_search_files ("
+      "material_id TEXT PRIMARY KEY REFERENCES lesson_materials(id) ON DELETE CASCADE, "
+      "fingerprint TEXT NOT NULL, status TEXT NOT NULL, page_count INTEGER NOT NULL DEFAULT 0, "
+      "material_revision INTEGER NOT NULL, source_identity TEXT NOT NULL)",
+    );
+    await customStatement(
+      "CREATE TABLE IF NOT EXISTS local_search_pages ("
+      "id INTEGER PRIMARY KEY, material_id TEXT NOT NULL REFERENCES lesson_materials(id) ON DELETE CASCADE, "
+      "page INTEGER NOT NULL, text TEXT NOT NULL, normalized_text TEXT NOT NULL, "
+      "UNIQUE(material_id, page))",
+    );
+    // FTS5 is available in bundled SQLite. Retain a literal LIKE fallback for
+    // system SQLite installations compiled without it.
+    try {
+      final existing = await customSelect(
+        "SELECT 1 FROM sqlite_master WHERE name = 'local_search_fts'",
+      ).getSingleOrNull();
+      await customStatement(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS local_search_fts USING fts5("
+        "normalized_text, content='local_search_pages', content_rowid='id', tokenize='unicode61')",
+      );
+      await customStatement(
+        "CREATE TRIGGER IF NOT EXISTS local_search_pages_ai AFTER INSERT ON local_search_pages BEGIN "
+        "INSERT INTO local_search_fts(rowid, normalized_text) VALUES (new.id, new.normalized_text); END",
+      );
+      await customStatement(
+        "CREATE TRIGGER IF NOT EXISTS local_search_pages_ad AFTER DELETE ON local_search_pages BEGIN "
+        "INSERT INTO local_search_fts(local_search_fts, rowid, normalized_text) VALUES ('delete', old.id, old.normalized_text); END",
+      );
+      await customStatement(
+        "CREATE TRIGGER IF NOT EXISTS local_search_pages_au AFTER UPDATE ON local_search_pages BEGIN "
+        "INSERT INTO local_search_fts(local_search_fts, rowid, normalized_text) VALUES ('delete', old.id, old.normalized_text); "
+        "INSERT INTO local_search_fts(rowid, normalized_text) VALUES (new.id, new.normalized_text); END",
+      );
+      if (existing == null) {
+        await customStatement(
+          "INSERT INTO local_search_fts(local_search_fts) VALUES ('rebuild')",
+        );
+      }
+    } on Exception {
+      // File contents remain searchable without the optional FTS acceleration.
+    }
+  }
+
   Future<void> _createLocalAiGenerationJobs() async {
     await customStatement(
       'CREATE TABLE IF NOT EXISTS local_ai_generation_jobs ('

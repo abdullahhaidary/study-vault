@@ -8,6 +8,9 @@ enum StudyEntityKind {
   note,
   flashcard,
   bookmark,
+  aiMaterial,
+  courseReview,
+  book,
 }
 
 /// Lightweight search hit for the Search UI.
@@ -63,6 +66,9 @@ enum SearchResultFilter {
   notes,
   flashcards,
   bookmarks,
+  aiMaterials,
+  courseReview,
+  books,
 }
 
 extension SearchResultFilterX on SearchResultFilter {
@@ -76,6 +82,9 @@ extension SearchResultFilterX on SearchResultFilter {
     SearchResultFilter.notes => 'Notes',
     SearchResultFilter.flashcards => 'Flashcards',
     SearchResultFilter.bookmarks => 'Bookmarks',
+    SearchResultFilter.aiMaterials => 'AI materials',
+    SearchResultFilter.courseReview => 'Course Review',
+    SearchResultFilter.books => 'Books',
   };
 
   StudyEntityKind? get asKind => switch (this) {
@@ -88,5 +97,8 @@ extension SearchResultFilterX on SearchResultFilter {
     SearchResultFilter.notes => StudyEntityKind.note,
     SearchResultFilter.flashcards => StudyEntityKind.flashcard,
     SearchResultFilter.bookmarks => StudyEntityKind.bookmark,
+    SearchResultFilter.aiMaterials => StudyEntityKind.aiMaterial,
+    SearchResultFilter.courseReview => StudyEntityKind.courseReview,
+    SearchResultFilter.books => StudyEntityKind.book,
   };
 }

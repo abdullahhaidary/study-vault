@@ -1,3 +1,6 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_result.dart';
+import '../../search/domain/study_search_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -50,6 +53,25 @@ class FlashcardsListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(scope.title),
         actions: [
+          IconButton(
+            tooltip: 'Search flashcards',
+            icon: const Icon(Icons.search),
+            onPressed: () => SearchScreen.open(
+              context,
+              filter: SearchResultFilter.flashcards,
+              scope: switch (scope.type) {
+                FlashcardsScopeType.all => const StudySearchScope.library(),
+                FlashcardsScopeType.subject => StudySearchScope.subject(
+                  id: scope.id,
+                  title: scope.title,
+                ),
+                FlashcardsScopeType.lesson => StudySearchScope.lesson(
+                  id: scope.id,
+                  title: scope.title,
+                ),
+              },
+            ),
+          ),
           IconButton(
             tooltip: 'Study flashcards',
             icon: const Icon(Icons.play_arrow),

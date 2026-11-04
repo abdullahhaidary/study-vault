@@ -1,3 +1,5 @@
+import '../../search/presentation/search_screen.dart';
+import '../../search/domain/study_search_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -386,6 +388,17 @@ class LessonDetailsScreen extends ConsumerWidget {
           title: lesson.name,
           description: lesson.description,
           actions: [
+            IconButton(
+              tooltip: 'Search this lesson',
+              icon: const Icon(Icons.search),
+              onPressed: () => SearchScreen.open(
+                context,
+                scope: StudySearchScope.lesson(
+                  id: lessonId,
+                  title: lesson.name,
+                ),
+              ),
+            ),
             LessonProgressBadge(
               status: LessonProgressStatus.fromStorage(lesson.progressStatus),
               onSelected: (status) async {
