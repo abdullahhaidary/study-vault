@@ -397,9 +397,12 @@ String normalizeNewApiBaseUrl(String raw) {
     );
   }
   final path = uri.path;
-  if (path.endsWith('/messages') || path.endsWith('/models')) {
+  if (path.endsWith('/messages') ||
+      path.endsWith('/models') ||
+      path.endsWith('/chat/completions')) {
     throw const FormatException(
-      'Enter the server base URL, not the /messages or /models endpoint.',
+      'Enter the server base URL, not the /messages, /models, or '
+      '/chat/completions endpoint.',
     );
   }
   final normalized = Uri(

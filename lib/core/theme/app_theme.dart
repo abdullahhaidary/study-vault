@@ -8,6 +8,7 @@ import 'app_spacing.dart';
 class AppTheme {
   AppTheme._();
 
+  /// Day / light study workspace.
   static ThemeData get light {
     const primary = AppColors.navy;
     const gold = AppColors.gold;
@@ -37,15 +38,82 @@ class AppTheme {
           onTertiaryContainer: AppColors.gold,
         );
 
-    final textTheme = _textTheme(ThemeData.light().textTheme);
+    return _build(
+      colorScheme: colorScheme,
+      scaffoldBackground: AppColors.scaffold,
+      primary: primary,
+      systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.surface,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
+  }
 
+  /// Night / dark study workspace.
+  static ThemeData get dark {
+    const primary = AppColors.navyLight;
+    const gold = AppColors.gold;
+
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.navy,
+          brightness: Brightness.dark,
+          primary: primary,
+          onPrimary: const Color(0xFF0B1A26),
+          secondary: const Color(0xFF8FB4D1),
+          tertiary: gold,
+          onTertiary: const Color(0xFF1A1408),
+          surface: AppColors.surfaceDark,
+          onSurface: const Color(0xFFE8ECF1),
+          onSurfaceVariant: AppColors.onSurfaceMutedDark,
+          outline: const Color(0xFF4A5868),
+          outlineVariant: AppColors.outlineSubtleDark,
+          error: const Color(0xFFFFB4AB),
+        ).copyWith(
+          surfaceContainerLowest: AppColors.scaffoldDark,
+          surfaceContainerLow: AppColors.surfaceDark,
+          surfaceContainer: AppColors.surfaceMutedDark,
+          surfaceContainerHigh: const Color(0xFF2A3545),
+          surfaceContainerHighest: const Color(0xFF334155),
+          tertiaryContainer: AppColors.goldSoftDark,
+          onTertiaryContainer: gold,
+        );
+
+    return _build(
+      colorScheme: colorScheme,
+      scaffoldBackground: AppColors.scaffoldDark,
+      primary: primary,
+      systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.surfaceDark,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
+  }
+
+  static ThemeData _build({
+    required ColorScheme colorScheme,
+    required Color scaffoldBackground,
+    required Color primary,
+    required SystemUiOverlayStyle systemOverlayStyle,
+  }) {
+    final textTheme = _textTheme(
+      colorScheme.brightness == Brightness.dark
+          ? ThemeData.dark().textTheme
+          : ThemeData.light().textTheme,
+    );
     final shape = RoundedRectangleBorder(borderRadius: AppRadii.mdAll);
     final subtleBorder = BorderSide(color: colorScheme.outlineVariant);
+    final surface = colorScheme.surface;
 
     return ThemeData(
       useMaterial3: true,
+      brightness: colorScheme.brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppColors.scaffold,
+      scaffoldBackgroundColor: scaffoldBackground,
       textTheme: textTheme,
       // Prefer system fonts that cover Persian/Arabic without bundling a
       // custom face. English typography stays on the platform default.
@@ -71,7 +139,7 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: AppColors.scaffold,
+        backgroundColor: scaffoldBackground,
         foregroundColor: colorScheme.onSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -81,12 +149,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
-          statusBarColor: Colors.transparent,
-          systemNavigationBarColor: AppColors.surface,
-          systemNavigationBarIconBrightness: Brightness.dark,
-          systemNavigationBarDividerColor: Colors.transparent,
-        ),
+        systemOverlayStyle: systemOverlayStyle,
         iconTheme: IconThemeData(color: colorScheme.onSurface, size: 22),
         actionsIconTheme: IconThemeData(
           color: colorScheme.onSurfaceVariant,
@@ -95,7 +158,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: AppColors.surface,
+        color: surface,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -122,7 +185,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
@@ -137,7 +200,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadii.mdAll,
-          borderSide: const BorderSide(color: primary, width: 1.5),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadii.mdAll,
@@ -194,7 +257,7 @@ class AppTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
-        foregroundColor: Colors.white,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 1,
         focusElevation: 2,
         hoverElevation: 2,
@@ -204,14 +267,14 @@ class AppTheme {
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: AppRadii.smAll),
         side: subtleBorder,
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         selectedColor: primary.withValues(alpha: 0.12),
         labelStyle: textTheme.labelMedium!,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         showCheckmark: false,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: AppRadii.mdAll),
@@ -224,7 +287,7 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 1,
         shape: const RoundedRectangleBorder(
@@ -236,7 +299,7 @@ class AppTheme {
         dragHandleColor: colorScheme.outlineVariant,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 68,
@@ -257,10 +320,10 @@ class AppTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         elevation: 0,
         indicatorColor: primary.withValues(alpha: 0.12),
-        selectedIconTheme: const IconThemeData(color: primary, size: 22),
+        selectedIconTheme: IconThemeData(color: primary, size: 22),
         unselectedIconTheme: IconThemeData(
           color: colorScheme.onSurfaceVariant,
           size: 22,
@@ -282,7 +345,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: AppRadii.smAll),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: AppColors.surface,
+        color: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: AppRadii.smAll),

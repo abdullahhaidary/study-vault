@@ -38,7 +38,7 @@ class NewApiClaudeChatService implements AiChatTransport {
       {
         'role': 'system',
         'content':
-            'You are Study Vault AI Assistant for university students. '
+            'You are StudyDesk AI Assistant for university students. '
             'Ground answers in shared study material and preserve formulas, code and technical terminology.\n'
             '${ChartSpec.promptInstruction}'
             '${preference == null || preference.trim().isEmpty ? '' : '\n${preference.trim()}'}',

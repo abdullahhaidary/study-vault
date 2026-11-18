@@ -1,3 +1,8 @@
+import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_assistant/data/ai_providers.dart';
+import '../../ai_assistant/presentation/ai_assistant_controller.dart';
+import '../domain/book_ai_input.dart';
+import 'book_ai_request_picker.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:convert';
 
@@ -35,6 +40,7 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   AiExecutionSelection? _selection;
+  BookAiInputMode _inputMode = BookAiInputMode.extractedText;
   late String? _chapterId = widget.initialChapterId;
   bool _sending = false;
 
@@ -48,24 +54,34 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
   Future<void> _send() async {
     final question = _input.text.trim();
     if (question.isEmpty || _sending) return;
-    final selection =
-        _selection ??
-        await pickAiModel(context, ref, title: 'Ask the book with');
-    if (selection == null || !mounted) return;
-    _selection = selection;
-    final chapters =
-        ref.read(bookChaptersProvider(widget.book.id)).valueOrNull ?? const [];
-    final chapter = chapters.where((c) => c.id == _chapterId).firstOrNull;
     setState(() => _sending = true);
-    _input.clear();
     try {
+      final selected =
+          _selection ??
+          await pickAiModel(context, ref, title: 'Ask the book with');
+      if (selected == null || !mounted) return;
+      if (!await AiAssistantController.ensureReady(
+            context,
+            ref,
+            selection: selected,
+          ) ||
+          !mounted) {
+        return;
+      }
+      setState(() => _selection = selected);
+      final chapters =
+          ref.read(bookChaptersProvider(widget.book.id)).valueOrNull ??
+          const [];
+      final chapter = chapters.where((c) => c.id == _chapterId).firstOrNull;
+      _input.clear();
       await ref
           .read(bookAiServiceProvider)
           .ask(
             book: widget.book,
             question: question,
-            selection: selection,
+            selection: selected,
             chapter: chapter,
+            inputMode: _inputMode,
           );
     } on Object catch (e) {
       if (mounted) {
@@ -77,6 +93,53 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  String _modelLabel() {
+    final selected = _selection;
+    if (selected == null) return 'Choose AI model';
+    final profile = ref
+        .watch(aiEndpointProfilesProvider)
+        .valueOrNull
+        ?.where((p) => p.id == selected.endpointProfileId)
+        .firstOrNull;
+    return '${profile?.name ?? selected.provider.displayName} · ${selected.modelRef.bareModelId}';
+  }
+
+  Future<void> _chooseModel() async {
+    final picked = await pickAiModel(
+      context,
+      ref,
+      title: 'Ask the book with',
+      initialSelection: _selection,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selection = picked;
+      // Switching models returns to the universally supported text mode.
+      _inputMode = BookAiInputMode.extractedText;
+    });
+  }
+
+  Future<void> _chooseInput() async {
+    if (_selection == null) await _chooseModel();
+    if (_selection == null || !mounted) return;
+    final chapters =
+        ref.read(bookChaptersProvider(widget.book.id)).valueOrNull ?? const [];
+    final chapter = chapters.where((c) => c.id == _chapterId).firstOrNull;
+    final chosen = await chooseBookInputMode(
+      context,
+      ref,
+      selection: _selection!,
+      initial: _inputMode,
+      pageCount: chapter == null
+          ? widget.book.pageCount
+          : chapter.endPage - chapter.startPage + 1,
+      sourceDescription: chapter == null
+          ? 'PDF mode attaches the entire book (${widget.book.pageCount} pages). Text mode searches for relevant pages.'
+          : 'PDF mode attaches "${chapter.title}", pages ${chapter.startPage}–${chapter.endPage}. Text mode searches within that chapter.',
+    );
+    if (chosen != null && mounted) setState(() => _inputMode = chosen);
   }
 
   @override
@@ -94,6 +157,44 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
     return Column(
       children: [
         Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: _sending ? null : _chooseModel,
+                    icon: const Icon(Icons.psychology_outlined),
+                    label: Text(_modelLabel()),
+                  ),
+                  TextButton.icon(
+                    onPressed: _sending ? null : _chooseInput,
+                    icon: Icon(
+                      _inputMode == BookAiInputMode.pdfAttachment
+                          ? Icons.picture_as_pdf
+                          : Icons.text_snippet_outlined,
+                    ),
+                    label: Text(
+                      _inputMode == BookAiInputMode.pdfAttachment
+                          ? 'PDF attachment'
+                          : 'Extracted text',
+                    ),
+                  ),
+                ],
+              ),
+              if (_inputMode == BookAiInputMode.pdfAttachment)
+                Text(
+                  _chapterId == null
+                      ? 'Sending the entire book PDF (${widget.book.pageCount} pages).'
+                      : 'Sending the selected chapter as a PDF.',
+                  style: theme.textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.sm,
             AppSpacing.xs,
@@ -110,9 +211,13 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
                       : null,
                   underline: const SizedBox.shrink(),
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('Search the whole book'),
+                      child: Text(
+                        _inputMode == BookAiInputMode.pdfAttachment
+                            ? 'Attach the whole book PDF'
+                            : 'Search the whole book',
+                      ),
                     ),
                     for (final c in chapters.where((c) => c.level == 0))
                       DropdownMenuItem(
@@ -123,7 +228,9 @@ class _BookChatViewState extends ConsumerState<BookChatView> {
                         ),
                       ),
                   ],
-                  onChanged: (v) => setState(() => _chapterId = v),
+                  onChanged: _sending
+                      ? null
+                      : (v) => setState(() => _chapterId = v),
                 ),
               ),
               if (messages.isNotEmpty)

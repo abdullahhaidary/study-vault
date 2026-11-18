@@ -13,4 +13,13 @@ abstract final class AppColors {
 
   static const Color outlineSubtle = Color(0xFFE2E6EB);
   static const Color onSurfaceMuted = Color(0xFF5F6B76);
+
+  // Dark (night) companion to the light day palette.
+  static const Color scaffoldDark = Color(0xFF121820);
+  static const Color surfaceDark = Color(0xFF1A2330);
+  static const Color surfaceMutedDark = Color(0xFF222C3A);
+  static const Color outlineSubtleDark = Color(0xFF2E3A4A);
+  static const Color onSurfaceMutedDark = Color(0xFF9AA5B1);
+  static const Color goldSoftDark = Color(0xFF3D3420);
+  static const Color navyLight = Color(0xFF5B9BC8);
 }

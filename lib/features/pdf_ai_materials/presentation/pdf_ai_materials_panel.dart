@@ -362,6 +362,7 @@ class _MaterialTypeViewState extends ConsumerState<_MaterialTypeView> {
   }
 
   IconData _iconFor(PdfAiMaterialType type) => switch (type) {
+    PdfAiMaterialType.mentalBlueprint => Icons.account_tree_outlined,
     PdfAiMaterialType.summary => Icons.summarize_outlined,
     PdfAiMaterialType.explanation => Icons.school_outlined,
     PdfAiMaterialType.deepExplanation => Icons.psychology_outlined,

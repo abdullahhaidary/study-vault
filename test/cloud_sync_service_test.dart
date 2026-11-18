@@ -23,6 +23,14 @@ class MemoryCloud implements CloudSyncRemote {
   final blobs = <String, List<int>>{};
   int head = 0;
   int committed = 0;
+  int snapshots = 0;
+  int deltas = 0;
+  int statusChecks = 0;
+  int downloads = 0;
+  int uploads = 0;
+  int lastDeltaSize = 0;
+  final receipts = <String, CloudCommit>{};
+  Future<void> Function()? duringCommit;
   bool disconnectAfterCommit = false;
   bool corruptDownload = false;
   bool interruptDownload = false;
@@ -31,14 +39,40 @@ class MemoryCloud implements CloudSyncRemote {
   Future<void> Function()? afterUpload;
 
   @override
-  Future<CloudSnapshot> snapshot(String token) async => CloudSnapshot(
-    head: head,
-    rows: cloudRowsFromJson(jsonDecode(jsonEncode(rows))),
-    revisions: Map.of(revisions),
-  );
+  Future<int> status(String token) async {
+    statusChecks++;
+    return head;
+  }
 
   @override
-  Future<void> commit(String token, Map<String, dynamic> body) async {
+  Future<CloudSnapshot> changes(String token, int after) async {
+    deltas++;
+    final changed = revisions.keys
+        .where((key) => revisions[key]! > after)
+        .toSet();
+    lastDeltaSize = changed.length;
+    return CloudSnapshot(
+      head: head,
+      rows: {
+        for (final key in changed)
+          if (rows[key] != null) key: Map.of(rows[key]!),
+      },
+      revisions: {for (final key in changed) key: revisions[key]!},
+    );
+  }
+
+  @override
+  Future<CloudSnapshot> snapshot(String token) async {
+    snapshots++;
+    return CloudSnapshot(
+      head: head,
+      rows: cloudRowsFromJson(jsonDecode(jsonEncode(rows))),
+      revisions: Map.of(revisions),
+    );
+  }
+
+  @override
+  Future<CloudCommit> commit(String token, Map<String, dynamic> body) async {
     if (rateLimits > 0) {
       rateLimits--;
       throw const CloudApiException(
@@ -50,7 +84,7 @@ class MemoryCloud implements CloudSyncRemote {
     final id = body['operationId'] as String;
     if (operations.containsKey(id)) {
       expect(operations[id], cloudCanonical(body));
-      return;
+      return receipts[id]!;
     }
     if (raceBeforeCommit) {
       raceBeforeCommit = false;
@@ -78,12 +112,23 @@ class MemoryCloud implements CloudSyncRemote {
     for (final m in body['mutations'] as List) {
       revisions[cloudKey(m['table'] as String, m['id'] as String)] = ++head;
     }
+    final receipt = CloudCommit(
+      head: head,
+      accepted: {
+        for (final m in body['mutations'] as List)
+          m['mutationId'] as String:
+              revisions[cloudKey(m['table'] as String, m['id'] as String)]!,
+      },
+    );
+    receipts[id] = receipt;
     operations[id] = cloudCanonical(body);
+    await duringCommit?.call();
     committed++;
     if (disconnectAfterCommit) {
       disconnectAfterCommit = false;
       throw const CloudApiException('Connection lost after commit');
     }
+    return receipt;
   }
 
   @override
@@ -91,6 +136,7 @@ class MemoryCloud implements CloudSyncRemote {
       blobs.containsKey(digest);
   @override
   Future<void> uploadFile(String token, String digest, File file) async {
+    uploads++;
     final bytes = await file.readAsBytes();
     expect(sha256.convert(bytes).toString(), digest);
     blobs[digest] = bytes;
@@ -104,6 +150,7 @@ class MemoryCloud implements CloudSyncRemote {
     int bytes,
     File target,
   ) async {
+    downloads++;
     await target.parent.create(recursive: true);
     if (interruptDownload) {
       await target.writeAsBytes([1]);
@@ -120,6 +167,7 @@ void main() {
   late MemoryCloud cloud;
   late CloudSyncService first;
   late CloudSyncService second;
+  int fileHashes = 0;
   Future<void> sync(CloudSyncService service) async {
     final outcome = await service.sync(
       token: 'test-token',
@@ -178,6 +226,7 @@ void main() {
           as String;
 
   setUp(() async {
+    fileHashes = 0;
     temp = await Directory.systemTemp.createTemp('study-vault-sync-test-');
     a = AppDatabase.forTesting(NativeDatabase.memory());
     b = PhoneSyncTestDatabase();
@@ -188,6 +237,10 @@ void main() {
       filesRoot: Directory(p.join(temp.path, 'a-files')),
       recoveryRoot: Directory(p.join(temp.path, 'a-recovery')),
       serverId: 'test-server',
+      hashFile: (file) async {
+        fileHashes++;
+        return (await sha256.bind(file.openRead()).first).toString();
+      },
     );
     second = CloudSyncService(
       db: b,
@@ -202,6 +255,257 @@ void main() {
     await b.close();
     await temp.delete(recursive: true);
   });
+
+  test(
+    'unchanged sync only checks revisions and reuses file checksums',
+    () async {
+      await seed(a);
+      final file = File(p.join(first.filesRoot.path, 'extra.pdf'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('unchanged PDF');
+      await sync(first);
+      final hashes = fileHashes;
+      final snapshots = cloud.snapshots;
+      final commits = cloud.committed;
+      final uploads = cloud.uploads;
+      final version =
+          (await a
+                  .customSelect(
+                    'SELECT change_version FROM local_cloud_sync_cursor',
+                  )
+                  .getSingle())
+              .data['change_version'];
+      await sync(first);
+      expect(cloud.statusChecks, 2);
+      expect(cloud.snapshots, snapshots);
+      expect(cloud.deltas, 0);
+      expect(cloud.committed, commits);
+      expect(cloud.uploads, uploads);
+      expect(fileHashes, hashes);
+      expect(
+        (await a
+                .customSelect(
+                  'SELECT change_version FROM local_cloud_sync_cursor',
+                )
+                .getSingle())
+            .data['change_version'],
+        version,
+      );
+      expect(await first.recoveryRoot.list().toList(), isEmpty);
+    },
+  );
+
+  test(
+    'one remote edit downloads one record and writes only that record',
+    () async {
+      await seed(a);
+      await addNote(a, 'n', 'Base');
+      await addNote(a, 'unchanged', 'Keep');
+      await sync(first);
+      await sync(second);
+      final snapshots = cloud.snapshots;
+      final version =
+          (await b
+                      .customSelect(
+                        'SELECT change_version FROM local_cloud_sync_cursor',
+                      )
+                      .getSingle())
+                  .data['change_version']
+              as int;
+      await a.customStatement('UPDATE study_notes SET content=? WHERE id=?', [
+        'Changed',
+        'n',
+      ]);
+      await sync(first);
+      await sync(second);
+      expect(cloud.snapshots, snapshots);
+      expect(cloud.lastDeltaSize, 1);
+      expect(await note(b, 'n'), 'Changed');
+      expect(await note(b, 'unchanged'), 'Keep');
+      expect(
+        (await b
+                .customSelect(
+                  'SELECT change_version FROM local_cloud_sync_cursor',
+                )
+                .getSingle())
+            .data['change_version'],
+        version + 1,
+      );
+    },
+  );
+
+  test(
+    'changed file signatures invalidate only that checksum and replace its bytes',
+    () async {
+      await seed(a);
+      final file = File(p.join(first.filesRoot.path, 'extra.pdf'));
+      final unchanged = File(p.join(first.filesRoot.path, 'unchanged.pdf'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('Original');
+      await unchanged.writeAsString('Keep this file');
+      await sync(first);
+      await sync(second);
+      final hashes = fileHashes;
+      final uploads = cloud.uploads;
+      await file.writeAsString('Modified');
+      await file.setLastModified(DateTime(2027));
+      await sync(first);
+      expect(fileHashes, hashes + 2); // Recompute once, then verify the upload.
+      expect(cloud.uploads, uploads + 1);
+      await sync(second);
+      expect(
+        await File(p.join(second.filesRoot.path, 'extra.pdf')).readAsString(),
+        'Modified',
+      );
+      expect(
+        await File(
+          p.join(second.filesRoot.path, 'unchanged.pdf'),
+        ).readAsString(),
+        'Keep this file',
+      );
+      expect(await second.recoveryRoot.list().toList(), isEmpty);
+    },
+  );
+
+  test('valid swaps of unique references apply together', () async {
+    await seed(a);
+    await a.customStatement(
+      "INSERT INTO favorites VALUES('one','lesson','left',1),('two','lesson','right',1)",
+    );
+    await sync(first);
+    await sync(second);
+    await a.transaction(() async {
+      await a.customStatement(
+        "UPDATE favorites SET entity_id='temporary' WHERE id='one'",
+      );
+      await a.customStatement(
+        "UPDATE favorites SET entity_id='left' WHERE id='two'",
+      );
+      await a.customStatement(
+        "UPDATE favorites SET entity_id='right' WHERE id='one'",
+      );
+    });
+    await sync(first);
+    await sync(second);
+    final swapped = {
+      for (final row in await b.customSelect('SELECT * FROM favorites').get())
+        row.data['id']: row.data['entity_id'],
+    };
+    expect(swapped, {'one': 'right', 'two': 'left'});
+  });
+
+  test('completed file apply is kept when cleanup was interrupted', () async {
+    await seed(a);
+    final file = File(p.join(first.filesRoot.path, 'extra.pdf'));
+    await file.parent.create(recursive: true);
+    await file.writeAsString('Committed file');
+    await sync(first);
+    final cursor = await a
+        .customSelect('SELECT * FROM local_cloud_sync_cursor')
+        .getSingle();
+    final staging = Directory(p.join(first.recoveryRoot.path, 'sync-staging'));
+    final previous = File(p.join(staging.path, 'previous', 'slot'));
+    await previous.parent.create(recursive: true);
+    await previous.writeAsString('Old file');
+    await File(p.join(staging.path, 'journal.json')).writeAsString(
+      jsonEncode({
+        'operation': cursor.data['applied_operation'],
+        'files': [
+          {
+            'path': 'extra.pdf',
+            'slot': 'slot',
+            'existed': true,
+            'incoming': true,
+          },
+        ],
+      }),
+    );
+    await sync(first);
+    expect(await file.readAsString(), 'Committed file');
+    expect(await staging.exists(), isFalse);
+  });
+
+  test('edits during a network commit remain usable and sync on retry', () async {
+    await seed(a);
+    await addNote(a, 'n', 'Base');
+    await sync(first);
+    await sync(second);
+    await a.customStatement('UPDATE study_notes SET content=? WHERE id=?', [
+      'Sending',
+      'n',
+    ]);
+    cloud.duringCommit = () async {
+      // This database access must complete while the network request is active.
+      await a.customStatement('UPDATE study_notes SET content=? WHERE id=?', [
+        'Newer edit',
+        'n',
+      ]);
+      cloud.duringCommit = null;
+    };
+    await expectLater(sync(first), throwsA(isA<CloudSyncFailure>()));
+    expect(await note(a, 'n'), 'Newer edit');
+    expect((await first.info())['pending'], isNotNull);
+    await sync(first);
+    await sync(second);
+    expect(await note(b, 'n'), 'Newer edit');
+  });
+
+  test(
+    'legacy baseline upgrades with one snapshot and preserves offline edits',
+    () async {
+      await seed(a);
+      await addNote(a, 'n', 'Base');
+      await sync(first);
+      await sync(second);
+      await b.customStatement('UPDATE study_notes SET content=? WHERE id=?', [
+        'Offline edit',
+        'n',
+      ]);
+      await b.customStatement(
+        'UPDATE local_cloud_sync_cursor SET head=NULL,revisions=\'{}\'',
+      );
+      await b.customStatement('DELETE FROM local_cloud_sync_dirty');
+      final snapshots = cloud.snapshots;
+      await sync(second);
+      expect(cloud.snapshots, snapshots + 1);
+      await sync(first);
+      expect(await note(a, 'n'), 'Offline edit');
+    },
+  );
+
+  test(
+    'restart rolls back only staged files from an interrupted local apply',
+    () async {
+      await seed(a);
+      final file = File(p.join(first.filesRoot.path, 'extra.pdf'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('Original');
+      await sync(first);
+      final staging = Directory(
+        p.join(first.recoveryRoot.path, 'sync-staging'),
+      );
+      final previous = File(p.join(staging.path, 'previous', 'slot'));
+      await previous.parent.create(recursive: true);
+      await file.rename(previous.path);
+      await file.writeAsString('Uncommitted replacement');
+      await File(p.join(staging.path, 'journal.json')).writeAsString(
+        jsonEncode({
+          'operation': 'interrupted',
+          'files': [
+            {
+              'path': 'extra.pdf',
+              'slot': 'slot',
+              'existed': true,
+              'incoming': true,
+            },
+          ],
+        }),
+      );
+      await sync(first);
+      expect(await file.readAsString(), 'Original');
+      expect(await staging.exists(), isFalse);
+    },
+  );
 
   test(
     'first sync needs consent and a library cannot switch accounts',
@@ -222,7 +526,7 @@ void main() {
   );
 
   test(
-    'initial upload and download preserve hierarchy and a recovery archive',
+    'initial upload and download preserve hierarchy without full recovery archives',
     () async {
       await seed(a);
       await addNote(a, 'n', 'Initial note');
@@ -230,10 +534,9 @@ void main() {
       await sync(second);
       expect(await note(b, 'n'), 'Initial note');
       expect((await b.watchAllClasses().first).single.name, 'Class');
-      expect(
-        await File((await second.info())['backup_path'] as String).exists(),
-        isTrue,
-      );
+      expect((await second.info())['backup_path'], isNull);
+      expect(await first.recoveryRoot.list().toList(), isEmpty);
+      expect(await second.recoveryRoot.list().toList(), isEmpty);
       final writes = cloud.committed;
       await sync(second);
       expect(cloud.committed, writes);

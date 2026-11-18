@@ -147,11 +147,12 @@ class BookSearchService {
     String query, {
     int limit = 20,
     ({int start, int end})? within,
+    bool useSemantic = true,
   }) async {
     final textIndex = await index(bookId);
     final keyword = textIndex.search(query, limit: 50, within: within);
     final state = await _repository.localState(bookId);
-    if (state.vectorsModel != _embeddings.model) {
+    if (!useSemantic || state.vectorsModel != _embeddings.model) {
       return keyword.take(limit).toList();
     }
     final vectors = await _repository.vectors(bookId, _embeddings.model);

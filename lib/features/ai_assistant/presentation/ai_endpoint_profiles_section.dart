@@ -110,6 +110,7 @@ class _ProfileCard extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(profile.host),
             Text('Key $suffix'),
+            Text('Protocol: ${profile.protocol.label}'),
             Text(
               profile.defaultModelId.isEmpty
                   ? 'Default model: not set'
@@ -190,9 +191,12 @@ Future<void> _addProfile(BuildContext context, WidgetRef ref) async {
         .read(aiEndpointProfileRepositoryProvider)
         .create(
           name: created.name,
+          protocol: created.protocol,
           baseUrl: created.baseUrl,
           apiKey: created.apiKey,
           promptCachingEnabled: created.promptCachingEnabled,
+          pdfAttachmentsEnabled: created.pdfAttachmentsEnabled,
+          pdfMaxPages: created.pdfMaxPages,
         );
     await _reload(ref);
     if (context.mounted) {
@@ -226,10 +230,13 @@ Future<void> _editProfile(
         .update(
           id: profile.id,
           name: edited.name,
+          protocol: edited.protocol,
           baseUrl: edited.baseUrl,
           replacementApiKey: edited.apiKey,
           defaultModelId: edited.defaultModelId,
           promptCachingEnabled: edited.promptCachingEnabled,
+          pdfAttachmentsEnabled: edited.pdfAttachmentsEnabled,
+          pdfMaxPages: edited.pdfMaxPages,
         );
     await _reload(ref);
   } on FormatException catch (error) {
@@ -397,17 +404,23 @@ Future<void> _delete(
 class _ProfileDraft {
   const _ProfileDraft({
     required this.name,
+    required this.protocol,
     required this.baseUrl,
     required this.apiKey,
     this.defaultModelId,
     required this.promptCachingEnabled,
+    required this.pdfAttachmentsEnabled,
+    required this.pdfMaxPages,
   });
 
   final String name;
+  final AiEndpointProtocol protocol;
   final String baseUrl;
   final String apiKey;
   final String? defaultModelId;
   final bool promptCachingEnabled;
+  final bool pdfAttachmentsEnabled;
+  final int pdfMaxPages;
 }
 
 Future<_ProfileDraft?> _showProfileDialog(
@@ -418,7 +431,13 @@ Future<_ProfileDraft?> _showProfileDialog(
   final url = TextEditingController(text: existing?.baseUrl ?? '');
   final key = TextEditingController();
   final model = TextEditingController(text: existing?.defaultModelId ?? '');
+  var protocol = existing?.protocol ?? AiEndpointProtocol.newApiAnthropic;
   var promptCachingEnabled = existing?.promptCachingEnabled ?? false;
+  var pdfAttachmentsEnabled = existing?.pdfAttachmentsEnabled ?? false;
+  final pdfPages = TextEditingController(
+    text: (existing?.pdfMaxPages ?? 100).toString(),
+  );
+  String? pdfError;
   return showDialog<_ProfileDraft>(
     context: context,
     builder: (context) => StatefulBuilder(
@@ -439,6 +458,17 @@ Future<_ProfileDraft?> _showProfileDialog(
                   hintText: 'https://your-server.example/v1',
                 ),
               ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<AiEndpointProtocol>(
+                initialValue: protocol,
+                decoration: const InputDecoration(labelText: 'Protocol'),
+                items: [
+                  for (final value in AiEndpointProtocol.values)
+                    DropdownMenuItem(value: value, child: Text(value.label)),
+                ],
+                onChanged: (value) =>
+                    setLocal(() => protocol = value ?? protocol),
+              ),
               TextField(
                 controller: key,
                 obscureText: true,
@@ -451,25 +481,47 @@ Future<_ProfileDraft?> _showProfileDialog(
                       : 'Leave blank to keep the saved key.',
                 ),
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Claude prompt caching'),
-                subtitle: const Text(
-                  'Enable if this server supports Anthropic cache_control. Uses the default 5-minute cache.',
-                ),
-                value: promptCachingEnabled,
-                onChanged: (value) =>
-                    setLocal(() => promptCachingEnabled = value),
-              ),
-              if (existing != null)
-                TextField(
-                  controller: model,
-                  decoration: const InputDecoration(
-                    labelText: 'Default model ID',
-                    helperText:
-                        'You can type a model if the server has no model list.',
+              if (protocol == AiEndpointProtocol.newApiAnthropic) ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Claude prompt caching'),
+                  subtitle: const Text(
+                    'Enable if this server supports Anthropic cache_control. Uses the default 5-minute cache.',
                   ),
+                  value: promptCachingEnabled,
+                  onChanged: (value) =>
+                      setLocal(() => promptCachingEnabled = value),
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('PDF attachments'),
+                  subtitle: const Text(
+                    'Enable for servers and selected models that accept PDF documents. Text mode remains available.',
+                  ),
+                  value: pdfAttachmentsEnabled,
+                  onChanged: (value) =>
+                      setLocal(() => pdfAttachmentsEnabled = value),
+                ),
+                if (pdfAttachmentsEnabled)
+                  TextField(
+                    controller: pdfPages,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Maximum PDF pages per request',
+                      helperText:
+                          '100 by default. Use up to 600 only if your model supports it. Attachments are limited to 20 MiB.',
+                      errorText: pdfError,
+                    ),
+                  ),
+              ],
+              TextField(
+                controller: model,
+                decoration: const InputDecoration(
+                  labelText: 'Default model ID',
+                  helperText:
+                      'Optional now — Refresh models can pick it for you.',
+                ),
+              ),
             ],
           ),
         ),
@@ -480,12 +532,29 @@ Future<_ProfileDraft?> _showProfileDialog(
           ),
           FilledButton(
             onPressed: () {
+              final pageLimit = int.tryParse(pdfPages.text.trim());
+              if (pdfAttachmentsEnabled &&
+                  (pageLimit == null || pageLimit < 1 || pageLimit > 600)) {
+                setLocal(
+                  () => pdfError = 'Enter a page limit between 1 and 600.',
+                );
+                return;
+              }
               final draft = _ProfileDraft(
-                promptCachingEnabled: promptCachingEnabled,
+                protocol: protocol,
+                pdfAttachmentsEnabled:
+                    protocol == AiEndpointProtocol.newApiAnthropic &&
+                    pdfAttachmentsEnabled,
+                pdfMaxPages: pdfAttachmentsEnabled
+                    ? pageLimit!
+                    : (existing?.pdfMaxPages ?? 100),
+                promptCachingEnabled:
+                    protocol == AiEndpointProtocol.newApiAnthropic &&
+                    promptCachingEnabled,
                 name: name.text,
                 baseUrl: url.text,
                 apiKey: key.text,
-                defaultModelId: existing == null ? null : model.text,
+                defaultModelId: model.text,
               );
               key.clear();
               Navigator.pop(context, draft);
@@ -500,6 +569,7 @@ Future<_ProfileDraft?> _showProfileDialog(
     url.dispose();
     key.dispose();
     model.dispose();
+    pdfPages.dispose();
   });
 }
 

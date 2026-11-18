@@ -1,6 +1,6 @@
-# study_vault
+# StudyDesk
 
-A new Flutter project.
+A local-first study app for organizing classes, lessons, and study materials.
 
 ## Getting Started
 

@@ -9,7 +9,7 @@ abstract final class GeminiModelRegistry {
       id: 'gemini-3.8-flash',
       displayName: 'Gemini 3.8 Flash',
       description:
-          'Best overall choice for Study Vault — reasoning, coding, and long context.',
+          'Best overall choice for StudyDesk — reasoning, coding, and long context.',
       tier: GeminiModelTier.recommended,
       recommended: true,
       supportsThinkingLevel: true,

@@ -10,6 +10,7 @@ import 'download_lesson_material.dart';
 import '../../../core/markdown/study_markdown.dart';
 import '../../../core/markdown/study_markdown_sections.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/storage/reading_positions.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
@@ -42,20 +43,32 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
   bool _showAiMaterials = false;
   double? _sidePanelWidth;
   final _editController = TextEditingController();
+  final _documentKey = GlobalKey();
+  late final ReadingPositions _positions;
+  late final ReadingScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
+    _positions = ref.read(readingPositionsProvider);
+    _scrollController = ReadingScrollController(
+      store: _positions,
+      positionKey: () =>
+          readingPositionKey(widget.filePath, widget.resourceId, 'markdown'),
+    );
     _load = _readFile();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
+    _positions.flush();
     _editController.dispose();
     super.dispose();
   }
 
   Future<String> _readFile() async {
+    await _positions.load();
     final file = File(widget.filePath);
     if (!await file.exists()) {
       throw StateError('File is missing on this device.');
@@ -183,7 +196,7 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final document = _document();
+          final document = KeyedSubtree(key: _documentKey, child: _document());
           if (!_showAiMaterials) return document;
           if (!wide) {
             return Stack(
@@ -279,6 +292,7 @@ class _MarkdownStudyScreenState extends ConsumerState<MarkdownStudyScreen> {
         final sections = splitStudyMarkdown(content);
         return ScrollEdgeArrows(
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             cacheExtent: 120,
             itemCount: sections.length + 1,

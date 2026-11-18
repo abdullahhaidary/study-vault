@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -9,6 +10,7 @@ import '../../ai_chat/domain/ai_chat_models.dart';
 import '../../ai_chat/presentation/widgets/ai_discussions_section.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../data/lesson_progress_providers.dart';
+import '../data/materials_providers.dart';
 import '../../study_pins/data/pin_categories_providers.dart';
 import '../../study_pins/data/study_pins_providers.dart';
 import '../../study_pins/domain/pin_coordinates.dart';
@@ -43,6 +45,14 @@ class ImageStudyScreen extends ConsumerStatefulWidget {
 class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
   final TransformationController _transformController =
       TransformationController();
+  late String _resourceId;
+  late String _title;
+  String? _lessonId;
+  int _loadEpoch = 0;
+  final _pointers = <int>{};
+  Offset? _swipeStart;
+  Offset? _swipeEnd;
+  bool _swipeAllowed = false;
   ui.Image? _decoded;
   Object? _loadError;
   StudyPin? _readerPin;
@@ -52,10 +62,12 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
   @override
   void initState() {
     super.initState();
+    _resourceId = widget.resourceId;
+    _title = widget.title;
     _focusedPinId = widget.focusPinId;
     _loadImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      recordMaterialStudyActivity(ref, materialId: widget.resourceId);
+      if (mounted) recordMaterialStudyActivity(ref, materialId: _resourceId);
     });
   }
 
@@ -68,9 +80,18 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
 
   bool get _isWide => MediaQuery.sizeOf(context).width >= 720;
 
-  Future<void> _loadImage() async {
+  Future<void> _loadImage({LessonMaterial? material}) async {
+    final epoch = ++_loadEpoch;
     try {
-      final buffer = await ui.ImmutableBuffer.fromFilePath(widget.filePath);
+      final path = material == null
+          ? widget.filePath
+          : await materialAbsolutePath(material);
+      if (!mounted || epoch != _loadEpoch) return;
+      final buffer = await ui.ImmutableBuffer.fromFilePath(path);
+      if (!mounted || epoch != _loadEpoch) {
+        buffer.dispose();
+        return;
+      }
       final codec = await ui.instantiateImageCodecWithSize(
         buffer,
         getTargetSize: (width, height) {
@@ -84,8 +105,9 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
         },
       );
       try {
+        if (!mounted || epoch != _loadEpoch) return;
         final frame = await codec.getNextFrame();
-        if (!mounted) {
+        if (!mounted || epoch != _loadEpoch) {
           frame.image.dispose();
           return;
         }
@@ -98,11 +120,72 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
         codec.dispose();
       }
     } catch (error) {
-      if (mounted) {
+      if (mounted && epoch == _loadEpoch) {
         setState(() => _loadError = error);
       }
     }
   }
+
+  bool get _atFit => (_transformController.value.storage[0] - 1).abs() < 0.02;
+
+  void _changeImage(List<LessonMaterial> images, int direction) {
+    final current = images.indexWhere((image) => image.id == _resourceId);
+    final next = current + direction;
+    if (current < 0 || next < 0 || next >= images.length) return;
+    final material = images[next];
+    setState(() {
+      _resourceId = material.id;
+      _title = material.title;
+      _decoded?.dispose();
+      _decoded = null;
+      _loadError = null;
+      _readerPin = null;
+      _focusedPinId = null;
+      _didApplyInitialFocus = true;
+      _swipeAllowed = false;
+      _transformController.value = Matrix4.identity();
+    });
+    _loadImage(material: material);
+    recordMaterialStudyActivity(ref, materialId: material.id);
+  }
+
+  Widget _swipeArea({
+    required Widget child,
+    required bool annotate,
+    required List<LessonMaterial> images,
+  }) => Listener(
+    key: const ValueKey('image-swipe-area'),
+    behavior: HitTestBehavior.opaque,
+    onPointerDown: (event) {
+      _pointers.add(event.pointer);
+      if (_pointers.length == 1) {
+        _swipeStart = _swipeEnd = event.position;
+        _swipeAllowed = !annotate && _atFit && event.buttons == kPrimaryButton;
+      } else {
+        _swipeAllowed = false;
+      }
+    },
+    onPointerMove: (event) {
+      if (_pointers.length == 1) _swipeEnd = event.position;
+    },
+    onPointerCancel: (event) {
+      _pointers.remove(event.pointer);
+      _swipeAllowed = false;
+    },
+    onPointerUp: (event) {
+      final allowed =
+          _swipeAllowed && _pointers.length == 1 && !annotate && _atFit;
+      _pointers.remove(event.pointer);
+      _swipeAllowed = false;
+      if (!allowed || _swipeStart == null || _swipeEnd == null) return;
+      final delta = _swipeEnd! - _swipeStart!;
+      if (delta.dx.abs() >= 64 && delta.dx.abs() > delta.dy.abs() * 1.3) {
+        _transformController.value = Matrix4.identity();
+        _changeImage(images, delta.dx < 0 ? 1 : -1);
+      }
+    },
+    child: child,
+  );
 
   Future<void> _openReader(StudyPin pin) async {
     if (_isWide) {
@@ -168,7 +251,7 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
     await createStudyPin(
       ref,
       CreateStudyPinInput(
-        resourceId: widget.resourceId,
+        resourceId: _resourceId,
         pageNumber: null,
         point: point,
         shortText: result.shortText,
@@ -180,7 +263,19 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final resourceId = widget.resourceId;
+    final resourceId = _resourceId;
+    final original = ref
+        .watch(materialByIdProvider(widget.resourceId))
+        .valueOrNull;
+    _lessonId ??= original?.lessonId;
+    final lessonId = _lessonId;
+    final images = lessonId == null
+        ? const <LessonMaterial>[]
+        : (ref.watch(materialsForLessonProvider(lessonId)).valueOrNull ??
+                  const <LessonMaterial>[])
+              .where((material) => isImageMimeType(material.mimeType))
+              .toList();
+    final imageIndex = images.indexWhere((image) => image.id == resourceId);
     final annotate = ref.watch(addPinModeProvider(resourceId));
     final displayMode = ref.watch(pinDisplayModeProvider(resourceId));
     final pinsAsync = ref.watch(studyPinsForResourceProvider(resourceId));
@@ -216,11 +311,11 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(_title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           FavoriteStarButton(
             entityType: FavoriteEntityType.material,
-            entityId: widget.resourceId,
+            entityId: resourceId,
           ),
           IconButton(
             tooltip: 'AI Discussions',
@@ -246,7 +341,7 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
                         const SizedBox(height: 8),
                         AiDiscussionsList(
                           kind: AiContextKind.material,
-                          id: widget.resourceId,
+                          id: resourceId,
                         ),
                       ],
                     ),
@@ -262,8 +357,8 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
               context,
               scope: ReviewScope(
                 type: ReviewScopeType.material,
-                id: widget.resourceId,
-                title: widget.title,
+                id: resourceId,
+                title: _title,
               ),
             ),
             icon: const Icon(Icons.school_outlined),
@@ -286,11 +381,15 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
           Expanded(
             child: Stack(
               children: [
-                _buildBody(
+                _swipeArea(
                   annotate: annotate,
-                  displayMode: displayMode,
-                  pins: pins,
-                  categoryMap: categoryMap,
+                  images: images,
+                  child: _buildBody(
+                    annotate: annotate,
+                    displayMode: displayMode,
+                    pins: pins,
+                    categoryMap: categoryMap,
+                  ),
                 ),
                 if (_isWide && _readerPin != null)
                   StudyPinReaderOverlay(
@@ -300,6 +399,30 @@ class _ImageStudyScreenState extends ConsumerState<ImageStudyScreen> {
               ],
             ),
           ),
+          if (images.length > 1 && imageIndex >= 0)
+            SafeArea(
+              top: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    tooltip: 'Previous image',
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: imageIndex > 0
+                        ? () => _changeImage(images, -1)
+                        : null,
+                  ),
+                  Text('${imageIndex + 1} of ${images.length}'),
+                  IconButton(
+                    tooltip: 'Next image',
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: imageIndex + 1 < images.length
+                        ? () => _changeImage(images, 1)
+                        : null,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

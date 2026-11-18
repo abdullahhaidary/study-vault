@@ -1,17 +1,25 @@
 /// Wire protocol for a custom AI endpoint.
 ///
-/// Only the New API / Anthropic Messages shape is implemented. Another
-/// protocol is a different variant, not a drop-in replacement.
+/// [newApiAnthropic] is the Anthropic Messages shape used by New API and
+/// Claude-compatible gateways. [openAiCompatible] is `/chat/completions`, used
+/// by OpenAI-shaped gateways that do not speak Messages at all.
 enum AiEndpointProtocol {
-  newApiAnthropic;
+  newApiAnthropic,
+  openAiCompatible;
 
   String get storageValue => name;
 
+  String get label => switch (this) {
+    newApiAnthropic => 'Anthropic Messages',
+    openAiCompatible => 'OpenAI-compatible',
+  };
+
   static AiEndpointProtocol parse(String? raw) {
-    if (raw == newApiAnthropic.storageValue) return newApiAnthropic;
-    throw FormatException(
-      'Unsupported AI endpoint protocol${raw == null || raw.isEmpty ? '' : ': $raw'}.',
-    );
+    if (raw == null || raw.isEmpty) return newApiAnthropic;
+    for (final protocol in values) {
+      if (protocol.storageValue == raw) return protocol;
+    }
+    throw FormatException('Unsupported AI endpoint protocol: $raw.');
   }
 }
 
@@ -57,6 +65,8 @@ class AiEndpointProfile {
     required this.keySuffix,
     this.connectionRevision = 0,
     this.promptCachingEnabled = false,
+    this.pdfAttachmentsEnabled = false,
+    this.pdfMaxPages = 100,
   });
 
   static const staleAfter = Duration(hours: 24);
@@ -80,6 +90,10 @@ class AiEndpointProfile {
 
   /// Opt in only when the gateway supports Anthropic cache_control.
   final bool promptCachingEnabled;
+
+  /// Explicit capability for the server/model selected from this profile.
+  final bool pdfAttachmentsEnabled;
+  final int pdfMaxPages;
 
   String get host {
     final uri = Uri.tryParse(baseUrl);
@@ -121,6 +135,8 @@ class AiEndpointProfile {
     'keySuffix': keySuffix,
     'connectionRevision': connectionRevision,
     'promptCachingEnabled': promptCachingEnabled,
+    'pdfAttachmentsEnabled': pdfAttachmentsEnabled,
+    'pdfMaxPages': pdfMaxPages,
   };
 
   factory AiEndpointProfile.fromJson(Map<String, Object?> json) {
@@ -150,6 +166,8 @@ class AiEndpointProfile {
       keySuffix: json['keySuffix'] as String? ?? '',
       connectionRevision: json['connectionRevision'] as int? ?? 0,
       promptCachingEnabled: json['promptCachingEnabled'] == true,
+      pdfAttachmentsEnabled: json['pdfAttachmentsEnabled'] == true,
+      pdfMaxPages: ((json['pdfMaxPages'] as int?) ?? 100).clamp(1, 600),
     );
   }
 
@@ -169,6 +187,8 @@ class AiEndpointProfile {
     String? keySuffix,
     int? connectionRevision,
     bool? promptCachingEnabled,
+    bool? pdfAttachmentsEnabled,
+    int? pdfMaxPages,
   }) {
     return AiEndpointProfile(
       id: id,
@@ -190,6 +210,9 @@ class AiEndpointProfile {
       keySuffix: keySuffix ?? this.keySuffix,
       connectionRevision: connectionRevision ?? this.connectionRevision,
       promptCachingEnabled: promptCachingEnabled ?? this.promptCachingEnabled,
+      pdfAttachmentsEnabled:
+          pdfAttachmentsEnabled ?? this.pdfAttachmentsEnabled,
+      pdfMaxPages: pdfMaxPages ?? this.pdfMaxPages,
     );
   }
 

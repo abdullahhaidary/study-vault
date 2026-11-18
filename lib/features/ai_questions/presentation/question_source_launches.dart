@@ -40,6 +40,7 @@ abstract final class QuestionSourceLaunches {
         QuestionSourceType.aiExplanation,
         QuestionSourceType.aiDeepExplanation,
         QuestionSourceType.aiRealWorldExamples,
+        QuestionSourceType.aiMentalBlueprint,
         QuestionSourceType.annotations,
         QuestionSourceType.notes,
         QuestionSourceType.annotationsAndNotes,
@@ -92,6 +93,7 @@ abstract final class QuestionSourceLaunches {
         QuestionSourceType.aiExplanation,
         QuestionSourceType.aiDeepExplanation,
         QuestionSourceType.aiRealWorldExamples,
+        QuestionSourceType.aiMentalBlueprint,
         QuestionSourceType.annotations,
         QuestionSourceType.notes,
         QuestionSourceType.annotationsAndNotes,
@@ -124,6 +126,7 @@ abstract final class QuestionSourceLaunches {
         QuestionSourceType.aiExplanation,
         QuestionSourceType.aiDeepExplanation,
         QuestionSourceType.aiRealWorldExamples,
+        QuestionSourceType.aiMentalBlueprint,
         QuestionSourceType.page,
         QuestionSourceType.material,
       ],
@@ -140,6 +143,8 @@ abstract final class QuestionSourceLaunches {
 
   static QuestionSourceType sourceTypeForPdfAi(PdfAiMaterialType type) {
     return switch (type) {
+      PdfAiMaterialType.mentalBlueprint =>
+        QuestionSourceType.aiMentalBlueprint,
       PdfAiMaterialType.summary => QuestionSourceType.aiSummary,
       PdfAiMaterialType.explanation => QuestionSourceType.aiExplanation,
       PdfAiMaterialType.deepExplanation => QuestionSourceType.aiDeepExplanation,
@@ -363,6 +368,7 @@ abstract final class QuestionSourceLaunches {
       case QuestionSourceType.aiExplanation:
       case QuestionSourceType.aiDeepExplanation:
       case QuestionSourceType.aiRealWorldExamples:
+      case QuestionSourceType.aiMentalBlueprint:
         return _resolvePdfAiSource(
           ref: ref,
           type: type,
@@ -388,6 +394,8 @@ abstract final class QuestionSourceLaunches {
       QuestionSourceType.aiDeepExplanation => PdfAiMaterialType.deepExplanation,
       QuestionSourceType.aiRealWorldExamples =>
         PdfAiMaterialType.realWorldExamples,
+      QuestionSourceType.aiMentalBlueprint =>
+        PdfAiMaterialType.mentalBlueprint,
       _ => PdfAiMaterialType.explanation,
     };
     final db = ref.read(databaseProvider);

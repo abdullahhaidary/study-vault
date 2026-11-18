@@ -108,6 +108,7 @@ class _HtmlStudyScreenState extends ConsumerState<HtmlStudyScreen> {
       final server = await HtmlPageServer.start(
         materialId: material.id,
         page: page,
+        storageIdentity: '${widget.filePath}|${widget.resourceId}',
       );
       if (!mounted) {
         await server.close();

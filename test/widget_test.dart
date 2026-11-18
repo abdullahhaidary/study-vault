@@ -8,7 +8,7 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 
 void main() {
-  testWidgets('Home screen shows Study Vault title and empty state', (
+  testWidgets('Home screen shows StudyDesk title and empty state', (
     tester,
   ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -25,7 +25,7 @@ void main() {
     await tester.pump();
 
     // SliverAppBar.large renders the title in both expanded and collapsed states.
-    expect(find.text('Study Vault'), findsWidgets);
+    expect(find.text('StudyDesk'), findsWidgets);
     expect(find.text('My Classes'), findsOneWidget);
     expect(find.text('No classes yet'), findsOneWidget);
 

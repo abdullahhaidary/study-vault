@@ -156,6 +156,7 @@ class _InlineAiOverlayState extends ConsumerState<InlineAiOverlay> {
   Future<bool> _ensureReady() => AiAssistantController.ensureReady(
     context,
     ref,
+    selection: _controller.state.selection,
     requireGemini:
         _controller.state.pageSendMode == AiPageSendMode.image &&
         _controller.state.selection?.provider != AiProviderId.pocket,

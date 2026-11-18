@@ -4,7 +4,7 @@ import 'ai_provider.dart';
 import 'ai_selectable_model.dart';
 
 const customProfileVisionReason =
-    'Custom API profiles are text-only. Use a Gemini vision model.';
+    'Page-image input is not enabled for custom API profiles. Use a Gemini vision model.';
 
 /// Picker rows for custom profiles. Identical model ids on different profiles
 /// stay distinct because each row carries that profile's id.

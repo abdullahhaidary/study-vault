@@ -1,3 +1,4 @@
+import 'book_ai_request_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,12 +60,15 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
     ReferenceBookChapter chapter,
     BookAiKind kind,
   ) async {
-    final selection = await pickAiModel(
+    final request = await pickBookAiRequest(
       context,
       ref,
       title: 'Write the ${kind.label.toLowerCase()} with',
+      pageCount: chapter.endPage - chapter.startPage + 1,
+      sourceDescription:
+          '${chapter.title} · pages ${chapter.startPage}–${chapter.endPage}',
     );
-    if (selection == null || !mounted) return;
+    if (request == null || !mounted) return;
     await _run(
       'Writing the ${kind.label.toLowerCase()}…',
       () => ref
@@ -73,7 +77,8 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
             book: book,
             chapter: chapter,
             kind: kind,
-            selection: selection,
+            selection: request.selection,
+            inputMode: request.inputMode,
           ),
     );
   }
@@ -222,8 +227,14 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
     start.dispose();
     end.dispose();
     if (ok != true || s == null || e == null || !mounted) return;
-    final selection = await pickAiModel(context, ref, title: 'Explain with');
-    if (selection == null || !mounted) return;
+    final request = await pickBookAiRequest(
+      context,
+      ref,
+      title: 'Explain with',
+      pageCount: e - s + 1,
+      sourceDescription: 'Book pages $s–$e',
+    );
+    if (request == null || !mounted) return;
     await _run(
       'Explaining pages $s–$e…',
       () => ref
@@ -232,7 +243,8 @@ class _BookChapterScreenState extends ConsumerState<BookChapterScreen> {
             book: book,
             startPage: s,
             endPage: e,
-            selection: selection,
+            selection: request.selection,
+            inputMode: request.inputMode,
             chapterId: chapter.id,
           ),
     );

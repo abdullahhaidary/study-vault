@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/features/lessons/data/materials_providers.dart';
@@ -14,7 +15,10 @@ import 'package:study_vault/features/reference_books/data/book_providers.dart';
 
 void main() {
   late AppDatabase db;
-  setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+  });
   tearDown(() => db.close());
 
   final original = [
@@ -142,6 +146,69 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(heading('Section 1'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Persian original study text lays out RTL without a translation', (
+    tester,
+  ) async {
+    final persian = PdfAiMaterial(
+      id: 'v-fa',
+      materialId: 'pdf-1',
+      type: PdfAiMaterialType.mentalBlueprint.storageValue,
+      content:
+          '## موضوع اصلی\n\n'
+          'این درس درباره نماینده (`Delegate`) در سی‌شارپ است.\n',
+      version: 1,
+      generatedAt: DateTime(2026),
+      sourceFingerprint: 'f-fa',
+    );
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          pdfAiPreferredStoreProvider.overrideWithValue(
+            MemoryPdfAiPreferredStore(),
+          ),
+          pdfAiMaterialsProvider(
+            'pdf-1',
+          ).overrideWith((ref) => Stream.value([persian])),
+          pdfAiTranslationsProvider(
+            'pdf-1',
+          ).overrideWith((ref) => Stream.value(const {})),
+          pdfAiAlsoPersianProvider.overrideWith((ref) async => false),
+          materialsForLessonProvider(
+            'lesson-1',
+          ).overrideWith((ref) => Stream.value([])),
+          materialBookLinksProvider.overrideWith(
+            (ref, id) => Stream.value(const []),
+          ),
+        ],
+        child: const MaterialApp(
+          home: PdfAiMaterialReaderScreen(
+            materialId: 'pdf-1',
+            pdfTitle: 'PDF',
+            filePath: '/fake.pdf',
+            type: PdfAiMaterialType.mentalBlueprint,
+          ),
+        ),
+      ),
+    );
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    final persianHeading = heading('موضوع اصلی');
+    expect(persianHeading, findsOneWidget);
+    final direction = tester.widget<Directionality>(
+      find
+          .ancestor(of: persianHeading, matching: find.byType(Directionality))
+          .first,
+    );
+    expect(direction.textDirection, TextDirection.rtl);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
   });

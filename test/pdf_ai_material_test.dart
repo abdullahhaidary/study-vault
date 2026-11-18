@@ -4,12 +4,14 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/features/lessons/data/materials_providers.dart';
 import 'package:study_vault/features/pdf_ai_materials/data/pdf_ai_material_providers.dart';
 import 'package:study_vault/features/pdf_ai_materials/data/pdf_ai_preferred_store.dart';
 import 'package:study_vault/features/pdf_ai_materials/domain/pdf_ai_versioning.dart';
 import 'package:study_vault/features/pdf_ai_materials/presentation/pdf_ai_material_reader_screen.dart';
+import 'package:study_vault/features/pdf_ai_materials/presentation/pdf_ai_materials_panel.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
 import 'helpers/ai_selection_helpers.dart';
 import 'package:study_vault/core/database/app_database.dart';
@@ -22,15 +24,25 @@ import 'package:study_vault/features/pdf_ai_materials/services/pdf_ai_material_s
 import 'package:study_vault/features/reference_books/data/book_providers.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   group('PDF AI prompt structure', () {
-    test('all five generation types have distinct typed instructions', () {
+    test('all six generation types have distinct typed instructions', () {
       final instructions = {
         for (final type in PdfAiMaterialType.values)
           type.storageValue: type.generationInstruction,
       };
 
-      expect(instructions, hasLength(5));
+      expect(instructions, hasLength(6));
       expect(instructions['slideshow'], contains('<!-- slide -->'));
+      expect(instructions['mental_blueprint'], contains('Persian'));
+      expect(
+        instructions['mental_blueprint'],
+        contains('blueprint before the bricks'),
+      );
+      expect(instructions['mental_blueprint'], contains('Main Topic'));
+      expect(instructions['mental_blueprint'], contains('Prerequisites'));
+      expect(instructions['mental_blueprint'], contains('right-to-left'));
+      expect(instructions['mental_blueprint'], contains('backticks'));
       expect(instructions['summary'], contains('concise'));
       expect(instructions['explanation'], contains('university student'));
       expect(instructions['deep_explanation'], contains('first principles'));
@@ -39,6 +51,10 @@ void main() {
       expect(
         instructions['real_world_examples'],
         contains('do not re-teach the theory'),
+      );
+      expect(
+        PdfAiMaterialTypeX.fromStorage('mental_blueprint'),
+        PdfAiMaterialType.mentalBlueprint,
       );
       expect(
         PdfAiMaterialTypeX.fromStorage('real_world_examples'),
@@ -334,6 +350,97 @@ Email footer
 
     tearDown(() => db.close());
 
+    testWidgets(
+      'Summary Explanation and Deep Explanation retain independent positions',
+      (tester) async {
+        final types = [
+          PdfAiMaterialType.summary,
+          PdfAiMaterialType.explanation,
+          PdfAiMaterialType.deepExplanation,
+        ];
+        for (final type in types) {
+          client.outputs.add(
+            List.generate(
+              35,
+              (index) =>
+                  '## ${type.shortName} section $index\n\n${'Long study paragraph. ' * 45}\n\n',
+            ).join(),
+          );
+        }
+        final materials = await tester.runAsync(
+          () async => [
+            for (final type in types) await _generate(service, type: type),
+          ],
+        );
+        await _pumpReader(tester, db, materials!, panel: true);
+        final offsets = <PdfAiMaterialType, double>{};
+        for (var i = 0; i < types.length; i++) {
+          await tester.tap(find.text(types[i].shortName).first);
+          await tester.pumpAndSettle();
+          final list = find.byType(ListView).first;
+          await tester.drag(list, Offset(0, -800.0 * (i + 1)));
+          await tester.pump();
+          offsets[types[i]] = tester.widget<ListView>(list).controller!.offset;
+          expect(offsets[types[i]], greaterThan(500));
+        }
+        for (final type in types) {
+          await tester.tap(find.text(type.shortName).first);
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .widget<ListView>(find.byType(ListView).first)
+                .controller!
+                .offset,
+            closeTo(offsets[type]!, 2),
+          );
+          expect(tester.takeException(), isNull);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets('slideshow remembers its slide after switching material tabs', (
+      tester,
+    ) async {
+      client.outputs.add(
+        '## Slide 1\nFirst slide.\n<!-- slide -->\n## Slide 2\nSecond slide.\n<!-- slide -->\n## Slide 3\nThird slide.',
+      );
+      final slides = await tester.runAsync(
+        () => _generate(service, type: PdfAiMaterialType.slideshow),
+      );
+      await _pumpReader(tester, db, [slides!], panel: true);
+      final tab = find.text(PdfAiMaterialType.slideshow.shortName).first;
+      await tester.ensureVisible(tab);
+      await tester.tap(tab);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Next slide'));
+      await tester.pumpAndSettle();
+      final page = tester
+          .widget<PageView>(find.byType(PageView))
+          .controller!
+          .page!
+          .round();
+      expect(page, greaterThan(0));
+      await tester.ensureVisible(find.text('Document Summary').first);
+      await tester.tap(find.text('Document Summary').first);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(tab);
+      await tester.tap(tab);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<PageView>(find.byType(PageView))
+            .controller!
+            .page!
+            .round(),
+        page,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('reader opens switchable materials without losing its place', (
       tester,
     ) async {
@@ -347,7 +454,7 @@ Email footer
           await _generate(service, type: PdfAiMaterialType.realWorldExamples),
         ],
       );
-      await _pumpReader(tester, db, materials!);
+      await _pumpReader(tester, db, materials!, panel: true);
       final summaryList = find.byType(ListView).first;
       await tester.drag(summaryList, const Offset(0, -400));
       await tester.pumpAndSettle();
@@ -355,33 +462,27 @@ Email footer
       final offset = controller.offset;
       expect(offset, greaterThan(0));
 
-      await tester.tap(find.byTooltip('Examples'));
-      await tester.pumpAndSettle();
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('A saved real-world example.'), findsOneWidget);
-      expect(find.byTooltip('Close study materials'), findsOneWidget);
-
-      final imagesTab = find.widgetWithText(Tab, 'Images');
-      await tester.ensureVisible(imagesTab);
-      await tester.tap(imagesTab);
-      await tester.pumpAndSettle();
-      expect(find.text('No images yet.'), findsOneWidget);
-
-      final examplesTab = find.widgetWithText(Tab, 'Examples');
+      final examplesTab = find
+          .text(PdfAiMaterialType.realWorldExamples.shortName)
+          .first;
       await tester.ensureVisible(examplesTab);
       await tester.tap(examplesTab);
       await tester.pumpAndSettle();
       expect(find.text('A saved real-world example.'), findsOneWidget);
-      await tester.tap(find.byTooltip('Close study materials'));
+      final summaryTab = find.text('Document Summary').first;
+      await tester.ensureVisible(summaryTab);
+      await tester.tap(summaryTab);
       await tester.pumpAndSettle();
-      expect(find.byType(Dialog), findsNothing);
-      expect(controller.offset, offset);
+      final restored = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      expect(restored.offset, closeTo(offset, 2));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
     });
 
-    testWidgets('compact shortcuts fit a narrow reader and open images', (
+    testWidgets('reader controls fit a narrow screen and open history', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(360, 800);
@@ -391,33 +492,30 @@ Email footer
       client.outputs.add('A short summary.');
       final summary = await tester.runAsync(() => _generate(service));
       await _pumpReader(tester, db, [summary!]);
-      expect(find.byTooltip('Examples'), findsOneWidget);
-      expect(find.byTooltip('Images'), findsOneWidget);
-      expect(find.byTooltip('More materials'), findsOneWidget);
+      expect(find.byTooltip('Download Markdown'), findsOneWidget);
+      expect(find.byTooltip('Version options'), findsOneWidget);
       expect(find.byTooltip('History'), findsOneWidget);
       expect(tester.takeException(), isNull);
-
-      await tester.tap(find.byTooltip('Images'));
-      await tester.pumpAndSettle();
-      expect(find.text('No images yet.'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('Close study materials'));
-      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('History'));
       await tester.pumpAndSettle();
-      expect(find.text('Summary History'), findsOneWidget);
+      expect(find.text('Document Summary History'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
     });
 
-    testWidgets('missing examples require explicit generation in the popup', (
+    testWidgets('missing examples require explicit generation in their tab', (
       tester,
     ) async {
       client.outputs.add('A short summary.');
       final summary = await tester.runAsync(() => _generate(service));
-      await _pumpReader(tester, db, [summary!]);
+      await _pumpReader(tester, db, [summary!], panel: true);
       final calls = client.messages.length;
-      await tester.tap(find.byTooltip('Examples'));
+      await tester.ensureVisible(
+        find.text(PdfAiMaterialType.realWorldExamples.shortName).first,
+      );
+      await tester.tap(
+        find.text(PdfAiMaterialType.realWorldExamples.shortName).first,
+      );
       await tester.pumpAndSettle();
       expect(
         find.text('Real-World Examples has not been generated yet.'),
@@ -425,9 +523,8 @@ Email footer
       );
       expect(find.widgetWithText(FilledButton, 'Generate'), findsOneWidget);
       expect(client.messages.length, calls);
-      await tester.tap(find.byTooltip('Close study materials'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('More materials'));
+      await tester.ensureVisible(find.text('Document Summary').first);
+      await tester.tap(find.text('Document Summary').first);
       await tester.pumpAndSettle();
       expect(find.text('A short summary.'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -470,7 +567,7 @@ Email footer
       await tester.tap(find.text('Add from JSON'));
       await tester.pumpAndSettle();
       expect(find.text('Copy instruction'), findsOneWidget);
-      expect(find.text('Add Summary from JSON'), findsOneWidget);
+      expect(find.text('Add Document Summary from JSON'), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
@@ -725,8 +822,9 @@ Email footer
 Future<void> _pumpReader(
   WidgetTester tester,
   AppDatabase db,
-  List<PdfAiMaterial> materials,
-) async {
+  List<PdfAiMaterial> materials, {
+  bool panel = false,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -744,13 +842,20 @@ Future<void> _pumpReader(
           (ref, id) => Stream.value(const []),
         ),
       ],
-      child: const MaterialApp(
-        home: PdfAiMaterialReaderScreen(
-          materialId: 'pdf-1',
-          pdfTitle: 'PDF',
-          filePath: '/fake.pdf',
-          type: PdfAiMaterialType.summary,
-        ),
+      child: MaterialApp(
+        home: panel
+            ? PdfAiMaterialsPanel(
+                materialId: 'pdf-1',
+                title: 'PDF',
+                filePath: '/fake.pdf',
+                onClose: () {},
+              )
+            : const PdfAiMaterialReaderScreen(
+                materialId: 'pdf-1',
+                pdfTitle: 'PDF',
+                filePath: '/fake.pdf',
+                type: PdfAiMaterialType.summary,
+              ),
       ),
     ),
   );

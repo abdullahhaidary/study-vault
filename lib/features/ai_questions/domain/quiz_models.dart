@@ -17,6 +17,7 @@ enum QuestionSourceType {
   aiExplanation,
   aiDeepExplanation,
   aiRealWorldExamples,
+  aiMentalBlueprint,
 }
 
 /// Supported quiz play modes. Exam Mode is reserved for a follow-up.
@@ -84,6 +85,7 @@ extension QuestionSourceTypeX on QuestionSourceType {
     QuestionSourceType.aiExplanation => 'ai_explanation',
     QuestionSourceType.aiDeepExplanation => 'ai_deep_explanation',
     QuestionSourceType.aiRealWorldExamples => 'ai_real_world_examples',
+    QuestionSourceType.aiMentalBlueprint => 'ai_mental_blueprint',
   };
 
   String get label => switch (this) {
@@ -94,10 +96,11 @@ extension QuestionSourceTypeX on QuestionSourceType {
     QuestionSourceType.annotations => 'Annotations',
     QuestionSourceType.notes => 'Notes',
     QuestionSourceType.annotationsAndNotes => 'Annotations + notes',
-    QuestionSourceType.aiSummary => 'AI Summary',
+    QuestionSourceType.aiSummary => 'Document Summary',
     QuestionSourceType.aiExplanation => 'AI Explanation',
     QuestionSourceType.aiDeepExplanation => 'AI Deep Explanation',
     QuestionSourceType.aiRealWorldExamples => 'AI Real-World Examples',
+    QuestionSourceType.aiMentalBlueprint => 'AI Mental Blueprint',
   };
 
   static QuestionSourceType fromStorage(String value) {

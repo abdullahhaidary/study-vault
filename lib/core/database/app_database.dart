@@ -641,7 +641,7 @@ class QuestionSets extends Table {
 
   /// `selected_text` | `page` | `pages` | `material` | `annotations` |
   /// `notes` | `annotations_and_notes` | `ai_summary` | `ai_explanation` |
-  /// `ai_deep_explanation` | `ai_real_world_examples`
+  /// `ai_deep_explanation` | `ai_real_world_examples` | `ai_mental_blueprint`
   TextColumn get sourceType => text()();
   TextColumn get sourceReference => text().nullable()();
   IntColumn get questionCount => integer()();

@@ -303,7 +303,7 @@ class _AiModelSelectorSheetState extends ConsumerState<_AiModelSelectorSheet> {
         provider: AiProviderId.newApi,
         enabled: profile != null && !widget.constraints.visionOnly,
         disabledReason: widget.constraints.visionOnly
-            ? 'Custom API profiles are text-only. Use a Gemini vision model.'
+            ? 'Page-image input is not enabled for custom API profiles. Use a Gemini vision model.'
             : profile == null
             ? 'API profile unavailable'
             : null,

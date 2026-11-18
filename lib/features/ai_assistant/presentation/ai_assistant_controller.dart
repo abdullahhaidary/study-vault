@@ -5,6 +5,7 @@ import '../../../core/widgets/transient_snack_bar.dart';
 import '../data/ai_providers.dart';
 import '../data/failed_ai_requests_provider.dart';
 import '../domain/ai_actions.dart';
+import '../domain/ai_execution_selection.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
@@ -28,8 +29,18 @@ abstract final class AiAssistantController {
     BuildContext context,
     WidgetRef ref, {
     bool requireGemini = false,
+    AiExecutionSelection? selection,
   }) async {
-    if (requireGemini) {
+    if (selection != null && !requireGemini) {
+      if (!await isSelectionConfigured(ref, selection)) {
+        if (!context.mounted) return false;
+        await showAiMissingKeyDialog(
+          context,
+          requireProvider: selection.provider,
+        );
+        return false;
+      }
+    } else if (requireGemini) {
       final creds = ref.read(aiCredentialStoreProvider);
       if (!await creds.hasApiKeyFor(AiProviderId.gemini)) {
         if (!context.mounted) return false;
@@ -47,6 +58,7 @@ abstract final class AiAssistantController {
         return false;
       }
     }
+    if (!context.mounted) return false;
     final settings = ref.read(aiSettingsStoreProvider);
     if (!await settings.getPrivacyConsentAccepted()) {
       if (!context.mounted) return false;
@@ -57,6 +69,27 @@ abstract final class AiAssistantController {
       ref.invalidate(aiSettingsStateProvider);
     }
     return true;
+  }
+
+  /// Check the captured selection, rather than the unrelated global default.
+  static Future<bool> isSelectionConfigured(
+    WidgetRef ref,
+    AiExecutionSelection selection,
+  ) async {
+    if (selection.provider == AiProviderId.pocket) return true;
+    if (selection.provider == AiProviderId.newApi) {
+      final repository = ref.read(aiEndpointProfileRepositoryProvider);
+      final bound = await repository.bindLegacy(selection.modelRef);
+      final id = bound.endpointProfileId;
+      if (id == null) return false;
+      try {
+        await repository.resolve(id);
+        return true;
+      } on FormatException {
+        return false;
+      }
+    }
+    return ref.read(aiCredentialStoreProvider).hasApiKeyFor(selection.provider);
   }
 
   static Future<AiStudyResult?> runWithLoading(
@@ -112,6 +145,7 @@ abstract final class AiAssistantController {
         !await ensureReady(
           context,
           ref,
+          selection: request.selection,
           requireGemini:
               (request.hasPageImage ||
                   request.pageSendMode == AiPageSendMode.image) &&

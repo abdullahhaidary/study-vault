@@ -301,7 +301,7 @@ class HttpGeminiChatService implements AiChatTransport {
         'parts': [
           {
             'text':
-                'You are Study AI, a helpful study assistant inside Study Vault. '
+                'You are Study AI, a helpful study assistant inside StudyDesk. '
                 'Be clear, accurate, and concise. Prefer structured explanations '
                 'with headings and lists when helpful. Support English and '
                 'Persian/Dari as needed. ${ChartSpec.promptInstruction}'

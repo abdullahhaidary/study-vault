@@ -7,7 +7,7 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { rateLimit, sessionToken, sha256, verifyPassword } from './security.js';
 import { push, schemaVersion, validateMutations } from './store.js';
-import { snapshot, commitLibrary, validCommit } from './library-sync.js';
+import { snapshot, syncStatus, commitLibrary, validCommit } from './library-sync.js';
 
 export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   maxFileBytes = 256 * 1024 * 1024, quotaBytes = 10 * 1024 * 1024 * 1024 }) {
@@ -96,6 +96,17 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   app.get('/v2/snapshot', async (req, res) => {
     res.json(await snapshot(pool, req.accountId));
   });
+  app.get('/v2/status', async (req, res) => {
+    res.json(await syncStatus(pool, req.accountId));
+  });
+  app.get('/v2/changes', async (req, res) => {
+    if (typeof req.query.after !== 'string' || !/^\d+$/.test(req.query.after)) {
+      return res.status(400).json({ error: 'Invalid sync cursor.' });
+    }
+    const after = Number(req.query.after);
+    if (!Number.isSafeInteger(after)) return res.status(400).json({ error: 'Invalid sync cursor.' });
+    res.json(await snapshot(pool, req.accountId, after));
+  });
   app.post('/v2/sync', express.json({ limit: '64mb', strict: true }), async (req, res) => {
     if (!validCommit(req.body)) return res.status(400).json({ error: 'Invalid library commit.' });
     const { status, ...result } = await commitLibrary(pool, req.accountId, req.body);
@@ -172,6 +183,7 @@ export function createApp({ pool, filesRoot, publicOrigin, requireHttps = true,
   app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));
   app.use((error, _req, res, _next) => {
     if (res.headersSent) return res.destroy();
+    if (error.code === 'cursor_ahead') return res.status(409).json({ code: 'cursor_ahead', error: 'Fetch a new library snapshot.' });
     const status = error.status === 413 || error.type === 'entity.too.large' ? 413 : error.type === 'entity.parse.failed' ? 400 : 500;
     res.status(status).json({ error: status === 500 ? 'Request failed. Please retry.' : 'Invalid request body.' });
   });

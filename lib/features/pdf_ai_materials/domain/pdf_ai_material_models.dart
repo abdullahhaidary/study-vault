@@ -8,6 +8,7 @@ import '../../ai_assistant/domain/ai_style_memory.dart';
 import '../../ai_questions/domain/question_source.dart';
 
 enum PdfAiMaterialType {
+  mentalBlueprint,
   summary,
   explanation,
   deepExplanation,
@@ -17,6 +18,7 @@ enum PdfAiMaterialType {
 
 extension PdfAiMaterialTypeX on PdfAiMaterialType {
   String get storageValue => switch (this) {
+    PdfAiMaterialType.mentalBlueprint => 'mental_blueprint',
     PdfAiMaterialType.summary => 'summary',
     PdfAiMaterialType.explanation => 'explanation',
     PdfAiMaterialType.deepExplanation => 'deep_explanation',
@@ -25,6 +27,7 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
   };
 
   String get displayName => switch (this) {
+    PdfAiMaterialType.mentalBlueprint => 'AI Mental Blueprint',
     PdfAiMaterialType.summary => 'AI Summary',
     PdfAiMaterialType.explanation => 'AI Explanation',
     PdfAiMaterialType.deepExplanation => 'AI Deep Explanation',
@@ -33,7 +36,8 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
   };
 
   String get shortName => switch (this) {
-    PdfAiMaterialType.summary => 'Summary',
+    PdfAiMaterialType.mentalBlueprint => 'Mental Blueprint',
+    PdfAiMaterialType.summary => 'Document Summary',
     PdfAiMaterialType.explanation => 'Explanation',
     PdfAiMaterialType.deepExplanation => 'Deep Explanation',
     PdfAiMaterialType.realWorldExamples => 'Real-World Examples',
@@ -41,7 +45,9 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
   };
 
   String get description => switch (this) {
-    PdfAiMaterialType.summary => 'Quick revision of the whole PDF',
+    PdfAiMaterialType.mentalBlueprint =>
+      'Persian big-picture map of structure and connections',
+    PdfAiMaterialType.summary => 'Quick revision of the whole document',
     PdfAiMaterialType.explanation => 'Full academic explanation',
     PdfAiMaterialType.deepExplanation =>
       'Simple, deep teaching from first principles',
@@ -52,6 +58,7 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
   };
 
   int get maxOutputTokens => switch (this) {
+    PdfAiMaterialType.mentalBlueprint => 8192,
     PdfAiMaterialType.summary => 8192,
     PdfAiMaterialType.explanation => 16384,
     PdfAiMaterialType.deepExplanation => 32768,
@@ -60,6 +67,44 @@ extension PdfAiMaterialTypeX on PdfAiMaterialType {
   };
 
   String get generationInstruction => switch (this) {
+    PdfAiMaterialType.mentalBlueprint =>
+      'Build a pre-learning mental architecture (نقشه ذهنی) of the whole '
+          'document — the blueprint before the bricks.\n'
+          'Goal: after reading this, the student knows what is in the '
+          'document, how it is organized section by section, and how the '
+          'main ideas fit together — without yet learning the details.\n'
+          'Imagine constructing a building: for now draw only the floor '
+          'plan. Doors, windows, colors, and furniture come later.\n'
+          '\n'
+          'Language:\n'
+          '- Write everything in simple, clear Persian (Farsi).\n'
+          '- Start every heading and paragraph with Persian (never English) '
+          'so the layout stays right-to-left.\n'
+          '- Keep important English technical terms in inline code backticks '
+          'next to the Persian phrase '
+          '(example: درخت دودویی جستجو (`Binary Search Tree`)).\n'
+          '\n'
+          'Scope:\n'
+          '- Stay at the general-concept / architecture level only.\n'
+          '- No deep teaching, proofs, advanced theory, or long examples.\n'
+          '- Follow the supplied document; do not invent a different course.\n'
+          '\n'
+          'Markdown structure (these roles, in this order; English gloss '
+          'only in backticks):\n'
+          '1. "## موضوع اصلی — `Main Topic`" — in very simple words, what '
+          'this document is about and why it exists.\n'
+          '2. "## ساختار کلی — `Overall Structure`" — the main sections of '
+          'the document in clear logical order.\n'
+          '3. "## نمای هر بخش — `Section Overview`" — for each section: what '
+          'it covers and what role it plays in the whole.\n'
+          '4. "## ارتباط مفاهیم — `Conceptual Connections`" — how the '
+          'sections and key ideas connect into one mental map (short '
+          'bullets or a simple relationship sketch).\n'
+          '5. "## پیش‌نیازها — `Prerequisites`" — what the student should '
+          'already understand before studying this document.\n'
+          '6. "## گام بعدی — `Next`" — list the blueprint sections the '
+          'student can explore later; stop there. Do not start teaching '
+          'any section.',
     PdfAiMaterialType.summary =>
       'Create a concise but complete study summary of the entire document.\n'
           '- Preserve important concepts, definitions, formulas, examples, '
@@ -433,7 +478,7 @@ abstract final class PdfAiPromptBuilder {
             '- Fix headings, lists, spacing, and reading flow so sections are '
             'coherent and aligned.\n'
             '- Convert mermaid, ASCII, HTML, or broken/misaligned charts and '
-            'numeric tables into Study Vault chart blocks.\n'
+            'numeric tables into StudyDesk chart blocks.\n'
             '${ChartSpec.promptInstruction}\n'
             '${extra == null || extra.isEmpty ? '' : '\nAdditional formatting notes:\n$extra\n'}'
             'Return polished Markdown only. Do not mention these instructions.',
@@ -515,7 +560,7 @@ abstract final class PdfAiPromptBuilder {
               'Use that document only — ignore the filename if it conflicts '
               'with the text.';
     return '''
-You are building a ${type.displayName} for the Study Vault app$from.
+You are building a ${type.displayName} for the StudyDesk app$from.
 
 $grounding
 
@@ -533,7 +578,7 @@ ${type.generationInstruction}
 
 ${ChartSpec.promptInstruction}
 
-ASCII diagrams (class boxes, relationship lines, comparison tables, and flows) are allowed; Study Vault renders them.
+ASCII diagrams (class boxes, relationship lines, comparison tables, and flows) are allowed; StudyDesk renders them.
 
 ${externalOutputContract.replaceAll('<type>', type.storageValue)}
 

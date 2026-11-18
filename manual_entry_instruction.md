@@ -1,9 +1,9 @@
-# Study Vault — Manual Entry Format
+# StudyDesk — Manual Entry Format
 
 Use this document as the instruction you give to an AI assistant (ChatGPT,
 Claude, Gemini, DeepSeek, …) together with your slides, PDF text, or lecture
 notes. The assistant must answer with **one JSON object only** in the format
-below. Paste that JSON into **Study Vault → Settings → Manual Entry** (or the
+below. Paste that JSON into **StudyDesk → Settings → Manual Entry** (or the
 lesson menu → *Import from JSON*). The app shows a full preview and lets you
 pick exactly which parts to save.
 
@@ -12,7 +12,7 @@ pick exactly which parts to save.
 ## Instruction to paste into the AI
 
 ```
-You are helping me build study material for the Study Vault app.
+You are helping me build study material for the StudyDesk app.
 Read the material I attach and answer with ONE JSON object only — no prose,
 no markdown fences, no comments. Use exactly this shape:
 
@@ -26,6 +26,7 @@ no markdown fences, no comments. Use exactly this shape:
     "pdf": "<title of the PDF these materials belong to, or omit>"
   },
   "study_materials": {
+    "mental_blueprint": "<markdown in Persian; big-picture only — Main Topic, Overall Structure, Section Overview, Conceptual Connections, Prerequisites, then Next; English technical terms beside Persian; no deep teaching>",
     "summary": "<markdown>",
     "explanation": "<markdown>",
     "deep_explanation": "<markdown>",
@@ -131,7 +132,7 @@ replaces lectures you did not include. In the app, **Copy prompt for lecture
 sections** copies this text plus the exact lesson and PDF names of the subject.
 
 ```
-You are building the COURSE REVIEW of a subject in the Study Vault app. I have
+You are building the COURSE REVIEW of a subject in the StudyDesk app. I have
 ALREADY studied every lecture in depth; this review is for fast end-of-course
 revision, not first-time learning. Read the lecture material I attach and
 answer with ONE JSON object only — no prose, no markdown fences, no comments:

@@ -38,74 +38,67 @@ void main() {
     });
   });
 
-  testWidgets(
-    'floating overlay opens, minimizes, and closes from its launcher',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      FlutterSecureStorage.setMockInitialValues({});
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      addTearDown(db.close);
+  testWidgets('floating overlay shows its launcher only while minimized', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: const StudyVaultApp(),
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(StudyWorkspaceHost)),
-      );
-    expect(container.read(studyWorkspaceProvider).visible, isFalse);
-    expect(find.bySemanticsLabel('Open Study AI'), findsOneWidget);
-
-    await tester.tap(
-      find.descendant(
-        of: find.byType(StudyWorkspaceHost),
-        matching: find.byIcon(Icons.auto_awesome),
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: const StudyVaultApp(),
       ),
     );
-    await tester.pumpAndSettle();
-      expect(container.read(studyWorkspaceProvider).visible, isTrue);
-      expect(container.read(studyWorkspaceProvider).minimized, isFalse);
-      expect(find.byType(AiChatScreen), findsOneWidget);
-      expect(find.byTooltip('Open full screen'), findsOneWidget);
-      expect(find.byTooltip('Chat history'), findsOneWidget);
-      expect(find.byTooltip('More options'), findsOneWidget);
-      expect(find.byTooltip('Minimize'), findsOneWidget);
-      expect(find.byTooltip('Close'), findsOneWidget);
+    await tester.pump();
+    await tester.pump();
 
-      await tester.tap(find.byTooltip('Minimize'));
-      await tester.pumpAndSettle();
-      expect(container.read(studyWorkspaceProvider).visible, isTrue);
-      expect(container.read(studyWorkspaceProvider).minimized, isTrue);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(StudyWorkspaceHost)),
+    );
+    final launcher = find.widgetWithIcon(
+      FloatingActionButton,
+      Icons.auto_awesome,
+    );
+    expect(container.read(studyWorkspaceProvider).visible, isFalse);
+    expect(launcher, findsNothing);
+
+    container.read(studyWorkspaceProvider.notifier).open();
+    await tester.pumpAndSettle();
+    expect(container.read(studyWorkspaceProvider).visible, isTrue);
+    expect(container.read(studyWorkspaceProvider).minimized, isFalse);
+    expect(find.byType(AiChatScreen), findsOneWidget);
+    expect(find.byTooltip('Open full screen'), findsOneWidget);
+    expect(find.byTooltip('Chat history'), findsOneWidget);
+    expect(find.byTooltip('More options'), findsOneWidget);
+    expect(find.byTooltip('Minimize'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Minimize'));
+    await tester.pumpAndSettle();
+    expect(container.read(studyWorkspaceProvider).visible, isTrue);
+    expect(container.read(studyWorkspaceProvider).minimized, isTrue);
     expect(find.byTooltip('Close'), findsNothing);
     expect(find.bySemanticsLabel('Resume Study AI'), findsOneWidget);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(StudyWorkspaceHost),
-        matching: find.byIcon(Icons.auto_awesome),
-      ),
-    );
+    await tester.tap(launcher);
     await tester.pumpAndSettle();
-      expect(container.read(studyWorkspaceProvider).minimized, isFalse);
-      expect(find.byTooltip('Close'), findsOneWidget);
+    expect(container.read(studyWorkspaceProvider).minimized, isFalse);
+    expect(find.byTooltip('Close'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Close'));
-      await tester.pumpAndSettle();
-      expect(container.read(studyWorkspaceProvider).visible, isFalse);
-      expect(container.read(studyWorkspaceProvider).minimized, isFalse);
-      expect(find.bySemanticsLabel('Open Study AI'), findsOneWidget);
-      expect(find.byTooltip('Close'), findsNothing);
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    expect(container.read(studyWorkspaceProvider).visible, isFalse);
+    expect(container.read(studyWorkspaceProvider).minimized, isFalse);
+    expect(launcher, findsNothing);
+    expect(find.byTooltip('Close'), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 100));
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 100));
+  });
 }

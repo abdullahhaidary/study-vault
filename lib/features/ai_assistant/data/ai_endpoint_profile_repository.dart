@@ -65,6 +65,8 @@ class AiEndpointConnection {
   final Uri messagesUri;
   final Uri modelsUri;
   final String apiKey;
+
+  AiEndpointProtocol get protocol => profile.protocol;
 }
 
 class AiEndpointProfileRepository {
@@ -82,6 +84,13 @@ class AiEndpointProfileRepository {
   final AiCredentialStore credentials;
   final DateTime Function() _clock;
   final String Function() _newId;
+
+  static int _pdfPageLimit(int value) {
+    if (value < 1 || value > 600) {
+      throw const FormatException('PDF page limit must be between 1 and 600.');
+    }
+    return value;
+  }
 
   Future<void>? _migrating;
   Future<void> _writes = Future.value();
@@ -156,6 +165,9 @@ class AiEndpointProfileRepository {
     String? defaultModelId,
     bool makeGlobalDefault = false,
     bool promptCachingEnabled = false,
+    bool pdfAttachmentsEnabled = false,
+    int pdfMaxPages = 100,
+    AiEndpointProtocol protocol = AiEndpointProtocol.newApiAnthropic,
   }) async {
     await ensureMigrated();
     return _serialize(() async {
@@ -173,8 +185,10 @@ class AiEndpointProfileRepository {
       final profile = AiEndpointProfile(
         id: _newId(),
         promptCachingEnabled: promptCachingEnabled,
+        pdfAttachmentsEnabled: pdfAttachmentsEnabled,
+        pdfMaxPages: _pdfPageLimit(pdfMaxPages),
         name: cleanedName,
-        protocol: AiEndpointProtocol.newApiAnthropic,
+        protocol: protocol,
         baseUrl: url,
         defaultModelId: model,
         cachedModelIds: const [],
@@ -206,8 +220,11 @@ class AiEndpointProfileRepository {
     String? baseUrl,
     String? replacementApiKey,
     String? defaultModelId,
+    AiEndpointProtocol? protocol,
     bool? enabled,
     bool? promptCachingEnabled,
+    bool? pdfAttachmentsEnabled,
+    int? pdfMaxPages,
   }) async {
     await ensureMigrated();
     return _serialize(() async {
@@ -232,6 +249,9 @@ class AiEndpointProfileRepository {
       if (defaultModelId != null && nextModel.isEmpty) {
         throw const FormatException('Enter a model ID.');
       }
+      final nextPdfLimit = pdfMaxPages == null
+          ? current.pdfMaxPages
+          : _pdfPageLimit(pdfMaxPages);
       final replacement = replacementApiKey?.trim();
       var suffix = current.keySuffix;
       if (replacement != null && replacement.isNotEmpty) {
@@ -240,9 +260,13 @@ class AiEndpointProfileRepository {
       }
       final connectionChanged =
           nextUrl != current.baseUrl ||
+          (protocol != null && protocol != current.protocol) ||
           (replacement != null && replacement.isNotEmpty);
       final next = current.copyWith(
+        protocol: protocol,
         promptCachingEnabled: promptCachingEnabled,
+        pdfAttachmentsEnabled: pdfAttachmentsEnabled,
+        pdfMaxPages: nextPdfLimit,
         connectionRevision:
             current.connectionRevision + (connectionChanged ? 1 : 0),
         cachedModelIds: connectionChanged ? const [] : null,
@@ -361,11 +385,6 @@ class AiEndpointProfileRepository {
       if (!profile.enabled) {
         throw const FormatException('This API profile is turned off.');
       }
-      if (profile.protocol != AiEndpointProtocol.newApiAnthropic) {
-        throw FormatException(
-          'Protocol ${profile.protocol.storageValue} is not supported.',
-        );
-      }
       final key = await credentials.readEndpointKey(profileId);
       if (key == null || key.isEmpty || profile.baseUrl.isEmpty) {
         throw const FormatException(
@@ -374,7 +393,10 @@ class AiEndpointProfileRepository {
       }
       return AiEndpointConnection(
         profile: profile,
-        messagesUri: aiEndpointMessagesUri(profile.baseUrl),
+        messagesUri: aiEndpointMessagesUri(
+          profile.baseUrl,
+          protocol: profile.protocol,
+        ),
         modelsUri: aiEndpointModelsUri(profile.baseUrl),
         apiKey: key,
       );
@@ -522,9 +544,14 @@ class AiEndpointProfileRepository {
   }
 }
 
-Uri aiEndpointMessagesUri(String baseUrl) {
+Uri aiEndpointMessagesUri(
+  String baseUrl, {
+  AiEndpointProtocol protocol = AiEndpointProtocol.newApiAnthropic,
+}) {
   final root = _withV1(baseUrl);
-  return Uri.parse('$root/messages');
+  return Uri.parse(
+    '$root/${protocol == AiEndpointProtocol.openAiCompatible ? 'chat/completions' : 'messages'}',
+  );
 }
 
 Uri aiEndpointModelsUri(String baseUrl) {

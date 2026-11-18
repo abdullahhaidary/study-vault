@@ -527,7 +527,7 @@ class _ManualEntryImportScreenState
             Text('1 · Paste the JSON', style: theme.textTheme.titleMedium),
             const SizedBox(height: AppSpacing.xxs),
             Text(
-              'Give ChatGPT your slides plus the Study Vault instruction, '
+              'Give ChatGPT your slides plus the StudyDesk instruction, '
               'then paste its JSON answer here.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

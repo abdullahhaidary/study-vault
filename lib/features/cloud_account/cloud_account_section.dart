@@ -52,7 +52,7 @@ class _CloudAccountSectionState extends ConsumerState<CloudAccountSection> {
                   'AI materials and conversations, PDFs, and images using your private account.\n\n'
                   'Items are merged by their IDs. Independently created copies may remain separate. '
                   'Later edits and deletions propagate when you press Sync now. Conflicting edits require your review.\n\n'
-                  'Configured AI API keys are not included. A local recovery backup is kept before changes; these backups are not encrypted and use device storage. '
+                  'Configured AI API keys are not included. Sync transfers changed records and files. Use Backup separately to keep a full library backup. '
                   'Signing out does not remove your local library.',
                 ),
               ),

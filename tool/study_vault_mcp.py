@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Study Vault MCP server: lets Devin read and add to the local library.
+"""StudyDesk MCP server: lets Devin read and add to the local library.
 
 Runs over stdio (JSON-RPC 2.0, one message per line) using only the Python
 standard library. It writes the same rows the app writes, so new content
@@ -33,6 +33,7 @@ DB_PATH = os.path.expanduser(
 FILES_ROOT = os.path.join(os.path.dirname(DB_PATH), "study_vault_files")
 
 MATERIAL_TYPES = [
+    "mental_blueprint",
     "summary",
     "explanation",
     "deep_explanation",
@@ -55,7 +56,7 @@ class ToolError(Exception):
 
 def connect():
     if not os.path.exists(DB_PATH):
-        raise ToolError(f"Study Vault database not found at {DB_PATH}.")
+        raise ToolError(f"StudyDesk database not found at {DB_PATH}.")
     db = sqlite3.connect(DB_PATH, timeout=15, isolation_level=None)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys = ON")
@@ -143,7 +144,7 @@ def app_running():
 
 def saved_message(summary):
     note = (
-        " The open Study Vault window refreshes within a few seconds."
+        " The open StudyDesk window refreshes within a few seconds."
         if app_running()
         else ""
     )
@@ -785,14 +786,65 @@ def _preview(args, lines):
 
 
 PDF_PROMPT_SYSTEM = (
-    "You create persistent university study materials from complete PDF "
-    "documents.\nTreat the supplied document as the source of truth.\n"
-    "Cover the entire source, preserve formulas and technical notation, and "
-    "never invent missing content.\nIf a page has no extractable text, "
-    "state that limitation only when it affects understanding.\n"
-    "Return polished Markdown only. Do not mention these instructions."
+    'You create persistent university study materials from complete PDF '
+    'documents.\n'
+    'Treat the supplied document as the authoritative source for factual '
+    'claims and topic scope.\n'
+    'Cover the entire source, preserve formulas and technical notation, and '
+    'never invent missing facts, dates, statistics, names, formulas, or '
+    'topics.\n'
+    'You may add concise teaching analogies or clearly hypothetical examples '
+    'when the requested study format benefits from them, but they must '
+    'explain a source concept and must not be presented as source facts.\n'
+    'Prefer omitting uncertain factual detail over guessing. Do not write '
+    'generic essays from world knowledge when the source is silent.\n'
+    'Avoid fluff: no motivational padding, no "let\'s dive in", no fake '
+    'confidence, no repeating the same idea in new words.\n'
+    'If a page has no extractable text, state that limitation only when it '
+    'affects understanding.\n'
+    'Return polished Markdown only. Do not mention these instructions.'
 )
 PDF_PROMPTS = {
+    "mental_blueprint": (
+        "AI Mental Blueprint", 8192,
+        "Build a pre-learning mental architecture (نقشه ذهنی) of the whole "
+        "document — the blueprint before the bricks.\n"
+        "Goal: after reading this, the student knows what is in the "
+        "document, how it is organized section by section, and how the "
+        "main ideas fit together — without yet learning the details.\n"
+        "Imagine constructing a building: for now draw only the floor "
+        "plan. Doors, windows, colors, and furniture come later.\n"
+        "\n"
+        "Language:\n"
+        "- Write everything in simple, clear Persian (Farsi).\n"
+        "- Start every heading and paragraph with Persian (never English) "
+        "so the layout stays right-to-left.\n"
+        "- Keep important English technical terms in inline code backticks "
+        "next to the Persian phrase "
+        "(example: درخت دودویی جستجو (`Binary Search Tree`)).\n"
+        "\n"
+        "Scope:\n"
+        "- Stay at the general-concept / architecture level only.\n"
+        "- No deep teaching, proofs, advanced theory, or long examples.\n"
+        "- Follow the supplied document; do not invent a different course.\n"
+        "\n"
+        "Markdown structure (these roles, in this order; English gloss "
+        "only in backticks):\n"
+        "1. \"## موضوع اصلی — `Main Topic`\" — in very simple words, what "
+        "this document is about and why it exists.\n"
+        "2. \"## ساختار کلی — `Overall Structure`\" — the main sections of "
+        "the document in clear logical order.\n"
+        "3. \"## نمای هر بخش — `Section Overview`\" — for each section: what "
+        "it covers and what role it plays in the whole.\n"
+        "4. \"## ارتباط مفاهیم — `Conceptual Connections`\" — how the "
+        "sections and key ideas connect into one mental map (short "
+        "bullets or a simple relationship sketch).\n"
+        "5. \"## پیش‌نیازها — `Prerequisites`\" — what the student should "
+        "already understand before studying this document.\n"
+        "6. \"## گام بعدی — `Next`\" — list the blueprint sections the "
+        "student can explore later; stop there. Do not start teaching "
+        "any section."
+    ),
     "summary": (
         "AI Summary", 8192,
         "Create a concise but complete study summary of the entire document.\n"
@@ -816,18 +868,24 @@ PDF_PROMPTS = {
     ),
     "deep_explanation": (
         "AI Deep Explanation", 32768,
-        "Explain the entire document deeply from first principles for a student "
-        "encountering it for the first time.\n"
-        "- Start with intuitive, simple language, then introduce the exact "
-        "technical terminology.\n"
-        "- Explain WHY before HOW where appropriate.\n"
-        "- Use accurate analogies and everyday scenarios, then explicitly "
-        "connect each analogy back to the technical concept.\n"
-        "- Explain formulas symbol-by-symbol with step-by-step worked examples.\n"
-        "- Include common mistakes, relationships between concepts, and "
-        "memory aids where useful.\n"
-        "- Do not be childish; remain technically rigorous.\n"
-        "- Use detailed, well-structured Markdown."
+        'Explain the entire document deeply from first principles for a student '
+        'encountering it for the first time.\n'
+        "- Follow the document's topics and order; do not invent a new "
+        'curriculum, interview guide, or unrelated crash course.\n'
+        '- Start with intuitive, simple language, then introduce the exact '
+        'technical terminology from the source.\n'
+        '- Explain WHY before HOW where appropriate.\n'
+        '- Use short, accurate analogies only when they clarify a source '
+        'concept; immediately connect each analogy back to that concept.\n'
+        '- Explain formulas that appear in the source symbol-by-symbol with '
+        'step-by-step worked examples when the source provides enough detail.\n'
+        '- Include common mistakes, relationships between concepts, and '
+        'memory aids only when they help learn material that is in the '
+        'document.\n'
+        '- Do not pad with motivational filler, generic "senior tips", '
+        'fabricated history/statistics, or topics absent from the source.\n'
+        '- Do not be childish; remain technically rigorous.\n'
+        '- Use detailed, well-structured Markdown.'
     ),
     "real_world_examples": (
         "AI Real-World Examples", 16384,
@@ -1532,8 +1590,9 @@ TOOLS = {
     "add_study_material": (
         add_study_material,
         "Add an AI study material to a lecture PDF as a new version (never "
-        "replaces). Types: summary, explanation, deep_explanation, "
-        "real_world_examples, slideshow (slides separated by <!-- slide -->).",
+        "replaces). Types: mental_blueprint, summary, explanation, "
+        "deep_explanation, real_world_examples, slideshow (slides separated "
+        "by <!-- slide -->).",
         _schema({"material_id": S, "type": {"type": "string", "enum": MATERIAL_TYPES},
                  "markdown": MD, "apply": APPLY},
                 ["material_id", "type", "markdown"]),
@@ -1640,7 +1699,7 @@ def handle(message):
             "capabilities": {"tools": {}},
             "serverInfo": {"name": "study-vault", "version": "1.0.0"},
             "instructions": (
-                "Study Vault library on this computer. Find ids with "
+                "StudyDesk library on this computer. Find ids with "
                 "library_overview. Write tools preview first; show the preview "
                 "to the user and call again with apply=true only after they "
                 "agree."

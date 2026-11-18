@@ -8,27 +8,32 @@ import '../domain/ai_execution_selection.dart';
 import 'ai_assistant_controller.dart';
 import 'widgets/ai_model_picker.dart';
 
-/// Key/consent check, then the provider/model picker preset to the global
-/// default. Returns null when the user backs out of setup.
+/// Choose a model first, then check its key and consent. Cancelling the picker
+/// never sends through the default provider.
 Future<AiExecutionSelection?> pickAiModel(
   BuildContext context,
   WidgetRef ref, {
   required String title,
+  AiExecutionSelection? initialSelection,
 }) async {
-  if (!await AiAssistantController.ensureReady(context, ref)) return null;
-  if (!context.mounted) return null;
-  final selection = await AiExecutionSelection.fromGlobal(
-    ref.read(aiSettingsStoreProvider),
-    action: AiStudyAction.customPrompt,
-  );
-  if (!context.mounted) return null;
-  return await showAiModelSelector(
-        context,
-        selected: selection,
+  final selection =
+      initialSelection ??
+      await AiExecutionSelection.fromGlobal(
+        ref.read(aiSettingsStoreProvider),
         action: AiStudyAction.customPrompt,
-        title: title,
-      ) ??
-      selection;
+      );
+  if (!context.mounted) return null;
+  final picked = await showAiModelSelector(
+    context,
+    selected: selection,
+    action: AiStudyAction.customPrompt,
+    title: title,
+  );
+  if (picked == null || !context.mounted) return null;
+  if (!await AiAssistantController.ensureReady(context, ref, selection: picked)) {
+    return null;
+  }
+  return picked;
 }
 
 /// Readable message for AI and validation failures.

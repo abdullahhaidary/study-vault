@@ -68,7 +68,7 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
                   ),
                 ),
               ),
-            if (!state.visible || state.minimized)
+            if (state.minimized)
               Positioned(
                 left: launcherPosition.dx,
                 top: launcherPosition.dy,
@@ -76,7 +76,7 @@ class _StudyWorkspaceHostState extends ConsumerState<StudyWorkspaceHost> {
                 height: _launcherSize,
                 child: Semantics(
                   button: true,
-                  label: state.minimized ? 'Resume Study AI' : 'Open Study AI',
+                  label: 'Resume Study AI',
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onPanUpdate: (details) => _moveLauncher(details.delta),

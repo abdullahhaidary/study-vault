@@ -122,4 +122,42 @@ void main() {
     );
     await unmount(tester);
   });
+
+  for (final size in [const Size(400, 800), const Size(1400, 900)]) {
+    testWidgets('source position survives repeated panel toggles at $size', (
+      tester,
+    ) async {
+      file.writeAsStringSync(
+        List.generate(
+          60,
+          (index) =>
+              '## Section $index\n\n${'A paragraph of lecture text. ' * 20}\n\n',
+        ).join(),
+      );
+      await pump(tester, size);
+      final source = find.byType(ListView).first;
+      await tester.drag(source, const Offset(0, -1600));
+      await tester.pumpAndSettle();
+      final controller = tester.widget<ListView>(source).controller!;
+      final offset = controller.offset;
+      expect(offset, greaterThan(500));
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byTooltip('AI explanations'));
+        await settle(tester);
+        expect(controller.offset, closeTo(offset, 1));
+        await tester.tap(find.byTooltip('Close AI explanations'));
+        await settle(tester);
+        expect(controller.offset, closeTo(offset, 1));
+      }
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+      // A new screen/provider scope must restore the saved local bookmark too.
+      await pump(tester, size);
+      expect(
+        tester.widget<ListView>(find.byType(ListView).first).controller!.offset,
+        closeTo(offset, 1),
+      );
+      await unmount(tester);
+    });
+  }
 }

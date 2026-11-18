@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/agent_bridge/agent_bridge_controller.dart';
+
 import '../database/database_provider.dart';
 import 'backup_manifest.dart';
 import 'backup_service.dart';
@@ -121,13 +123,14 @@ class BackupUiController extends StateNotifier<BackupProgress> {
 
     state = const BackupProgress(
       phase: BackupPhase.restoring,
-      message: 'Restoring Study Vault…',
+      message: 'Restoring StudyDesk…',
     );
 
     try {
       final manifest = await _service.restoreBackup(
         archive: file,
         closeDatabase: () async {
+          await _ref.read(agentBridgeProvider).stop();
           await _ref.read(databaseProvider).close();
         },
         reopenDatabase: () async {
@@ -143,7 +146,7 @@ class BackupUiController extends StateNotifier<BackupProgress> {
 
       state = BackupProgress(
         phase: BackupPhase.success,
-        message: 'Study Vault restored successfully.',
+        message: 'StudyDesk restored successfully.',
         resultFileName: file.uri.pathSegments.isNotEmpty
             ? file.uri.pathSegments.last
             : file.path,

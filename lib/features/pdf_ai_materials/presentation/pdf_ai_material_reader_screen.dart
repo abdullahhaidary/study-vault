@@ -11,7 +11,9 @@ import '../../../core/database/app_database.dart';
 import '../../../core/export/download_document_button.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/markdown/study_markdown.dart';
+import '../../../core/text/text_direction_utils.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/storage/reading_positions.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../ai_assistant/data/ai_providers.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
@@ -83,10 +85,20 @@ class PdfAiMaterialReaderScreen extends ConsumerStatefulWidget {
 
 class _PdfAiMaterialReaderScreenState
     extends ConsumerState<PdfAiMaterialReaderScreen> {
-  final ScrollController _scrollController = ScrollController();
+  late final ReadingPositions _positions;
+  late final Future<void> _positionsReady;
+  late final ReadingScrollController _scrollController;
+  bool _anchorSaveScheduled = false;
+
+  String get _positionKey => readingPositionKey(
+    widget.filePath,
+    widget.materialId,
+    'ai:${widget.type.name}:${_restoredGenerationId ?? widget.initialGenerationId ?? ""}:${_restoredLanguage.name}',
+  );
   final PageController _slideController = PageController();
   String? _slideGenerationId;
   int _slideIndex = 0;
+  bool _restoringSlide = false;
   String? _selectedId;
   AiGenerationJob? _queueJob;
   bool get _generating => _queueJob?.isActive ?? false;
@@ -110,6 +122,13 @@ class _PdfAiMaterialReaderScreenState
   @override
   void initState() {
     super.initState();
+    _positions = ref.read(readingPositionsProvider);
+    _positionsReady = _positions.load();
+    _scrollController = ReadingScrollController(
+      store: _positions,
+      positionKey: () => _positionKey,
+      shouldSave: () => !_restoringScroll && _restoredGenerationId != null,
+    );
     _selectedId = widget.initialGenerationId;
     _scrollController.addListener(_saveScrollOffset);
     ref.read(databaseProvider).getMaterialById(widget.materialId).then((m) {
@@ -246,19 +265,10 @@ class _PdfAiMaterialReaderScreenState
     _persistScrollOffset();
     _scrollController.removeListener(_saveScrollOffset);
     _scrollController.dispose();
+    unawaited(_positions.flush());
     _slideController.dispose();
     super.dispose();
   }
-
-  PdfAiMaterialScrollKey _scrollKey(
-    String generationId,
-    PdfAiLanguage language,
-  ) => (
-    materialId: widget.materialId,
-    type: widget.type,
-    generationId: generationId,
-    language: language,
-  );
 
   void _saveScrollOffset() {
     final generationId = _restoredGenerationId;
@@ -268,6 +278,25 @@ class _PdfAiMaterialReaderScreenState
       return;
     }
     _pendingScrollOffset = _scrollController.offset;
+    if (_positions.get(_positionKey)['offset'] != _pendingScrollOffset) {
+      _positions.save(_positionKey, {'offset': _pendingScrollOffset!});
+    }
+    if (!_anchorSaveScheduled) {
+      _anchorSaveScheduled = true;
+      final key = _positionKey;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _anchorSaveScheduled = false;
+        if (!mounted || _restoringScroll || key != _positionKey) return;
+        final anchor = _captureAnchor();
+        if (anchor != null) {
+          _positions.save(key, {
+            ..._positions.get(key),
+            'section': anchor.index.toDouble(),
+            'fraction': anchor.fraction,
+          });
+        }
+      });
+    }
     _scrollSaveTimer?.cancel();
     _scrollSaveTimer = Timer(
       const Duration(milliseconds: 250),
@@ -280,14 +309,10 @@ class _PdfAiMaterialReaderScreenState
     final offset = _pendingScrollOffset;
     if (generationId == null || offset == null) return;
     _pendingScrollOffset = null;
-    ref
-            .read(
-              pdfAiMaterialScrollOffsetProvider(
-                _scrollKey(generationId, _restoredLanguage),
-              ).notifier,
-            )
-            .state =
-        offset;
+    _positions.save(_positionKey, {
+      ..._positions.get(_positionKey),
+      'offset': offset,
+    });
   }
 
   /// Restores the saved position of this version + language; after a
@@ -311,8 +336,15 @@ class _PdfAiMaterialReaderScreenState
     _restoredGenerationId = generationId;
     _restoredLanguage = language;
     _restoringScroll = true;
-    if (anchor != null) {
-      _anchor = anchor;
+    final stored = _positions.get(_positionKey);
+    final rememberedAnchor = stored['section'] == null || sectionCount == 0
+        ? null
+        : (
+            index: stored['section']!.toInt().clamp(0, sectionCount - 1),
+            fraction: (stored['fraction'] ?? 0).clamp(0.0, 1.0),
+          );
+    if (anchor != null || rememberedAnchor != null) {
+      _anchor = anchor ?? rememberedAnchor;
       _applyAnchor(sectionCount);
       return;
     }
@@ -322,15 +354,18 @@ class _PdfAiMaterialReaderScreenState
         return;
       }
       final position = _scrollController.position;
-      final saved = ref.read(
-        pdfAiMaterialScrollOffsetProvider(_scrollKey(generationId, language)),
-      );
+      if (_restoredGenerationId != generationId ||
+          _restoredLanguage != language) {
+        return;
+      }
+      final saved = _positions.get(_positionKey)['offset'] ?? 0;
       _scrollController.jumpTo(
         saved
             .clamp(position.minScrollExtent, position.maxScrollExtent)
             .toDouble(),
       );
       _restoringScroll = false;
+      _saveScrollOffset();
     });
   }
 
@@ -404,6 +439,7 @@ class _PdfAiMaterialReaderScreenState
       }
       _anchor = null;
       _restoringScroll = false;
+      _saveScrollOffset();
     });
   }
 
@@ -950,6 +986,9 @@ class _PdfAiMaterialReaderScreenState
         packedText: body.isEmpty ? null : body,
       ),
       draftText: switch (widget.type) {
+        PdfAiMaterialType.mentalBlueprint =>
+          'از روی این نقشه ذهنی، می‌خواهم یکی از بخش‌ها را عمیق‌تر یاد بگیرم. '
+              'لطفاً اول فهرست بخش‌ها را بگو و صبر کن تا انتخاب کنم.',
         PdfAiMaterialType.realWorldExamples =>
           'Let\'s practice with real-world examples from this PDF. Pick one '
               'topic, give me a new realistic scenario, and then ask me how '
@@ -1026,14 +1065,23 @@ class _PdfAiMaterialReaderScreenState
     return 'Could not generate this study material. Please try again.';
   }
 
-  void _syncSlideGeneration(String id) {
+  String _slidePositionKey(String id) => readingPositionKey(
+    widget.filePath,
+    widget.materialId,
+    'ai-slides:${widget.type.name}:$id',
+  );
+
+  void _syncSlideGeneration(String id, int count) {
     if (_slideGenerationId == id) return;
     _slideGenerationId = id;
-    _slideIndex = 0;
+    final saved = (_positions.get(_slidePositionKey(id))['page'] ?? 0).toInt();
+    final index = count == 0 ? 0 : saved.clamp(0, count - 1);
+    _slideIndex = index;
+    _restoringSlide = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _slideGenerationId == id && _slideController.hasClients) {
-        _slideController.jumpToPage(0);
-      }
+      if (!mounted || _slideGenerationId != id) return;
+      if (_slideController.hasClients) _slideController.jumpToPage(index);
+      _restoringSlide = false;
     });
   }
 
@@ -1115,7 +1163,13 @@ class _PdfAiMaterialReaderScreenState
           child: PageView.builder(
             controller: _slideController,
             itemCount: slides.length,
-            onPageChanged: (index) => setState(() => _slideIndex = index),
+            onPageChanged: (index) {
+              if (_restoringSlide) return;
+              setState(() => _slideIndex = index);
+              _positions.save(_slidePositionKey(selected.id), {
+                'page': index.toDouble(),
+              });
+            },
             itemBuilder: (context, index) => Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Card(
@@ -1128,9 +1182,9 @@ class _PdfAiMaterialReaderScreenState
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Directionality(
-                          textDirection: persianText == null
-                              ? Directionality.of(context)
-                              : TextDirection.rtl,
+                          textDirection: TextDirectionUtils.resolve(
+                            slides[index],
+                          ),
                           child: StudyMarkdown(
                             data: slides[index],
                             selectable: false,
@@ -1284,7 +1338,18 @@ class _PdfAiMaterialReaderScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FutureBuilder<void>(
+    future: _positionsReady,
+    builder: (context, snapshot) =>
+        snapshot.connectionState == ConnectionState.done
+        ? _buildReader(context)
+        : const Center(child: CircularProgressIndicator()),
+  );
+
+  Widget _buildReader(BuildContext context) {
+    final title = widget.type == PdfAiMaterialType.summary
+        ? widget.type.shortName
+        : widget.type.displayName;
     _queueJob = ref.watch(
       pdfAiJobForTargetProvider((
         materialId: widget.materialId,
@@ -1295,15 +1360,11 @@ class _PdfAiMaterialReaderScreenState
 
     return allAsync.when(
       loading: () => Scaffold(
-        appBar: widget.embedded
-            ? null
-            : AppBar(title: Text(widget.type.displayName)),
+        appBar: widget.embedded ? null : AppBar(title: Text(title)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => Scaffold(
-        appBar: widget.embedded
-            ? null
-            : AppBar(title: Text(widget.type.displayName)),
+        appBar: widget.embedded ? null : AppBar(title: Text(title)),
         body: const Center(child: Text('Could not load saved generations.')),
       ),
       data: (all) {
@@ -1319,7 +1380,7 @@ class _PdfAiMaterialReaderScreenState
             appBar: widget.embedded
                 ? null
                 : AppBar(
-                    title: Text(widget.type.displayName),
+                    title: Text(title),
                     actions: [
                       IconButton(
                         tooltip: 'Add from JSON',
@@ -1379,11 +1440,13 @@ class _PdfAiMaterialReaderScreenState
             ? PdfAiTranslation.split(persianStored)
             : _chunksFor(selected);
         if (isSlideshow) {
-          _syncSlideGeneration(selected.id);
+          _syncSlideGeneration(selected.id, slides.length);
         } else {
           _restoreScrollOffset(selected.id, showing, markdownChunks.length);
         }
-        final rtl = persianStored != null;
+        // Edit stays locked on translations; RTL follows the on-screen text
+        // (Mental Blueprint originals are already Persian).
+        final viewingTranslation = persianStored != null;
         final bodyStyle = MarkdownStyleSheet.fromTheme(Theme.of(context));
         final usage = aiTokenUsageFromColumns(
           promptTokens: selected.promptTokens,
@@ -1399,7 +1462,7 @@ class _PdfAiMaterialReaderScreenState
           appBar: widget.embedded
               ? null
               : AppBar(
-                  title: Text(widget.type.displayName),
+                  title: Text(title),
                   actions: [
                     _languageToggle(selected, translation, showing),
                     IconButton(
@@ -1459,9 +1522,9 @@ class _PdfAiMaterialReaderScreenState
                                     bottom: AppSpacing.sm,
                                   ),
                                   child: Directionality(
-                                    textDirection: rtl
-                                        ? TextDirection.rtl
-                                        : Directionality.of(context),
+                                    textDirection: TextDirectionUtils.resolve(
+                                      markdownChunks[index],
+                                    ),
                                     child: StudyMarkdown(
                                       data: markdownChunks[index],
                                       selectable: false,
@@ -1481,7 +1544,7 @@ class _PdfAiMaterialReaderScreenState
                                             _editing ||
                                                 _generating ||
                                                 _deleting ||
-                                                rtl
+                                                viewingTranslation
                                             ? null
                                             : () => _edit(selected),
                                         icon: const Icon(

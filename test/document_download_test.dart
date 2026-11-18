@@ -15,7 +15,7 @@ void main() {
     );
     expect(
       DocumentDownload.fileNameFor('  ', DocumentFileKind.plainText),
-      'Study Vault.txt',
+      'StudyDesk.txt',
     );
     expect(
       DocumentDownload.withExtension('/tmp/notes', 'md'),

@@ -10,9 +10,12 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/widgets/responsive_grid.dart';
 import 'package:study_vault/features/ai_chat/presentation/ai_chat_screen.dart';
+import 'package:study_vault/features/flashcards/presentation/flashcards_list_screen.dart';
 import 'package:study_vault/features/search/presentation/search_screen.dart';
 import 'package:study_vault/features/study_review/presentation/recent_reviews_screen.dart';
+import 'package:study_vault/features/study_review/presentation/review_setup_screen.dart';
 import 'package:study_vault/features/study_schedule/presentation/study_schedule_screen.dart';
+import 'package:study_vault/features/study_workspace/data/study_workspace_providers.dart';
 
 Future<AppDatabase> _pumpApp(WidgetTester tester, Size size) async {
   SharedPreferences.setMockInitialValues({});
@@ -70,9 +73,9 @@ void main() {
       final db = await _pumpApp(tester, const Size(1440, 900));
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.text('Library'), findsWidgets);
-      expect(find.text('Recent Reviews'), findsOneWidget);
-      expect(find.text('Schedule'), findsOneWidget);
-      expect(find.text('Reviews'), findsNothing);
+      expect(find.text('Recent Reviews'), findsNothing);
+      expect(find.text('Schedule'), findsNothing);
+      expect(find.text('Review'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Add Class'), findsWidgets);
 
       await tester.tap(find.text('Search'));
@@ -87,16 +90,20 @@ void main() {
       expect(find.byType(SearchScreen), findsNothing);
       expect(find.text('My Classes'), findsOneWidget);
 
-      await tester.tap(find.text('Recent Reviews'));
+      await tester.tap(find.text('Review'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('History'));
       await tester.pumpAndSettle();
       expect(find.byType(RecentReviewsScreen), findsOneWidget);
       expect(find.byType(StudyScheduleScreen), findsNothing);
       final reviewsRail = tester.widget<NavigationRail>(
         find.byType(NavigationRail),
       );
-      expect(reviewsRail.selectedIndex, 6);
+      expect(reviewsRail.selectedIndex, 4);
 
-      await tester.tap(find.text('Schedule'));
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Due Lessons'));
       await tester.pumpAndSettle();
       expect(find.byType(StudyScheduleScreen), findsOneWidget);
       expect(find.byType(RecentReviewsScreen), findsNothing);
@@ -118,9 +125,9 @@ void main() {
         of: find.byType(NavigationRail),
         matching: find.text('AI Chat'),
       );
-      expect(aiChatLabels, findsNWidgets(2));
+      expect(aiChatLabels, findsOneWidget);
 
-      await tester.tap(aiChatLabels.last);
+      await tester.tap(aiChatLabels);
       await tester.pumpAndSettle();
       expect(find.byType(AiChatScreen), findsOneWidget);
       expect(find.byTooltip('Leave chat'), findsOneWidget);
@@ -152,7 +159,10 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
       final db = await _pumpApp(tester, const Size(1440, 900));
-      await tester.tap(find.byIcon(Icons.auto_awesome).first);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(NavigationRail)),
+      );
+      container.read(studyWorkspaceProvider.notifier).open();
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Close'), findsOneWidget);
@@ -181,12 +191,21 @@ void main() {
     try {
       final db = await _pumpApp(tester, const Size(900, 800));
       expect(find.byType(NavigationRail), findsNothing);
-      expect(find.text('Study Vault'), findsWidgets);
+      expect(find.text('StudyDesk'), findsWidgets);
       await tester.tap(find.byTooltip('More'));
       await tester.pumpAndSettle();
-      expect(find.text('Recent Reviews'), findsOneWidget);
-      expect(find.text('Study Schedule'), findsOneWidget);
-      expect(find.text('Schedule'), findsNothing);
+      expect(find.text('Recent Reviews'), findsNothing);
+      expect(find.text('Study Schedule'), findsNothing);
+      await tester.tap(find.text('Review'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pins'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewSetupScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Flashcards'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FlashcardsListScreen), findsOneWidget);
       await _dispose(tester, db);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -198,7 +217,29 @@ void main() {
   ) async {
     final db = await _pumpApp(tester, const Size(1440, 900));
     expect(find.byType(NavigationRail), findsNothing);
-    expect(find.text('Study Vault'), findsWidgets);
+    expect(find.text('StudyDesk'), findsWidgets);
+    await _dispose(tester, db);
+  });
+
+  testWidgets('advanced settings contains profiles and agent access', (
+    tester,
+  ) async {
+    final db = await _pumpApp(tester, const Size(400, 800));
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('AI API Profiles'), findsNothing);
+    expect(find.text('Termux agent access'), findsNothing);
+
+    final advanced = find.text('Advanced Settings');
+    await tester.ensureVisible(advanced);
+    await tester.pumpAndSettle();
+    await tester.tap(advanced);
+    await tester.pumpAndSettle();
+    expect(find.text('AI API Profiles'), findsOneWidget);
+    expect(find.text('Termux agent access'), findsOneWidget);
+    expect(find.text('Open Manual Entry'), findsOneWidget);
     await _dispose(tester, db);
   });
 }

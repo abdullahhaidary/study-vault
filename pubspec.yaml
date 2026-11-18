@@ -1,5 +1,5 @@
 name: study_vault
-description: "A local-first study application for organizing classes, subjects, and lessons."
+description: "StudyDesk is a local-first app for organizing classes, subjects, and lessons."
 publish_to: "none"
 version: 4.0.0+6000
 
@@ -64,3 +64,4 @@ flutter:
     - assets/logo/study_vault_icon_512.png
     - assets/logo/study_vault_icon_1024.png
     - manual_entry_instruction.md
+    - tool/study_vault_termux_mcp.py

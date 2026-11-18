@@ -10,6 +10,7 @@ import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_execution_selection.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_pdf_document.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_token_usage.dart';
 import '../domain/gemini_model_registry.dart';
@@ -209,6 +210,7 @@ class GeminiAiService implements AiService {
     required int maxOutputTokens,
     required AiExecutionSelection selection,
     Duration timeout = const Duration(minutes: 5),
+    AiPdfDocument? document,
   }) async {
     if (messages.isEmpty) {
       throw const AiMalformedOutputException('The document prompt is empty.');
@@ -217,23 +219,45 @@ class GeminiAiService implements AiService {
       throw const AiPrivacyNotAcceptedException();
     }
     final model = selection.resolvedModelId;
+    document?.validatePageLimit(1000);
+    var attached = false;
+    final system = <String>[];
     final contents = <Map<String, dynamic>>[];
     for (final message in messages) {
       final role = message['role'] ?? 'user';
       final content = message['content'] ?? '';
       if (content.trim().isEmpty) continue;
+      if (document != null && role == 'system') {
+        system.add(content);
+        continue;
+      }
+      final attachHere = document != null && !attached && role != 'assistant';
+      if (attachHere) attached = true;
       contents.add({
         'role': role == 'assistant' ? 'model' : 'user',
         'parts': [
+          if (attachHere)
+            {
+              'inlineData': {
+                'mimeType': 'application/pdf',
+                'data': document.base64Data,
+              },
+            },
           {'text': content},
         ],
       });
     }
-    if (contents.isEmpty) {
+    if (contents.isEmpty || (document != null && !attached)) {
       throw const AiMalformedOutputException('The document prompt is empty.');
     }
     final body = <String, dynamic>{
       'contents': contents,
+      if (system.isNotEmpty)
+        'systemInstruction': {
+          'parts': [
+            {'text': system.join('\n\n')},
+          ],
+        },
       'generationConfig': {
         'maxOutputTokens': maxOutputTokens,
         'thinkingConfig': {'thinkingBudget': 0},

@@ -11,6 +11,8 @@ import '../../ai_assistant/services/new_api_claude_service.dart';
 import '../../ai_assistant/services/pocket_ai_service.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_assistant/domain/ai_models.dart';
+import '../../ai_assistant/domain/ai_pdf_document.dart';
+import '../../ai_assistant/domain/ai_exceptions.dart';
 import '../../ai_assistant/domain/ai_provider.dart';
 import '../../ai_assistant/domain/ai_token_usage.dart';
 import '../../ai_assistant/services/deepseek_ai_service.dart';
@@ -49,8 +51,20 @@ abstract interface class PdfAiCompletionClient {
   });
 }
 
+/// Native PDF input is a separate capability: text-only clients remain valid.
+abstract interface class PdfAiFileCompletionClient {
+  Future<int> pdfPageLimit(AiExecutionSelection selection);
+  Future<PdfAiCompletion> completeWithPdf({
+    required List<Map<String, String>> messages,
+    required AiPdfDocument document,
+    required int maxOutputTokens,
+    required AiExecutionSelection selection,
+  });
+}
+
 /// Routes document completions to Gemini or DeepSeek from [selection].
-class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
+class RoutingPdfAiCompletionClient
+    implements PdfAiCompletionClient, PdfAiFileCompletionClient {
   RoutingPdfAiCompletionClient({
     required GeminiAiService gemini,
     required DeepSeekAiService deepSeek,
@@ -84,7 +98,7 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
         maxOutputTokens: maxOutputTokens,
         selection: selection,
       ),
-      AiProviderId.newApi => await _newApi!.completeDocumentMessages(
+      AiProviderId.newApi => await _requireNewApi().completeDocumentMessages(
         messages: messages,
         maxOutputTokens: maxOutputTokens,
         selection: selection,
@@ -100,7 +114,71 @@ class RoutingPdfAiCompletionClient implements PdfAiCompletionClient {
     return PdfAiCompletion(
       markdown: result.markdown,
       provider: selection.providerStorage,
-      model: result.usage?.model ?? selection.resolvedModelId,
+      model: selection.provider == AiProviderId.newApi
+          ? selection.persistedModelId
+          : result.usage?.model ?? selection.resolvedModelId,
+      usage: result.usage,
+      disposition: result.disposition,
+    );
+  }
+
+  NewApiClaudeService _requireNewApi() =>
+      _newApi ??
+      (throw const AiNotConfiguredException(
+        'The selected API profile is unavailable.',
+      ));
+
+  @override
+  Future<int> pdfPageLimit(AiExecutionSelection selection) async {
+    if (selection.provider == AiProviderId.gemini) return 1000;
+    if (selection.provider == AiProviderId.newApi) {
+      final profiles = _requireNewApi().profiles;
+      final ref = await profiles.bindLegacy(selection.modelRef);
+      final id = ref.endpointProfileId;
+      if (id == null) throw const AiProfileUnavailableException();
+      final connection = await profiles.resolve(id);
+      if (!connection.profile.pdfAttachmentsEnabled) {
+        throw const AiNotConfiguredException(
+          'Enable PDF attachments for this API profile in Settings. Extracted text works without this option.',
+        );
+      }
+      return connection.profile.pdfMaxPages;
+    }
+    throw const AiUnsupportedModelException(
+      'This provider uses extracted book text. Choose extracted text, or a Gemini/custom model with PDF attachments enabled.',
+    );
+  }
+
+  @override
+  Future<PdfAiCompletion> completeWithPdf({
+    required List<Map<String, String>> messages,
+    required AiPdfDocument document,
+    required int maxOutputTokens,
+    required AiExecutionSelection selection,
+  }) async {
+    document.validatePageLimit(await pdfPageLimit(selection));
+    final AiTextResult result;
+    if (selection.provider == AiProviderId.gemini) {
+      result = await _gemini.completeDocumentMessages(
+        messages: messages,
+        document: document,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+      );
+    } else {
+      result = await _requireNewApi().completeDocumentMessages(
+        messages: messages,
+        document: document,
+        maxOutputTokens: maxOutputTokens,
+        selection: selection,
+      );
+    }
+    return PdfAiCompletion(
+      markdown: result.markdown,
+      provider: selection.providerStorage,
+      model: selection.provider == AiProviderId.newApi
+          ? selection.persistedModelId
+          : result.usage?.model ?? selection.resolvedModelId,
       usage: result.usage,
       disposition: result.disposition,
     );

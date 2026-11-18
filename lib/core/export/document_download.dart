@@ -109,7 +109,7 @@ class PlatformDocumentSavePort implements DocumentSavePort {
   }) async {
     final result = await Share.shareXFiles(
       [XFile(path, mimeType: mimeType, name: fileName)],
-      subject: 'Study Vault',
+      subject: 'StudyDesk',
     );
     return result.status != ShareResultStatus.dismissed;
   }
@@ -149,7 +149,7 @@ class DocumentDownload {
     final limited = cleaned.length > 80
         ? cleaned.substring(0, 80).trim()
         : cleaned;
-    final stem = limited.isEmpty ? 'Study Vault' : limited;
+    final stem = limited.isEmpty ? 'StudyDesk' : limited;
     return '$stem.${extensionFor(kind)}';
   }
 

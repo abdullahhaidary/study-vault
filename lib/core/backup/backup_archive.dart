@@ -28,7 +28,7 @@ class ValidatedBackup {
   final Directory extractedDir;
 }
 
-/// Create / inspect / extract Study Vault backup archives (ZIP under the hood).
+/// Create / inspect / extract StudyDesk backup archives (ZIP under the hood).
 abstract final class BackupArchive {
   /// Build a `.svbackup` ZIP at [outputFile] from prepared content.
   static Future<void> createArchive({
@@ -117,7 +117,7 @@ abstract final class BackupArchive {
     );
     if (!await dbFile.exists()) {
       throw const BackupValidationException(
-        'This backup is missing the Study Vault database.',
+        'This backup is missing the StudyDesk database.',
       );
     }
 
@@ -196,7 +196,7 @@ abstract final class BackupArchive {
       final dbEntry = archive.findFile(BackupArchiveLayout.databasePath);
       if (dbEntry == null || !dbEntry.isFile) {
         throw const BackupValidationException(
-          'This backup is missing the Study Vault database.',
+          'This backup is missing the StudyDesk database.',
         );
       }
 
@@ -218,14 +218,14 @@ abstract final class BackupArchive {
   }) {
     if (manifest.format != BackupManifest.formatId) {
       throw const BackupValidationException(
-        'This file is not a Study Vault backup.',
+        'This file is not a StudyDesk backup.',
       );
     }
     if (manifest.backupFormatVersion < 1 ||
         manifest.backupFormatVersion > BackupManifest.currentFormatVersion) {
       throw BackupIncompatibleException(
         'Unsupported backup format version '
-        '(${manifest.backupFormatVersion}). Update Study Vault and try again.',
+        '(${manifest.backupFormatVersion}). Update StudyDesk and try again.',
       );
     }
     if (manifest.databaseSchemaVersion < 1) {
@@ -235,9 +235,9 @@ abstract final class BackupArchive {
     }
     if (manifest.databaseSchemaVersion > currentSchemaVersion) {
       throw BackupIncompatibleException(
-        'This backup was created by a newer version of Study Vault '
+        'This backup was created by a newer version of StudyDesk '
         '(database schema ${manifest.databaseSchemaVersion}). '
-        'Update Study Vault before restoring it.',
+        'Update StudyDesk before restoring it.',
       );
     }
   }

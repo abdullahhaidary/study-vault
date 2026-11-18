@@ -307,7 +307,8 @@ void main() {
         expect(server.entryUri.host, '127.0.0.1');
         final (status, body, type) = await get(server.entryUri);
         expect(status, 200);
-        expect(body, '<h1>Hi</h1>');
+        expect(body, startsWith('<h1>Hi</h1>'));
+        expect(body, contains(HtmlPageServer.readingScriptName));
         expect(type, 'text/html');
 
         final script = server.entryUri.resolve('js/app.js');
@@ -316,6 +317,20 @@ void main() {
         expect(scriptBody, 'go()');
         expect(scriptType, 'text/javascript');
         expect(server.owns(script), isTrue);
+        final readingScript = Uri.parse(
+          '${server.pagePrefix}${HtmlPageServer.readingScriptName}',
+        );
+        final (readingStatus, readingBody, readingType) = await get(
+          readingScript,
+        );
+        expect(readingStatus, 200);
+        expect(readingType, 'text/javascript');
+        expect(readingBody, contains('localStorage.setItem'));
+        expect(readingBody, contains('node.scrollTop'));
+        expect(
+          File(p.join(page.root.path, 'index.html')).readAsStringSync(),
+          '<h1>Hi</h1>',
+        );
       },
     );
 

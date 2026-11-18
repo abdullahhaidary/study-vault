@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../core/backup/backup_providers.dart'
+    show kStudyVaultSchemaVersion;
 import 'cloud_sync_models.dart';
 
 class CloudApiException implements Exception {
@@ -107,6 +109,29 @@ class CloudApi implements CloudSyncRemote {
   }
 
   @override
+  Future<int> status(String token) async {
+    final result = await _request('GET', '/v2/status', token: token);
+    if (result['schemaVersion'] != kStudyVaultSchemaVersion ||
+        result['head'] is! int ||
+        (result['head'] as int) < 0) {
+      throw const CloudApiException('Unsupported sync server version.');
+    }
+    return result['head'] as int;
+  }
+
+  @override
+  Future<CloudSnapshot> changes(String token, int after) async =>
+      CloudSnapshot.fromJson(
+        await _request(
+          'GET',
+          '/v2/changes?after=$after',
+          token: token,
+          maximumBytes: 64 * 1024 * 1024,
+          timeout: const Duration(minutes: 5),
+        ),
+      );
+
+  @override
   Future<CloudSnapshot> snapshot(String token) async => CloudSnapshot.fromJson(
     await _request(
       'GET',
@@ -118,19 +143,21 @@ class CloudApi implements CloudSyncRemote {
   );
 
   @override
-  Future<void> commit(String token, Map<String, dynamic> body) async {
+  Future<CloudCommit> commit(String token, Map<String, dynamic> body) async {
     if (utf8.encode(jsonEncode(body)).length > 60 * 1024 * 1024) {
       throw const CloudApiException(
         'This sync exceeds the 60 MiB metadata limit. No records were sent.',
       );
     }
-    await _request(
-      'POST',
-      '/v2/sync',
-      token: token,
-      body: body,
-      maximumBytes: 4 * 1024 * 1024,
-      timeout: const Duration(minutes: 5),
+    return CloudCommit.fromJson(
+      await _request(
+        'POST',
+        '/v2/sync',
+        token: token,
+        body: body,
+        maximumBytes: 4 * 1024 * 1024,
+        timeout: const Duration(minutes: 5),
+      ),
     );
   }
 

@@ -1,5 +1,5 @@
-/// App identity constants kept in sync with pubspec.yaml.
+/// App identity used by Flutter and export metadata.
 abstract final class AppInfo {
-  static const name = 'Study Vault';
+  static const name = 'StudyDesk';
   static const version = '1.0.0+1';
 }

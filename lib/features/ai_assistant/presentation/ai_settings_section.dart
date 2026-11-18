@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/navigation/shell_tab.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../../ai_chat/data/ai_chat_providers.dart';
 import '../../ai_chat/presentation/pocket_chat_history_sheet.dart';
@@ -12,8 +13,6 @@ import '../domain/ai_actions.dart';
 import '../domain/ai_exceptions.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_model_ref.dart';
-import 'ai_endpoint_profiles_section.dart';
-import 'ai_cache_diagnostics.dart';
 import 'ai_style_memory_settings.dart';
 import '../domain/deepseek_model_registry.dart';
 import 'pocket_accounts_section.dart';
@@ -277,6 +276,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                 Text('Default Provider', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<AiProviderId>(
+                  isExpanded: true,
                   initialValue: provider,
                   items: [
                     for (final p in AiProviderId.values)
@@ -327,12 +327,6 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                if (provider == AiProviderId.newApi) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Choose a profile below as the global default. Each profile keeps its own server, key, and models.',
-                  ),
-                ],
                 if (provider == AiProviderId.deepseek) ...[
                   const SizedBox(height: 12),
                   const DeepSeekPricingBanner(
@@ -340,7 +334,8 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                if (provider != AiProviderId.pocket) ...[
+                if (provider != AiProviderId.pocket &&
+                    provider != AiProviderId.newApi) ...[
                   Text(
                     provider == AiProviderId.gemini
                         ? 'Gemini API keys'
@@ -356,7 +351,7 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     'Chat, study actions, quizzes, book questions, document '
                     'generation, and Persian translation are typed into the '
                     'signed-in Pocket tab. Start Pocket and sign in first. '
-                    'Messages in one Study Vault chat stay in the same browser '
+                    'Messages in one StudyDesk chat stay in the same browser '
                     'chat. Choose another from Pocket chats in the chat menu. '
                     'Study actions still open their own page.',
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -471,11 +466,9 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                   TextField(
                     controller: _keyController,
                     obscureText: true,
-                    minLines: 1,
-                    maxLines: 6,
                     decoration: const InputDecoration(
                       labelText: 'Add Gemini API key',
-                      hintText: 'Paste one key, or several separated by lines',
+                      hintText: 'Paste one key, or separate keys with commas',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -495,10 +488,14 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                           ),
                   ),
                 ] else if (provider == AiProviderId.newApi) ...[
-                  Text(
-                    'API keys are saved on each profile below and are not shown again.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton(
+                      onPressed: () => ShellNavigation.openSettings(
+                        context,
+                        section: 'advanced',
+                      ),
+                      child: const Text('Manage API profiles'),
                     ),
                   ),
                 ] else if (configured) ...[
@@ -587,15 +584,13 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
-                const AiEndpointProfilesSection(),
-                const AiCacheDiagnostics(),
                 const SizedBox(height: 16),
                 if (provider != AiProviderId.newApi) ...[
                   Text('Default Model', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
                   DropdownButtonFormField<String>(
                     key: ValueKey('model-${provider.name}-${state.modelId}'),
+                    isExpanded: true,
                     initialValue: modelItems.contains(state.modelId)
                         ? state.modelId
                         : modelItems.first,
@@ -603,7 +598,10 @@ class _AiSettingsSectionState extends ConsumerState<AiSettingsSection> {
                       for (final id in modelItems)
                         DropdownMenuItem(
                           value: id,
-                          child: Text(AiModels.label(provider, id)),
+                          child: Text(
+                            AiModels.label(provider, id),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                     ],
                     onChanged: (value) async {

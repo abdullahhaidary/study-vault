@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_credential_store.dart';
 import 'package:study_vault/features/ai_assistant/data/ai_settings_store.dart';
+import 'package:study_vault/features/ai_assistant/domain/ai_endpoint_profile.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_exceptions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_actions.dart';
 import 'package:study_vault/features/ai_assistant/domain/ai_execution_selection.dart';
@@ -146,7 +147,7 @@ void main() {
   test('runs a study action using the selected New API model', () async {
     final client = MockClient((request) async {
       final body = jsonDecode(request.body) as Map;
-      expect(body['system'], contains('Study Vault AI Assistant'));
+      expect(body['system'], contains('StudyDesk AI Assistant'));
       expect(body['messages'], isNotEmpty);
       expect(body['model'], 'claude-example');
       return http.Response(
@@ -330,7 +331,7 @@ void main() {
         {'role': 'assistant', 'content': 'Earlier answer'},
         {'role': 'user', 'content': 'Go deeper'},
       ]);
-      expect(body['system'], contains('Study Vault'));
+      expect(body['system'], contains('StudyDesk'));
       return http.Response(
         jsonEncode({
           'content': [
@@ -419,6 +420,42 @@ void main() {
     expect(texts, ["I'm ", 'happy']);
   });
 
+  test('reads tooken-style SSE comment, stop chunk, and usage chunk', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        ': tooken-stream-connected\n\n'
+        'data: {"choices":[{"index":0,"delta":{"role":"assistant"}}]}\n\n'
+        'data: {"choices":[{"index":0,"delta":{"content":"Hello"}}]}\n\n'
+        'data: {"choices":[{"index":0,"delta":{"content":"!"}}]}\n\n'
+        'data: {"choices":[{"index":0,"delta":{"content":""},"finish_reason":"stop"}]}\n\n'
+        'data: {"choices":[],"usage":{"prompt_tokens":8,"completion_tokens":13,"total_tokens":21}}\n\n'
+        'data: [DONE]\n\n',
+        200,
+        headers: {'content-type': 'text/event-stream'},
+      );
+    });
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      profiles: profiles,
+      httpClient: client,
+    );
+    final events = await service
+        .streamMessages(
+          model: 'newapi:gpt-6.1-sol',
+          messages: const [
+            {'role': 'user', 'content': 'Hello!'},
+          ],
+        )
+        .toList();
+    expect(events.where((e) => e.text != null).map((e) => e.text), [
+      'Hello',
+      '!',
+    ]);
+    expect(events.last.usage?.promptTokens, 8);
+    expect(events.last.usage?.completionTokens, 13);
+  });
+
   test('accepts non-SSE JSON body when stream is buffered by proxy', () async {
     final client = MockClient((request) async {
       return http.Response(
@@ -480,6 +517,136 @@ void main() {
     expect(body?['max_tokens'], 16384);
     expect(result.markdown, contains('# Title'));
     expect(result.usage?.completionTokens, 9);
+  });
+
+  test(
+    'sends OpenAI-compatible chat completions when the profile says so',
+    () async {
+      final profile = await profiles.create(
+        name: 'Dahl',
+        baseUrl: 'https://inference.dahl.global',
+        apiKey: 'dahl-key',
+        defaultModelId: 'zai-org/GLM-5.3-Flash',
+        protocol: AiEndpointProtocol.openAiCompatible,
+      );
+      Map<String, Object?>? body;
+      final client = MockClient((request) async {
+        expect(
+          request.url.toString(),
+          'https://inference.dahl.global/v1/chat/completions',
+        );
+        expect(request.headers['authorization'], 'Bearer dahl-key');
+        expect(request.headers.containsKey('anthropic-version'), false);
+        body = jsonDecode(request.body) as Map<String, Object?>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'Hello there'},
+              },
+            ],
+            'usage': {'prompt_tokens': 7, 'completion_tokens': 3},
+          }),
+          200,
+        );
+      });
+      final service = NewApiClaudeService(
+        credentials: credentials,
+        settings: settings,
+        profiles: profiles,
+        httpClient: client,
+      );
+      final result = await service.completeMessages(
+        profileId: profile.id,
+        model: 'sv1:endpoint:${profile.id}:zai-org/GLM-5.3-Flash',
+        messages: const [
+          {'role': 'system', 'content': 'Study assistant'},
+          {'role': 'user', 'content': 'Hello!'},
+        ],
+        maxTokens: 32,
+      );
+      expect(body?['model'], 'zai-org/GLM-5.3-Flash');
+      expect(body?['system'], isNull);
+      expect(body?['messages'], [
+        {'role': 'system', 'content': 'Study assistant'},
+        {'role': 'user', 'content': 'Hello!'},
+      ]);
+      expect(result.text, 'Hello there');
+      expect(result.usage?.promptTokens, 7);
+      expect(result.usage?.completionTokens, 3);
+    },
+  );
+
+  test(
+    'surfaces a 403 reason from the server instead of a bare key error',
+    () async {
+      final service = NewApiClaudeService(
+        credentials: credentials,
+        settings: settings,
+        profiles: profiles,
+        httpClient: MockClient((_) async {
+          // No charset, like tooken.club: the body must still decode as UTF-8.
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'error': {
+                  'type': 'forbidden',
+                  'message': 'Эта модель недоступна на вашем тарифе.',
+                },
+              }),
+            ),
+            403,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      await expectLater(
+        service.completeMessages(
+          model: 'newapi:claude-example',
+          messages: const [
+            {'role': 'user', 'content': 'Hi'},
+          ],
+          maxTokens: 8,
+        ),
+        throwsA(
+          isA<AiInvalidKeyException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('403'), contains('тарифе')),
+          ),
+        ),
+      );
+    },
+  );
+
+  test('explains an HTML block page instead of a bare status code', () async {
+    final service = NewApiClaudeService(
+      credentials: credentials,
+      settings: settings,
+      profiles: profiles,
+      httpClient: MockClient((_) async {
+        return http.Response(
+          '<html><body><h1>Access denied</h1></body></html>',
+          403,
+        );
+      }),
+    );
+    await expectLater(
+      service.completeMessages(
+        model: 'newapi:claude-example',
+        messages: const [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+        maxTokens: 8,
+      ),
+      throwsA(
+        isA<AiInvalidKeyException>().having(
+          (e) => e.message,
+          'message',
+          contains('Access denied'),
+        ),
+      ),
+    );
   });
 
   test('maps mid-request drops as interrupted, not offline', () {

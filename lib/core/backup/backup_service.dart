@@ -64,7 +64,7 @@ class BuiltBackup {
   final Directory workDir;
 }
 
-/// Full Study Vault backup + restore (SQLite + material files).
+/// Full StudyDesk backup + restore (SQLite + material files).
 class BackupService {
   /// Keep default in sync with [AppDatabase.schemaVersion] /
   /// [kStudyVaultSchemaVersion] in backup_providers.dart.
@@ -94,7 +94,7 @@ class BackupService {
 
     final source = await StudyVaultPaths.databaseFile();
     if (!await source.exists()) {
-      throw const BackupIoException('Study Vault database file was not found.');
+      throw const BackupIoException('StudyDesk database file was not found.');
     }
     await copyFileStreaming(source, destination);
     return destination;
@@ -236,9 +236,9 @@ class BackupService {
               name: built.suggestedFileName,
             ),
           ],
-          subject: 'Study Vault backup',
+          subject: 'StudyDesk backup',
           text:
-              'Save this Study Vault backup in a safe place '
+              'Save this StudyDesk backup in a safe place '
               '(Downloads, Drive, USB, …). Backup files are not encrypted.',
         );
         if (result.status == ShareResultStatus.dismissed) {
@@ -248,7 +248,7 @@ class BackupService {
       }
 
       final path = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Study Vault backup',
+        dialogTitle: 'Save StudyDesk backup',
         fileName: built.suggestedFileName,
         type: FileType.custom,
         allowedExtensions: const ['svbackup'],
@@ -265,7 +265,7 @@ class BackupService {
 
   Future<File?> pickBackupFile() async {
     final result = await FilePicker.platform.pickFiles(
-      dialogTitle: 'Select Study Vault backup',
+      dialogTitle: 'Select StudyDesk backup',
       type: Platform.isAndroid ? FileType.any : FileType.custom,
       allowedExtensions: Platform.isAndroid ? null : const ['svbackup'],
       withData: false,
@@ -289,7 +289,7 @@ class BackupService {
     );
   }
 
-  /// Restore [archive] into the live Study Vault data directory.
+  /// Restore [archive] into the live StudyDesk data directory.
   ///
   /// [closeDatabase] must close all open SQLite connections first.
   /// [reopenDatabase] opens a fresh connection afterwards (runs migrations).

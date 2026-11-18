@@ -22,6 +22,7 @@ import '../features/notes/presentation/note_reader_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/study_review/presentation/recent_reviews_screen.dart';
+import '../features/study_review/presentation/review_hub_screen.dart';
 import '../features/study_schedule/presentation/study_schedule_screen.dart';
 import '../features/subjects/presentation/subject_details_screen.dart';
 import '../features/ai_generation_queue/presentation/generation_center_screen.dart';
@@ -52,6 +53,7 @@ abstract final class AppRoutes {
   static const lessonSummary = '/lesson-summary';
   static const questionSets = '/ai-questions';
   static const manualEntry = '/manual-entry';
+  static const review = '/review';
   static const reviews = '/reviews';
   static const studySchedule = '/schedule';
   static const courseReview = '/course-review';
@@ -146,6 +148,12 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
         settings: settings,
         builder: (_) =>
             QuestionSetsScreen(scope: settings.arguments as QuestionSetsScope),
+      );
+
+    case AppRoutes.review:
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => const ReviewHubScreen(),
       );
 
     case AppRoutes.reviews:

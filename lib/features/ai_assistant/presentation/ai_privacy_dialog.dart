@@ -23,7 +23,7 @@ Future<bool?> showAiPrivacyNotice(BuildContext context) {
           return AlertDialog(
             title: const Text('AI Privacy Notice'),
             content: Text(
-              'Study Vault normally keeps your study data on this device.\n\n'
+              'StudyDesk normally keeps your study data on this device.\n\n'
               'When you use an AI action, only the text/note needed for that '
               'action is sent to $providerName.\n\n'
               '$privacyLine\n\n'

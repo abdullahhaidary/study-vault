@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS sync_commits (
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY(account_id, operation_id)
 );
+CREATE INDEX IF NOT EXISTS records_account_revision ON records(account_id, revision);
 CREATE TABLE IF NOT EXISTS files (
   account_id uuid NOT NULL REFERENCES accounts(id),
   digest text NOT NULL CHECK(digest ~ '^[a-f0-9]{64}$'),

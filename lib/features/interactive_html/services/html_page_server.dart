@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -6,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../data/interactive_html_files.dart';
 import '../domain/html_bundle.dart';
+import 'html_reading_position.dart';
 
 /// Serves one prepared page on `127.0.0.1` while it is open.
 ///
@@ -14,11 +16,13 @@ import '../domain/html_bundle.dart';
 /// survives reopening. A random path token keeps other local programs from
 /// guessing the address. Only files inside the page's own folder are served.
 class HtmlPageServer {
-  HtmlPageServer._(this._server, this._page, this._token);
+  HtmlPageServer._(this._server, this._page, this._token, this._readingScript);
 
   final HttpServer _server;
   final PreparedHtmlPage _page;
   final String _token;
+  final String _readingScript;
+  static const readingScriptName = '__sv_reader_position_v1__.js';
 
   static const _firstPort = 20000;
   static const _portRange = 30000;
@@ -57,6 +61,7 @@ class HtmlPageServer {
   static Future<HtmlPageServer> start({
     required String materialId,
     required PreparedHtmlPage page,
+    String? storageIdentity,
     Random? random,
   }) async {
     final rng = random ?? Random.secure();
@@ -76,7 +81,12 @@ class HtmlPageServer {
       }
     }
     server ??= await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    final instance = HtmlPageServer._(server, page, token);
+    final instance = HtmlPageServer._(
+      server,
+      page,
+      token,
+      htmlReadingPositionScript(storageIdentity ?? materialId),
+    );
     server.listen(instance._handle, onError: (_) {});
     return instance;
   }
@@ -90,6 +100,18 @@ class HtmlPageServer {
         response.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
+      if (request.uri.pathSegments.length == 2 &&
+          request.uri.pathSegments.first == _token &&
+          request.uri.pathSegments.last == readingScriptName) {
+        final bytes = utf8.encode(_readingScript);
+        response.headers
+          ..set(HttpHeaders.contentTypeHeader, 'text/javascript; charset=utf-8')
+          ..set(HttpHeaders.cacheControlHeader, 'no-store')
+          ..set('X-Content-Type-Options', 'nosniff');
+        response.contentLength = bytes.length;
+        if (request.method == 'GET') response.add(bytes);
+        return;
+      }
       final file = _resolve(request.uri);
       if (file == null || !await file.exists()) {
         response.statusCode = HttpStatus.notFound;
@@ -100,9 +122,16 @@ class HtmlPageServer {
         ..set(HttpHeaders.cacheControlHeader, 'no-store')
         ..set('X-Content-Type-Options', 'nosniff')
         ..set('Referrer-Policy', 'no-referrer');
-      response.contentLength = await file.length();
+      final readingScript =
+          htmlAssetContentType(file.path).startsWith('text/html')
+          ? utf8.encode(
+              '\n<script defer src="$pagePrefix$readingScriptName"></script>',
+            )
+          : const <int>[];
+      response.contentLength = await file.length() + readingScript.length;
       if (request.method == 'GET') {
         await response.addStream(file.openRead());
+        response.add(readingScript);
       }
     } on Object {
       response.statusCode = HttpStatus.internalServerError;

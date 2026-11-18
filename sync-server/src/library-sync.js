@@ -18,7 +18,7 @@ async function head(client, owner) {
   return Number(result.rows[0].head);
 }
 
-async function records(client, owner) {
+async function records(client, owner, after = null) {
   const size = await client.query(`SELECT COALESCE(SUM(COALESCE(octet_length(data::text),4)+octet_length(record_id)+128),0) AS bytes,
     COUNT(*) AS count FROM records WHERE account_id=$1`, [owner]);
   if (Number(size.rows[0].bytes) > maxBytes || Number(size.rows[0].count) > maxRecords) {
@@ -26,16 +26,30 @@ async function records(client, owner) {
     error.status = 413;
     throw error;
   }
-  const result = await client.query('SELECT table_name,record_id,revision,data FROM records WHERE account_id=$1 ORDER BY table_name,record_id', [owner]);
+  const result = await client.query(`SELECT table_name,record_id,revision,data FROM records
+    WHERE account_id=$1 AND ($2::bigint IS NULL OR revision>$2) ORDER BY table_name,record_id`, [owner, after]);
   return result.rows.map((r) => ({ table: r.table_name, id: r.record_id, revision: Number(r.revision), data: r.data }));
 }
 
-export async function snapshot(pool, owner) {
+export async function syncStatus(pool, owner) {
+  return { schemaVersion, head: await head(pool, owner) };
+}
+
+// Latest versions, including tombstones, under the same account lock as commits.
+// A delta is a complete view through head, never half of a related-record commit.
+export async function snapshot(pool, owner, after = null) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query('SELECT id FROM accounts WHERE id=$1 FOR SHARE', [owner]);
-    const result = { schemaVersion, head: await head(client, owner), records: await records(client, owner) };
+    const currentHead = await head(client, owner);
+    if (after !== null && after > currentHead) {
+      const error = new Error('The sync cursor is ahead of the library. Fetch a snapshot.');
+      error.status = 409;
+      error.code = 'cursor_ahead';
+      throw error;
+    }
+    const result = { schemaVersion, head: currentHead, records: await records(client, owner, after) };
     await client.query('COMMIT');
     return result;
   } catch (error) {

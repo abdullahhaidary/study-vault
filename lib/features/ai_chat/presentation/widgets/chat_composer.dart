@@ -183,7 +183,7 @@ class ChatComposerState extends State<ChatComposer> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             IconButton(
-                              tooltip: 'Attach Study Vault content',
+                              tooltip: 'Attach StudyDesk content',
                               visualDensity: compact
                                   ? VisualDensity.compact
                                   : null,

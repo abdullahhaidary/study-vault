@@ -140,9 +140,11 @@ class CloudMerge {
       if (choice == null) break;
     }
     if (choice != null || conflicts.isEmpty) schema.validate(rows);
-    final token = sha256
-        .convert(utf8.encode(cloudCanonical([base, device, server])))
-        .toString();
+    final token = conflicts.isEmpty
+        ? ''
+        : sha256
+              .convert(utf8.encode(cloudCanonical([base, device, server])))
+              .toString();
     return CloudMerge(
       rows: rows,
       conflicts: conflicts.values.toList(),

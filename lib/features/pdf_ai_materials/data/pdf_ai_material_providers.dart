@@ -80,16 +80,6 @@ final pdfAiMaterialSelectedTypeProvider =
       return PdfAiMaterialType.summary;
     });
 
-typedef PdfAiMaterialScrollKey = ({
-  String materialId,
-  PdfAiMaterialType type,
-  String generationId,
-  PdfAiLanguage language,
-});
-
-final pdfAiMaterialScrollOffsetProvider =
-    StateProvider.family<double, PdfAiMaterialScrollKey>((ref, key) => 0);
-
 final pdfAiPreferredStoreProvider = Provider<PdfAiPreferredStore>((ref) {
   return SharedPreferencesPdfAiPreferredStore();
 });

@@ -215,7 +215,7 @@ class HttpDeepSeekChatService implements AiChatTransport {
       {
         'role': 'system',
         'content':
-            'You are Study Vault AI Assistant for university students.\n'
+            'You are StudyDesk AI Assistant for university students.\n'
             'Ground answers in any study material the user shares.\n'
             'Preserve formulas, code, variable names, and technical terminology.\n'
             'Keep responses useful for studying.\n'

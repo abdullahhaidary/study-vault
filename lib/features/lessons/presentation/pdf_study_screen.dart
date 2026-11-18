@@ -1,5 +1,6 @@
 import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../../core/export/download_document_button.dart';
 import '../../../core/database/built_in_data.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
+import '../../../core/storage/reading_positions.dart';
 import '../../ai_assistant/domain/ai_actions.dart';
 import '../../ai_assistant/domain/ai_models.dart';
 import '../../ai_assistant/domain/annotation_ai_context.dart';
@@ -76,6 +78,12 @@ class PdfStudyScreen extends ConsumerStatefulWidget {
 
 class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
   PdfViewerController _controller = PdfViewerController();
+  late final ReadingPositions _positions;
+  Map<String, double>? _pendingViewport;
+  bool _restoringPdfPosition = true;
+
+  String get _positionKey =>
+      readingPositionKey(_activeFilePath, _viewingMaterialId, 'pdf');
   late Future<bool> _fileExists;
   late String _activeFilePath;
   late String _viewingMaterialId;
@@ -103,11 +111,84 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
     _activeFilePath = widget.filePath;
     _viewingMaterialId = widget.resourceId;
     _pendingPage = widget.initialPage;
-    _fileExists = File(_activeFilePath).exists();
+    _positions = ref.read(readingPositionsProvider);
+    _controller.addListener(_rememberPdfViewport);
+    _fileExists = _preparePdf();
     _focusedPinId = widget.focusPinId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       recordMaterialStudyActivity(ref, materialId: widget.resourceId);
     });
+  }
+
+  Future<bool> _preparePdf({bool restore = true}) async {
+    await _positions.load();
+    if (restore && _pendingPage == null) {
+      _pendingViewport = Map.of(_positions.get(_positionKey));
+    }
+    return File(_activeFilePath).exists();
+  }
+
+  void _rememberPdfViewport() {
+    if (_restoringPdfPosition || !_controller.isReady) return;
+    final center = _controller.centerPosition;
+    _positions.save(_positionKey, {
+      'x': center.dx,
+      'y': center.dy,
+      'zoom': _controller.currentZoom,
+      'page': (_controller.pageNumber ?? _currentPage ?? 1).toDouble(),
+    });
+  }
+
+  Future<void> _restorePdfViewport(
+    PdfDocument document,
+    PdfViewerController controller,
+  ) async {
+    final saved = _pendingViewport;
+    final pageCount = document.pages.length;
+    final rawPage = _pendingPage ?? saved?['page']?.toInt();
+    _pendingPage = null;
+    _pendingViewport = null;
+    setState(() {
+      _pageCount = pageCount;
+      _currentPage = controller.pageNumber;
+    });
+    try {
+      if (saved?['x'] != null &&
+          saved?['y'] != null &&
+          saved?['zoom'] != null) {
+        await controller.goTo(
+          controller.calcMatrixFor(
+            Offset(
+              saved!['x']!.clamp(0.0, controller.documentSize.width),
+              saved['y']!.clamp(0.0, controller.documentSize.height),
+            ),
+            zoom: saved['zoom']!.clamp(
+              controller.minScale,
+              controller.maxScale,
+            ),
+          ),
+          duration: Duration.zero,
+        );
+      } else if (rawPage != null && pageCount > 0) {
+        await controller.goToPage(
+          pageNumber: rawPage.clamp(1, pageCount),
+          duration: Duration.zero,
+        );
+      }
+    } finally {
+      if (mounted && identical(controller, _controller)) {
+        _restoringPdfPosition = false;
+        _rememberPdfViewport();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _rememberPdfViewport();
+    _controller.removeListener(_rememberPdfViewport);
+    unawaited(_positions.flush());
+    super.dispose();
   }
 
   Future<void> _switchPdfLanguage(
@@ -135,7 +216,11 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
         : widget.filePath;
     if (!mounted) return;
 
+    _rememberPdfViewport();
+    _controller.removeListener(_rememberPdfViewport);
     setState(() {
+      _restoringPdfPosition = true;
+      _pendingViewport = null;
       _pdfLanguage = next;
       _activeFilePath = nextPath;
       _viewingMaterialId = next == PdfAiLanguage.persian
@@ -145,8 +230,8 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
       _currentPage = null;
       _pageCount = null;
       _viewerEpoch++;
-      _controller = PdfViewerController();
-      _fileExists = File(_activeFilePath).exists();
+      _controller = PdfViewerController()..addListener(_rememberPdfViewport);
+      _fileExists = _preparePdf(restore: false);
       _readerPin = null;
       _inlineAi = null;
     });
@@ -1173,19 +1258,9 @@ class _PdfStudyScreenState extends ConsumerState<PdfStudyScreen> {
                                 setState(() => _currentPage = pageNumber);
                               },
                               onViewerReady: (document, controller) {
-                                final pending = _pendingPage;
-                                final pageCount = document.pages.length;
-                                setState(() {
-                                  _pageCount = pageCount;
-                                  _currentPage = controller.pageNumber;
-                                  _pendingPage = null;
-                                });
-                                final raw = pending ?? widget.initialPage;
-                                if (raw != null && pageCount >= 1) {
-                                  final page = raw.clamp(1, pageCount);
-                                  controller.goToPage(pageNumber: page);
-                                  setState(() => _currentPage = page);
-                                }
+                                unawaited(
+                                  _restorePdfViewport(document, controller),
+                                );
                               },
                               onGeneralTap: (context, controller, details) {
                                 if (!annotate) return false;

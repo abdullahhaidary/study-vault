@@ -5,10 +5,16 @@ import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../core/backup/backup_manifest.dart';
 import '../../../core/backup/backup_providers.dart';
 import '../../../core/backup/backup_service.dart';
+import '../../../core/navigation/shell_tab.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
+import '../../ai_assistant/presentation/ai_cache_diagnostics.dart';
+import '../../ai_assistant/presentation/ai_endpoint_profiles_section.dart';
 import '../../ai_assistant/presentation/ai_settings_section.dart';
+import '../../ai_assistant/presentation/failed_ai_requests_screen.dart';
+import '../../agent_bridge/agent_bridge_section.dart';
 import '../../cloud_account/cloud_account_section.dart';
 import '../../library_accounts/presentation/library_accounts_section.dart';
 import '../../manual_entry/presentation/manual_entry_settings_section.dart';
@@ -21,7 +27,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
     this.embeddedInShell = false,
   });
 
-  /// Optional: `ai` scrolls/focuses the AI Assistant section.
+  /// `ai` focuses AI Assistant. `advanced` opens Advanced Settings.
   final String? initialSection;
 
   final bool embeddedInShell;
@@ -65,11 +71,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final page = AppSpacing.pageInsets(context);
     final theme = Theme.of(context);
+    final advanced = widget.initialSection == 'advanced';
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !widget.embeddedInShell,
-        title: const Text('Settings'),
+        title: Text(advanced ? 'Advanced Settings' : 'Settings'),
       ),
       body: ScrollEdgeArrows(
         child: ListView(
@@ -83,37 +90,108 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AppSpacing.contentMaxWidth,
+                constraints: BoxConstraints(
+                  maxWidth: AppSpacing.contentWidth(context),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const LibraryAccountsSection(),
-                    const SizedBox(height: AppSpacing.xl),
-                    const CloudAccountSection(),
-                    const SizedBox(height: AppSpacing.xl),
-                    KeyedSubtree(key: _aiKey, child: const AiSettingsSection()),
-                    const SizedBox(height: AppSpacing.xl),
-                    const ManualEntrySettingsSection(),
-                    const SizedBox(height: AppSpacing.xl),
-                    const SectionHeader(title: 'Backup & Restore'),
-                    Text(
-                      'Backups are not encrypted. Store them somewhere safe. '
-                      'API keys are never included.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _BackupRestoreCard(),
-                  ],
+                  children: advanced
+                      ? [
+                          const AiEndpointProfilesSection(),
+                          const SizedBox(height: AppSpacing.xl),
+                          const AiCacheDiagnostics(),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.error_outline),
+                            title: const Text('Failed AI requests'),
+                            onTap: () => showFailedAiRequestsScreen(context),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          const AgentBridgeSection(),
+                          const SizedBox(height: AppSpacing.xl),
+                          const ManualEntrySettingsSection(),
+                        ]
+                      : [
+                          const _AppearanceSection(),
+                          const SizedBox(height: AppSpacing.xl),
+                          const LibraryAccountsSection(),
+                          const SizedBox(height: AppSpacing.xl),
+                          const CloudAccountSection(),
+                          const SizedBox(height: AppSpacing.xl),
+                          KeyedSubtree(
+                            key: _aiKey,
+                            child: const AiSettingsSection(),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          const SectionHeader(title: 'Backup & Restore'),
+                          Text(
+                            'Backups are not encrypted. Store them somewhere safe. '
+                            'API keys are never included.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          const _BackupRestoreCard(),
+                          const SizedBox(height: AppSpacing.xl),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.tune),
+                            title: const Text('Advanced Settings'),
+                            subtitle: const Text(
+                              'API profiles, diagnostics, agent access, and JSON import',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => ShellNavigation.openSettings(
+                              context,
+                              section: 'advanced',
+                            ),
+                          ),
+                        ],
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AppearanceSection extends ConsumerWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader(title: 'Appearance'),
+        SegmentedButton<ThemeMode>(
+          segments: const [
+            ButtonSegment(
+              value: ThemeMode.system,
+              icon: Icon(Icons.brightness_auto),
+              label: Text('System'),
+            ),
+            ButtonSegment(
+              value: ThemeMode.light,
+              icon: Icon(Icons.light_mode_outlined),
+              label: Text('Light'),
+            ),
+            ButtonSegment(
+              value: ThemeMode.dark,
+              icon: Icon(Icons.dark_mode_outlined),
+              label: Text('Dark'),
+            ),
+          ],
+          selected: {mode},
+          onSelectionChanged: (selection) =>
+              setThemeMode(ref, selection.single),
+        ),
+      ],
     );
   }
 }
@@ -206,7 +284,7 @@ class _BackupRestoreCard extends ConsumerWidget {
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         const TransientSnackBar(
-          content: Text('Study Vault restored successfully.'),
+          content: Text('StudyDesk restored successfully.'),
         ),
       );
     }
@@ -222,7 +300,7 @@ class _RestoreConfirmDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final when = _formatDateTime(manifest.createdAt.toLocal());
     return AlertDialog(
-      title: const Text('Restore Study Vault?'),
+      title: const Text('Restore StudyDesk?'),
       content: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +316,7 @@ class _RestoreConfirmDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Restoring this backup will replace the Study Vault data '
+              'Restoring this backup will replace the StudyDesk data '
               'currently stored on this device.\n\n'
               'This cannot be undone unless you create a backup of the '
               'current data first.',

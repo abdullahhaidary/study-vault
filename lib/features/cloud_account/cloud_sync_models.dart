@@ -19,7 +19,27 @@ String cloudCanonical(Object? value) {
   return jsonEncode(value);
 }
 
-bool cloudEqual(Object? a, Object? b) => cloudCanonical(a) == cloudCanonical(b);
+// Compare directly: serializing two whole libraries just to compare them can
+// temporarily allocate several copies of every long study document on a phone.
+bool cloudEqual(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map && b is Map) {
+    return a.length == b.length &&
+        a.entries.every(
+          (entry) =>
+              b.containsKey(entry.key) && cloudEqual(entry.value, b[entry.key]),
+        );
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!cloudEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  return a == b;
+}
+
 String cloudKey(String table, String id) => '$table/$id';
 String cloudTable(String key) => key.substring(0, key.indexOf('/'));
 String cloudId(String key) => key.substring(key.indexOf('/') + 1);
@@ -84,9 +104,37 @@ class CloudSnapshot {
   }
 }
 
+class CloudCommit {
+  const CloudCommit({required this.head, required this.accepted});
+  final int head;
+  final Map<String, int> accepted;
+
+  factory CloudCommit.fromJson(Map<String, dynamic> json) {
+    final head = json['head'];
+    final accepted = <String, int>{};
+    if (head is! int || head < 0 || json['accepted'] is! List) {
+      throw const FormatException('Invalid sync receipt.');
+    }
+    for (final item in json['accepted'] as List) {
+      if (item is! Map ||
+          item['mutationId'] is! String ||
+          item['revision'] is! int ||
+          item['revision'] <= 0 ||
+          item['revision'] > head ||
+          accepted.containsKey(item['mutationId'])) {
+        throw const FormatException('Invalid sync receipt.');
+      }
+      accepted[item['mutationId'] as String] = item['revision'] as int;
+    }
+    return CloudCommit(head: head, accepted: accepted);
+  }
+}
+
 abstract interface class CloudSyncRemote {
+  Future<int> status(String token);
   Future<CloudSnapshot> snapshot(String token);
-  Future<void> commit(String token, Map<String, dynamic> body);
+  Future<CloudSnapshot> changes(String token, int after);
+  Future<CloudCommit> commit(String token, Map<String, dynamic> body);
   Future<bool> hasFile(String token, String digest);
   Future<void> uploadFile(String token, String digest, File file);
   Future<void> downloadFile(

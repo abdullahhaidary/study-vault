@@ -117,7 +117,7 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
   Future<void> _loadSyncInfo() async {
     if (syncService == null || _session == null) return;
     final service = await syncService!();
-    final info = await service.info();
+    final info = await service.info(includeBaseline: false);
     _syncEnabled =
         info['account'] == '${service.serverId}|${_session!.accountId}';
     _sync = CloudSyncOutcome(
@@ -161,7 +161,7 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
       final session = await _api.login(
         username: username,
         password: password,
-        deviceName: 'Study Vault ${Platform.operatingSystem}',
+        deviceName: 'StudyDesk ${Platform.operatingSystem}',
       );
       try {
         await _store.write(session);
@@ -230,7 +230,7 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
             ? error.message
             : error is CloudSyncFailure
             ? error.message
-            : 'Sync was interrupted. Your recovery copies were kept. Check your connection and storage, then tap Sync now to retry.',
+            : 'Sync was interrupted. Tap Sync now to check the previous operation and retry.',
       );
     }
   }
@@ -246,14 +246,14 @@ class CloudAccountController extends StateNotifier<CloudAccountState> {
       final manifest = await backups.inspectBackup(file);
       temporary = await Directory.systemTemp.createTemp('sv_recovery_export_');
       final copy = File(
-        p.join(temporary.path, 'StudyVault-before-sync.svbackup'),
+        p.join(temporary.path, 'StudyDesk-before-sync.svbackup'),
       );
       await copyFileStreaming(file, copy);
       await backups.exportBuiltBackup(
         BuiltBackup(
           archiveFile: copy,
           manifest: manifest,
-          suggestedFileName: 'StudyVault-before-sync.svbackup',
+          suggestedFileName: 'StudyDesk-before-sync.svbackup',
           workDir: temporary,
         ),
       );

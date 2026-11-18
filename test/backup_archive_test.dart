@@ -40,7 +40,7 @@ void main() {
   group('backup helpers', () {
     test('suggestedBackupFileName format', () {
       final name = suggestedBackupFileName(DateTime(2026, 10, 1, 20, 35));
-      expect(name, 'StudyVault-2026-10-01-2035.svbackup');
+      expect(name, 'StudyDesk-2026-10-01-2035.svbackup');
     });
 
     test('files index is stable and sorted', () {

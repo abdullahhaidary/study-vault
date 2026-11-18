@@ -13,6 +13,7 @@ import '../domain/ai_exceptions.dart';
 import '../domain/ai_execution_selection.dart';
 import '../domain/ai_model_ref.dart';
 import '../domain/ai_models.dart';
+import '../domain/ai_pdf_document.dart';
 import '../domain/ai_provider.dart';
 import '../domain/ai_token_usage.dart';
 import 'ai_output_validator.dart';
@@ -69,10 +70,17 @@ class NewApiClaudeService implements AiService {
     return profiles.legacyProfileId();
   }
 
-  Future<({Uri uri, String key, bool promptCachingEnabled})> _open(
-    String? profileId,
-    String model,
-  ) async {
+  Future<
+    ({
+      Uri uri,
+      String key,
+      AiEndpointProtocol protocol,
+      bool promptCachingEnabled,
+      bool pdfAttachmentsEnabled,
+      int pdfMaxPages,
+    })
+  >
+  _open(String? profileId, String model) async {
     final id = await _resolveProfileId(profileId, model);
     AiEndpointConnection connection;
     try {
@@ -86,7 +94,10 @@ class NewApiClaudeService implements AiService {
     return (
       uri: connection.messagesUri,
       key: connection.apiKey,
+      protocol: connection.protocol,
       promptCachingEnabled: connection.profile.promptCachingEnabled,
+      pdfAttachmentsEnabled: connection.profile.pdfAttachmentsEnabled,
+      pdfMaxPages: connection.profile.pdfMaxPages,
     );
   }
 
@@ -165,16 +176,25 @@ class NewApiClaudeService implements AiService {
     } on http.ClientException catch (error) {
       throwTransportError(error, requestStarted: false);
     }
+    final body = _text(response);
     if (response.statusCode == 401 || response.statusCode == 403) {
-      throw const AiInvalidKeyException('The New API key was rejected.');
+      final message = _errorMessage(body).trim();
+      throw AiInvalidKeyException(
+        message.isEmpty
+            ? 'Could not load models: the server rejected the key (HTTP ${response.statusCode}).'
+            : 'Could not load models (HTTP ${response.statusCode}): $message',
+      );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = _errorMessage(body).trim();
       throw AiServerException(
-        'Could not load models (HTTP ${response.statusCode}). Check the New API server URL.',
+        message.isEmpty
+            ? 'Could not load models (HTTP ${response.statusCode}). Check the server URL.'
+            : 'Could not load models (HTTP ${response.statusCode}): $message',
       );
     }
     try {
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(body);
       if (decoded is! Map || decoded['data'] is! List) {
         throw const AiServerException(
           'The server did not return a model list.',
@@ -196,15 +216,41 @@ class NewApiClaudeService implements AiService {
     }
   }
 
+  /// `response.body` falls back to Latin-1 when a gateway sends
+  /// `application/json` with no charset, which mangles non-ASCII error text.
+  /// These APIs always answer UTF-8, so decode that.
+  String _text(http.Response response) {
+    final charset = response.headers['content-type']?.toLowerCase() ?? '';
+    if (charset.contains('charset=latin') || charset.contains('charset=iso')) {
+      return response.body;
+    }
+    return utf8.decode(response.bodyBytes, allowMalformed: true);
+  }
+
   String _errorMessage(String body) {
     try {
       final decoded = jsonDecode(body);
-      if (decoded is Map && decoded['error'] is Map) {
-        final message = (decoded['error'] as Map)['message'];
-        return message is String ? message : '';
+      if (decoded is Map) {
+        final error = decoded['error'];
+        if (error is Map) {
+          final message = error['message'];
+          if (message is String && message.trim().isNotEmpty) return message;
+          final title = error['title'];
+          if (title is String && title.trim().isNotEmpty) return title;
+        }
+        if (error is String && error.trim().isNotEmpty) return error;
+        for (final key in const ['message', 'detail', 'title']) {
+          final value = decoded[key];
+          if (value is String && value.trim().isNotEmpty) return value;
+        }
       }
     } on FormatException {
-      return '';
+      // Not JSON: a proxy page (blocked request, challenge, or HTML error).
+      final text = body
+          .replaceAll(RegExp(r'<[^>]*>'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      return text.length > 140 ? '${text.substring(0, 140)}…' : text;
     }
     return '';
   }
@@ -219,9 +265,14 @@ class NewApiClaudeService implements AiService {
     return name;
   }
 
-  Map<String, String> headers(String key, {bool stream = false}) => {
+  Map<String, String> headers(
+    String key, {
+    bool stream = false,
+    AiEndpointProtocol protocol = AiEndpointProtocol.newApiAnthropic,
+  }) => {
     'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
+    if (protocol == AiEndpointProtocol.newApiAnthropic)
+      'anthropic-version': '2023-06-01',
     'Authorization': 'Bearer $key',
     if (stream) 'Accept': 'text/event-stream',
   };
@@ -231,8 +282,26 @@ class NewApiClaudeService implements AiService {
     required List<Map<String, String>> messages,
     required int maxTokens,
     required bool stream,
+    AiEndpointProtocol protocol = AiEndpointProtocol.newApiAnthropic,
     bool promptCachingEnabled = false,
+    AiPdfDocument? document,
   }) {
+    if (protocol == AiEndpointProtocol.openAiCompatible) {
+      if (document != null) {
+        throw const AiNotConfiguredException(
+          'This profile uses the OpenAI-compatible protocol, which cannot attach a PDF here. Use extracted text.',
+        );
+      }
+      return {
+        'model': modelName(model),
+        'max_tokens': maxTokens,
+        'stream': stream,
+        'messages': [
+          for (final m in messages)
+            {'role': m['role'], 'content': m['content'] ?? ''},
+        ],
+      };
+    }
     final system = messages
         .where((m) => m['role'] == 'system')
         .map((m) => m['content'] ?? '')
@@ -240,8 +309,30 @@ class NewApiClaudeService implements AiService {
         .join('\n\n');
     final turns = messages
         .where((m) => m['role'] != 'system')
-        .map((m) => {'role': m['role'], 'content': m['content']})
+        .map(
+          (m) => <String, Object?>{'role': m['role'], 'content': m['content']},
+        )
         .toList();
+    if (document != null) {
+      final firstUser = turns.indexWhere((m) => m['role'] == 'user');
+      if (firstUser < 0) {
+        throw const AiMalformedOutputException(
+          'A PDF attachment requires a user message.',
+        );
+      }
+      turns[firstUser]['content'] = [
+        {
+          'type': 'document',
+          'title': document.fileName,
+          'source': {
+            'type': 'base64',
+            'media_type': 'application/pdf',
+            'data': document.base64Data,
+          },
+        },
+        {'type': 'text', 'text': turns[firstUser]['content'] ?? ''},
+      ];
+    }
     return {
       'model': modelName(model),
       'max_tokens': maxTokens,
@@ -254,10 +345,24 @@ class NewApiClaudeService implements AiService {
 
   void checkStatus(int status, String body, String model) {
     if (status >= 200 && status < 300) return;
-    if (status == 401 || status == 403) {
-      throw const AiInvalidKeyException('The New API key was rejected.');
+    final apiMessage = _errorMessage(body).trim();
+    if (status == 401) {
+      throw AiInvalidKeyException(
+        apiMessage.isEmpty
+            ? 'The API key was rejected.'
+            : 'The API key was rejected: $apiMessage',
+      );
     }
-    final error = _errorMessage(body).toLowerCase();
+    // 403 is often the gateway itself (IP block, plan, or endpoint), so the
+    // server's own wording is the only real explanation the user can act on.
+    if (status == 403) {
+      throw AiInvalidKeyException(
+        apiMessage.isEmpty
+            ? 'The server refused this request (HTTP 403). Check the key, and that the profile protocol matches the server.'
+            : 'The server refused this request (HTTP 403): $apiMessage',
+      );
+    }
+    final error = apiMessage.toLowerCase();
     if ((status == 400 || status == 404) &&
         (error.contains('model') || error.contains('no available channel'))) {
       throw AiUnsupportedModelException(
@@ -287,6 +392,14 @@ class NewApiClaudeService implements AiService {
     final u = data['usage'] as Map;
     final input = u['input_tokens'];
     final output = u['output_tokens'];
+    if (input is! int && output is! int) {
+      // OpenAI-shaped gateways report prompt/completion/total tokens.
+      return AiTokenUsage.fromUsageMap(
+        u,
+        model: model,
+        provider: AiProviderId.newApi.storageValue,
+      );
+    }
     final cached = u['cache_read_input_tokens'];
     final created = u['cache_creation_input_tokens'];
     final prompt = input is int
@@ -312,6 +425,7 @@ class NewApiClaudeService implements AiService {
     required List<Map<String, String>> messages,
     required int maxTokens,
     String? profileId,
+    AiPdfDocument? document,
     Duration timeout = const Duration(seconds: 90),
     bool requireConsent = true,
   }) async {
@@ -319,18 +433,30 @@ class NewApiClaudeService implements AiService {
       throw const AiPrivacyNotAcceptedException();
     }
     final conn = await _open(profileId, model);
+    if (document != null) {
+      if (!conn.pdfAttachmentsEnabled) {
+        throw const AiNotConfiguredException(
+          'Enable PDF attachments for this API profile in Settings, or use extracted text.',
+        );
+      }
+      document.validatePageLimit(conn.pdfMaxPages);
+    }
     late http.Response response;
     try {
       final request = http.Request('POST', conn.uri)
         ..followRedirects = false
-        ..headers.addAll(headers(conn.key, stream: false))
+        ..headers.addAll(
+          headers(conn.key, stream: false, protocol: conn.protocol),
+        )
         ..body = jsonEncode(
           payload(
             model: model,
             messages: messages,
             maxTokens: maxTokens,
             stream: false,
+            protocol: conn.protocol,
             promptCachingEnabled: conn.promptCachingEnabled,
+            document: document,
           ),
         );
       // Connect timeout only; reading the body can take several minutes for
@@ -345,32 +471,17 @@ class NewApiClaudeService implements AiService {
       // Request likely reached the server; body download may have failed.
       throwTransportError(error, requestStarted: true);
     }
-    checkStatus(response.statusCode, response.body, model);
-    try {
-      final data = jsonDecode(response.body);
-      if (data is! Map || data['content'] is! List) {
-        throw const AiMalformedOutputException();
-      }
-      final text = (data['content'] as List)
-          .whereType<Map>()
-          .where((b) => b['type'] == 'text' && b['text'] is String)
-          .map((b) => b['text'] as String)
-          .join('\n')
-          .trim();
-      if (text.isEmpty) throw const AiEmptyResultException();
-      // Hit max_tokens: still return usable text so billed work is not wasted.
-      return (text: text, usage: usage(data, model));
-    } on AiException {
-      rethrow;
-    } on Object {
-      throw const AiMalformedOutputException();
-    }
+    final body = _text(response);
+    checkStatus(response.statusCode, body, model);
+    // Anthropic returns content blocks; OpenAI-compatible returns choices.
+    return _parseCompletedMessage(body, model);
   }
 
   Stream<({String? text, AiTokenUsage? usage})> streamMessages({
     required String model,
     required List<Map<String, String>> messages,
     String? profileId,
+    AiPdfDocument? document,
     int maxTokens = 4096,
 
     /// Idle gap between stream events. SSE tokens keep middleboxes awake.
@@ -380,18 +491,30 @@ class NewApiClaudeService implements AiService {
       throw const AiPrivacyNotAcceptedException();
     }
     final conn = await _open(profileId, model);
+    if (document != null) {
+      if (!conn.pdfAttachmentsEnabled) {
+        throw const AiNotConfiguredException(
+          'Enable PDF attachments for this API profile in Settings, or use extracted text.',
+        );
+      }
+      document.validatePageLimit(conn.pdfMaxPages);
+    }
     late http.StreamedResponse response;
     try {
       final request = http.Request('POST', conn.uri)
         ..followRedirects = false
-        ..headers.addAll(headers(conn.key, stream: true))
+        ..headers.addAll(
+          headers(conn.key, stream: true, protocol: conn.protocol),
+        )
         ..body = jsonEncode(
           payload(
             model: model,
             messages: messages,
             maxTokens: maxTokens,
             stream: true,
+            protocol: conn.protocol,
             promptCachingEnabled: conn.promptCachingEnabled,
+            document: document,
           ),
         );
       response = await _http.send(request).timeout(timeout);
@@ -465,6 +588,11 @@ class NewApiClaudeService implements AiService {
           model: model,
           provider: AiProviderId.newApi.storageValue,
         );
+        return (text: null, usage: combinedUsage);
+      }
+      final rawUsage = usage(event, model);
+      if (rawUsage != null) {
+        combinedUsage = rawUsage;
         return (text: null, usage: combinedUsage);
       }
       return null;
@@ -806,6 +934,7 @@ class NewApiClaudeService implements AiService {
     required int maxOutputTokens,
     required AiExecutionSelection selection,
     Duration timeout = const Duration(minutes: 5),
+    AiPdfDocument? document,
     void Function(String partialText)? onPartialText,
   }) async {
     if (messages.isEmpty) {
@@ -818,6 +947,7 @@ class NewApiClaudeService implements AiService {
         profileId: selection.endpointProfileId,
         model: selection.resolvedModelId,
         messages: messages,
+        document: document,
         maxTokens: maxOutputTokens,
         timeout: timeout,
       )) {

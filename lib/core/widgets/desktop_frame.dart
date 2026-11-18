@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/routes.dart';
 import '../../features/library_accounts/presentation/account_switcher.dart';
-import '../../features/study_workspace/data/study_workspace_providers.dart';
 import '../theme/app_spacing.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -24,7 +22,10 @@ class CurrentRouteObserver extends NavigatorObserver {
   }
 
   void _changed() {
-    final name = top?.settings.name;
+    final name = _pages.reversed
+        .map((page) => page.settings.name)
+        .nonNulls
+        .firstOrNull;
     SchedulerBinding.instance.addPostFrameCallback((_) => current.value = name);
   }
 
@@ -62,7 +63,7 @@ class CurrentRouteObserver extends NavigatorObserver {
 }
 
 /// Persistent left navigation for desktop windows; passes through on phones.
-class DesktopFrame extends ConsumerWidget {
+class DesktopFrame extends StatelessWidget {
   const DesktopFrame({super.key, required this.child});
 
   final Widget child;
@@ -83,22 +84,23 @@ class DesktopFrame extends ConsumerWidget {
       'AI Chat',
     ),
     (
-      AppRoutes.studySchedule,
+      AppRoutes.review,
       Icons.event_repeat_outlined,
       Icons.event_repeat,
-      'Schedule',
+      'Review',
     ),
     (AppRoutes.favorites, Icons.star_outline, Icons.star, 'Favorites'),
-    (
-      AppRoutes.reviews,
-      Icons.history_outlined,
-      Icons.history,
-      'Recent Reviews',
-    ),
     (AppRoutes.settings, Icons.settings_outlined, Icons.settings, 'Settings'),
   ];
 
   static int _indexFor(String? route) {
+    route = switch (route) {
+      AppRoutes.studySchedule ||
+      AppRoutes.reviews ||
+      AppRoutes.flashcardsList ||
+      AppRoutes.flashcardStudy => AppRoutes.review,
+      _ => route,
+    };
     final index = _sections.indexWhere((s) => s.$1 == route);
     return index < 0 ? 0 : index;
   }
@@ -122,7 +124,7 @@ class DesktopFrame extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     if (!AppSpacing.isDesktopLayout(context)) return child;
     final theme = Theme.of(context);
     return Row(
@@ -139,28 +141,15 @@ class DesktopFrame extends ConsumerWidget {
             onDestinationSelected: (index) => _open(_sections[index].$1),
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/logo/study_vault_icon_512.png',
-                    width: 40,
-                    height: 40,
-                    errorBuilder: (_, _, _) => Icon(
-                      Icons.school,
-                      size: 36,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  FloatingActionButton.small(
-                    heroTag: null,
-                    elevation: 0,
-                    onPressed: () =>
-                        ref.read(studyWorkspaceProvider.notifier).open(),
-                    child: const Icon(Icons.auto_awesome),
-                  ),
-                  Text('AI Chat', style: theme.textTheme.labelSmall),
-                ],
+              child: Image.asset(
+                'assets/logo/study_vault_icon_512.png',
+                width: 40,
+                height: 40,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.school,
+                  size: 36,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
             trailing: const Padding(

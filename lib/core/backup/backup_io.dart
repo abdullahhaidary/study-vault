@@ -43,7 +43,7 @@ Future<List<({File file, String relativePath, int size})>> listFilesRecursive(
 String suggestedBackupFileName(DateTime when) {
   final local = when.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
-  return 'StudyVault-'
+  return 'StudyDesk-'
       '${local.year}-${two(local.month)}-${two(local.day)}-'
       '${two(local.hour)}${two(local.minute)}.svbackup';
 }

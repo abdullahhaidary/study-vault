@@ -53,7 +53,7 @@ Return concise but educational answers.
         ? null
         : userPreference.trim();
     return AiStyleMemory.appendToSystem(
-      'You are Study Vault AI Assistant for university students.\n'
+      'You are StudyDesk AI Assistant for university students.\n'
       '$_annotationStudyRole'
       '$lang\n'
       '$_preserveRules',

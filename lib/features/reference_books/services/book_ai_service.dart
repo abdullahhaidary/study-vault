@@ -1,3 +1,9 @@
+import '../../ai_assistant/domain/ai_exceptions.dart';
+import '../../ai_assistant/domain/ai_provider.dart';
+import '../../ai_chat/domain/ai_chat_models.dart';
+import '../../ai_chat/services/chat_history_policy.dart';
+import '../domain/book_ai_input.dart';
+import 'book_pdf_source.dart';
 import '../../../core/database/app_database.dart';
 import '../../ai_assistant/domain/ai_execution_selection.dart';
 import '../../ai_questions/domain/question_source.dart';
@@ -14,21 +20,24 @@ import '../domain/book_text_index.dart';
 import '../domain/reading_plan.dart';
 import 'book_search_service.dart';
 
-/// Every AI action on a reference book. Only small, relevant page sets are
-/// sent, so book size does not change the request size.
+/// Book AI uses retrieved/chapter text by default. Native PDF input is an
+/// explicit choice and keeps the selected provider/profile for the request.
 class BookAiService {
   BookAiService(
     this._repository,
     this._search,
     this._client, {
     this.quizzes,
+    BookPdfSource? pdfSource,
     Future<String> Function(LessonMaterial)? resolveLecturePath,
-  }) : _resolveLecturePath = resolveLecturePath ?? materialAbsolutePath;
+  }) : _pdfSource = pdfSource ?? LocalBookPdfSource(),
+       _resolveLecturePath = resolveLecturePath ?? materialAbsolutePath;
 
   final BookRepository _repository;
   final BookSearchService _search;
   final PdfAiCompletionClient _client;
   final QuizGenerationService? quizzes;
+  final BookPdfSource _pdfSource;
   final Future<String> Function(LessonMaterial) _resolveLecturePath;
 
   static const askPageLimit = 14;
@@ -65,9 +74,19 @@ class BookAiService {
     required String question,
     required AiExecutionSelection selection,
     ReferenceBookChapter? chapter,
+    BookAiInputMode inputMode = BookAiInputMode.extractedText,
   }) async {
     final trimmed = question.trim();
     if (trimmed.isEmpty) return;
+    if (inputMode == BookAiInputMode.pdfAttachment) {
+      await _askPdf(
+        book: book,
+        question: trimmed,
+        selection: selection,
+        chapter: chapter,
+      );
+      return;
+    }
     await _requireIndex(book);
     final history = await _repository.messages(book.id);
     await _repository.addMessage(
@@ -80,7 +99,8 @@ class BookAiService {
 
     var query = trimmed;
     final state = await _repository.localState(book.id);
-    if (state.vectorsModel != _search.embeddings.model) {
+    final useSemantic = selection.provider == AiProviderId.gemini;
+    if (!useSemantic || state.vectorsModel != _search.embeddings.model) {
       try {
         final keywords = await _client.complete(
           messages: [
@@ -89,6 +109,7 @@ class BookAiService {
           maxOutputTokens: 256,
           selection: selection,
         );
+        _requireComplete(keywords);
         query = '$trimmed ${keywords.markdown}';
       } on Object {
         // Keyword expansion is only a recall boost.
@@ -102,6 +123,7 @@ class BookAiService {
       query,
       limit: askPageLimit,
       within: within,
+      useSemantic: useSemantic,
     );
     if (hits.isEmpty) {
       await _repository.addMessage(
@@ -125,24 +147,22 @@ class BookAiService {
     }
     selected.sort((a, b) => a.page.compareTo(b.page));
     final chapters = await _repository.chapters(book.id);
+    final context =
+        'SOURCE PAGES:\n${BookPrompts.pagesDocument(selected, chapterOf: _chapterLookup(chapters))}';
+    final historyTurns = ChatHistoryPolicy.compact([
+      AiChatTurn(role: 'user', content: context, pinForCache: true),
+      for (final m in history) AiChatTurn(role: m.role, content: m.content),
+      AiChatTurn(role: 'user', content: BookPrompts.askRequest(trimmed)),
+    ]);
     final completion = await _client.complete(
       messages: [
         {'role': 'system', 'content': BookPrompts.system(book.title)},
-        for (final m
-            in history.length > 6
-                ? history.sublist(history.length - 6)
-                : history)
-          {'role': m.role, 'content': m.content},
-        {
-          'role': 'user',
-          'content':
-              'SOURCE PAGES:\n${BookPrompts.pagesDocument(selected, chapterOf: _chapterLookup(chapters))}',
-        },
-        {'role': 'user', 'content': BookPrompts.askRequest(trimmed)},
+        for (final m in historyTurns) {'role': m.role, 'content': m.content},
       ],
       maxOutputTokens: 4096,
       selection: selection,
     );
+    _requireComplete(completion);
     final answer = completion.markdown.trim();
     if (answer.isEmpty) throw StateError('The AI returned an empty answer.');
     await _repository.addMessage(
@@ -162,16 +182,28 @@ class BookAiService {
     required ReferenceBookChapter chapter,
     required BookAiKind kind,
     required AiExecutionSelection selection,
+    BookAiInputMode inputMode = BookAiInputMode.extractedText,
   }) async {
-    await _requireIndex(book);
-    final pages = await _repository.pages(
-      book.id,
-      start: chapter.startPage,
-      end: chapter.endPage,
-    );
+    if (chapter.bookId != book.id) {
+      throw StateError('This chapter belongs to another book.');
+    }
+    if (inputMode == BookAiInputMode.extractedText) await _requireIndex(book);
+    final pages = inputMode == BookAiInputMode.pdfAttachment
+        ? await _pdfPageReferences(
+            book,
+            chapter.startPage,
+            chapter.endPage,
+            selection,
+          )
+        : await _repository.pages(
+            book.id,
+            start: chapter.startPage,
+            end: chapter.endPage,
+          );
     final completion = await _completeOverPages(
       book: book,
       pages: pages,
+      inputMode: inputMode,
       request: BookPrompts.chapterRequest(kind, chapter.title),
       title: chapter.title,
       selection: selection,
@@ -194,20 +226,23 @@ class BookAiService {
     required int startPage,
     required int endPage,
     required AiExecutionSelection selection,
+    BookAiInputMode inputMode = BookAiInputMode.extractedText,
     String? chapterId,
   }) async {
-    if (endPage < startPage || endPage - startPage + 1 > maxExplainPages) {
+    if (startPage < 1 ||
+        endPage > book.pageCount ||
+        endPage < startPage ||
+        endPage - startPage + 1 > maxExplainPages) {
       throw StateError('Choose at most $maxExplainPages pages to explain.');
     }
-    await _requireIndex(book);
-    final pages = await _repository.pages(
-      book.id,
-      start: startPage,
-      end: endPage,
-    );
+    if (inputMode == BookAiInputMode.extractedText) await _requireIndex(book);
+    final pages = inputMode == BookAiInputMode.pdfAttachment
+        ? await _pdfPageReferences(book, startPage, endPage, selection)
+        : await _repository.pages(book.id, start: startPage, end: endPage);
     final completion = await _completeOverPages(
       book: book,
       pages: pages,
+      inputMode: inputMode,
       request: BookPrompts.chapterRequest(BookAiKind.explanation, ''),
       title: 'pages $startPage–$endPage',
       selection: selection,
@@ -234,7 +269,29 @@ class BookAiService {
     required String request,
     required String title,
     required AiExecutionSelection selection,
+    BookAiInputMode inputMode = BookAiInputMode.extractedText,
   }) async {
+    if (inputMode == BookAiInputMode.pdfAttachment) {
+      final client = _fileClient;
+      final limit = await client.pdfPageLimit(selection);
+      final document = await _pdfSource.prepare(
+        book,
+        pages: [for (final p in pages) p.page],
+        maxPages: limit,
+      );
+      final result = await client.completeWithPdf(
+        document: document,
+        messages: [
+          {'role': 'system', 'content': BookPrompts.system(book.title)},
+          {'role': 'user', 'content': document.pageMap},
+          {'role': 'user', 'content': request},
+        ],
+        maxOutputTokens: 12000,
+        selection: selection,
+      );
+      _requireComplete(result);
+      return result;
+    }
     if (pages.every((p) => p.text.trim().isEmpty)) {
       throw StateError('These pages have no extractable text.');
     }
@@ -252,6 +309,7 @@ class BookAiService {
           maxOutputTokens: PdfAiMaterialService.chunkDigestMaxOutputTokens,
           selection: selection,
         );
+        _requireComplete(digest);
         digests.add(digest.markdown.trim());
       }
       document = PdfAiPromptBuilder.synthesisDocument(
@@ -268,10 +326,106 @@ class BookAiService {
       maxOutputTokens: 12000,
       selection: selection,
     );
+    _requireComplete(completion);
     if (completion.markdown.trim().isEmpty) {
       throw StateError('The AI returned an empty response.');
     }
     return completion;
+  }
+
+  Future<List<BookPage>> _pdfPageReferences(
+    ReferenceBook book,
+    int start,
+    int end,
+    AiExecutionSelection selection,
+  ) async {
+    final limit = await _fileClient.pdfPageLimit(selection);
+    if (start < 1 ||
+        end < start ||
+        end > book.pageCount ||
+        end - start + 1 > limit) {
+      throw AiMalformedOutputException(
+        'Choose a valid range of at most $limit pages for this endpoint, or use extracted text.',
+      );
+    }
+    return [for (var p = start; p <= end; p++) BookPage(p, '')];
+  }
+
+  PdfAiFileCompletionClient get _fileClient {
+    final client = _client;
+    if (client is! PdfAiFileCompletionClient) {
+      throw const AiUnsupportedModelException(
+        'PDF attachments are unavailable. Use extracted text for this model.',
+      );
+    }
+    return client as PdfAiFileCompletionClient;
+  }
+
+  static void _requireComplete(PdfAiCompletion completion) {
+    if (completion.isPartial) {
+      throw const AiConnectionInterruptedException(
+        'The book response was interrupted. It was not saved as a completed answer. Try again.',
+      );
+    }
+    if (completion.markdown.trim().isEmpty) {
+      throw const AiEmptyResultException();
+    }
+  }
+
+  Future<void> _askPdf({
+    required ReferenceBook book,
+    required String question,
+    required AiExecutionSelection selection,
+    ReferenceBookChapter? chapter,
+  }) async {
+    final client = _fileClient;
+    final limit = await client.pdfPageLimit(selection);
+    final references = chapter == null
+        ? null
+        : await _pdfPageReferences(
+            book,
+            chapter.startPage,
+            chapter.endPage,
+            selection,
+          );
+    final document = await _pdfSource.prepare(
+      book,
+      pages: references == null ? null : [for (final p in references) p.page],
+      maxPages: limit,
+    );
+    final history = await _repository.messages(book.id);
+    final messages = ChatHistoryPolicy.compact([
+      AiChatTurn(role: 'user', content: document.pageMap, pinForCache: true),
+      for (final m in history) AiChatTurn(role: m.role, content: m.content),
+      AiChatTurn(role: 'user', content: BookPrompts.askRequest(question)),
+    ]);
+    await _repository.addMessage(
+      bookId: book.id,
+      role: 'user',
+      content: question,
+    );
+    final completion = await client.completeWithPdf(
+      document: document,
+      messages: [
+        {'role': 'system', 'content': BookPrompts.system(book.title)},
+        for (final m in messages) {'role': m.role, 'content': m.content},
+      ],
+      maxOutputTokens: 4096,
+      selection: selection,
+    );
+    _requireComplete(completion);
+    final permitted = document.sourcePages.toSet();
+    final cited = BookPrompts.citedPages(
+      completion.markdown,
+    ).where(permitted.contains).toList();
+    await _repository.addMessage(
+      bookId: book.id,
+      role: 'assistant',
+      content: completion.markdown.trim(),
+      sourcePages: cited,
+      provider: completion.provider,
+      model: completion.model,
+    );
   }
 
   static List<String> _chunks(String text, int size) {
@@ -356,6 +510,7 @@ class BookAiService {
       book.id,
       lectureText.length > 3000 ? lectureText.substring(0, 3000) : lectureText,
       limit: 15,
+      useSemantic: selection.provider == AiProviderId.gemini,
     );
     final lookup = _chapterLookup(chapters);
     final matching = [
@@ -381,6 +536,7 @@ class BookAiService {
       maxOutputTokens: 2048,
       selection: selection,
     );
+    _requireComplete(completion);
     final ranges = BookPrompts.parseRanges(completion.markdown, book.pageCount);
     await _repository.replaceLinks(
       bookId: book.id,

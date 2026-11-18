@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/app_info.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/navigation/library_reorder.dart';
@@ -13,7 +14,6 @@ import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../lessons/data/lesson_progress_providers.dart';
 import '../../library_accounts/presentation/account_switcher.dart';
-import '../../study_review/presentation/recent_reviews_screen.dart';
 import '../../study_schedule/data/study_schedule_providers.dart';
 import '../../study_schedule/presentation/study_schedule_screen.dart';
 import '../data/classes_providers.dart';
@@ -43,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
           slivers: [
             SliverAppBar(
               pinned: true,
-              title: Text(desktop ? 'Library' : 'Study Vault'),
+              title: Text(desktop ? 'Library' : AppInfo.name),
               actions: desktop
                   ? [
                       Padding(
@@ -77,10 +77,8 @@ class HomeScreen extends ConsumerWidget {
                               CreateClassDialog.show(context);
                             case 'books':
                               Navigator.of(context).pushNamed(AppRoutes.books);
-                            case 'schedule':
-                              StudyScheduleScreen.open(context);
-                            case 'reviews':
-                              RecentReviewsScreen.open(context);
+                            case 'review':
+                              Navigator.of(context).pushNamed(AppRoutes.review);
                             case 'favorites':
                               ShellNavigation.openFavorites(context);
                             case 'settings':
@@ -96,14 +94,7 @@ class HomeScreen extends ConsumerWidget {
                             value: 'books',
                             child: Text('Reference Books'),
                           ),
-                          PopupMenuItem(
-                            value: 'schedule',
-                            child: Text('Study Schedule'),
-                          ),
-                          PopupMenuItem(
-                            value: 'reviews',
-                            child: Text('Recent Reviews'),
-                          ),
+                          PopupMenuItem(value: 'review', child: Text('Review')),
                           PopupMenuItem(
                             value: 'favorites',
                             child: Text('Favorites'),

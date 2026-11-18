@@ -42,7 +42,7 @@ class ManualEntrySettingsSection extends ConsumerWidget {
         const SectionHeader(title: 'Manual Entry'),
         Text(
           'Generate study content with any AI (ChatGPT, Claude, Gemini) using '
-          'the Study Vault JSON format, then import it with a full preview. '
+          'the StudyDesk JSON format, then import it with a full preview. '
           'Works without an API key.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,

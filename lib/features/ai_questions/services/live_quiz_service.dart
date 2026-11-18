@@ -98,7 +98,7 @@ class LiveQuizService {
   static const judgeMaxTokens = 2048;
 
   static const _systemRules =
-      'You are Study Vault AI quizzing a university student.\n'
+      'You are StudyDesk AI quizzing a university student.\n'
       'Ground every question and every wrong-answer explanation in the attached '
       'study material only.\n'
       'Ask topic, scenario, or how-it-works questions. Do not ask trivia such as '

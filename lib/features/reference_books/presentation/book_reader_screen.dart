@@ -1,3 +1,4 @@
+import 'book_ai_request_picker.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import 'dart:async';
 import 'dart:io';
@@ -213,33 +214,43 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
     );
   }
 
-  Future<void> _explainPage(ReferenceBook book) async {
-    final scope = BookAiService.pageScope(_page, _page);
-    var item = await _repository.latestAiItem(
-      bookId: book.id,
-      kind: BookAiKind.explanation,
-      scopeKey: scope,
-    );
+  Future<void> _explainPage(
+    ReferenceBook book, {
+    bool regenerate = false,
+    int? targetPage,
+  }) async {
+    final page = targetPage ?? _page;
+    final scope = BookAiService.pageScope(page, page);
+    var item = regenerate
+        ? null
+        : await _repository.latestAiItem(
+            bookId: book.id,
+            kind: BookAiKind.explanation,
+            scopeKey: scope,
+          );
     if (item == null) {
       if (!mounted) return;
-      final selection = await pickAiModel(
+      final request = await pickBookAiRequest(
         context,
         ref,
-        title: 'Explain page $_page with',
+        title: 'Explain page $page with',
+        pageCount: 1,
+        sourceDescription: 'Book page $page',
       );
-      if (selection == null || !mounted) return;
+      if (request == null || !mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
-        TransientSnackBar(content: Text('Explaining page $_page…')),
+        TransientSnackBar(content: Text('Explaining page $page…')),
       );
       try {
         item = await ref
             .read(bookAiServiceProvider)
             .explainPages(
               book: book,
-              startPage: _page,
-              endPage: _page,
-              selection: selection,
+              startPage: page,
+              endPage: page,
+              selection: request.selection,
+              inputMode: request.inputMode,
             );
       } on Object catch (e) {
         messenger.showSnackBar(
@@ -277,6 +288,21 @@ class _BookReaderScreenState extends ConsumerState<BookReaderScreen> {
                   ),
                 ),
               ],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Generate with another model'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _explainPage(
+                    book,
+                    regenerate: true,
+                    targetPage: item!.startPage,
+                  );
+                },
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             BookMarkdown(

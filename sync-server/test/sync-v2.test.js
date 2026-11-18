@@ -11,7 +11,7 @@ import { sha256, sessionToken } from '../src/security.js';
 
 let pool, server, root, origin, token, owner;
 const classId = randomUUID();
-const row = { id: classId, name: 'Library', description: null, created_at: 1, updated_at: 1 };
+const row = { id: classId, name: 'Library', description: null, sort_order: 0, created_at: 1, updated_at: 1 };
 const mutation = (data, revision = 0, table = 'classes', id = classId) => ({
   table, id, data, baseRevision: revision, mutationId: randomUUID(),
 });
@@ -87,7 +87,7 @@ test('invalid local column types and dangling foreign keys are rejected', async 
 test('multiple tables commit together and parent-only deletion cannot orphan a child', async () => {
   const subjectId = randomUUID();
   const subject = { id: subjectId, class_id: classId, subject_group_id: null, name: 'Subject',
-    description: null, sort_order: 0, created_at: 1, updated_at: 1 };
+    description: null, sort_order: 0, exam_date: null, created_at: 1, updated_at: 1 };
   const result = await request('/v2/sync', batch([mutation(subject, 0, 'subjects', subjectId)], committed.head));
   assert.equal(result.status, 200);
   const latest = await result.json();
@@ -108,4 +108,64 @@ test('reference books require their uploaded PDF manifest', async () => {
   const response = await request('/v2/sync', batch([mutation(book, 0, 'reference_books', id)], head));
   assert.equal(response.status, 422);
   assert.match((await response.json()).error, /Upload the PDF/);
+});
+
+test('revision checks and deltas require authentication and validate cursors', async () => {
+  assert.equal((await request('/v2/status', null, null)).status, 401);
+  assert.equal((await request('/v2/changes?after=0', null, null)).status, 401);
+  for (const query of ['', '?after=-1', '?after=1.5', '?after=no', '?after=9007199254740992', '?after=1&after=2']) {
+    assert.equal((await request(`/v2/changes${query}`)).status, 400);
+  }
+  const status = await (await request('/v2/status')).json();
+  assert.equal(status.head, (await (await request('/v2/snapshot')).json()).head);
+  assert.deepEqual(await (await request(`/v2/changes?after=${status.head}`)).json(), {
+    schemaVersion: 24, head: status.head, records: [],
+  });
+  assert.equal((await request(`/v2/changes?after=${status.head + 1}`)).status, 409);
+});
+
+test('deltas return only latest changed records and retain deletion tombstones', async () => {
+  const start = await (await request('/v2/status')).json();
+  const id = randomUUID(), subjectId = randomUUID();
+  const parent = { ...row, id };
+  const child = { id: subjectId, class_id: id, subject_group_id: null, name: 'Subject',
+    description: null, sort_order: 0, exam_date: null, created_at: 1, updated_at: 1 };
+  const response = await request('/v2/sync', batch([
+    mutation(parent, 0, 'classes', id), mutation(child, 0, 'subjects', subjectId),
+  ], start.head));
+  assert.equal(response.status, 200);
+  const created = await response.json();
+  const parentRevision = created.accepted[0].revision;
+  const childRevision = created.accepted[1].revision;
+  const updatedResponse = await request('/v2/sync', batch([
+    mutation({ ...parent, name: 'Latest' }, parentRevision, 'classes', id),
+  ], created.head));
+  assert.equal(updatedResponse.status, 200);
+  const updated = await updatedResponse.json();
+  const delta = await (await request(`/v2/changes?after=${start.head}`)).json();
+  assert.equal(delta.records.length, 2);
+  assert.equal(delta.head, updated.head);
+  assert.equal(delta.records.find((r) => r.id === id).data.name, 'Latest');
+  const one = await (await request(`/v2/changes?after=${created.head}`)).json();
+  assert.equal(one.records.length, 1);
+  assert.equal(one.records[0].id, id);
+  const deletionResponse = await request('/v2/sync', batch([
+    mutation(null, updated.head, 'classes', id), mutation(null, childRevision, 'subjects', subjectId),
+  ], updated.head));
+  assert.equal(deletionResponse.status, 200);
+  const deleted = await deletionResponse.json();
+  const tombstones = await (await request(`/v2/changes?after=${updated.head}`)).json();
+  assert.equal(tombstones.head, deleted.head);
+  assert.equal(tombstones.records.length, 2);
+  assert.ok(tombstones.records.every((r) => r.data === null));
+});
+
+test('revision checks and deltas are account scoped', async () => {
+  const otherOwner = randomUUID(), otherToken = sessionToken();
+  await pool.query('INSERT INTO accounts(id,username,password_hash) VALUES($1,$2,$3)', [otherOwner, otherOwner, 'test-only']);
+  await pool.query("INSERT INTO sessions(token_hash,account_id,device_name,expires_at) VALUES($1,$2,'test',now()+interval '1 day')", [sha256(otherToken), otherOwner]);
+  assert.deepEqual(await (await request('/v2/status', null, otherToken)).json(), { schemaVersion: 24, head: 0 });
+  assert.deepEqual(await (await request('/v2/changes?after=0', null, otherToken)).json(), {
+    schemaVersion: 24, head: 0, records: [],
+  });
 });

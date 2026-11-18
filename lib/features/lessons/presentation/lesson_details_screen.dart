@@ -190,7 +190,7 @@ class LessonDetailsScreen extends ConsumerWidget {
       title: 'Remove $kind?',
       message:
           '"${material.title}" will be removed from this lesson and deleted '
-          'from local Study Vault storage. Study Pins, AI materials, and '
+          'from local StudyDesk storage. Study Pins, AI materials, and '
           'quizzes for this attachment will also be removed.'
           '${hasPersian ? ' Its Persian PDF companion will be removed too.' : ''}',
       confirmLabel: 'Remove',
@@ -570,7 +570,7 @@ class LessonDetailsScreen extends ConsumerWidget {
         _StudyToolTile(
           icon: Icons.summarize_outlined,
           title: 'Lesson Summary',
-          subtitle: 'Every AI summary in one place · edit, copy, add',
+          subtitle: 'An editable summary of the whole lesson',
           onTap: () => LessonSummaryScreen.open(
             context,
             lessonId: lessonId,
@@ -630,7 +630,7 @@ class LessonDetailsScreen extends ConsumerWidget {
         _StudyToolTile(
           icon: Icons.library_books_outlined,
           title: 'AI Study Materials',
-          subtitle: 'Summary · Explanation · Deep Explanation',
+          subtitle: 'Mental Blueprint · Document Summary · Explanation',
           onTap: () => _openAiStudyMaterials(
             context,
             ref,
