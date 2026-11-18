@@ -5,8 +5,8 @@ Refactor one small part at a time. Reuse the components StudyDesk already has, t
 ## Current progress
 
 - **Baseline** — Review navigation, summary labels, and Advanced Settings were reorganized. That work is separate from the component refactors below.
-- **Next** — B. Check whether the flashcard list can reuse `EmptyState`, following the Books shelf’s example.
-- **Completed** — 1 of 26. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
+- **Next** — C. Check whether the Review hub and Settings can reuse `ContentContainer` with their current widths and padding.
+- **Completed** — 2 of 26. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
 
 ## How to work through one item
 
@@ -25,7 +25,7 @@ Test filenames below are relative to `test/`.
 | Item | Small change | Existing check |
 | --- | --- | --- |
 | [x] A. Loading indicators | Use `AppLoading` for full-body loading in Recent Reviews and the flashcard list. Keep the existing loading conditions and all other states. | `desktop_layout_test.dart` |
-| [ ] B. Empty states | Compare the empty states in the flashcard list and Books shelf. Reuse `EmptyState` where it fits, with each screen’s own copy and action. | `desktop_layout_test.dart`, `reference_books_test.dart` |
+| [x] B. Empty states | Compare the empty states in the flashcard list and Books shelf. Reuse `EmptyState` where it fits, with each screen’s own copy and action. | `desktop_layout_test.dart`, `reference_books_test.dart` |
 | [ ] C. Content width | Try `ContentContainer` in the Review hub and one Settings section with explicit width and padding. Check placement before considering a new default for other callers. | `desktop_layout_test.dart` |
 | [ ] D. Search width | Reduce the repeated width and padding setup inside `SearchScreen`. Check that the input, filters, and results still align across window sizes. | `desktop_layout_test.dart`, `search_favorites_categories_test.dart` |
 | [ ] E. Adaptive lists | Use `AdaptiveItemList` for one library list that already needs the same phone-list and desktop-grid behavior. Verify ordering and tap targets. | `desktop_layout_test.dart`, `library_reorder_test.dart` |
@@ -72,3 +72,4 @@ Test filenames below are relative to `test/`.
 | --- | --- | --- | --- |
 | 2026-11-18 | Baseline | Recorded the refactor sequence. Start with Recent Reviews and the flashcard list. | The preceding navigation work passed focused checks. Separate older schema assertions in the quiz and chat-reference tests expected version 22 while the app uses 24. |
 | 2026-11-18 | A. Loading indicators | `recent_reviews_screen.dart` and `flashcards_list_screen.dart` now use `AppLoading`. | All 8 desktop layout tests passed. `flutter analyze --no-pub` reported 8 existing informational findings outside these files. |
+| 2026-11-18 | B. Empty states | `flashcards_list_screen.dart` now uses `EmptyState`, with a hint for making a card from selected PDF text. | All 26 desktop layout and reference book tests passed. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited file. |
