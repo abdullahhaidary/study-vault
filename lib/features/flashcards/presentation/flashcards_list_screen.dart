@@ -8,6 +8,7 @@ import '../../../core/widgets/transient_snack_bar.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../favorites/presentation/favorite_star_button.dart';
 import '../../study_pins/domain/study_note_codec.dart';
@@ -83,7 +84,7 @@ class FlashcardsListScreen extends ConsumerWidget {
       ),
       body: ScrollEdgeArrows(
         child: cards.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoading(),
           error: (error, _) =>
               Center(child: Text('Could not load flashcards: $error')),
           data: (items) {

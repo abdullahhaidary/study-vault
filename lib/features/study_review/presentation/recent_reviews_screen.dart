@@ -26,7 +26,7 @@ class RecentReviewsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Recent Reviews')),
       body: ScrollEdgeArrows(
         child: sessionsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoading(),
           error: (e, _) => Center(child: Text('Error: $e')),
           data: (sessions) {
             if (sessions.isEmpty) {
