@@ -5,8 +5,8 @@ Refactor one small part at a time. Reuse the components StudyDesk already has, t
 ## Current progress
 
 - **Baseline** — Review navigation, summary labels, and Advanced Settings were reorganized. That work is separate from the component refactors below.
-- **Next** — E. Find a library list that can reuse `AdaptiveItemList` with the same phone and desktop behavior.
-- **Completed** — 4 of 26. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
+- **Next** — F. Compare the group headers on the class and subject pages.
+- **Completed** — 5 of 26. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
 
 ## How to work through one item
 
@@ -28,7 +28,7 @@ Test filenames below are relative to `test/`.
 | [x] B. Empty states | Compare the empty states in the flashcard list and Books shelf. Reuse `EmptyState` where it fits, with each screen’s own copy and action. | `desktop_layout_test.dart`, `reference_books_test.dart` |
 | [x] C. Content width | Use `ContentContainer` for the Review hub and Settings with explicit width and the existing list padding. | `desktop_layout_test.dart` |
 | [x] D. Search width | Use one `ContentContainer` for Search’s input, filters, and results. | `desktop_layout_test.dart`, `search_favorites_categories_test.dart`, `file_search_test.dart` |
-| [ ] E. Adaptive lists | Use `AdaptiveItemList` for one library list that already needs the same phone-list and desktop-grid behavior. Verify ordering and tap targets. | `desktop_layout_test.dart`, `library_reorder_test.dart` |
+| [x] E. Adaptive lists | Reuse `ResponsiveGrid` inside `AdaptiveItemList` for desktop layout. Verify ordering and tap targets at desktop and compact widths. | `desktop_layout_test.dart`, `library_reorder_test.dart` |
 | [ ] F. Group headers | Compare group rows on the class and subject pages. Reuse `GroupSectionHeader` for matching presentation while each page owns its menu and reorder callbacks. | `library_reorder_test.dart` |
 | [ ] G. Delete confirmations | Compare one class or subject delete confirmation with the lesson equivalent. Reuse the existing confirmation dialog where it fits and keep each cascade warning and cancel path. | `library_reorder_test.dart`, `database_test.dart` |
 
@@ -75,3 +75,4 @@ Test filenames below are relative to `test/`.
 | 2026-11-18 | B. Empty states | `flashcards_list_screen.dart` now uses `EmptyState`, with a hint for making a card from selected PDF text. | All 26 desktop layout and reference book tests passed. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited file. |
 | 2026-11-18 | C. Content width | `review_hub_screen.dart` and `settings_screen.dart` use `ContentContainer`. `desktop_layout_test.dart` checks the desktop Review and phone Settings widths. | All 8 layout tests passed on retry. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |
 | 2026-11-18 | D. Search width | `search_screen.dart` uses one width and horizontal padding for the whole body. `file_search_test.dart` checks field, scope chip, and result alignment at phone and desktop widths. | All 37 focused tests passed. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |
+| 2026-11-18 | E. Adaptive lists | `desktop_frame.dart` now uses `ResponsiveGrid` for the desktop branch of `AdaptiveItemList`. My Classes and Books use the grid directly because they can show multiple columns on wide phones. | All 12 layout and reorder tests passed, including the new order and tap checks. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |

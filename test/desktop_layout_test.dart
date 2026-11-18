@@ -9,6 +9,7 @@ import 'package:study_vault/app/app.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/theme/app_spacing.dart';
+import 'package:study_vault/core/widgets/desktop_frame.dart';
 import 'package:study_vault/core/widgets/responsive_grid.dart';
 import 'package:study_vault/features/ai_chat/presentation/ai_chat_screen.dart';
 import 'package:study_vault/features/flashcards/presentation/flashcards_list_screen.dart';
@@ -64,6 +65,52 @@ void main() {
       tester.getSize(find.byType(ResponsiveGrid)).width,
       tester.view.physicalSize.width / tester.view.devicePixelRatio,
     );
+  });
+
+  testWidgets('adaptive library rows keep their order and tap targets', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(tester.view.reset);
+    try {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1100, 800);
+      String? opened;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdaptiveItemList(
+              children: [
+                for (final title in ['First', 'Second', 'Third', 'Fourth'])
+                  ListTile(title: Text(title), onTap: () => opened = title),
+              ],
+            ),
+          ),
+        ),
+      );
+      final first = find.widgetWithText(ListTile, 'First');
+      final second = find.widgetWithText(ListTile, 'Second');
+      final fourth = find.widgetWithText(ListTile, 'Fourth');
+      final origin = tester.getTopLeft(first);
+      expect(tester.getTopLeft(second).dy, origin.dy);
+      expect(tester.getTopLeft(second).dx, greaterThan(origin.dx));
+      expect(tester.getTopLeft(fourth).dx, origin.dx);
+      expect(tester.getTopLeft(fourth).dy, greaterThan(origin.dy));
+      await tester.tap(second);
+      expect(opened, 'Second');
+
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(second).dx, tester.getTopLeft(first).dx);
+      expect(
+        tester.getTopLeft(second).dy,
+        greaterThan(tester.getTopLeft(first).dy),
+      );
+      await tester.tap(fourth);
+      expect(opened, 'Fourth');
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('desktop window shows a persistent navigation rail', (

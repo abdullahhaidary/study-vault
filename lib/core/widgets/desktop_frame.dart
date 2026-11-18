@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import '../../app/routes.dart';
 import '../../features/library_accounts/presentation/account_switcher.dart';
 import '../theme/app_spacing.dart';
+import 'responsive_grid.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
 final appRouteObserver = CurrentRouteObserver();
@@ -190,26 +191,11 @@ class AdaptiveItemList extends StatelessWidget {
     if (AppSpacing.isDesktopLayout(context)) {
       return Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            const spacing = AppSpacing.sm;
-            final columns = (constraints.maxWidth / (minItemWidth + spacing))
-                .floor()
-                .clamp(1, 4);
-            final width =
-                (constraints.maxWidth - spacing * (columns - 1)) / columns;
-            return SizedBox(
-              width: constraints.maxWidth,
-              child: Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: [
-                  for (final child in children)
-                    SizedBox(width: width, child: child),
-                ],
-              ),
-            );
-          },
+        child: ResponsiveGrid(
+          minItemWidth: minItemWidth,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: children,
         ),
       );
     }
