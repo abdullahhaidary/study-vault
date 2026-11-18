@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/app/app.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
+import 'package:study_vault/core/theme/app_spacing.dart';
 import 'package:study_vault/core/widgets/responsive_grid.dart';
 import 'package:study_vault/features/ai_chat/presentation/ai_chat_screen.dart';
 import 'package:study_vault/features/flashcards/presentation/flashcards_list_screen.dart';
@@ -92,6 +93,10 @@ void main() {
 
       await tester.tap(find.text('Review'));
       await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.widgetWithText(ListTile, 'Due Lessons')).width,
+        AppSpacing.contentMaxWidthWide - 2 * AppSpacing.pagePaddingWide,
+      );
       await tester.tap(find.text('History'));
       await tester.pumpAndSettle();
       expect(find.byType(RecentReviewsScreen), findsOneWidget);
@@ -235,6 +240,10 @@ void main() {
     final advanced = find.text('Advanced Settings');
     await tester.ensureVisible(advanced);
     await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.widgetWithText(ListTile, 'Advanced Settings')).width,
+      400 - 2 * AppSpacing.pagePadding,
+    );
     await tester.tap(advanced);
     await tester.pumpAndSettle();
     expect(find.text('AI API Profiles'), findsOneWidget);
