@@ -75,16 +75,6 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
     super.dispose();
   }
 
-  Future<void> _downloadMarkdown() async {
-    final markdown = QuillToMarkdown.fromDocument(_controller.document).trim();
-    await runDocumentDownload(
-      context,
-      markdown.isEmpty
-          ? null
-          : DocumentTextRequest(fileName: widget.title, text: markdown),
-    );
-  }
-
   Future<bool> _confirmDiscard() async {
     if (!_dirty || widget.readOnly) return true;
     final result = await showDialog<bool>(
@@ -208,10 +198,18 @@ class _FullExplanationScreenState extends State<FullExplanationScreen> {
                   style: theme.textTheme.titleMedium,
                 ),
               ),
-              IconButton(
+              DownloadDocumentButton(
                 tooltip: 'Download Markdown',
-                onPressed: _downloadMarkdown,
-                icon: const Icon(Icons.download_outlined),
+                request: () async {
+                  final markdown = QuillToMarkdown.fromDocument(
+                    _controller.document,
+                  ).trim();
+                  if (markdown.isEmpty) return null;
+                  return DocumentTextRequest(
+                    fileName: widget.title,
+                    text: markdown,
+                  );
+                },
               ),
               if (!widget.readOnly)
                 Consumer(

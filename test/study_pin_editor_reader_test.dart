@@ -4,11 +4,13 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_vault/core/database/app_database.dart';
+import 'package:study_vault/core/export/download_document_button.dart';
 import 'package:study_vault/features/favorites/data/favorites_providers.dart';
 import 'package:study_vault/features/study_pins/data/pin_categories_providers.dart';
 import 'package:study_vault/features/study_pins/domain/pin_type.dart';
 import 'package:study_vault/features/study_pins/domain/study_note_codec.dart';
 import 'package:study_vault/features/study_pins/presentation/add_edit_study_pin_sheet.dart';
+import 'package:study_vault/features/study_pins/presentation/full_explanation_screen.dart';
 import 'package:study_vault/features/study_pins/presentation/study_pin_reader.dart';
 import 'package:study_vault/features/study_pins/presentation/widgets/study_rich_text_viewer.dart';
 
@@ -34,6 +36,28 @@ Widget _app(Widget child) {
 }
 
 void main() {
+  testWidgets(
+    'Full Note provides its title and Markdown to the download button',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const FullExplanationScreen(
+            title: 'Gradient Descent',
+            initialText: 'A short explanation.',
+            readOnly: true,
+          ),
+        ),
+      );
+      final button = tester.widget<DownloadDocumentButton>(
+        find.byType(DownloadDocumentButton),
+      );
+      final request = await button.request() as DocumentTextRequest;
+      expect(request.fileName, 'Gradient Descent');
+      expect(request.kind, DocumentFileKind.markdown);
+      expect(request.text, 'A short explanation.');
+    },
+  );
+
   testWidgets('editor shows selected text context for text annotations', (
     tester,
   ) async {

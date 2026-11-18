@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/storage/study_vault_paths.dart';
@@ -14,6 +15,7 @@ import 'package:study_vault/features/favorites/presentation/favorite_star_button
 import 'package:study_vault/features/favorites/data/favorites_providers.dart';
 import 'package:study_vault/features/lessons/data/materials_providers.dart';
 import 'package:study_vault/features/lessons/presentation/image_study_screen.dart';
+import 'package:study_vault/features/lessons/presentation/lesson_images_screen.dart';
 import 'package:study_vault/features/study_pins/data/pin_categories_providers.dart';
 import 'package:study_vault/features/study_pins/data/study_pins_providers.dart';
 
@@ -149,6 +151,47 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await frames(tester);
   }
+
+  testWidgets('cancelling image removal keeps the attachment', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          materialsForLessonProvider.overrideWith(
+            (ref, id) => Stream.value(materials),
+          ),
+        ],
+        child: const MaterialApp(
+          home: LessonImagesScreen(
+            scope: LessonImagesScope(lessonId: 'l', title: 'Lesson'),
+          ),
+        ),
+      ),
+    );
+    await frames(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('i1')),
+        matching: find.byTooltip('Image options'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove image?'), findsOneWidget);
+    expect(find.textContaining('Study Pins on this resource'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Remove image?'), findsNothing);
+    expect(await tester.runAsync(() => db.getMaterialById('i1')), isNotNull);
+    expect(
+      File('${temp.path}/study_vault_files/lessons/l/1.png').existsSync(),
+      isTrue,
+    );
+    await close(tester);
+  });
 
   testWidgets(
     'left and right swipes follow only lesson images without wrapping',

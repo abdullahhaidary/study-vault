@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/routes.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../../core/widgets/transient_snack_bar.dart';
 import '../data/materials_providers.dart';
@@ -103,32 +104,16 @@ class _LessonImagesScreenState extends ConsumerState<LessonImagesScreen> {
     WidgetRef ref,
     LessonMaterial material,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove image?'),
-        content: Text(
+    final confirmed = await confirmDelete(
+      context,
+      title: 'Remove image?',
+      message:
           '"${material.title}" will be removed from this lesson and deleted '
           'from local StudyDesk storage. Study Pins on this resource will '
           'also be removed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Remove',
     );
-    if (confirmed == true) {
+    if (confirmed && mounted) {
       await deleteLessonMaterial(ref, material: material);
     }
   }

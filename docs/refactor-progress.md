@@ -5,8 +5,8 @@ Refactor one small part at a time. Reuse the components StudyDesk already has, t
 ## Current progress
 
 - **Baseline** — Review navigation, summary labels, and Advanced Settings were reorganized. That work is separate from the component refactors below.
-- **Next** — F. Compare the group headers on the class and subject pages.
-- **Completed** — 5 of 26. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
+- **Next** — K. Review the image reader’s page counter and navigation controls.
+- **Progress** — 8 completed, 2 skipped, 16 pending. All unchecked entries are proposals. If inspection shows a shared component would make the callers harder to read, mark the entry **skipped** and record why.
 
 ## How to work through one item
 
@@ -29,16 +29,16 @@ Test filenames below are relative to `test/`.
 | [x] C. Content width | Use `ContentContainer` for the Review hub and Settings with explicit width and the existing list padding. | `desktop_layout_test.dart` |
 | [x] D. Search width | Use one `ContentContainer` for Search’s input, filters, and results. | `desktop_layout_test.dart`, `search_favorites_categories_test.dart`, `file_search_test.dart` |
 | [x] E. Adaptive lists | Reuse `ResponsiveGrid` inside `AdaptiveItemList` for desktop layout. Verify ordering and tap targets at desktop and compact widths. | `desktop_layout_test.dart`, `library_reorder_test.dart` |
-| [ ] F. Group headers | Compare group rows on the class and subject pages. Reuse `GroupSectionHeader` for matching presentation while each page owns its menu and reorder callbacks. | `library_reorder_test.dart` |
-| [ ] G. Delete confirmations | Compare one class or subject delete confirmation with the lesson equivalent. Reuse the existing confirmation dialog where it fits and keep each cascade warning and cancel path. | `library_reorder_test.dart`, `database_test.dart` |
+| [x] F. Group headers | Verified that the class and subject pages already use `GroupSectionHeader` with local menu and reorder callbacks. | `library_reorder_test.dart` |
+| [x] G. Delete confirmations | Class, subject, and lesson screens already use `confirmDelete`. Adopt it in the image gallery with the existing warning and Remove label. | `image_gallery_test.dart`, `library_reorder_test.dart`, `database_test.dart` |
 
 ### Readers and review
 
 | Item | Small change | Existing check |
 | --- | --- | --- |
-| [ ] H. Review links | Compare the pin-review actions in the PDF and image readers with `ReviewEntryButton`. Share the button only if enabled states, counts, and scopes agree. | `study_review_test.dart`, `image_gallery_test.dart` |
-| [ ] I. Bookmark actions | Compare the bookmark affordance in the lesson PDF and book readers. Share presentation if it matches and keep their bookmark writes in their respective features. | `reference_books_test.dart`, `pdf_study_dock_test.dart` |
-| [ ] J. Download actions | Check one book or lesson reader for download UI that can reuse `DownloadDocumentButton`. Preserve filename, file type, and save or share behavior. | `document_download_test.dart`, `reference_books_test.dart` |
+| [x] H. Review links (skipped) | Both readers use `openReviewSetup`. Their entries are available without waiting for a pin count, while `ReviewEntryButton` depends on the count. | `study_review_test.dart`, `image_gallery_test.dart` |
+| [x] I. Bookmark actions (skipped) | The lesson PDF dock toggles bookmarks and shows their current state. The book reader adds a bookmark from an app-bar action. | `reference_books_test.dart`, `pdf_study_dock_test.dart` |
+| [x] J. Download actions | Use `DownloadDocumentButton` in the Full Note screen with the existing Markdown request. | `document_download_test.dart`, `reference_books_test.dart`, `study_pin_editor_reader_test.dart` (Full Note export case) |
 | [ ] K. Image navigation | Keep the current image position, previous and next buttons, and counter together in the image reader. Preserve swipe, zoom, annotation, and missing-file behavior. | `image_gallery_test.dart` |
 | [ ] L. Reading positions | Compare save and restore in the PDF and Markdown readers against `reading_positions.dart`. Reuse storage code where it fits and keep each reader’s viewport or scroll logic local. | `pdf_reader_position_test.dart`, `markdown_study_screen_test.dart`, `reading_positions_test.dart` |
 | [ ] M. Review actions | Compare the schedule’s lesson-row actions with those in the lesson schedule tile. Reuse `schedule_actions.dart` for matching operations and preserve the existing dates and ratings. | `study_schedule_screen_test.dart`, `study_schedule_test.dart` |
@@ -76,3 +76,8 @@ Test filenames below are relative to `test/`.
 | 2026-11-18 | C. Content width | `review_hub_screen.dart` and `settings_screen.dart` use `ContentContainer`. `desktop_layout_test.dart` checks the desktop Review and phone Settings widths. | All 8 layout tests passed on retry. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |
 | 2026-11-18 | D. Search width | `search_screen.dart` uses one width and horizontal padding for the whole body. `file_search_test.dart` checks field, scope chip, and result alignment at phone and desktop widths. | All 37 focused tests passed. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |
 | 2026-11-18 | E. Adaptive lists | `desktop_frame.dart` now uses `ResponsiveGrid` for the desktop branch of `AdaptiveItemList`. My Classes and Books use the grid directly because they can show multiple columns on wide phones. | All 12 layout and reorder tests passed, including the new order and tap checks. `flutter analyze --no-pub` reported 8 existing informational findings outside the edited files. |
+| 2026-11-18 | F. Group headers | Confirmed that `class_details_screen.dart` and `subject_details_screen.dart` already share the header. | Library reorder tests passed. |
+| 2026-11-18 | G. Delete confirmations | `lesson_images_screen.dart` now uses `confirmDelete`. | Gallery, database, and reorder tests passed. The new cancel check verifies that the attachment record and file remain. |
+| 2026-11-18 | H. Review links | Skipped. The readers share the setup launcher and keep their existing entry controls. | Study review and gallery tests passed. |
+| 2026-11-18 | I. Bookmark actions | Skipped. The PDF dock and book app bar have different actions and states. | PDF dock and reference book tests passed. |
+| 2026-11-18 | J. Download actions | `full_explanation_screen.dart` now uses `DownloadDocumentButton`. | Export tests and the new Full Note request check passed. A broader run found two existing pin-editor tests expecting obsolete labels. Across F–J, all 56 focused checks passed and Flutter analysis reported 8 existing informational findings outside the edited files. |
