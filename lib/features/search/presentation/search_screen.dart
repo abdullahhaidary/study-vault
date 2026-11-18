@@ -6,6 +6,7 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/navigation/study_navigator.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auto_direction_text.dart';
+import '../../../core/widgets/content_container.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/scroll_edge_arrows.dart';
 import '../../favorites/data/favorites_display_providers.dart';
@@ -97,19 +98,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
       ),
       body: ScrollEdgeArrows(
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                page.left,
-                AppSpacing.xs,
-                page.right,
-                0,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: AppSpacing.contentWidth(context),
-                ),
+        child: ContentContainer(
+          maxWidth: AppSpacing.contentWidth(context) + page.horizontal,
+          padding: page,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Row(
                   children: [
                     Expanded(
@@ -158,176 +154,135 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                page.left,
-                AppSpacing.sm,
-                page.right,
-                0,
-              ),
-              child: Align(
-                alignment: Alignment.center,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: AppSpacing.contentWidth(context),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ActionChip(
-                          avatar: const Icon(Icons.folder_open, size: 18),
-                          tooltip: queryState.scope.title,
-                          label: Text(
-                            queryState.scope.kind ==
-                                    StudySearchScopeKind.library
-                                ? 'Entire library'
-                                : queryState.scope.title,
-                          ),
-                          onPressed: () async {
-                            final scope = await showSearchScopePicker(
-                              context,
-                              ref.read(databaseProvider),
-                            );
-                            if (scope != null && mounted) {
-                              ref
-                                  .read(searchQueryProvider(_session).notifier)
-                                  .setScope(scope);
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        for (final filter in [
-                          SearchResultFilter.all,
-                          SearchResultFilter.lessons,
-                          SearchResultFilter.materials,
-                          SearchResultFilter.aiMaterials,
-                          SearchResultFilter.notes,
-                          SearchResultFilter.pins,
-                          SearchResultFilter.flashcards,
-                          SearchResultFilter.courseReview,
-                          SearchResultFilter.books,
-                        ]) ...[
-                          ChoiceChip(
-                            label: Text(filter.label),
-                            selected: queryState.typeFilter == filter,
-                            onSelected: (_) => ref
-                                .read(searchQueryProvider(_session).notifier)
-                                .setTypeFilter(filter),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (indexing?.running == true ||
-                indexRequest.hasError ||
-                (indexing?.unavailable ?? 0) > 0 ||
-                (indexing?.withoutText ?? 0) > 0)
               Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: page.left,
-                  vertical: 4,
-                ),
-                child: Column(
-                  children: [
-                    if (indexing?.running == true)
-                      const LinearProgressIndicator(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            indexRequest.hasError
-                                ? 'Could not index file contents. Titles and saved study text are still searchable.'
-                                : indexing?.running == true
-                                ? 'Indexing files: ${indexing!.completed}/${indexing.total}. Matches appear as pages are indexed.'
-                                : '${indexing?.unavailable ?? 0} files unavailable · ${indexing?.withoutText ?? 0} files have no searchable text (scans need OCR).',
-                            style: theme.textTheme.bodySmall,
-                          ),
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.folder_open, size: 18),
+                        tooltip: queryState.scope.title,
+                        label: Text(
+                          queryState.scope.kind == StudySearchScopeKind.library
+                              ? 'Entire library'
+                              : queryState.scope.title,
                         ),
-                        if (indexing?.running != true)
-                          TextButton(
-                            onPressed: () => ref.invalidate(
-                              fileSearchIndexRequestProvider(queryState.scope),
-                            ),
-                            child: const Text('Retry'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            if (activeChips.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  page.left,
-                  AppSpacing.sm,
-                  page.right,
-                  0,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: AppSpacing.contentWidth(context),
-                    ),
-                    child: Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      children: activeChips,
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            Expanded(
-              child: queryState.query.trim().isEmpty
-                  ? _InitialSearchBody(theme: theme, scope: queryState.scope)
-                  : resultsAsync.when(
-                      loading: () => const AppLoading(),
-                      error: (e, _) =>
-                          const AppErrorState(message: 'Search failed.'),
-                      data: (results) {
-                        if (results.isEmpty) {
-                          return EmptyState(
-                            icon: Icons.search_off,
-                            title: 'No results',
-                            message:
-                                'No matches for "${queryState.query.trim()}" in ${queryState.scope.title}. '
-                                '${indexing?.running == true ? 'File indexing is still running.' : 'Try a shorter phrase or a wider scope.'}',
+                        onPressed: () async {
+                          final scope = await showSearchScopePicker(
+                            context,
+                            ref.read(databaseProvider),
                           );
-                        }
-                        return ListView.separated(
-                          padding: EdgeInsets.fromLTRB(
-                            page.left,
-                            0,
-                            page.right,
-                            AppSpacing.xl,
+                          if (scope != null && mounted) {
+                            ref
+                                .read(searchQueryProvider(_session).notifier)
+                                .setScope(scope);
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      for (final filter in [
+                        SearchResultFilter.all,
+                        SearchResultFilter.lessons,
+                        SearchResultFilter.materials,
+                        SearchResultFilter.aiMaterials,
+                        SearchResultFilter.notes,
+                        SearchResultFilter.pins,
+                        SearchResultFilter.flashcards,
+                        SearchResultFilter.courseReview,
+                        SearchResultFilter.books,
+                      ]) ...[
+                        ChoiceChip(
+                          label: Text(filter.label),
+                          selected: queryState.typeFilter == filter,
+                          onSelected: (_) => ref
+                              .read(searchQueryProvider(_session).notifier)
+                              .setTypeFilter(filter),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (indexing?.running == true ||
+                  indexRequest.hasError ||
+                  (indexing?.unavailable ?? 0) > 0 ||
+                  (indexing?.withoutText ?? 0) > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    children: [
+                      if (indexing?.running == true)
+                        const LinearProgressIndicator(),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              indexRequest.hasError
+                                  ? 'Could not index file contents. Titles and saved study text are still searchable.'
+                                  : indexing?.running == true
+                                  ? 'Indexing files: ${indexing!.completed}/${indexing.total}. Matches appear as pages are indexed.'
+                                  : '${indexing?.unavailable ?? 0} files unavailable · ${indexing?.withoutText ?? 0} files have no searchable text (scans need OCR).',
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ),
-                          itemCount: results.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.xs),
-                          itemBuilder: (context, index) {
-                            final r = results[index];
-                            return Align(
-                              alignment: Alignment.topCenter,
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: AppSpacing.contentWidth(context),
+                          if (indexing?.running != true)
+                            TextButton(
+                              onPressed: () => ref.invalidate(
+                                fileSearchIndexRequestProvider(
+                                  queryState.scope,
                                 ),
-                                child: _SearchResultTile(result: r),
                               ),
+                              child: const Text('Retry'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              if (activeChips.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: activeChips,
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.sm),
+              Expanded(
+                child: queryState.query.trim().isEmpty
+                    ? _InitialSearchBody(theme: theme, scope: queryState.scope)
+                    : resultsAsync.when(
+                        loading: () => const AppLoading(),
+                        error: (e, _) =>
+                            const AppErrorState(message: 'Search failed.'),
+                        data: (results) {
+                          if (results.isEmpty) {
+                            return EmptyState(
+                              icon: Icons.search_off,
+                              title: 'No results',
+                              message:
+                                  'No matches for "${queryState.query.trim()}" in ${queryState.scope.title}. '
+                                  '${indexing?.running == true ? 'File indexing is still running.' : 'Try a shorter phrase or a wider scope.'}',
                             );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
+                          }
+                          return ListView.separated(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.xl,
+                            ),
+                            itemCount: results.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: AppSpacing.xs),
+                            itemBuilder: (context, index) =>
+                                _SearchResultTile(result: results[index]),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -484,24 +439,13 @@ class _InitialSearchBody extends ConsumerWidget {
       );
     }
     final favs = ref.watch(homeFavoritesProvider);
-    final page = AppSpacing.pageInsets(context);
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        page.left,
-        AppSpacing.md,
-        page.right,
-        AppSpacing.xl,
-      ),
+      padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xl),
       children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: AppSpacing.contentWidth(context),
-          ),
-          child: Text(
-            'Search lesson titles and text inside PDFs, Markdown files, saved AI materials, notes, and pins. PDF matches open on their page. Reference-book text is searchable after indexing the book in its reader.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+        Text(
+          'Search lesson titles and text inside PDFs, Markdown files, saved AI materials, notes, and pins. PDF matches open on their page. Reference-book text is searchable after indexing the book in its reader.',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -510,40 +454,35 @@ class _InitialSearchBody extends ConsumerWidget {
           error: (_, _) => const SizedBox.shrink(),
           data: (items) {
             if (items.isEmpty) return const SizedBox.shrink();
-            return ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSpacing.contentMaxWidth,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Favorites', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.xs),
-                  for (final item in items.take(5))
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.star,
-                        color: theme.colorScheme.tertiary,
-                      ),
-                      title: Text(item.title),
-                      subtitle: Text(item.breadcrumb),
-                      onTap: () => StudyNavigator.openEntity(
-                        context,
-                        ref,
-                        kind: item.kind,
-                        id: item.entityId,
-                        materialId: item.materialId,
-                        materialTitle: item.materialTitle,
-                        mimeType: item.mimeType,
-                        pageNumber: item.pageNumber,
-                        focusPinId: item.kind == StudyEntityKind.studyPin
-                            ? item.entityId
-                            : null,
-                      ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Favorites', style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.xs),
+                for (final item in items.take(5))
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.star,
+                      color: theme.colorScheme.tertiary,
                     ),
-                ],
-              ),
+                    title: Text(item.title),
+                    subtitle: Text(item.breadcrumb),
+                    onTap: () => StudyNavigator.openEntity(
+                      context,
+                      ref,
+                      kind: item.kind,
+                      id: item.entityId,
+                      materialId: item.materialId,
+                      materialTitle: item.materialTitle,
+                      mimeType: item.mimeType,
+                      pageNumber: item.pageNumber,
+                      focusPinId: item.kind == StudyEntityKind.studyPin
+                          ? item.entityId
+                          : null,
+                    ),
+                  ),
+              ],
             );
           },
         ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'package:study_vault/core/database/app_database.dart';
 import 'package:study_vault/core/database/database_provider.dart';
 import 'package:study_vault/core/navigation/study_navigator.dart';
 import 'package:study_vault/core/storage/study_vault_paths.dart';
+import 'package:study_vault/core/theme/app_spacing.dart';
 import 'package:study_vault/features/search/data/file_search_indexer.dart';
 import 'package:study_vault/features/search/data/search_providers.dart';
 import 'package:study_vault/features/search/data/study_search_service.dart';
@@ -530,7 +532,7 @@ void main() {
     },
   );
 
-  testWidgets('scoped search renders snippets and fits a narrow screen', (
+  testWidgets('scoped search aligns filters and results across window sizes', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 800);
@@ -567,8 +569,28 @@ void main() {
     expect(find.text('Search Lesson A'), findsOneWidget);
     expect(find.textContaining('Gradient descent updates'), findsOneWidget);
     expect(find.textContaining('PDF · page 7'), findsOneWidget);
+    final input = find.byType(TextField);
+    final scopeChip = find.byType(ActionChip);
+    final result = find.widgetWithText(ListTile, 'Lecture attachment');
+    for (final widget in [input, scopeChip, result]) {
+      expect(tester.getTopLeft(widget).dx, AppSpacing.pagePadding);
+    }
     expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    try {
+      tester.view.physicalSize = const Size(1600, 900);
+      await tester.pumpAndSettle();
+      final left = (1600 - AppSpacing.contentMaxWidthWide) / 2;
+      for (final widget in [input, scopeChip, result]) {
+        expect(tester.getTopLeft(widget).dx, left);
+      }
+      expect(tester.getSize(result).width, AppSpacing.contentMaxWidthWide);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('PDF content search navigation forwards the matched page', (
